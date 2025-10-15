@@ -2,11 +2,14 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { useAction } from 'convex/react';
+import { api } from 'give-care-app/convex/_generated/api';
 import { BSFC_SHORT_QUESTIONS, SCALE_OPTIONS } from '@/lib/bsfc';
 import Navbar from '@/app/components/layout/Navbar';
 
 export default function AssessmentQuestions() {
   const router = useRouter();
+  const submitAssessment = useAction(api.functions.assessmentResults.submit);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [responses, setResponses] = useState<number[]>([]);
   const [showEmailCapture, setShowEmailCapture] = useState(false);
@@ -46,18 +49,7 @@ export default function AssessmentQuestions() {
     setIsSubmitting(true);
 
     try {
-      const response = await fetch('/api/assessment/submit', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ responses, email }),
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to submit assessment');
-      }
-
-      const data = await response.json();
-
+      await submitAssessment({ email, responses });
       // Redirect to thank you page
       router.push(`/assessment/results?email=${encodeURIComponent(email)}`);
     } catch (error) {

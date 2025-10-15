@@ -29,9 +29,15 @@ export const createCheckoutSession = action({
     couponCode: v.optional(v.string()), // Optional coupon code (CAREGIVER50, PARTNER-ORG, etc.)
   },
   handler: async (ctx, { fullName, email, phoneNumber, priceId, couponCode }): Promise<string | null> => {
-    const domain = process.env.HOSTING_URL ?? "http://localhost:5173";
+    // Fail fast if HOSTING_URL is missing in production
+    const domain = process.env.HOSTING_URL;
+    if (!domain) {
+      console.error("[Stripe] HOSTING_URL environment variable is not set");
+      throw new Error("Server configuration error: HOSTING_URL is required for checkout");
+    }
+
     const stripe = new Stripe(process.env.STRIPE_KEY!, {
-      apiVersion: "2024-11-20.acacia",
+      apiVersion: "2025-09-30.clover",
     });
 
     // Create or get Stripe customer
@@ -109,7 +115,7 @@ export const createCheckoutSession = action({
         },
       },
       // Pre-fill customer information from signup form
-      customer_email: customer.email, // Pre-fill email (user can't change it)
+      customer_email: customer.email || undefined, // Pre-fill email (user can't change it)
       phone_number_collection: {
         enabled: false, // Don't collect phone - we already have it
       },
@@ -136,7 +142,7 @@ export const fulfillCheckout = internalAction({
   },
   handler: async (ctx, { signature, payload }) => {
     const stripe = new Stripe(process.env.STRIPE_KEY!, {
-      apiVersion: "2024-11-20.acacia",
+      apiVersion: "2025-09-30.clover",
     });
 
     const webhookSecret = process.env.STRIPE_WEBHOOKS_SECRET!;
@@ -161,7 +167,7 @@ export const fulfillCheckout = internalAction({
 
           // Activate subscription
           await ctx.runMutation(internal.subscriptions.activateSubscription, {
-            userId,
+            userId: userId as any,
             stripeSubscriptionId: session.subscription as string,
             subscriptionStatus: "active",
           });
@@ -169,7 +175,7 @@ export const fulfillCheckout = internalAction({
           // Send welcome SMS
           await ctx.runAction(internal.stripe.sendWelcomeSMS, {
             phoneNumber,
-            userId,
+            userId: userId as any,
           });
 
           break;
@@ -186,7 +192,7 @@ export const fulfillCheckout = internalAction({
 
           // Normalize Stripe status (all are now valid in validator)
           await ctx.runMutation(internal.subscriptions.updateSubscriptionStatus, {
-            userId,
+            userId: userId as any,
             subscriptionStatus: subscription.status,
           });
 
@@ -203,7 +209,7 @@ export const fulfillCheckout = internalAction({
           }
 
           await ctx.runMutation(internal.subscriptions.updateSubscriptionStatus, {
-            userId,
+            userId: userId as any,
             subscriptionStatus: "canceled",
           });
 

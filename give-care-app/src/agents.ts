@@ -113,7 +113,7 @@ export async function runAgentTurn(
       : (result.finalOutput ? JSON.stringify(result.finalOutput) : '');
 
     // Access updated context from run state using type-safe extraction
-    const resultWithContext = result as RunResultWithContext<GiveCareContext>;
+    const resultWithContext = result as any as RunResultWithContext<GiveCareContext>;
     const updatedContext = resultWithContext.state?.context || context;
 
     // Extract telemetry data using type-safe helpers

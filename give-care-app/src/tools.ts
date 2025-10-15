@@ -359,7 +359,7 @@ export const findInterventions = tool({
       ? "Things are tough. These might help lighten the load:\n\n"
       : "Here are some strategies that might help:\n\n";
 
-    // Try to get real resources from database
+    // Try to get real resources from database (only if convexClient is available)
     let resources: Array<{
       title: string;
       provider: string;
@@ -369,16 +369,23 @@ export const findInterventions = tool({
       location: string;
     }> = [];
 
-    try {
-      resources = await runContext!.convexClient.query(
-        api.functions.resources.getResourceRecommendations,
-        { userId: context.userId, limit: 3 }
-      );
-    } catch (e) {
-      console.error("Resource query failed:", e);
+    // Guard: Only query database if convexClient is available
+    const convexClient = (runContext as any)?.convexClient;
+    if (convexClient) {
+      try {
+        resources = await convexClient.query(
+          api.functions.resources.getResourceRecommendations,
+          { userId: context.userId, limit: 3 }
+        );
+      } catch (e) {
+        // Log error only in development to avoid log spam
+        if (process.env.NODE_ENV === 'development') {
+          console.error("[Tools] Resource query failed:", e);
+        }
+      }
     }
 
-    // If database empty, use static fallback
+    // If database empty or client unavailable, use static fallback
     if (resources.length === 0) {
       const topZones = zones.slice(0, 2);
       const matches = topZones

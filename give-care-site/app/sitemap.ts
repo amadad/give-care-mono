@@ -2,6 +2,8 @@ import { MetadataRoute } from 'next'
 import { readdirSync, statSync } from 'fs'
 import { join } from 'path'
 
+export const dynamic = 'force-static'
+
 export default function sitemap(): MetadataRoute.Sitemap {
   const baseUrl = 'https://givecareapp.com'
 

@@ -432,4 +432,29 @@ export default defineSchema({
     .index("by_conversation", ["conversationId"])
     .index("by_source", ["source"]),
 
+  // NEWSLETTER SUBSCRIBERS (marketing site)
+  newsletterSubscribers: defineTable({
+    email: v.string(),
+    subscribedAt: v.number(),
+    unsubscribed: v.boolean(),
+    unsubscribedAt: v.optional(v.number()),
+    updatedAt: v.number(),
+  })
+    .index("by_email", ["email"])
+    .index("by_subscribed", ["unsubscribed"])
+    .index("by_subscribed_at", ["subscribedAt"]),
+
+  // ASSESSMENT RESULTS (marketing site BSFC assessments)
+  assessmentResults: defineTable({
+    email: v.string(),
+    responses: v.array(v.number()),
+    totalScore: v.number(),
+    averageScore: v.number(),
+    band: v.string(), // high | moderate | mild | thriving
+    submittedAt: v.number(),
+  })
+    .index("by_email", ["email"])
+    .index("by_submitted_at", ["submittedAt"])
+    .index("by_band", ["band"]),
+
 });

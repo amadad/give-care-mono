@@ -16,9 +16,13 @@ const stripePromise = STRIPE_PUBLISHABLE_KEY
   ? loadStripe(STRIPE_PUBLISHABLE_KEY)
   : null
 
-// Stripe Price IDs from environment
-const MONTHLY_PRICE_ID = process.env.NEXT_PUBLIC_STRIPE_MONTHLY_PRICE_ID || "price_1RJ3l1AXk51qocidWUcvmNR1"
-const ANNUAL_PRICE_ID = process.env.NEXT_PUBLIC_STRIPE_ANNUAL_PRICE_ID || "price_1RKnYwAXk51qocidnJFB39A1"
+// Stripe Price IDs from environment (required - no defaults to prevent prod/staging mixups)
+const MONTHLY_PRICE_ID = process.env.NEXT_PUBLIC_STRIPE_MONTHLY_PRICE_ID
+const ANNUAL_PRICE_ID = process.env.NEXT_PUBLIC_STRIPE_ANNUAL_PRICE_ID
+
+if (!MONTHLY_PRICE_ID || !ANNUAL_PRICE_ID) {
+  console.error("[Stripe] Missing price IDs: Set NEXT_PUBLIC_STRIPE_MONTHLY_PRICE_ID and NEXT_PUBLIC_STRIPE_ANNUAL_PRICE_ID")
+}
 
 export function SignupFormConvex() {
   const [plan, setPlan] = useState<PlanType>("monthly")
@@ -58,6 +62,11 @@ export function SignupFormConvex() {
 
       // Get price ID based on plan
       const priceId = plan === "monthly" ? MONTHLY_PRICE_ID : ANNUAL_PRICE_ID
+
+      // Fail fast if price IDs are not configured
+      if (!priceId) {
+        throw new Error(`Missing Stripe price ID for ${plan} plan. Check environment configuration.`)
+      }
 
       console.log('[SignupForm] Creating checkout session...', {
         fullName: name,

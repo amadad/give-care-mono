@@ -1,10 +1,13 @@
 "use client";
 
 import { useState } from "react";
+import { useAction } from "convex/react";
+import { api } from "give-care-app/convex/_generated/api";
 
 export default function NewsletterSubscribeForm() {
   const [status, setStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
   const [message, setMessage] = useState('');
+  const subscribe = useAction(api.functions.newsletter.subscribe);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -13,23 +16,13 @@ export default function NewsletterSubscribeForm() {
     setStatus('loading');
     setMessage('');
     try {
-      const res = await fetch('/api/newsletter', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email }),
-      });
-      if (res.ok) {
-        setStatus('success');
-        setMessage('Thank you for subscribing!');
-        form.reset();
-      } else {
-        const data = await res.json();
-        setStatus('error');
-        setMessage(data.error || 'Something went wrong.');
-      }
-    } catch {
+      const result = await subscribe({ email });
+      setStatus('success');
+      setMessage(result.message || 'Thank you for subscribing!');
+      form.reset();
+    } catch (error) {
       setStatus('error');
-      setMessage('Something went wrong.');
+      setMessage(error instanceof Error ? error.message : 'Something went wrong.');
     }
   };
 

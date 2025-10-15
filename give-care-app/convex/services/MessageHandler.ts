@@ -71,7 +71,7 @@ export class MessageHandler {
       const agentResult = await this.executeAgent(message.body, context);
 
       // 7. Persist changes
-      await this.persistChanges(user, context, agentResult, message.messageSid, startTime);
+      await this.persistChanges(user, context, agentResult, message.body, message.messageSid, startTime);
 
       // 8. Schedule follow-ups
       await this.scheduleFollowups(user, context, agentResult.context);
@@ -301,6 +301,7 @@ export class MessageHandler {
     user: any,
     originalContext: GiveCareContext,
     agentResult: any,
+    userMessage: string,
     messageSid: string,
     startTime: number
   ): Promise<void> {
@@ -337,6 +338,7 @@ export class MessageHandler {
     await this.logConversation(
       user._id,
       originalContext.phoneNumber,
+      userMessage,
       agentResult,
       messageSid,
       startTime
@@ -422,6 +424,7 @@ export class MessageHandler {
   private async logConversation(
     userId: any,
     phoneNumber: string,
+    userMessage: string,
     agentResult: any,
     messageSid: string,
     startTime: number
@@ -431,11 +434,11 @@ export class MessageHandler {
     // Batch insert both messages in one mutation (50-75ms faster)
     await this.ctx.runMutation(internal.functions.conversations.logMessages, {
       messages: [
-        // User message
+        // User message (FIXED: was storing agentResult.message twice)
         {
           userId,
           role: 'user',
-          text: agentResult.message, // Original user message stored in result
+          text: userMessage, // Store the actual incoming SMS body
           mode: 'sms',
           messageSid,
           timestamp: startTime,
@@ -444,7 +447,7 @@ export class MessageHandler {
         {
           userId,
           role: 'assistant',
-          text: agentResult.message,
+          text: agentResult.message, // AI's response
           mode: 'sms',
           latency: timestamp - startTime,
           agentName: agentResult.agentName,
