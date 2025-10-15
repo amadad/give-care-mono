@@ -374,25 +374,14 @@ export const resetUserAssessment = mutation({
 export const getSystemHealth = query({
   args: {},
   handler: async (ctx) => {
+    // TODO: Re-enable when rate limit table is implemented
     // Rate limits: Query rateLimitState table for current usage
     const now = Date.now();
     const oneDayAgo = now - 24 * 60 * 60 * 1000;
 
-    // Get all rate limit states updated in last 24h
-    const rateLimitStates = await ctx.db
-      .query("rateLimitState")
-      .filter(q => q.gte(q.field("lastUpdated"), oneDayAgo))
-      .collect();
-
-    // Calculate per-user quota usage (max user's daily usage)
-    const userQuotas = rateLimitStates
-      .filter(s => s.key.startsWith("sms_user_"))
-      .map(s => s.count);
-    const maxUserUsage = userQuotas.length > 0 ? Math.max(...userQuotas) : 0;
-
-    // Calculate global quota usage
-    const globalState = rateLimitStates.find(s => s.key === "sms_global");
-    const globalUsage = globalState?.count || 0;
+    // Placeholder data until rate limit table exists
+    const maxUserUsage = 0;
+    const globalUsage = 0;
 
     // Count priority tier users (users with subscriptionStatus === "active")
     const activeSubscriptions = await ctx.db
