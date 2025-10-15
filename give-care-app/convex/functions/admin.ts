@@ -82,14 +82,17 @@ export const getAllUsers = query({
   handler: async (ctx, args) => {
     const limit = Math.min(Math.max(args.limit, 1), 200);
 
-    let usersQuery = ctx.db.query("users");
+    // Start with a query builder
+    let usersQuery;
     let indexApplied = false;
 
     if (args.journeyPhase) {
-      usersQuery = usersQuery.withIndex("by_journey", q =>
+      usersQuery = ctx.db.query("users").withIndex("by_journey", q =>
         q.eq("journeyPhase", args.journeyPhase)
       );
       indexApplied = true;
+    } else {
+      usersQuery = ctx.db.query("users");
     }
 
     if (args.burnoutBand) {
