@@ -190,14 +190,16 @@ function deduplicateServiceAreas(areas: ServiceAreaRecord[]) {
   });
 }
 
-export const findResources = query({
+// Internal helper for finding resources (shared by multiple queries)
+async function findResourcesInternal(
+  ctx: any,
   args: {
-    zip: v.string(),
-    zones: v.optional(v.array(v.string())),
-    bands: v.optional(v.array(v.string())),
-    limit: v.optional(v.number()),
-  },
-  handler: async (ctx, args) => {
+    zip: string;
+    zones?: string[];
+    bands?: string[];
+    limit?: number;
+  }
+) {
     const limit = args.limit ?? 5;
     const allServiceAreas = (await ctx.db
       .query("serviceAreas")
@@ -301,7 +303,17 @@ export const findResources = query({
       facility: item.facility,
       serviceArea: item.serviceArea,
     }));
+}
+
+// Public query that calls the internal helper
+export const findResources = query({
+  args: {
+    zip: v.string(),
+    zones: v.optional(v.array(v.string())),
+    bands: v.optional(v.array(v.string())),
+    limit: v.optional(v.number()),
   },
+  handler: async (ctx, args) => findResourcesInternal(ctx, args),
 });
 
 export const verifyResource = mutation({
@@ -391,8 +403,8 @@ export const getResourceRecommendations = query({
     // If no zones, return empty
     if (zones.length === 0) return [];
 
-    // Use existing findResources with user's data
-    const results = await findResources(ctx, {
+    // Use internal helper to find resources with user's data
+    const results = await findResourcesInternal(ctx, {
       zip,
       zones,
       bands: user.burnoutBand ? [user.burnoutBand] : undefined,
