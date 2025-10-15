@@ -1,0 +1,42 @@
+{
+  "name": "give-care-app",
+  "version": "0.7.0",
+  "private": true,
+  "packageManager": "pnpm@9.0.0",
+  "type": "module",
+  "main": "./index.ts",
+  "exports": {
+    ".": "./index.ts",
+    "./convex/_generated/api": "./convex/_generated/api.js",
+    "./convex/_generated/api.d.ts": "./convex/_generated/api.d.ts"
+  },
+  "scripts": {
+    "dev": "convex dev",
+    "lint": "eslint \"src/**/*.ts\" \"convex/**/*.ts\" \"index.ts\"",
+    "test": "vitest",
+    "format": "prettier --write \"src/**/*.ts\" \"convex/**/*.ts\" \"index.ts\""
+  },
+  "dependencies": {
+    "@auth/core": "^0.37.0",
+    "@convex-dev/auth": "^0.0.90",
+    "@convex-dev/rate-limiter": "^0.2.13",
+    "@convex-dev/twilio": "^0.1.7",
+    "@openai/agents": "^0.1.9",
+    "@openai/agents-extensions": "^0.1.5",
+    "convex": "^1.11.0",
+    "dotenv": "^17.2.3",
+    "event-target-polyfill": "^0.0.4",
+    "openai": "^4.0.0",
+    "stripe": "^19.1.0",
+    "twilio": "^5.0.0",
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "convex-test": "^0.0.38",
+    "eslint": "^9.0.0",
+    "prettier": "^3.0.0",
+    "typescript": "^5.4.0",
+    "vitest": "^2.0.0"
+  }
+}

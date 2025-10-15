@@ -1,0 +1,23 @@
+{
+  "name": "givecare-monorepo",
+  "version": "1.0.0",
+  "private": true,
+  "description": "GiveCare AI-powered caregiving support platform monorepo",
+  "packageManager": "pnpm@9.0.0",
+  "scripts": {
+    "dev": "pnpm --filter give-care-site dev",
+    "dev:site": "pnpm --filter give-care-site dev",
+    "dev:app": "pnpm --filter give-care-app dev",
+    "dev:story": "pnpm --filter give-care-story dev",
+    "build": "pnpm --recursive build",
+    "build:site": "pnpm --filter give-care-site build",
+    "build:app": "pnpm --filter give-care-app build",
+    "build:story": "pnpm --filter give-care-story build",
+    "lint": "pnpm --recursive lint",
+    "clean": "pnpm --recursive clean",
+    "format": "prettier --write \"**/*.{js,jsx,ts,tsx,json,md}\""
+  },
+  "devDependencies": {
+    "prettier": "^3.6.2"
+  }
+}

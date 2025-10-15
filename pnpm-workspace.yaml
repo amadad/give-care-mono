@@ -1,0 +1,5 @@
+packages:
+  # Core applications
+  - 'give-care-app'      # TypeScript/Convex backend + admin dashboard
+  - 'give-care-site'     # Marketing website
+  - 'give-care-story'    # Presentation system

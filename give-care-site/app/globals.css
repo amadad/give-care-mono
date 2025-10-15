@@ -1,0 +1,324 @@
+@import "tailwindcss";
+@plugin "daisyui";
+
+/* Force light mode */
+:root {
+  color-scheme: light only !important;
+}
+
+html {
+  color-scheme: light only !important;
+  forced-color-adjust: none !important;
+}
+
+
+/* Logo grid container */
+.logo-grid {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(120px, 160px));
+  gap: 2rem;
+  align-items: center;
+  justify-items: center;
+  justify-content: center;
+  padding: 1rem 0;
+}
+
+/* Logo item */
+.logo-item {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  opacity: 0.8;
+  transition: opacity 0.2s ease-in-out;
+  width: 100%;
+  height: 80px;
+}
+
+.logo-item:hover {
+  opacity: 1;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .logo-grid {
+    grid-template-columns: repeat(2, minmax(100px, 140px));
+    gap: 1rem;
+    justify-content: center;
+  }
+  
+  .logo-item {
+    height: 60px;
+    padding: 0.5rem;
+  }
+}
+
+@media (max-width: 640px) {
+  .logo-grid {
+    grid-template-columns: repeat(2, minmax(80px, 120px));
+  }
+}
+
+@plugin "daisyui/theme" {
+  name: "givecare";
+  default: true;
+  prefersdark: false;
+  color-scheme: "light";
+  --color-base-100: oklch(98% 0.016 73.684);
+  --color-base-200: oklch(95% 0.038 75.164);
+  --color-base-300: oklch(90% 0.076 70.697);
+  --color-base-content: oklch(40% 0.123 38.172);
+  --color-primary: oklch(42% 0.095 57.708);
+  --color-primary-content: oklch(100% 0 0);
+  --color-secondary: oklch(22.45% 0.075 37.85);
+  --color-secondary-content: oklch(90% 0.076 70.697);
+  --color-accent: oklch(64% 0.222 41.116);
+  --color-accent-content: oklch(90% 0.076 70.697);
+  --color-neutral: oklch(55% 0.195 38.402);
+  --color-neutral-content: oklch(98% 0.016 73.684);
+  --color-info: oklch(42% 0.199 265.638);
+  --color-info-content: oklch(90% 0.076 70.697);
+  --color-success: oklch(43% 0.095 166.913);
+  --color-success-content: oklch(90% 0.076 70.697);
+  --color-warning: oklch(82% 0.189 84.429);
+  --color-warning-content: oklch(41% 0.112 45.904);
+  --color-error: oklch(70% 0.191 22.216);
+  --color-error-content: oklch(39% 0.141 25.723);
+  --radius-selector: 1rem;
+  --radius-field: 1rem;
+  --radius-box: 1rem;
+  --size-selector: 0.25rem;
+  --size-field: 0.3125rem;
+  --border: 2px;
+  --depth: 1;
+  --noise: 1;
+}
+
+/* Typography removed - using utility classes instead */
+/* Global heading styles removed to prevent conflicts with .heading-* utility classes */
+
+/* Essential custom text utilities */
+.text-accessible-muted {
+  @apply text-base-content/70;
+}
+
+.text-accessible-body {
+  @apply text-base-content;
+}
+
+/* Use DaisyUI classes: section, container, prose */
+
+/* DaisyUI handles focus states - minimal override */
+:focus-visible {
+  @apply ring-2 ring-primary ring-offset-2;
+}
+
+/* Use DaisyUI sr-only utility instead */
+
+/* Reduced motion preferences */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* High contrast mode support */
+@media (prefers-contrast: high) {
+  .text-accessible-muted {
+    @apply text-amber-800;
+  }
+  
+  .text-accessible-light {
+    @apply text-amber-700;
+  }
+  
+  .text-accessible-body {
+    @apply text-amber-950;
+  }
+}
+
+/* Simplified hover states - use DaisyUI component hover states */
+.hover-lift {
+  @apply hover:scale-105;
+}
+
+/* DaisyUI cards handle hover states naturally */
+
+/* ============================================
+   DESIGN SYSTEM UTILITIES
+   Standardized classes for consistent styling
+   Wrapped in @layer for Tailwind v4 compatibility
+   ============================================ */
+
+@layer components {
+  /* Editorial Headings */
+  .heading-hero {
+    @apply text-4xl md:text-6xl font-serif font-light tracking-tight text-amber-950 leading-[1.2];
+  }
+
+  .heading-hero-dark {
+    @apply text-4xl md:text-6xl font-serif font-light tracking-tight text-amber-50 leading-[1.2];
+  }
+
+  .heading-section {
+    @apply text-3xl md:text-4xl font-serif font-light text-amber-950;
+  }
+
+  .heading-section-dark {
+    @apply text-3xl md:text-4xl font-serif font-light text-amber-50;
+  }
+
+  .heading-subsection {
+    @apply text-2xl md:text-3xl font-serif font-light text-amber-950;
+  }
+
+  .heading-card {
+    @apply text-lg md:text-xl font-serif font-light text-amber-950;
+  }
+
+  /* Body Text Variants */
+  .body-large {
+    @apply text-lg md:text-xl font-serif font-light text-amber-700 leading-relaxed;
+  }
+
+  .body-standard {
+    @apply text-base md:text-lg text-amber-700 leading-relaxed font-light;
+  }
+
+  /* Editorial Buttons */
+  .btn-editorial-primary {
+    @apply inline-block px-10 py-4 bg-amber-950 text-white text-sm tracking-widest hover:bg-amber-900 transition-colors duration-200 rounded-lg;
+  }
+
+  .btn-editorial-secondary {
+    @apply inline-block px-8 py-3 bg-white text-amber-950 text-sm tracking-widest hover:bg-amber-50 transition-colors duration-200 rounded-lg border border-amber-200;
+  }
+
+  .btn-editorial-small {
+    @apply inline-block px-4 py-2 bg-amber-950 text-white text-sm tracking-widest hover:bg-amber-900 transition-colors duration-200 rounded-lg;
+  }
+
+  /* Cards */
+  .card-editorial {
+    @apply bg-white border border-amber-200 rounded-lg p-6 hover:border-amber-300 transition-colors;
+  }
+
+  .card-editorial-lg {
+    @apply bg-white border border-amber-200 rounded-lg p-8 hover:border-amber-300 transition-colors;
+  }
+
+  .card-editorial-dark {
+    @apply bg-amber-900/50 border border-amber-100/20 rounded-lg p-6;
+  }
+
+  /* Section Spacing */
+  .section-standard {
+    @apply py-20 md:py-24;
+  }
+
+  .section-hero {
+    @apply pt-12 pb-16 md:pt-16 md:pb-20;
+  }
+
+  .section-tight {
+    @apply py-16;
+  }
+
+  /* Container Variants */
+  .container-editorial {
+    @apply container mx-auto px-6 max-w-5xl;
+  }
+
+  .container-editorial-narrow {
+    @apply container mx-auto px-6 max-w-3xl;
+  }
+
+  .container-editorial-wide {
+    @apply container mx-auto px-6 max-w-6xl;
+  }
+}
+
+/* Editorial Blog Styling */
+.editorial-content {
+  @apply max-w-none;
+}
+
+.editorial-content p:first-of-type {
+  @apply leading-relaxed;
+}
+
+/* Editorial quote styling */
+.editorial-quote {
+  @apply relative text-2xl md:text-3xl font-serif italic text-amber-800 text-center my-12 px-8;
+}
+
+.editorial-quote::before,
+.editorial-quote::after {
+  @apply absolute text-6xl text-amber-400 font-serif;
+  content: '"';
+}
+
+.editorial-quote::before {
+  @apply -top-4 -left-2;
+}
+
+.editorial-quote::after {
+  @apply -bottom-8 -right-2;
+}
+
+/* Smooth scrolling for anchor links */
+html {
+  scroll-behavior: smooth;
+}
+
+/* Remove any drop caps and first-letter styling */
+.editorial-content p:first-of-type::first-letter,
+.prose p:first-of-type::first-letter,
+.prose-lg p:first-of-type::first-letter,
+.prose-xl p:first-of-type::first-letter,
+.prose-2xl p:first-of-type::first-letter {
+  float: none !important;
+  margin: 0 !important;
+  font-size: inherit !important;
+  line-height: inherit !important;
+  font-weight: inherit !important;
+  font-family: inherit !important;
+  text-transform: none !important;
+  letter-spacing: normal !important;
+}
+
+/* Essential animations only */
+@keyframes gentle-pulse {
+  0%, 100% { transform: scale(0.95); }
+  50% { transform: scale(1.05); }
+}
+
+.animate-gentle-pulse {
+  animation: gentle-pulse 3s ease-in-out infinite;
+}
+
+
+/* Print styles for articles */
+@media print {
+  .editorial-content {
+    color: #000000;
+  }
+  
+  .editorial-content h1,
+  .editorial-content h2,
+  .editorial-content h3,
+  .editorial-content h4 {
+    color: #000000;
+  }
+  
+  .editorial-content a {
+    color: #000000;
+    text-decoration: underline;
+  }
+}
+

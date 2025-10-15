@@ -1,0 +1,6 @@
+# Project-specific patterns only
+# Common patterns are handled by root .gitignore
+
+# Convex auto-generated files (specific to give-care-app)
+convex/_generated/
+_REF/admin-frontend/convex/_generated/

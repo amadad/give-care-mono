@@ -1,0 +1,72 @@
+# Dependencies
+node_modules/
+.pnp
+.pnp.js
+
+# Package manager lock files (monorepo uses pnpm-lock.yaml only)
+package-lock.json
+yarn.lock
+
+# Testing
+coverage/
+
+# Next.js
+.next/
+out/
+build/
+dist/
+
+# Production
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Environment variables
+.env
+.env*.local
+.env.production
+
+# OS
+.DS_Store
+*.pem
+
+# Debug
+*.tsbuildinfo
+
+# Convex
+.convex/
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+venv/
+ENV/
+.venv
+
+# Archives
+_archive_git_histories/
+
+# IDEs
+.idea/
+.vscode/
+*.swp
+*.swo
+.cursor/
+.claude/
+.mcp.json
+.env.local
+.cursorrules
+
+# MCP (project-specific configs only, root .mcp.json is committed)
+give-care-app/.mcp.json
+give-care-site/.mcp.json
+give-care-story/.mcp.json
+
+# Temporary
+_drafts/
+*.backup
+.DS_Store

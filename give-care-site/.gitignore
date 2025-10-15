@@ -1,0 +1,5 @@
+# Project-specific patterns only
+# Common patterns are handled by root .gitignore
+
+# Next.js specific build info
+tsconfig.tsbuildinfo

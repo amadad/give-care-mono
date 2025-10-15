@@ -1,0 +1,5 @@
+# Project-specific patterns only
+# Common patterns are handled by root .gitignore
+
+# Next.js specific (if needed beyond root)
+app/components/.DS_Store
