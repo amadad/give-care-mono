@@ -1,5 +1,27 @@
-# Project-specific patterns only
-# Common patterns are handled by root .gitignore
+# Next.js
+.next/
+out/
 
-# Next.js specific (if needed beyond root)
+# Environment
+.env
+.env*.local
+
+# Dependencies
+node_modules/
+
+# Build
+dist/
+
+# Testing
+coverage/
+
+# Logs
+*.log
+
+# OS
+.DS_Store
 app/components/.DS_Store
+
+# IDE
+.idea/
+.vscode/

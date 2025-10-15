@@ -1,6 +1,36 @@
-# Project-specific patterns only
-# Common patterns are handled by root .gitignore
-
-# Convex auto-generated files (specific to give-care-app)
+# Convex specific
 convex/_generated/
+.convex/
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# Dependencies
+node_modules/
+
+# Build
+dist/
+build/
+
+# Testing
+coverage/
+
+# Logs
+*.log
+npm-debug.log*
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Admin frontend Convex generated
+admin-frontend/convex/_generated/
 _REF/admin-frontend/convex/_generated/

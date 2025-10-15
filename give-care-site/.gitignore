@@ -1,5 +1,31 @@
-# Project-specific patterns only
-# Common patterns are handled by root .gitignore
+# Next.js
+.next/
+out/
 
-# Next.js specific build info
+# Environment
+.env
+.env*.local
+
+# Dependencies
+node_modules/
+
+# Build
+dist/
+build/
 tsconfig.tsbuildinfo
+
+# Testing
+coverage/
+
+# Logs
+*.log
+
+# OS
+.DS_Store
+
+# IDE
+.idea/
+.vscode/
+
+# Drafts
+_drafts/
