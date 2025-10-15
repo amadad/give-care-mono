@@ -47,7 +47,17 @@ export const giveCareContextSchema = z.object({
 
   // Compliance
   consentAt: z.string().nullable().default(null),
-  languagePreference: z.string().default('en')
+  languagePreference: z.string().default('en'),
+
+  // Conversation Summarization (Task 9)
+  recentMessages: z.array(z.object({
+    role: z.string(),
+    content: z.string(),
+    timestamp: z.number(),
+  })).default([]),
+  historicalSummary: z.string().default(''),
+  conversationStartDate: z.number().nullable().default(null),
+  totalInteractionCount: z.number().nullable().default(null),
 });
 
 export type GiveCareContext = z.infer<typeof giveCareContextSchema>;

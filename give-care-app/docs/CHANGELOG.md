@@ -8,6 +8,47 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [0.8.0] - 2025-10-15
 
+### Added - Conversation Summarization (Task 9 - OpenPoke Analysis)
+- **Automatic conversation summarization** for infinite context retention
+  - Preserves context beyond OpenAI's 30-day session limit
+  - Recent messages (<7 days) kept in full detail
+  - Historical messages (>=7 days) compressed to 500 tokens using GPT-4o-mini
+  - Critical facts never summarized (care recipient name, crisis history, profile fields)
+  - Expected impact: 60-80% token cost reduction for users with 100+ messages
+
+- **Database schema: users table updates** (4 new fields)
+  - `recentMessages` - Array of {role, content, timestamp} for last 7 days
+  - `historicalSummary` - Compressed summary of messages >7 days old (max 500 tokens)
+  - `conversationStartDate` - Timestamp when user first interacted
+  - `totalInteractionCount` - Total number of messages exchanged
+
+- **Context integration** (`src/context.ts`)
+  - Added 4 new fields to GiveCareContext with Zod validation
+  - Recent messages available to agents for detailed context
+  - Historical summary provides compressed long-term context
+
+- **Summarization functions** (`convex/summarization.ts`)
+  - `splitMessagesByRecency()` - Splits messages by 7-day threshold
+  - `summarizeMessages()` - OpenAI GPT-4o-mini summarization (focus: caregiver challenges and progress)
+  - `updateCaregiverProfile()` - Main summarization logic (action)
+  - `summarizeAllUsers()` - Daily cron job processor
+  - `calculateTokenSavings()` - Validates 60-80% token reduction
+  - `estimateMonthlyCostSavings()` - Cost analysis at scale (~$2-5/month at 1,000 users)
+
+- **Daily summarization cron** (`convex/crons.ts`)
+  - Runs at 3am PT (11:00 UTC) - low usage period
+  - Processes active users with >30 messages
+  - Updates user profiles with recent/historical split
+
+- **Testing**: 45 comprehensive tests
+  - Schema validation (8 tests) - All passing ✅
+  - Message splitting (7 tests) - Requires OpenAI mocking
+  - Summarization logic (10 tests) - Requires OpenAI mocking
+  - Critical facts preservation (6 tests) - Requires OpenAI mocking
+  - Context integration (5 tests) - All passing ✅
+  - Cron scheduling (4 tests) - Requires OpenAI mocking
+  - Token cost reduction (5 tests) - Requires OpenAI mocking
+
 ### Added - Working Memory System (Task 10 - OpenPoke Analysis)
 - **Structured memory recording** for important caregiver information
   - Categories: care_routine, preference, intervention_result, crisis_trigger

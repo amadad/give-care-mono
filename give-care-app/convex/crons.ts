@@ -89,4 +89,27 @@ crons.interval(
   internal.triggers.processDueTriggers
 );
 
+/**
+ * CONVERSATION SUMMARIZATION (Task 9)
+ * Runs daily at 3am PT (11:00 UTC during standard time)
+ *
+ * Automatically summarizes historical conversation messages to:
+ * - Preserve context beyond OpenAI's 30-day session limit
+ * - Reduce token costs by 60-80% for long-term users
+ * - Enable infinite context retention
+ *
+ * Processes active users with >30 messages:
+ * - Recent messages (< 7 days): Full detail preserved
+ * - Historical messages (>= 7 days, >20 messages): Compressed to 500 tokens
+ * - Critical facts: Never summarized (care recipient name, crisis history)
+ */
+crons.daily(
+  'conversation-summarization',
+  {
+    hourUTC: 11,
+    minuteUTC: 0,
+  },
+  internal.summarization.summarizeAllUsers
+);
+
 export default crons;

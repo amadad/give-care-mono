@@ -50,7 +50,17 @@ export default defineSchema({
     lastProactiveMessageAt: v.optional(v.number()),
     lastCrisisEventAt: v.optional(v.number()),
     crisisFollowupCount: v.optional(v.number()),
-    reactivationMessageCount: v.optional(v.number())
+    reactivationMessageCount: v.optional(v.number()),
+
+    // Conversation Summarization (Task 9)
+    recentMessages: v.optional(v.array(v.object({
+      role: v.string(),
+      content: v.string(),
+      timestamp: v.number(),
+    }))),
+    historicalSummary: v.optional(v.string()),
+    conversationStartDate: v.optional(v.number()),
+    totalInteractionCount: v.optional(v.number()),
   })
     .index("email", ["email"]) // For admin login
     .index("by_phone", ["phoneNumber"]) // For SMS user lookup
