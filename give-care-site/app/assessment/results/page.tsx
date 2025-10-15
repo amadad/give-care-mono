@@ -1,7 +1,15 @@
 'use client';
 
 import { useSearchParams } from 'next/navigation';
-import { Suspense, type ReactNode } from 'react';
+import { Suspense } from 'react';
+
+function LoadingFallback() {
+  return (
+    <div className="min-h-screen flex items-center justify-center">
+      <div className="loading loading-spinner loading-lg text-amber-600"></div>
+    </div>
+  );
+}
 
 function ThankYouContent() {
   const searchParams = useSearchParams();
@@ -127,14 +135,8 @@ function ThankYouContent() {
 }
 
 export default function AssessmentResultsThankYou() {
-  const fallback = (
-    <div className="min-h-screen flex items-center justify-center">
-      <div className="loading loading-spinner loading-lg text-amber-600"></div>
-    </div>
-  ) as ReactNode;
-
   return (
-    <Suspense fallback={fallback}>
+    <Suspense fallback={<LoadingFallback />}>
       <ThankYouContent />
     </Suspense>
   );
