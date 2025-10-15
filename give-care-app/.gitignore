@@ -1,5 +1,5 @@
 # Convex specific
-convex/_generated/
+# convex/_generated/ - Commented out to allow committing types for monorepo builds
 .convex/
 
 # Environment
