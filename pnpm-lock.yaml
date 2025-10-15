@@ -19,13 +19,13 @@ importers:
         version: 0.37.4
       '@convex-dev/auth':
         specifier: ^0.0.90
-        version: 0.0.90(@auth/core@0.37.4)(convex@1.27.5(react@19.1.0))(react@19.1.0)
+        version: 0.0.90(@auth/core@0.37.4)(convex@1.28.0(react@19.1.0))(react@19.1.0)
       '@convex-dev/rate-limiter':
         specifier: ^0.2.13
-        version: 0.2.13(convex@1.27.5(react@19.1.0))(react@19.1.0)
+        version: 0.2.13(convex@1.28.0(react@19.1.0))(react@19.1.0)
       '@convex-dev/twilio':
         specifier: ^0.1.7
-        version: 0.1.7(convex@1.27.5(react@19.1.0))
+        version: 0.1.7(convex@1.28.0(react@19.1.0))
       '@openai/agents':
         specifier: ^0.1.9
         version: 0.1.9(ws@8.18.3)(zod@3.25.76)
@@ -33,8 +33,8 @@ importers:
         specifier: ^0.1.5
         version: 0.1.5(@openai/agents@0.1.9(ws@8.18.3)(zod@3.25.76))(ws@8.18.3)(zod@3.25.76)
       convex:
-        specifier: ^1.11.0
-        version: 1.27.5(react@19.1.0)
+        specifier: ^1.28.0
+        version: 1.28.0(react@19.1.0)
       dotenv:
         specifier: ^17.2.3
         version: 17.2.3
@@ -59,7 +59,7 @@ importers:
         version: 22.18.10
       convex-test:
         specifier: ^0.0.38
-        version: 0.0.38(convex@1.27.5(react@19.1.0))
+        version: 0.0.38(convex@1.28.0(react@19.1.0))
       eslint:
         specifier: ^9.0.0
         version: 9.37.0(jiti@2.6.1)
@@ -3137,6 +3137,22 @@ packages:
 
   convex@1.27.5:
     resolution: {integrity: sha512-6YU/AVPnoNdAaJABKBI9c5IqRSKsow/c4yo/ntaOWtd8Dff2P2zaImA/ougICfPgTuTvjKRbgkxk6lJhODzb4g==}
+    engines: {node: '>=18.0.0', npm: '>=7.0.0'}
+    hasBin: true
+    peerDependencies:
+      '@auth0/auth0-react': ^2.0.1
+      '@clerk/clerk-react': ^4.12.8 || ^5.0.0
+      react: ^18.0.0 || ^19.0.0-0 || ^19.0.0
+    peerDependenciesMeta:
+      '@auth0/auth0-react':
+        optional: true
+      '@clerk/clerk-react':
+        optional: true
+      react:
+        optional: true
+
+  convex@1.28.0:
+    resolution: {integrity: sha512-40FgeJ/LxP9TxnkDDztU/A5gcGTdq1klcTT5mM0Ak+kSlQiDktMpjNX1TfkWLxXaE3lI4qvawKH95v2RiYgFxA==}
     engines: {node: '>=18.0.0', npm: '>=7.0.0'}
     hasBin: true
     peerDependencies:
@@ -6785,12 +6801,12 @@ snapshots:
 
   '@chevrotain/utils@11.0.3': {}
 
-  '@convex-dev/auth@0.0.90(@auth/core@0.37.4)(convex@1.27.5(react@19.1.0))(react@19.1.0)':
+  '@convex-dev/auth@0.0.90(@auth/core@0.37.4)(convex@1.28.0(react@19.1.0))(react@19.1.0)':
     dependencies:
       '@auth/core': 0.37.4
       '@oslojs/crypto': 1.0.1
       '@oslojs/encoding': 1.1.0
-      convex: 1.27.5(react@19.1.0)
+      convex: 1.28.0(react@19.1.0)
       cookie: 1.0.2
       is-network-error: 1.3.0
       jose: 5.10.0
@@ -6802,15 +6818,15 @@ snapshots:
     optionalDependencies:
       react: 19.1.0
 
-  '@convex-dev/rate-limiter@0.2.13(convex@1.27.5(react@19.1.0))(react@19.1.0)':
+  '@convex-dev/rate-limiter@0.2.13(convex@1.28.0(react@19.1.0))(react@19.1.0)':
     dependencies:
-      convex: 1.27.5(react@19.1.0)
+      convex: 1.28.0(react@19.1.0)
     optionalDependencies:
       react: 19.1.0
 
-  '@convex-dev/twilio@0.1.7(convex@1.27.5(react@19.1.0))':
+  '@convex-dev/twilio@0.1.7(convex@1.28.0(react@19.1.0))':
     dependencies:
-      convex: 1.27.5(react@19.1.0)
+      convex: 1.28.0(react@19.1.0)
 
   '@csstools/color-helpers@5.1.0': {}
 
@@ -9406,11 +9422,18 @@ snapshots:
 
   convert-source-map@2.0.0: {}
 
-  convex-test@0.0.38(convex@1.27.5(react@19.1.0)):
+  convex-test@0.0.38(convex@1.28.0(react@19.1.0)):
     dependencies:
-      convex: 1.27.5(react@19.1.0)
+      convex: 1.28.0(react@19.1.0)
 
   convex@1.27.5(react@19.1.0):
+    dependencies:
+      esbuild: 0.25.4
+      prettier: 3.6.2
+    optionalDependencies:
+      react: 19.1.0
+
+  convex@1.28.0(react@19.1.0):
     dependencies:
       esbuild: 0.25.4
       prettier: 3.6.2

@@ -23,7 +23,7 @@
     "@convex-dev/twilio": "^0.1.7",
     "@openai/agents": "^0.1.9",
     "@openai/agents-extensions": "^0.1.5",
-    "convex": "^1.11.0",
+    "convex": "^1.28.0",
     "dotenv": "^17.2.3",
     "event-target-polyfill": "^0.0.4",
     "openai": "^4.0.0",
