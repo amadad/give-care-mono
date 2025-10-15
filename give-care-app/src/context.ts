@@ -103,10 +103,17 @@ export const contextHelpers = {
   },
 
   /**
-   * Record an attempt to collect a profile field
+   * Record an attempt to collect a profile field (pure function)
+   * Returns new context with updated attempt count (immutable)
    */
-  recordFieldAttempt(ctx: GiveCareContext, field: string): void {
-    ctx.onboardingAttempts[field] = (ctx.onboardingAttempts[field] || 0) + 1;
+  recordFieldAttempt(ctx: GiveCareContext, field: string): GiveCareContext {
+    return {
+      ...ctx,
+      onboardingAttempts: {
+        ...ctx.onboardingAttempts,
+        [field]: (ctx.onboardingAttempts[field] || 0) + 1
+      }
+    };
   }
 };
 

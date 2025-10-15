@@ -109,7 +109,9 @@ PRD P4: Soft confirm first, then call tool`,
           return `COOLDOWN:${attemptKey}`;
         }
         context[contextKey] = value;
-        contextHelpers.recordFieldAttempt(context, attemptKey);
+        // Update context with new attempt count (immutable pattern)
+        const updatedContext = contextHelpers.recordFieldAttempt(context, attemptKey);
+        Object.assign(context, updatedContext);
         updatedFields.push(display);
       }
     }

@@ -62,7 +62,7 @@ export interface RunResultWithContext<T> {
 export function hasContextState<T>(
   result: any
 ): result is RunResultWithContext<T> {
-  return result && typeof result === 'object' && 'state' in result;
+  return !!(result && typeof result === 'object' && 'state' in result);
 }
 
 /**

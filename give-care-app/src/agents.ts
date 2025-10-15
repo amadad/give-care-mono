@@ -19,7 +19,7 @@ import {
   safetyGuardrail,
 } from "./safety";
 import type { ExtendedModelSettings, RunResultWithContext } from "./types/openai-extensions";
-import { extractTokenUsage } from "./types/openai-extensions";
+import { extractTokenUsage, hasContextState } from "./types/openai-extensions";
 
 /**
  * Service Tier Configuration - Responses API
@@ -112,11 +112,13 @@ export async function runAgentTurn(
       ? result.finalOutput
       : (result.finalOutput ? JSON.stringify(result.finalOutput) : '');
 
-    // Access updated context from run state using type-safe extraction
-    const resultWithContext = result as any as RunResultWithContext<GiveCareContext>;
-    const updatedContext = resultWithContext.state?.context || context;
+    // Access updated context from run state using type-safe type guard
+    const updatedContext = hasContextState<GiveCareContext>(result)
+      ? result.state.context
+      : context;
 
     // Extract telemetry data using type-safe helpers
+    const resultWithContext = result as any as RunResultWithContext<GiveCareContext>;
     const agentName = resultWithContext.agentName || 'main';
     const toolCalls = resultWithContext.toolCalls || [];
     const tokenUsage = extractTokenUsage(result);
