@@ -70,4 +70,23 @@ crons.weekly(
   internal.functions.scheduling.generateWeeklyReport
 );
 
+/**
+ * RRULE TRIGGER PROCESSOR (Task 8)
+ * Runs every 15 minutes
+ *
+ * Processes personalized wellness check-in triggers based on RRULE schedules.
+ * Replaces fixed cron times with per-user customizable schedules.
+ *
+ * Features:
+ * - Timezone-aware scheduling (IANA timezones)
+ * - Daily, weekly, custom patterns (RFC 5545 RRULE)
+ * - Automatic next occurrence calculation
+ * - Missed trigger handling (skips >24h old)
+ */
+crons.interval(
+  'process-rrule-triggers',
+  { minutes: 15 },
+  internal.triggers.processDueTriggers
+);
+
 export default crons;

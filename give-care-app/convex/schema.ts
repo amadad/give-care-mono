@@ -457,4 +457,22 @@ export default defineSchema({
     .index("by_submitted_at", ["submittedAt"])
     .index("by_band", ["band"]),
 
+  // TRIGGERS (RRULE-based scheduling for personalized wellness check-ins)
+  triggers: defineTable({
+    userId: v.id("users"),
+    recurrenceRule: v.string(), // RRULE format (RFC 5545) e.g., "FREQ=DAILY;BYHOUR=9;BYMINUTE=0"
+    type: v.string(), // "wellness_checkin" | "assessment_reminder" | "crisis_followup"
+    message: v.string(),
+    timezone: v.string(), // IANA timezone (e.g., "America/Los_Angeles", "America/New_York")
+    enabled: v.boolean(),
+    nextOccurrence: v.number(), // Unix timestamp (milliseconds)
+    createdAt: v.number(),
+    lastTriggeredAt: v.optional(v.number()),
+  })
+    .index("by_user", ["userId"])
+    .index("by_next_occurrence", ["nextOccurrence", "enabled"])
+    .index("by_type", ["type"])
+    .index("by_enabled", ["enabled"])
+    .index("by_user_type", ["userId", "type"]),
+
 });

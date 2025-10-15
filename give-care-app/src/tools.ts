@@ -412,6 +412,86 @@ export const findInterventions = tool({
   },
 });
 
+// Wellness Schedule (RRULE Triggers - Task 8)
+export const setWellnessSchedule = tool({
+  name: 'set_wellness_schedule',
+  description: `Set personalized wellness check-in schedule for the user. Supports daily, every-other-day, and weekly patterns with specific times and timezone.`,
+
+  parameters: z.object({
+    frequency: z.enum(['daily', 'every_other_day', 'weekly', 'custom']),
+    preferred_time: z.string(), // "9:00 AM", "14:30", etc.
+    timezone: z.string(), // "America/Los_Angeles", "America/New_York", etc.
+    days_of_week: z.array(z.enum(['MO', 'TU', 'WE', 'TH', 'FR', 'SA', 'SU'])).nullable().optional(),
+  }),
+
+  execute: async (input, runContext) => {
+    const context = runContext!.context as GiveCareContext;
+
+    // Validate weekly requires daysOfWeek
+    if (input.frequency === 'weekly' && (!input.days_of_week || input.days_of_week.length === 0)) {
+      return "For weekly check-ins, I need to know which days work best. Which days? (e.g., Mon/Wed/Fri)";
+    }
+
+    // Parse time
+    let time: { hour: number; minute: number };
+    try {
+      // Import parseTime from convex/triggers.ts
+      const { parseTime } = await import('../convex/triggers');
+      time = parseTime(input.preferred_time);
+    } catch (error) {
+      return `I couldn't understand the time "${input.preferred_time}". Please use format like "9:00 AM" or "14:30".`;
+    }
+
+    // Build RRULE
+    let rrule: string;
+    try {
+      const { buildRRule } = await import('../convex/triggers');
+      rrule = buildRRule(input.frequency, time, input.days_of_week);
+    } catch (error) {
+      return `Error setting schedule: ${error}`;
+    }
+
+    // Create trigger via Convex
+    const convexClient = (runContext as any)?.convexClient;
+    if (!convexClient) {
+      return "Schedule feature not available right now. Try again in a moment.";
+    }
+
+    try {
+      await convexClient.mutation(
+        api.triggers.createTrigger,
+        {
+          userId: context.userId,
+          recurrenceRule: rrule,
+          type: 'wellness_checkin',
+          message: 'Quick check-in: How are you feeling today?',
+          timezone: input.timezone,
+        }
+      );
+
+      // Format confirmation message
+      let confirmMsg = `✓ Set wellness check-ins for ${input.frequency.replace('_', ' ')} at ${input.preferred_time}`;
+
+      if (input.frequency === 'weekly' && input.days_of_week) {
+        const dayNames: Record<string, string> = {
+          MO: 'Mon', TU: 'Tue', WE: 'Wed', TH: 'Thu', FR: 'Fri', SA: 'Sat', SU: 'Sun',
+        };
+        const days = input.days_of_week.map(d => dayNames[d]).join('/');
+        confirmMsg += ` on ${days}`;
+      }
+
+      confirmMsg += ` (${input.timezone.split('/')[1]?.replace('_', ' ') || input.timezone})`;
+      confirmMsg += '\n\nI\'ll check in at those times. You can update this anytime.';
+
+      return confirmMsg;
+
+    } catch (error) {
+      console.error('[setWellnessSchedule] Error creating trigger:', error);
+      return "I couldn't set the schedule right now. Want to try again later?";
+    }
+  },
+});
+
 // Export all tools
 export const allTools = [
   updateProfile,
@@ -419,4 +499,5 @@ export const allTools = [
   recordAssessmentAnswer,
   checkWellnessStatus,
   findInterventions,
+  setWellnessSchedule,
 ];

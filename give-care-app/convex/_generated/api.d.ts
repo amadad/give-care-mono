@@ -39,6 +39,7 @@ import type * as services_MessageHandler from "../services/MessageHandler.js";
 import type * as stripe from "../stripe.js";
 import type * as subscriptions from "../subscriptions.js";
 import type * as test from "../test.js";
+import type * as triggers from "../triggers.js";
 import type * as twilio from "../twilio.js";
 
 import type {
@@ -87,6 +88,7 @@ declare const fullApi: ApiFromModules<{
   stripe: typeof stripe;
   subscriptions: typeof subscriptions;
   test: typeof test;
+  triggers: typeof triggers;
   twilio: typeof twilio;
 }>;
 declare const fullApiWithMounts: typeof fullApi;
