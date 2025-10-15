@@ -96,7 +96,7 @@ export const getRecentConversations = query({
 
     return await ctx.db
       .query('conversations')
-      .withIndex('by_user_time', (q) => q.eq('userId', args.userId))
+      .withIndex('by_user_time', (q: any) => q.eq('userId', args.userId))
       .order('desc')
       .take(limit);
   },
@@ -112,7 +112,7 @@ export const getConversationMetrics = query({
 
     const messages = await ctx.db
       .query('conversations')
-      .withIndex('by_user_time', (q) => q.eq('userId', args.userId))
+      .withIndex('by_user_time', (q: any) => q.eq('userId', args.userId))
       .filter((q) => q.gte(q.field('timestamp'), since))
       .collect();
 

@@ -11,8 +11,9 @@
  */
 
 import { RateLimiter } from '@convex-dev/rate-limiter';
+import { components } from './_generated/api';
 
-export const rateLimiter = new RateLimiter();
+export const rateLimiter = new RateLimiter((components as any).rateLimiter);
 
 /**
  * Rate limit configurations using token bucket algorithm

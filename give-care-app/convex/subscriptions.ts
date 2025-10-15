@@ -21,7 +21,7 @@ export const createPendingUser = internalMutation({
     // Check if user already exists by phone number
     const existing = await ctx.db
       .query("users")
-      .withIndex("by_phone", (q) => q.eq("phoneNumber", phoneNumber))
+      .withIndex("by_phone", (q: any) => q.eq("phoneNumber", phoneNumber))
       .first();
 
     if (existing) {
@@ -179,12 +179,12 @@ export const checkSubscription = query({
     if (phoneNumber) {
       user = await ctx.db
         .query("users")
-        .withIndex("by_phone", (q) => q.eq("phoneNumber", phoneNumber))
+        .withIndex("by_phone", (q: any) => q.eq("phoneNumber", phoneNumber))
         .first();
     } else if (email) {
       user = await ctx.db
         .query("users")
-        .withIndex("email", (q) => q.eq("email", email))
+        .withIndex("email", (q: any) => q.eq("email", email))
         .first();
     }
 

@@ -246,7 +246,7 @@ async function findResourcesInternal(
       const programAreas = candidateAreas.filter((area) => area.programId === typedProgram._id);
       const resources = (await ctx.db
         .query("resources")
-        .withIndex("by_program", (q) => q.eq("programId", typedProgram._id))
+        .withIndex("by_program", (q: any) => q.eq("programId", typedProgram._id))
         .collect()) as ResourceRecord[];
 
       for (const resourceDoc of resources) {
@@ -335,7 +335,7 @@ export const verifyResource = mutation({
 
     const programAreas = (await ctx.db
       .query("serviceAreas")
-      .withIndex("by_program", (q) => q.eq("programId", resource.programId))
+      .withIndex("by_program", (q: any) => q.eq("programId", resource.programId))
       .collect()) as ServiceAreaRecord[];
     const area = programAreas[0];
 
@@ -393,7 +393,7 @@ export const getResourceRecommendations = query({
     // Get latest wellness score with pressure zones
     const score = await ctx.db
       .query("wellnessScores")
-      .withIndex("by_user", q => q.eq("userId", userId))
+      .withIndex("by_user", (q: any) => q.eq("userId", userId))
       .order("desc")
       .first();
 
@@ -447,7 +447,7 @@ export const feedback = mutation({
 
     const programAreas = (await ctx.db
       .query("serviceAreas")
-      .withIndex("by_program", (q) => q.eq("programId", resource.programId))
+      .withIndex("by_program", (q: any) => q.eq("programId", resource.programId))
       .collect()) as ServiceAreaRecord[];
     const area = programAreas[0];
     const jurisdictionFit = scoreJurisdictionFit(area?.type, resource.jurisdictionLevel);

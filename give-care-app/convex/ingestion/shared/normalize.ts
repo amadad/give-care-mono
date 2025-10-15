@@ -74,7 +74,7 @@ export function parseAddress(
   // If fields are already separated, use them
   if (city && state && zip) {
     return {
-      street: address || null,
+      street: address || undefined,
       city,
       state,
       zip
@@ -83,24 +83,24 @@ export function parseAddress(
 
   // Otherwise, try to parse from combined address string
   if (!address) {
-    return { street: null, city: null, state: null, zip: null };
+    return { street: undefined, city: undefined, state: undefined, zip: undefined };
   }
 
   // Extract ZIP code (5 digits)
   const zipMatch = address.match(/\b(\d{5})(-\d{4})?\b/);
-  const extractedZip = zipMatch ? zipMatch[1] : zip || null;
+  const extractedZip = zipMatch ? zipMatch[1] : zip || undefined;
 
   // Extract state (2 uppercase letters)
   const stateMatch = address.match(/\b([A-Z]{2})\b/);
-  const extractedState = stateMatch ? stateMatch[1] : state || null;
+  const extractedState = stateMatch ? stateMatch[1] : state || undefined;
 
   // City is usually the part before state/ZIP
   // Pattern: "Street, City, State ZIP"
   const parts = address.split(",").map(p => p.trim());
-  let extractedCity = city || null;
+  let extractedCity = city || undefined;
 
   if (parts.length >= 2) {
-    extractedCity = parts[parts.length - 2] || null;
+    extractedCity = parts[parts.length - 2] || undefined;
   }
 
   // Street is everything before city

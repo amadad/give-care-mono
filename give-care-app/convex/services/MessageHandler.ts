@@ -130,7 +130,7 @@ export class MessageHandler {
     // 2a. Spam protection (20/hour per user)
     const spamCheck = await rateLimiter.limit(this.ctx, 'spam', {
       key: phoneNumber,
-      ...RATE_LIMITS.spamProtection,
+      config: RATE_LIMITS.spamProtection as any,
     });
 
     if (!spamCheck.ok) {
@@ -141,7 +141,7 @@ export class MessageHandler {
     // 2b. Per-user SMS limit (10/day per user)
     const smsCheck = await rateLimiter.limit(this.ctx, 'sms-user', {
       key: phoneNumber,
-      ...RATE_LIMITS.smsPerUser,
+      config: RATE_LIMITS.smsPerUser as any,
     });
 
     if (!smsCheck.ok) {
@@ -151,7 +151,7 @@ export class MessageHandler {
     // 2c. Global SMS limit (1000/hour)
     const globalCheck = await rateLimiter.limit(this.ctx, 'sms-global', {
       key: 'global',
-      ...RATE_LIMITS.smsGlobal,
+      config: RATE_LIMITS.smsGlobal as any,
     });
 
     if (!globalCheck.ok) {
@@ -162,7 +162,7 @@ export class MessageHandler {
     // 2d. OpenAI rate limit (100/min)
     const openaiCheck = await rateLimiter.limit(this.ctx, 'openai', {
       key: 'global',
-      ...RATE_LIMITS.openaiCalls,
+      config: RATE_LIMITS.openaiCalls as any,
     });
 
     if (!openaiCheck.ok) {
@@ -173,7 +173,7 @@ export class MessageHandler {
     // 2e. Assessment rate limit (3/day per user)
     const assessmentCheck = await rateLimiter.limit(this.ctx, 'assessment', {
       key: phoneNumber,
-      ...RATE_LIMITS.assessmentPerUser,
+      config: RATE_LIMITS.assessmentPerUser as any,
     });
 
     return {
@@ -361,14 +361,14 @@ export class MessageHandler {
     const definition = getAssessmentDefinition(context.assessmentType!);
     const totalQuestions = definition?.questions.length ?? 0;
 
-    const sessionId = await this.ctx.runMutation(
+    const sessionId = (await this.ctx.runMutation(
       internal.functions.assessments.insertAssessmentSession,
       {
         userId,
         type: context.assessmentType!,
         totalQuestions,
       }
-    );
+    )) as any;
 
     context.assessmentSessionId = sessionId;
     console.log(`[Assessment] Created session ${sessionId}`);
@@ -392,8 +392,8 @@ export class MessageHandler {
       const question = definition?.questions.find((q) => q.id === questionId);
 
       await this.ctx.runMutation(internal.functions.assessments.insertAssessmentResponse, {
-        sessionId,
-        userId: updatedContext.userId,
+        sessionId: sessionId as any,
+        userId: updatedContext.userId as any,
         questionId,
         questionText: question?.text ?? '',
         responseValue,
@@ -411,7 +411,7 @@ export class MessageHandler {
     );
 
     await this.ctx.runMutation(internal.functions.assessments.completeAssessmentSession, {
-      sessionId: context.assessmentSessionId!,
+      sessionId: context.assessmentSessionId! as any,
       overallScore: scoreData.overall_score,
       domainScores: scoreData.subscores,
     });
@@ -579,7 +579,8 @@ export class MessageHandler {
       console.log(`[Onboarding] User ${user._id} completed onboarding`);
 
       await this.ctx.runAction(internal.functions.scheduling.checkOnboardingAndNudge, {
-        userId: user._id,
+        userId: user._id as any,
+        nudgeStage: 1, // Start with first nudge (48hr)
       });
     }
   }

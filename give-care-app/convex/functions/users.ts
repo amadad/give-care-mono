@@ -20,7 +20,7 @@ export const getUserByPhone = internalQuery({
   handler: async (ctx, args) => {
     return await ctx.db
       .query('users')
-      .withIndex('by_phone', (q) => q.eq('phoneNumber', args.phoneNumber))
+      .withIndex('by_phone', (q: any) => q.eq('phoneNumber', args.phoneNumber))
       .unique();
   },
 });
@@ -188,7 +188,7 @@ export const getOrCreateByPhone = internalMutation({
   handler: async (ctx, args) => {
     const existing = await ctx.db
       .query('users')
-      .withIndex('by_phone', (q) => q.eq('phoneNumber', args.phoneNumber))
+      .withIndex('by_phone', (q: any) => q.eq('phoneNumber', args.phoneNumber))
       .unique();
 
     if (existing) {
@@ -281,7 +281,7 @@ export const getEligibleForCrisisDaily = internalQuery({
 
     const users = await ctx.db
       .query('users')
-      .withIndex('by_burnout_band', (q) => q.eq('burnoutBand', 'crisis'))
+      .withIndex('by_burnout_band', (q: any) => q.eq('burnoutBand', 'crisis'))
       .collect();
 
     // Filter: crisis within last 7 days, not contacted in 2+ days
@@ -306,7 +306,7 @@ export const getEligibleForCrisisWeekly = internalQuery({
 
     const users = await ctx.db
       .query('users')
-      .withIndex('by_burnout_band', (q) => q.eq('burnoutBand', 'crisis'))
+      .withIndex('by_burnout_band', (q: any) => q.eq('burnoutBand', 'crisis'))
       .collect();
 
     // Filter: crisis >7 days ago, not proactively messaged in 7+ days, not contacted in 3+ days
@@ -331,7 +331,7 @@ export const getEligibleForHighBurnoutCheckin = internalQuery({
 
     const users = await ctx.db
       .query('users')
-      .withIndex('by_burnout_band', (q) => q.eq('burnoutBand', 'high'))
+      .withIndex('by_burnout_band', (q: any) => q.eq('burnoutBand', 'high'))
       .collect();
 
     // Filter: active, not proactively messaged in 3+ days, not contacted in 2+ days
@@ -354,7 +354,7 @@ export const getEligibleForModerateCheckin = internalQuery({
 
     const users = await ctx.db
       .query('users')
-      .withIndex('by_burnout_band', (q) => q.eq('burnoutBand', 'moderate'))
+      .withIndex('by_burnout_band', (q: any) => q.eq('burnoutBand', 'moderate'))
       .collect();
 
     // Filter: active, not proactively messaged in 7+ days, not contacted in 3+ days

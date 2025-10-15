@@ -22,7 +22,7 @@ export const getLatestSession = internalQuery({
   handler: async (ctx, args) => {
     const query = ctx.db
       .query('assessmentSessions')
-      .withIndex('by_user', (q) => q.eq('userId', args.userId))
+      .withIndex('by_user', (q: any) => q.eq('userId', args.userId))
       .order('desc');
 
     const sessions = await query.collect();
@@ -40,7 +40,7 @@ export const getSessionResponses = internalQuery({
   handler: async (ctx, args) => {
     return await ctx.db
       .query('assessmentResponses')
-      .withIndex('by_session', (q) => q.eq('sessionId', args.sessionId))
+      .withIndex('by_session', (q: any) => q.eq('sessionId', args.sessionId))
       .collect();
   },
 });

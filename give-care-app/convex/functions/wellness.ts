@@ -15,7 +15,7 @@ export const getLatestScore = query({
   handler: async (ctx, args) => {
     return await ctx.db
       .query('wellnessScores')
-      .withIndex('by_user_recorded', (q) => q.eq('userId', args.userId))
+      .withIndex('by_user_recorded', (q: any) => q.eq('userId', args.userId))
       .order('desc')
       .first();
   },
@@ -31,7 +31,7 @@ export const getScoreHistory = query({
 
     return await ctx.db
       .query('wellnessScores')
-      .withIndex('by_user_recorded', (q) => q.eq('userId', args.userId))
+      .withIndex('by_user_recorded', (q: any) => q.eq('userId', args.userId))
       .order('desc')
       .take(limit);
   },
@@ -46,7 +46,7 @@ export const trend = query({
     const cutoff = Date.now() - args.windowDays * 24 * 60 * 60 * 1000;
     const points = await ctx.db
       .query('wellnessScores')
-      .withIndex('by_user_recorded', (q) => q.eq('userId', args.userId))
+      .withIndex('by_user_recorded', (q: any) => q.eq('userId', args.userId))
       .filter((q) => q.gte(q.field('recordedAt'), cutoff))
       .collect();
 
@@ -75,7 +75,7 @@ export const getPressureZoneTrends = query({
     const cutoff = Date.now() - args.windowDays * 24 * 60 * 60 * 1000;
     const scores = await ctx.db
       .query('wellnessScores')
-      .withIndex('by_user_recorded', (q) => q.eq('userId', args.userId))
+      .withIndex('by_user_recorded', (q: any) => q.eq('userId', args.userId))
       .filter((q) => q.gte(q.field('recordedAt'), cutoff))
       .collect();
 
@@ -146,7 +146,7 @@ export const saveScore = internalMutation({
 
       await ctx.scheduler.runAfter(
         sevenDays,
-        internal.functions.scheduling.scheduleMessage,
+        internal.functions.scheduling.sendScheduledMessage,
         {
           userId: args.userId,
           message: `Hi ${firstName}, ready for a quick check-in? It's been a week since your last assessment. (Reply YES when ready)`,

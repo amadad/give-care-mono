@@ -28,7 +28,7 @@ export const createCheckoutSession = action({
     priceId: v.string(), // Stripe Price ID (from your Stripe Dashboard)
     couponCode: v.optional(v.string()), // Optional coupon code (CAREGIVER50, PARTNER-ORG, etc.)
   },
-  handler: async (ctx, { fullName, email, phoneNumber, priceId, couponCode }) => {
+  handler: async (ctx, { fullName, email, phoneNumber, priceId, couponCode }): Promise<string | null> => {
     const domain = process.env.HOSTING_URL ?? "http://localhost:5173";
     const stripe = new Stripe(process.env.STRIPE_KEY!, {
       apiVersion: "2024-11-20.acacia",

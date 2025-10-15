@@ -74,13 +74,14 @@ async function sendProactiveMessage(
   });
 
   // Log conversation
-  await ctx.runMutation(internal.functions.conversations.create, {
+  await ctx.runMutation(internal.functions.conversations.logMessage, {
     userId,
     role: 'assistant',
     text: message,
     mode: 'sms',
     agentName: 'scheduled',
     metadata: { type },
+    timestamp: Date.now(),
   });
 
   // Update last proactive message timestamp (for deduplication)
@@ -122,6 +123,7 @@ export const sendTieredWellnessCheckins = internalAction({
 
     for (const user of crisisRecentUsers) {
       if (!(await canSendProactiveMessage(ctx, user._id))) continue;
+      if (!user.phoneNumber) continue; // Skip users without phone numbers
 
       const message = user.firstName
         ? `Hi ${user.firstName}, how are you doing today? 💙`
@@ -138,6 +140,7 @@ export const sendTieredWellnessCheckins = internalAction({
 
     for (const user of crisisLongerUsers) {
       if (!(await canSendProactiveMessage(ctx, user._id))) continue;
+      if (!user.phoneNumber) continue;
 
       const message = user.firstName
         ? `Hi ${user.firstName}, checking in this week - how are things going? 💙`
@@ -154,6 +157,7 @@ export const sendTieredWellnessCheckins = internalAction({
 
     for (const user of highBurnoutUsers) {
       if (!(await canSendProactiveMessage(ctx, user._id))) continue;
+      if (!user.phoneNumber) continue;
 
       const message = user.firstName
         ? `Hi ${user.firstName}, how are you holding up? 💙`
@@ -170,6 +174,7 @@ export const sendTieredWellnessCheckins = internalAction({
 
     for (const user of moderateUsers) {
       if (!(await canSendProactiveMessage(ctx, user._id))) continue;
+      if (!user.phoneNumber) continue;
 
       const message = user.firstName
         ? `Hey ${user.firstName}, how's your week going?`
@@ -213,12 +218,13 @@ export const reactivateDormantUsers = internalAction({
     );
 
     for (const user of dormantUsers) {
-      const daysSinceContact = (now - (user.lastContactAt || user.createdAt)) / DAY_MS;
+      const daysSinceContact = (now - (user.lastContactAt || user.createdAt || now)) / DAY_MS;
       const reactivationCount = user.reactivationMessageCount || 0;
 
       // Day 7: First reactivation (if count = 0)
       if (daysSinceContact >= 7 && daysSinceContact < 8 && reactivationCount === 0) {
         if (!(await canSendProactiveMessage(ctx, user._id))) continue;
+        if (!user.phoneNumber) continue;
 
         const message = user.firstName
           ? `Hey ${user.firstName}, it's been a while - how are things?`
@@ -237,6 +243,7 @@ export const reactivateDormantUsers = internalAction({
       // Day 14: Second reactivation (if count = 1)
       else if (daysSinceContact >= 14 && daysSinceContact < 15 && reactivationCount === 1) {
         if (!(await canSendProactiveMessage(ctx, user._id))) continue;
+        if (!user.phoneNumber) continue;
 
         const message = user.firstName
           ? `Just checking in, ${user.firstName} - we're here when you need us 💙`
@@ -255,6 +262,7 @@ export const reactivateDormantUsers = internalAction({
       // Day 30: Final reactivation (if count = 2)
       else if (daysSinceContact >= 30 && daysSinceContact < 31 && reactivationCount === 2) {
         if (!(await canSendProactiveMessage(ctx, user._id))) continue;
+        if (!user.phoneNumber) continue;
 
         const message = user.firstName
           ? `We miss you, ${user.firstName}! Reply anytime 💙`
@@ -391,6 +399,11 @@ export const sendScheduledMessage = internalAction({
     if (!(await canSendProactiveMessage(ctx, args.userId))) {
       console.log(`[Scheduled] Skipped ${args.type} due to deduplication`);
       return { success: false, error: 'Deduplication blocked' };
+    }
+
+    // Check phone number exists
+    if (!user.phoneNumber) {
+      return { success: false, error: 'User has no phone number' };
     }
 
     // Send message
@@ -558,6 +571,11 @@ export const checkOnboardingAndNudge = internalAction({
     // Check deduplication
     if (!(await canSendProactiveMessage(ctx, userId))) {
       return { success: false, error: 'Deduplication blocked' };
+    }
+
+    // Check phone number exists
+    if (!user.phoneNumber) {
+      return { success: false, error: 'User has no phone number' };
     }
 
     // Send nudge

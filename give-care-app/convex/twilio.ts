@@ -11,6 +11,7 @@
  */
 
 import { internalAction } from './_generated/server';
+import { components } from './_generated/api';
 import { v } from 'convex/values';
 import { MessageHandler } from './services/MessageHandler';
 
@@ -39,6 +40,30 @@ export const onIncomingMessage = internalAction({
     console.log(`[SMS] Incoming message from ${args.from}: "${args.body}"`);
 
     return handler.handle(args);
+  },
+});
+
+/**
+ * Send outbound SMS message
+ * Called by scheduled functions and other internal actions
+ */
+export const sendOutboundSMS = internalAction({
+  args: {
+    to: v.string(),
+    body: v.string(),
+  },
+  handler: async (ctx, { to, body }) => {
+    const result = await ctx.runAction(components.twilio.messages.create, {
+      to,
+      from: process.env.TWILIO_PHONE_NUMBER!,
+      body,
+      account_sid: process.env.TWILIO_ACCOUNT_SID!,
+      auth_token: process.env.TWILIO_AUTH_TOKEN!,
+      status_callback: '', // Optional webhook for delivery status
+    });
+
+    console.log(`[SMS] Sent outbound message to ${to}: "${body}"`);
+    return result;
   },
 });
 

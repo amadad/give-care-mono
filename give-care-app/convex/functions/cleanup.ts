@@ -17,7 +17,7 @@ export const deleteAllUsers = internalMutation({
         // 1. Conversations
         const conversations = await ctx.db
           .query('conversations')
-          .withIndex('by_user', (q) => q.eq('userId', user._id))
+          .withIndex('by_user', (q: any) => q.eq('userId', user._id))
           .collect();
         for (const conv of conversations) {
           await ctx.db.delete(conv._id);
@@ -26,7 +26,7 @@ export const deleteAllUsers = internalMutation({
         // 2. Knowledge usage
         const knowledgeUsage = await ctx.db
           .query('knowledgeUsage')
-          .withIndex('by_user', (q) => q.eq('userId', user._id))
+          .withIndex('by_user', (q: any) => q.eq('userId', user._id))
           .collect();
         for (const usage of knowledgeUsage) {
           await ctx.db.delete(usage._id);
@@ -35,12 +35,12 @@ export const deleteAllUsers = internalMutation({
         // 3. Assessment responses (via sessions)
         const sessions = await ctx.db
           .query('assessmentSessions')
-          .withIndex('by_user', (q) => q.eq('userId', user._id))
+          .withIndex('by_user', (q: any) => q.eq('userId', user._id))
           .collect();
         for (const session of sessions) {
           const responses = await ctx.db
             .query('assessmentResponses')
-            .withIndex('by_session', (q) => q.eq('sessionId', session._id))
+            .withIndex('by_session', (q: any) => q.eq('sessionId', session._id))
             .collect();
           for (const response of responses) {
             await ctx.db.delete(response._id);
@@ -51,7 +51,7 @@ export const deleteAllUsers = internalMutation({
         // 4. Wellness scores
         const wellnessScores = await ctx.db
           .query('wellnessScores')
-          .withIndex('by_user', (q) => q.eq('userId', user._id))
+          .withIndex('by_user', (q: any) => q.eq('userId', user._id))
           .collect();
         for (const score of wellnessScores) {
           await ctx.db.delete(score._id);
@@ -84,7 +84,7 @@ export const deleteUserByPhone = internalMutation({
   handler: async (ctx, args) => {
     const user = await ctx.db
       .query('users')
-      .withIndex('by_phone', (q) => q.eq('phoneNumber', args.phoneNumber))
+      .withIndex('by_phone', (q: any) => q.eq('phoneNumber', args.phoneNumber))
       .unique();
 
     if (!user) {
@@ -96,7 +96,7 @@ export const deleteUserByPhone = internalMutation({
       // 1. Conversations
       const conversations = await ctx.db
         .query('conversations')
-        .withIndex('by_user', (q) => q.eq('userId', user._id))
+        .withIndex('by_user', (q: any) => q.eq('userId', user._id))
         .collect();
       for (const conv of conversations) {
         await ctx.db.delete(conv._id);
@@ -105,7 +105,7 @@ export const deleteUserByPhone = internalMutation({
       // 2. Knowledge usage
       const knowledgeUsage = await ctx.db
         .query('knowledgeUsage')
-        .withIndex('by_user', (q) => q.eq('userId', user._id))
+        .withIndex('by_user', (q: any) => q.eq('userId', user._id))
         .collect();
       for (const usage of knowledgeUsage) {
         await ctx.db.delete(usage._id);
@@ -114,12 +114,12 @@ export const deleteUserByPhone = internalMutation({
       // 3. Assessment responses (via sessions)
       const sessions = await ctx.db
         .query('assessmentSessions')
-        .withIndex('by_user', (q) => q.eq('userId', user._id))
+        .withIndex('by_user', (q: any) => q.eq('userId', user._id))
         .collect();
       for (const session of sessions) {
         const responses = await ctx.db
           .query('assessmentResponses')
-          .withIndex('by_session', (q) => q.eq('sessionId', session._id))
+          .withIndex('by_session', (q: any) => q.eq('sessionId', session._id))
           .collect();
         for (const response of responses) {
           await ctx.db.delete(response._id);
@@ -130,7 +130,7 @@ export const deleteUserByPhone = internalMutation({
       // 4. Wellness scores
       const wellnessScores = await ctx.db
         .query('wellnessScores')
-        .withIndex('by_user', (q) => q.eq('userId', user._id))
+        .withIndex('by_user', (q: any) => q.eq('userId', user._id))
         .collect();
       for (const score of wellnessScores) {
         await ctx.db.delete(score._id);

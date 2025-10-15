@@ -24,6 +24,63 @@ import { parseOpenReferral } from "./adapters/openReferralAdapter";
 // MAIN IMPORT MUTATION
 // ============================================================================
 
+// Internal handler function (can be called directly)
+async function importResourcesHandler(
+  ctx: any,
+  args: {
+    source: "nys_oaa" | "eldercare_locator" | "open_referral";
+    data: any;
+    metadata?: {
+      license?: string;
+      fundingSource?: string;
+    };
+  }
+) {
+  const { source, data, metadata } = args;
+  console.log(`🚀 Starting import from source: ${source}`);
+
+  // STEP 1: Parse (source-specific)
+  let intermediateRecords;
+
+  switch (source) {
+    case "nys_oaa":
+      intermediateRecords = parseNysOaa(data as string);
+      break;
+
+    case "eldercare_locator":
+      intermediateRecords = parseEldercareLocator(data);
+      break;
+
+    case "open_referral":
+      intermediateRecords = parseOpenReferral(data);
+      break;
+
+    default:
+      throw new Error(`Unknown source: ${source}`);
+  }
+
+  console.log(`📊 Parsed ${intermediateRecords.length} records`);
+
+  // STEP 2: Normalize (shared logic for ALL sources)
+  const normalizedRecords = intermediateRecords.map(record =>
+    normalizeRecord(record, {
+      dataSourceType: source === "nys_oaa" ? "manual_entry" : "scraped",
+      aggregatorSource: source,
+      license: metadata?.license || `${source} data`,
+      fundingSource: metadata?.fundingSource
+    })
+  );
+
+  console.log(`✅ Normalized ${normalizedRecords.length} records`);
+
+  // STEP 3: Load (shared logic for ALL sources)
+  const result = await loadNormalizedRecords(ctx, normalizedRecords);
+
+  console.log(`✨ Import complete: ${result.imported} imported, ${result.failed} failed`);
+
+  return result;
+}
+
 export const importResources = internalMutation({
   args: {
     source: v.union(
@@ -39,50 +96,7 @@ export const importResources = internalMutation({
       })
     )
   },
-  handler: async (ctx, { source, data, metadata }) => {
-    console.log(`🚀 Starting import from source: ${source}`);
-
-    // STEP 1: Parse (source-specific)
-    let intermediateRecords;
-
-    switch (source) {
-      case "nys_oaa":
-        intermediateRecords = parseNysOaa(data as string);
-        break;
-
-      case "eldercare_locator":
-        intermediateRecords = parseEldercareLocator(data);
-        break;
-
-      case "open_referral":
-        intermediateRecords = parseOpenReferral(data);
-        break;
-
-      default:
-        throw new Error(`Unknown source: ${source}`);
-    }
-
-    console.log(`📊 Parsed ${intermediateRecords.length} records`);
-
-    // STEP 2: Normalize (shared logic for ALL sources)
-    const normalizedRecords = intermediateRecords.map(record =>
-      normalizeRecord(record, {
-        dataSourceType: source === "nys_oaa" ? "manual_entry" : "scraped",
-        aggregatorSource: source,
-        license: metadata?.license || `${source} data`,
-        fundingSource: metadata?.fundingSource
-      })
-    );
-
-    console.log(`✅ Normalized ${normalizedRecords.length} records`);
-
-    // STEP 3: Load (shared logic for ALL sources)
-    const result = await loadNormalizedRecords(ctx, normalizedRecords);
-
-    console.log(`✨ Import complete: ${result.imported} imported, ${result.failed} failed`);
-
-    return result;
-  }
+  handler: importResourcesHandler
 });
 
 // ============================================================================
@@ -97,7 +111,7 @@ export const importNysOaa = internalMutation({
     fileContent: v.string()
   },
   handler: async (ctx, { fileContent }) => {
-    return await ctx.runMutation(api.ingestion.importResources.importResources, {
+    return await importResourcesHandler(ctx, {
       source: "nys_oaa",
       data: fileContent,
       metadata: {
@@ -116,7 +130,7 @@ export const importEldercareLocator = internalMutation({
     apiResponse: v.any()
   },
   handler: async (ctx, { apiResponse }) => {
-    return await ctx.runMutation(api.ingestion.importResources.importResources, {
+    return await importResourcesHandler(ctx, {
       source: "eldercare_locator",
       data: apiResponse,
       metadata: {
@@ -135,7 +149,7 @@ export const importOpenReferral = internalMutation({
     services: v.any()
   },
   handler: async (ctx, { services }) => {
-    return await ctx.runMutation(api.ingestion.importResources.importResources, {
+    return await importResourcesHandler(ctx, {
       source: "open_referral",
       data: services,
       metadata: {
