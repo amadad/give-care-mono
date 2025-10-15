@@ -46,6 +46,7 @@ export interface RunResultWithContext<T> {
     outputTokens: number;
   };
   sessionId?: string;
+  serviceTier?: "priority" | "auto" | "default" | "flex";
 }
 
 /**
@@ -100,4 +101,34 @@ export function extractTokenUsage(result: any): TokenUsage | undefined {
     output,
     total: input + output,
   };
+}
+
+/**
+ * Extract service tier from run result
+ *
+ * The OpenAI API returns the actual service tier used in the response.
+ * This may differ from the requested tier (e.g., "auto" resolves to "priority" or "default").
+ *
+ * Usage:
+ * ```typescript
+ * const result = await run(agent, message);
+ * const tier = extractServiceTier(result);
+ * console.log(`Request used ${tier} service tier`);
+ * ```
+ */
+export function extractServiceTier(result: any): "priority" | "auto" | "default" | "flex" | undefined {
+  // Check for serviceTier in result (may be in different locations depending on SDK version)
+  const tier = (result as any)?.serviceTier
+    || (result as any)?.service_tier
+    || (result as any)?.usage?.serviceTier
+    || (result as any)?.usage?.service_tier;
+
+  if (!tier) return undefined;
+
+  // Validate it's a known tier value
+  if (tier === "priority" || tier === "auto" || tier === "default" || tier === "flex") {
+    return tier;
+  }
+
+  return undefined;
 }

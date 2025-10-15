@@ -112,6 +112,68 @@ export const insertAssessmentResponse = internalMutation({
   },
 });
 
+/**
+ * PERFORMANCE OPTIMIZATION: Batch insert multiple assessment responses
+ * Reduces RPC calls from N (one per response) to 1 (single batch)
+ *
+ * Example: 10 responses = 10 RPC calls → 1 RPC call = ~90% latency reduction
+ */
+export const batchInsertAssessmentResponses = internalMutation({
+  args: {
+    sessionId: v.id('assessmentSessions'),
+    userId: v.id('users'),
+    responses: v.array(
+      v.object({
+        questionId: v.string(),
+        questionText: v.string(),
+        responseValue: v.string(),
+        score: v.optional(v.number()),
+      })
+    ),
+  },
+  handler: async (ctx, args) => {
+    const now = Date.now();
+    const session = await ctx.db.get(args.sessionId);
+
+    if (!session) {
+      throw new Error(`Session ${args.sessionId} not found`);
+    }
+
+    // Batch insert all response records
+    const responseIds = await Promise.all(
+      args.responses.map((response) =>
+        ctx.db.insert('assessmentResponses', {
+          sessionId: args.sessionId,
+          userId: args.userId,
+          questionId: response.questionId,
+          questionText: response.questionText,
+          responseValue: response.responseValue,
+          score: response.score,
+          respondedAt: now,
+          createdAt: now,
+        })
+      )
+    );
+
+    // Build updated responses object
+    const updatedResponses = { ...session.responses };
+    for (const response of args.responses) {
+      updatedResponses[response.questionId] = response.responseValue;
+    }
+
+    // Single session update with all responses
+    await ctx.db.patch(args.sessionId, {
+      responses: updatedResponses,
+      currentQuestion: session.currentQuestion + args.responses.length,
+    });
+
+    return {
+      responseIds,
+      count: args.responses.length,
+    };
+  },
+});
+
 export const completeAssessmentSession = internalMutation({
   args: {
     sessionId: v.id('assessmentSessions'),

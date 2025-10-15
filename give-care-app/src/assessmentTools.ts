@@ -503,6 +503,54 @@ export function getNextQuestion(
   return definition.questions[questionIndex];
 }
 
+/**
+ * Calculate the score for a single question response
+ * Returns number (0-100) or null if invalid/skipped
+ */
+export function calculateQuestionScore(
+  question: AssessmentQuestion,
+  response: string | number
+): number | null {
+  if (response === undefined || response === 'SKIPPED') {
+    return null;
+  }
+
+  let score = 0;
+
+  if (question.type === 'likert') {
+    // CRITICAL FIX: Empty string handling
+    // Empty string coerces to 0 via Number(''), causing scores >100 for reverse-scored items
+    // Example bug: (5+1-0)/(5-1)*100 = 125 for a 1-5 scale
+    // Treat empty/whitespace strings the same as SKIPPED
+    if (typeof response === 'string' && response.trim() === '') {
+      return null; // Treat empty strings as skipped
+    }
+
+    const numericValue = Number(response);
+    if (Number.isNaN(numericValue)) {
+      return null; // Invalid response
+    }
+    score = numericValue;
+    // Reverse score if needed (higher is better)
+    if (question.reverse_score && question.scale) {
+      score = question.scale + 1 - score;
+    }
+    // Normalize to 0-100
+    if (question.scale) {
+      score = ((score - 1) / (question.scale - 1)) * 100;
+    }
+  } else if (question.type === 'boolean') {
+    // Boolean: true = 100 (issue present), false = 0 (no issue)
+    score = response === 'true' || response === 'yes' || response === '1' ? 100 : 0;
+    // Reverse if needed
+    if (question.reverse_score) {
+      score = 100 - score;
+    }
+  }
+
+  return Math.round(score * 10) / 10; // Round to 1 decimal place
+}
+
 export function calculateAssessmentScore(
   type: AssessmentType,
   responses: Record<string, string | number>

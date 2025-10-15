@@ -196,7 +196,7 @@ html {
   }
 
   .btn-editorial-secondary {
-    @apply inline-block px-8 py-3 bg-white text-amber-950 text-sm tracking-widest hover:bg-amber-50 transition-colors duration-200 rounded-lg border border-amber-200;
+    @apply inline-block px-10 py-4 bg-white text-amber-950 text-sm tracking-widest hover:bg-amber-50 transition-colors duration-200 rounded-lg border border-amber-200;
   }
 
   .btn-editorial-small {
@@ -222,7 +222,7 @@ html {
   }
 
   .section-hero {
-    @apply pt-12 pb-16 md:pt-16 md:pb-20;
+    @apply pt-12 pb-24 md:pt-16 md:pb-32;
   }
 
   .section-tight {

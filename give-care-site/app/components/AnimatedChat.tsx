@@ -27,7 +27,7 @@ export default function AnimatedChat({ messages }: { messages: Message[] }) {
           }}
         >
           <div
-            className="chat-bubble text-sm"
+            className="chat-bubble text-base"
             style={{
               backgroundColor: message.isUser ? '#65C466' : '#e9e9eb',
               color: message.isUser ? 'white' : 'black',

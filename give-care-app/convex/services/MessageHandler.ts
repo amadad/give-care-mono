@@ -22,7 +22,7 @@ import { validateRequest } from 'twilio';
 import { rateLimiter, RATE_LIMITS, RATE_LIMIT_MESSAGES } from '../rateLimits.config';
 import { runAgentTurn } from '../../src/agents';
 import type { GiveCareContext } from '../../src/context';
-import { getAssessmentDefinition, calculateAssessmentScore } from '../../src/assessmentTools';
+import { getAssessmentDefinition, calculateAssessmentScore, calculateQuestionScore } from '../../src/assessmentTools';
 
 interface IncomingMessage {
   from: string;
@@ -67,11 +67,16 @@ export class MessageHandler {
       // 5. Build context
       const context = this.buildContext(user, message.from, rateLimitResult.assessmentRateLimited);
 
+      // 5b. Clone context before agent execution to prevent mutation bugs
+      // The agent mutates context.assessmentResponses, so we need a snapshot
+      // for the diff comparison in persistAssessmentResponses
+      const originalContext = structuredClone(context);
+
       // 6. Execute agent
       const agentResult = await this.executeAgent(message.body, context);
 
-      // 7. Persist changes
-      await this.persistChanges(user, context, agentResult, message.body, message.messageSid, startTime);
+      // 7. Persist changes (compare originalContext vs agentResult.context)
+      await this.persistChanges(user, originalContext, agentResult, message.body, message.messageSid, startTime);
 
       // 8. Schedule follow-ups
       await this.scheduleFollowups(user, context, agentResult.context);
@@ -125,56 +130,60 @@ export class MessageHandler {
   /**
    * Step 2: Check all 5 rate limit layers
    * Returns assessment rate limit status for context building
+   *
+   * PERFORMANCE FIX (Bug #2): Parallelized rate limit checks
+   * Previous: Sequential checks (~5× RPC latency)
+   * Current: Parallel checks (1× RPC latency)
    */
   private async checkRateLimits(phoneNumber: string): Promise<{ assessmentRateLimited: boolean }> {
-    // 2a. Spam protection (20/hour per user)
-    const spamCheck = await rateLimiter.limit(this.ctx, 'spam', {
-      key: phoneNumber,
-      config: RATE_LIMITS.spamProtection as any,
-    });
+    // Run all 5 rate limit checks in parallel
+    const [spamCheck, smsCheck, globalCheck, openaiCheck, assessmentCheck] = await Promise.all([
+      // 2a. Spam protection (20/hour per user)
+      rateLimiter.limit(this.ctx, 'spam', {
+        key: phoneNumber,
+        config: RATE_LIMITS.spamProtection as any,
+      }),
+      // 2b. Per-user SMS limit (10/day per user)
+      rateLimiter.limit(this.ctx, 'sms-user', {
+        key: phoneNumber,
+        config: RATE_LIMITS.smsPerUser as any,
+      }),
+      // 2c. Global SMS limit (1000/hour)
+      rateLimiter.limit(this.ctx, 'sms-global', {
+        key: 'global',
+        config: RATE_LIMITS.smsGlobal as any,
+      }),
+      // 2d. OpenAI rate limit (100/min)
+      rateLimiter.limit(this.ctx, 'openai', {
+        key: 'global',
+        config: RATE_LIMITS.openaiCalls as any,
+      }),
+      // 2e. Assessment rate limit (3/day per user)
+      rateLimiter.limit(this.ctx, 'assessment', {
+        key: phoneNumber,
+        config: RATE_LIMITS.assessmentPerUser as any,
+      }),
+    ]);
 
+    // Check results and throw appropriate errors
     if (!spamCheck.ok) {
       console.warn(`[Rate Limit] Spam detected from ${phoneNumber}`);
       throw new Error('Rate limited (spam)');
     }
 
-    // 2b. Per-user SMS limit (10/day per user)
-    const smsCheck = await rateLimiter.limit(this.ctx, 'sms-user', {
-      key: phoneNumber,
-      config: RATE_LIMITS.smsPerUser as any,
-    });
-
     if (!smsCheck.ok) {
       throw new Error(RATE_LIMIT_MESSAGES.smsPerUser);
     }
-
-    // 2c. Global SMS limit (1000/hour)
-    const globalCheck = await rateLimiter.limit(this.ctx, 'sms-global', {
-      key: 'global',
-      config: RATE_LIMITS.smsGlobal as any,
-    });
 
     if (!globalCheck.ok) {
       console.error('[Rate Limit] ALERT: Global SMS limit reached!');
       throw new Error(RATE_LIMIT_MESSAGES.smsGlobal);
     }
 
-    // 2d. OpenAI rate limit (100/min)
-    const openaiCheck = await rateLimiter.limit(this.ctx, 'openai', {
-      key: 'global',
-      config: RATE_LIMITS.openaiCalls as any,
-    });
-
     if (!openaiCheck.ok) {
       console.error('[Rate Limit] OpenAI quota reached!');
       throw new Error(RATE_LIMIT_MESSAGES.openaiCalls);
     }
-
-    // 2e. Assessment rate limit (3/day per user)
-    const assessmentCheck = await rateLimiter.limit(this.ctx, 'assessment', {
-      key: phoneNumber,
-      config: RATE_LIMITS.assessmentPerUser as any,
-    });
 
     return {
       assessmentRateLimited: !assessmentCheck.ok,
@@ -393,16 +402,21 @@ export class MessageHandler {
       const definition = getAssessmentDefinition(updatedContext.assessmentType!);
       const question = definition?.questions.find((q) => q.id === questionId);
 
+      // Calculate per-question score (0-100 or null if invalid)
+      const questionScore = question
+        ? calculateQuestionScore(question, currentResponses[questionId])
+        : null;
+
       await this.ctx.runMutation(internal.functions.assessments.insertAssessmentResponse, {
         sessionId: sessionId as any,
         userId: updatedContext.userId as any,
         questionId,
         questionText: question?.text ?? '',
         responseValue,
-        score: undefined,
+        score: questionScore ?? undefined, // Store calculated score, not undefined
       });
 
-      console.log(`[Assessment] Persisted response for ${questionId}`);
+      console.log(`[Assessment] Persisted response for ${questionId} (score: ${questionScore})`);
     }
   }
 
@@ -454,7 +468,9 @@ export class MessageHandler {
           toolCalls: agentResult.toolCalls,
           tokenUsage: agentResult.tokenUsage,
           sessionId: agentResult.sessionId,
-          serviceTier: 'priority',
+          // BUG FIX #4: Use actual service tier from OpenAI response
+          // Requested tier may differ from actual tier (e.g., "auto" resolves to "priority" or "default")
+          serviceTier: agentResult.serviceTier || 'priority', // Fallback to 'priority' if not available
           timestamp,
         },
       ],

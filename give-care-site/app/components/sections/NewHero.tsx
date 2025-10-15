@@ -2,11 +2,12 @@
 
 import { motion } from 'framer-motion';
 import Image from 'next/image';
+import Link from 'next/link';
 
 export default function NewHero() {
   return (
-    <section className="pt-8 pb-0 md:pt-12 md:pb-0 bg-base-100">
-        <div className="container-editorial">
+    <section className="pt-8 md:pt-12 pb-0 bg-base-100">
+        <div className="container-editorial pb-0">
           {/* Minimal Headline */}
           <motion.div
             initial={{ opacity: 0 }}
@@ -15,7 +16,7 @@ export default function NewHero() {
             className="text-center mb-4 md:mb-6"
           >
             <h1 className="heading-hero mb-6">
-              Caregiving is hard.<br />You deserve support that actually helps.
+              AI caregiving support that remembers everything—<br />no app required
             </h1>
 
             {/* Forbes Badge */}
@@ -43,23 +44,30 @@ export default function NewHero() {
             </motion.div>
 
             <p className="body-large max-w-2xl mx-auto">
-              Track your burden over time. Get evidence-based support matched to your needs.
+              Track your burnout score. Get help matched to YOUR struggles.
+              We remember everything and check in before crisis hits. Works on any phone—no app required.
             </p>
           </motion.div>
 
-          {/* Single CTA */}
+          {/* Dual CTA */}
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ duration: 0.6, delay: 0.2 }}
-            className="text-center mb-8"
+            className="flex flex-col sm:flex-row gap-4 justify-center items-center mb-0"
           >
-            <a
+            <Link
               href="/assessment"
               className="btn-editorial-primary"
             >
               Start Free Assessment
-            </a>
+            </Link>
+            <Link
+              href="/how-it-works"
+              className="btn-editorial-secondary"
+            >
+              See How It Works →
+            </Link>
           </motion.div>
 
           {/* Hero Image */}
@@ -69,13 +77,13 @@ export default function NewHero() {
             transition={{ duration: 0.6, delay: 0.4 }}
             className="flex justify-center"
           >
-            <div className="relative w-full max-w-2xl md:max-w-3xl">
+            <div className="relative w-full max-w-3xl md:max-w-4xl">
               <Image
                 src="/w.webp"
                 alt="Caregiver using GiveCare"
                 width={1200}
                 height={1200}
-                className="w-full h-auto"
+                className="w-full h-auto block"
                 priority
               />
             </div>

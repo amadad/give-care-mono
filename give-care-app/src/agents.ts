@@ -19,7 +19,7 @@ import {
   safetyGuardrail,
 } from "./safety";
 import type { ExtendedModelSettings, RunResultWithContext } from "./types/openai-extensions";
-import { extractTokenUsage, hasContextState } from "./types/openai-extensions";
+import { extractTokenUsage, extractServiceTier, hasContextState } from "./types/openai-extensions";
 
 /**
  * Service Tier Configuration - Responses API
@@ -123,6 +123,7 @@ export async function runAgentTurn(
     const toolCalls = resultWithContext.toolCalls || [];
     const tokenUsage = extractTokenUsage(result);
     const sessionId = resultWithContext.sessionId;
+    const serviceTier = extractServiceTier(result);
 
     return {
       message: responseText ?? '',
@@ -131,6 +132,7 @@ export async function runAgentTurn(
       toolCalls,
       tokenUsage,
       sessionId,
+      serviceTier, // Actual tier from OpenAI response (may differ from requested)
       latency,
     };
   } catch (error) {

@@ -402,7 +402,7 @@ export const findInterventions = tool({
       const topZones = zones.slice(0, 2);
       const matches = topZones
         .map(zone => ZONE_INTERVENTIONS[zone])
-        .filter(Boolean);
+        .filter(Boolean); // matches is Intervention[], not Intervention[][]
 
       return intro + matches
         .map((int, i) => `${i + 1}. **${int.title}**: ${int.desc}\n   ✓ ${int.helpful}% found helpful`)

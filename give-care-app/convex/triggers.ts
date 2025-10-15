@@ -13,7 +13,7 @@
  * Processes triggers every 15 minutes via cron job in convex/crons.ts
  */
 
-import { internalMutation, internalAction } from './_generated/server';
+import { internalMutation, internalAction, mutation } from './_generated/server';
 import { internal } from './_generated/api';
 import { v } from 'convex/values';
 import { RRule } from 'rrule';
@@ -128,8 +128,9 @@ export const processDueTriggers = internalMutation({
  * Create a new trigger for a user
  *
  * Used by the setWellnessSchedule tool
+ * NOTE: Made public (not internal) so agent tools can call it via api.triggers.createTrigger
  */
-export const createTrigger = internalMutation({
+export const createTrigger = mutation({
   args: {
     userId: v.id('users'),
     recurrenceRule: v.string(),

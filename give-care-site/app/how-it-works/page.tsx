@@ -10,6 +10,30 @@ import Link from 'next/link';
 import { useState } from 'react';
 
 const scenarios = {
+  onboarding: [
+    { "id": 1, "text": "Hi! I'm here to support you. What's your name?", "isUser": false },
+    { "id": 2, "text": "Sarah", "isUser": true },
+    { "id": 3, "text": "Nice to meet you, Sarah. Who are you caring for?", "isUser": false },
+    { "id": 4, "text": "My mom", "isUser": true },
+    { "id": 5, "text": "I appreciate you being here for your mom. How long have you been caring for her?", "isUser": false },
+    { "id": 6, "text": "About 2 years now", "isUser": true },
+    { "id": 7, "text": "That's a significant commitment. To find local resources near you, what's your zip code?", "isUser": false },
+    { "id": 8, "text": "94103", "isUser": true },
+    { "id": 9, "text": "Perfect. Let's do a quick check-in to see how you're doing.", "isUser": false },
+    { "id": 10, "text": "ok", "isUser": true },
+  ],
+  dailyCheckin: [
+    { "id": 1, "text": "Morning! Quick check-in. How are you feeling right now?", "isUser": false },
+    { "id": 2, "text": "Honestly? Not great", "isUser": true },
+    { "id": 3, "text": "I hear you. How overwhelming does caregiving feel today?", "isUser": false },
+    { "id": 4, "text": "Pretty overwhelming", "isUser": true },
+    { "id": 5, "text": "How stressed do you feel right now?", "isUser": false },
+    { "id": 6, "text": "Very stressed", "isUser": true },
+    { "id": 7, "text": "Your wellness score today: 45/100 (Managing, but challenging)", "isUser": false },
+    { "id": 8, "text": "Top pressure: Emotional strain. Let me find support for you", "isUser": false },
+    { "id": 9, "text": "Found a caregiver support group meeting tonight at 7pm. Interested?", "isUser": false },
+    { "id": 10, "text": "maybe, send me the details", "isUser": true },
+  ],
   respite: [
     { "id": 1, "text": "I haven't left the house in 3 weeks", "isUser": true },
     { "id": 2, "text": "I just snapped at my kids for no reason", "isUser": true },
@@ -23,55 +47,29 @@ const scenarios = {
     { "id": 10, "text": "Comfort Keepers: (415) 555-0234", "isUser": false },
     { "id": 11, "text": "thanks, i'll check it out", "isUser": true },
   ],
-  burnout: [
-    { "id": 1, "text": "In the past month, worried you wouldn't have enough food? (1-5)", "isUser": false },
-    { "id": 2, "text": "3", "isUser": true },
-    { "id": 3, "text": "How hard is it to pay for basics like housing? (1-5)", "isUser": false },
-    { "id": 4, "text": "4", "isUser": true },
-    { "id": 5, "text": "How often do you feel socially isolated? (1-5)", "isUser": false },
-    { "id": 6, "text": "5", "isUser": true },
-    { "id": 7, "text": "Your wellness score: 62/100 (High risk)", "isUser": false },
-    { "id": 8, "text": "Top concerns: Financial strain, Social isolation", "isUser": false },
-    { "id": 9, "text": "Let me find resources for you", "isUser": false },
-  ],
   crisis: [
     { "id": 1, "text": "I don't know if I can do this anymore", "isUser": true },
-    { "id": 2, "text": "I hear you. That sounds overwhelming. Tell me what's happening.", "isUser": false },
+    { "id": 2, "text": "I hear you. That sounds overwhelming. Are you safe right now?", "isUser": false },
     { "id": 3, "text": "I think so", "isUser": true },
     { "id": 4, "text": "just overwhelmed", "isUser": true },
-    { "id": 5, "text": "It's okay to feel overwhelmed", "isUser": false },
-    { "id": 6, "text": "You're doing something incredibly hard", "isUser": false },
-    { "id": 7, "text": "If you need to talk to someone right now:", "isUser": false },
-    { "id": 8, "text": "988 Suicide & Crisis Lifeline: Call or text 988", "isUser": false },
-    { "id": 9, "text": "Crisis Text Line: Text HOME to 741741", "isUser": false },
+    { "id": 5, "text": "It's okay to feel overwhelmed. You're doing something incredibly hard.", "isUser": false },
+    { "id": 6, "text": "If you need to talk to someone right now:", "isUser": false },
+    { "id": 7, "text": "988 Suicide & Crisis Lifeline", "isUser": false },
+    { "id": 8, "text": "Crisis Text Line: Text HOME to 741741", "isUser": false },
+    { "id": 9, "text": "911 for emergencies", "isUser": false },
     { "id": 10, "text": "I'm here too. What do you need right now?", "isUser": false },
-    { "id": 11, "text": "im ok right now", "isUser": true },
+    { "id": 11, "text": "just someone to listen", "isUser": true },
   ],
   financial: [
     { "id": 1, "text": "I can't afford her medications this month", "isUser": true },
     { "id": 2, "text": "The bills keep piling up", "isUser": true },
-    { "id": 3, "text": "Let me help find financial assistance", "isUser": false },
-    { "id": 4, "text": "What medications does she need?", "isUser": false },
-    { "id": 5, "text": "Blood pressure and diabetes meds", "isUser": true },
-    { "id": 6, "text": "Found 3 prescription assistance programs:", "isUser": false },
-    { "id": 7, "text": "RxAssist: Free meds for qualifying patients", "isUser": false },
-    { "id": 8, "text": "NeedyMeds: Up to 80% off", "isUser": false },
-    { "id": 9, "text": "Medicare Extra Help: (800) 772-1213", "isUser": false },
-    { "id": 10, "text": "thanks", "isUser": true },
-  ],
-  selfcare: [
-    { "id": 1, "text": "I feel like I'm going to explode", "isUser": true },
-    { "id": 2, "text": "I need to calm down but I don't know how", "isUser": true },
-    { "id": 3, "text": "Let's do a quick breathing exercise", "isUser": false },
-    { "id": 4, "text": "Just 2 minutes. Want to try?", "isUser": false },
-    { "id": 5, "text": "ok", "isUser": true },
-    { "id": 6, "text": "Breathe in for 4 counts... hold for 4... out for 6", "isUser": false },
-    { "id": 7, "text": "I'll guide you. Ready?", "isUser": false },
-    { "id": 8, "text": "Breathe IN... 2... 3... 4", "isUser": false },
-    { "id": 9, "text": "HOLD... 2... 3... 4", "isUser": false },
-    { "id": 10, "text": "OUT... 2... 3... 4... 5... 6", "isUser": false },
-    { "id": 11, "text": "Again. IN... 2... 3... 4", "isUser": false },
-    { "id": 12, "text": "that actually helped", "isUser": true },
+    { "id": 3, "text": "Let me help find financial assistance. What medications does she need?", "isUser": false },
+    { "id": 4, "text": "Blood pressure and diabetes meds", "isUser": true },
+    { "id": 5, "text": "Found 3 prescription assistance programs:", "isUser": false },
+    { "id": 6, "text": "RxAssist: Free meds for qualifying patients", "isUser": false },
+    { "id": 7, "text": "NeedyMeds: Up to 80% off", "isUser": false },
+    { "id": 8, "text": "Medicare Extra Help: (800) 772-1213", "isUser": false },
+    { "id": 9, "text": "thanks", "isUser": true },
   ],
 };
 
@@ -95,14 +93,14 @@ const whatYouGet = [
 ];
 
 export default function HowItWorksPage() {
-  const [activeScenario, setActiveScenario] = useState<keyof typeof scenarios>('respite');
+  const [activeScenario, setActiveScenario] = useState<keyof typeof scenarios>('onboarding');
 
   return (
     <div className="min-h-screen bg-base-100 flex flex-col">
       <Navbar />
       <main className="flex-1">
         {/* Hero Section */}
-        <section className="section-hero bg-gradient-to-b from-base-100 to-amber-50/20">
+        <section className="section-hero bg-gradient-to-b from-base-100 to-amber-50/20 pb-24">
           <div className="container-editorial">
             <motion.div
               initial={{ opacity: 0, y: 20 }}
@@ -120,6 +118,26 @@ export default function HowItWorksPage() {
               {/* Scenario Tabs */}
               <div className="flex flex-wrap justify-center gap-3 mb-8">
                 <button
+                  onClick={() => setActiveScenario('onboarding')}
+                  className={`px-4 py-2 text-sm font-medium transition-colors rounded-lg ${
+                    activeScenario === 'onboarding'
+                      ? 'bg-amber-950 text-white'
+                      : 'bg-white text-amber-950 border border-amber-200 hover:bg-amber-50'
+                  }`}
+                >
+                  Getting Started
+                </button>
+                <button
+                  onClick={() => setActiveScenario('dailyCheckin')}
+                  className={`px-4 py-2 text-sm font-medium transition-colors rounded-lg ${
+                    activeScenario === 'dailyCheckin'
+                      ? 'bg-amber-950 text-white'
+                      : 'bg-white text-amber-950 border border-amber-200 hover:bg-amber-50'
+                  }`}
+                >
+                  Daily Check-in
+                </button>
+                <button
                   onClick={() => setActiveScenario('respite')}
                   className={`px-4 py-2 text-sm font-medium transition-colors rounded-lg ${
                     activeScenario === 'respite'
@@ -127,17 +145,7 @@ export default function HowItWorksPage() {
                       : 'bg-white text-amber-950 border border-amber-200 hover:bg-amber-50'
                   }`}
                 >
-                  Respite
-                </button>
-                <button
-                  onClick={() => setActiveScenario('burnout')}
-                  className={`px-4 py-2 text-sm font-medium transition-colors rounded-lg ${
-                    activeScenario === 'burnout'
-                      ? 'bg-amber-950 text-white'
-                      : 'bg-white text-amber-950 border border-amber-200 hover:bg-amber-50'
-                  }`}
-                >
-                  Wellness
+                  Finding Resources
                 </button>
                 <button
                   onClick={() => setActiveScenario('crisis')}
@@ -147,7 +155,7 @@ export default function HowItWorksPage() {
                       : 'bg-white text-amber-950 border border-amber-200 hover:bg-amber-50'
                   }`}
                 >
-                  Crisis
+                  Crisis Support
                 </button>
                 <button
                   onClick={() => setActiveScenario('financial')}
@@ -157,52 +165,38 @@ export default function HowItWorksPage() {
                       : 'bg-white text-amber-950 border border-amber-200 hover:bg-amber-50'
                   }`}
                 >
-                  Financial
-                </button>
-                <button
-                  onClick={() => setActiveScenario('selfcare')}
-                  className={`px-4 py-2 text-sm font-medium transition-colors rounded-lg ${
-                    activeScenario === 'selfcare'
-                      ? 'bg-amber-950 text-white'
-                      : 'bg-white text-amber-950 border border-amber-200 hover:bg-amber-50'
-                  }`}
-                >
-                  Self-Care
+                  Financial Help
                 </button>
               </div>
 
               {/* Phone Demo */}
-              <motion.div
-                key={activeScenario}
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ duration: 0.3 }}
-                className="flex justify-center"
-              >
-                <div className="transform scale-75 md:scale-90">
-                  <div className="mockup-phone border-amber-800 shadow-sm">
+              <div className="flex justify-center mt-8 mb-4">
+                <div className="transform scale-[0.8] md:scale-[0.85]">
+                  <div className="mockup-phone border-amber-800">
                     <div className="mockup-phone-camera"></div>
-                    <div className="mockup-phone-display">
-                      <div className="artboard artboard-demo phone-1 w-full h-full overflow-y-auto p-2 relative">
-                        {/* Background Image */}
-                        <div className="absolute inset-0 z-0">
-                          <Image
-                            src="/phone.jpg"
-                            alt="Phone background"
-                            fill
-                            className="object-cover"
-                          />
-                        </div>
+                    <div className="mockup-phone-display relative">
+                      <Image
+                        src="/phone.jpg"
+                        alt="Phone background"
+                        width={1179}
+                        height={2556}
+                        className="w-full h-full object-cover"
+                      />
 
-                        {/* Animated Chat Messages */}
-                        <div className="absolute z-10 w-full px-6" style={{ top: '155px', bottom: '20px', left: '0', right: '0', overflowY: 'auto' }}>
-                          <AnimatedChat messages={scenarios[activeScenario]} />
-                        </div>
-                      </div>
+                      {/* Chat Messages - positioned below the gray header and GiveCare title */}
+                      <motion.div
+                        key={activeScenario}
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        transition={{ duration: 0.3 }}
+                        className="absolute inset-x-0 top-[160px] bottom-0 px-4 pt-3 pb-4 overflow-y-auto"
+                      >
+                        <AnimatedChat messages={scenarios[activeScenario]} />
+                      </motion.div>
                     </div>
                   </div>
                 </div>
-              </motion.div>
+              </div>
             </motion.div>
           </div>
         </section>
