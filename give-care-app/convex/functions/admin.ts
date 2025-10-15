@@ -82,43 +82,42 @@ export const getAllUsers = query({
   handler: async (ctx, args) => {
     const limit = Math.min(Math.max(args.limit, 1), 200);
 
-    // Start with a query builder
+    // Build query with index (can only use one index)
+    // Priority: journeyPhase > burnoutBand > subscriptionStatus
     let usersQuery;
-    let indexApplied = false;
 
     if (args.journeyPhase) {
-      usersQuery = ctx.db.query("users").withIndex("by_journey", q =>
-        q.eq("journeyPhase", args.journeyPhase)
-      );
-      indexApplied = true;
-    } else {
-      usersQuery = ctx.db.query("users");
-    }
+      usersQuery = ctx.db
+        .query("users")
+        .withIndex("by_journey", q => q.eq("journeyPhase", args.journeyPhase));
 
-    if (args.burnoutBand) {
-      if (!indexApplied) {
-        usersQuery = usersQuery.withIndex("by_burnout_band", q =>
-          q.eq("burnoutBand", args.burnoutBand)
-        );
-        indexApplied = true;
-      } else {
+      // Apply additional filters
+      if (args.burnoutBand) {
         usersQuery = usersQuery.filter(q =>
           q.eq(q.field("burnoutBand"), args.burnoutBand)
         );
       }
-    }
-
-    if (args.subscriptionStatus) {
-      if (!indexApplied) {
-        usersQuery = usersQuery.withIndex("by_subscription", q =>
-          q.eq("subscriptionStatus", args.subscriptionStatus)
-        );
-        indexApplied = true;
-      } else {
+      if (args.subscriptionStatus) {
         usersQuery = usersQuery.filter(q =>
           q.eq(q.field("subscriptionStatus"), args.subscriptionStatus)
         );
       }
+    } else if (args.burnoutBand) {
+      usersQuery = ctx.db
+        .query("users")
+        .withIndex("by_burnout_band", q => q.eq("burnoutBand", args.burnoutBand));
+
+      if (args.subscriptionStatus) {
+        usersQuery = usersQuery.filter(q =>
+          q.eq(q.field("subscriptionStatus"), args.subscriptionStatus)
+        );
+      }
+    } else if (args.subscriptionStatus) {
+      usersQuery = ctx.db
+        .query("users")
+        .withIndex("by_subscription", q => q.eq("subscriptionStatus", args.subscriptionStatus));
+    } else {
+      usersQuery = ctx.db.query("users");
     }
 
     const searchTerm = args.search?.trim();
