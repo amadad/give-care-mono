@@ -25,7 +25,7 @@ function simulateFindInterventions(pressureZones: string[]): {
 } {
   const topZones = pressureZones.slice(0, 2);
   const matches = topZones
-    .map(zone => ZONE_INTERVENTIONS[zone]?.[0]) // Top intervention per zone
+    .map(zone => ZONE_INTERVENTIONS[zone]) // Get intervention for each zone
     .filter(Boolean);
 
   return {
@@ -338,22 +338,16 @@ describe('Intervention Integration Tests', () => {
       ];
 
       requiredZones.forEach(zone => {
-        const interventions = ZONE_INTERVENTIONS[zone];
+        const intervention = ZONE_INTERVENTIONS[zone];
 
-        // Each zone MUST have interventions defined
-        expect(interventions, `Zone "${zone}" has no interventions`).toBeDefined();
-        expect(interventions, `Zone "${zone}" has empty interventions array`).not.toHaveLength(0);
-
-        // Each zone should have at least 3-5 interventions
-        expect(interventions.length, `Zone "${zone}" should have at least 3 interventions`).toBeGreaterThanOrEqual(3);
+        // Each zone MUST have intervention defined
+        expect(intervention, `Zone "${zone}" has no intervention`).toBeDefined();
 
         // Each intervention should have required fields
-        interventions.forEach((intervention, idx) => {
-          expect(intervention.title, `Zone "${zone}" intervention ${idx} missing title`).toBeTruthy();
-          expect(intervention.desc, `Zone "${zone}" intervention ${idx} missing desc`).toBeTruthy();
-          expect(intervention.helpful, `Zone "${zone}" intervention ${idx} missing helpful score`).toBeGreaterThan(0);
-          expect(intervention.helpful, `Zone "${zone}" intervention ${idx} helpful score too high`).toBeLessThanOrEqual(100);
-        });
+        expect(intervention.title, `Zone "${zone}" intervention missing title`).toBeTruthy();
+        expect(intervention.desc, `Zone "${zone}" intervention missing desc`).toBeTruthy();
+        expect(intervention.helpful, `Zone "${zone}" intervention missing helpful score`).toBeGreaterThan(0);
+        expect(intervention.helpful, `Zone "${zone}" intervention helpful score too high`).toBeLessThanOrEqual(100);
       });
     });
 

@@ -523,7 +523,13 @@ export function calculateAssessmentScore(
     let score = 0;
 
     if (question.type === 'likert') {
-      score = Number(response);
+      // Input validation: prevent NaN from invalid responses
+      const numericValue = Number(response);
+      if (Number.isNaN(numericValue)) {
+        // Skip invalid responses (treat as SKIPPED)
+        continue;
+      }
+      score = numericValue;
       // Reverse score if needed (higher is better)
       if (question.reverse_score && question.scale) {
         score = question.scale + 1 - score;

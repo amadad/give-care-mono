@@ -334,25 +334,6 @@ export const safetyGuardrail: OutputGuardrail<TextOutput> = {
   },
 };
 
-// Legacy compatibility
-/** @deprecated Use crisisGuardrail instead */
-export const detectCrisis = (message: string): {
-  tripwire: boolean;
-  response: string;
-} => {
-  const normalized = message.toLowerCase();
-  const triggered = CRISIS_KEYWORDS.some((phrase) => normalized.includes(phrase));
-
-  if (!triggered) {
-    return { tripwire: false, response: "" };
-  }
-
-  return {
-    tripwire: true,
-    response: CRISIS_RESOURCES,
-  };
-};
-
 // Export all guardrails
 export const allInputGuardrails = [crisisGuardrail, spamGuardrail];
 export const allOutputGuardrails = [medicalAdviceGuardrail, safetyGuardrail];

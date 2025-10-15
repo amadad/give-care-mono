@@ -4,17 +4,10 @@
  */
 
 // Agents & orchestration
-export { giveCareAgent, crisisAgent, assessmentAgent, runAgentTurn } from './src/agents';
+export { giveCareAgent, runAgentTurn } from './src/agents';
 
-// Tools
-export {
-  updateProfile,
-  startAssessment,
-  recordAssessmentAnswer,
-  checkWellnessStatus,
-  findInterventions,
-  allTools,
-} from './src/tools';
+// Tools (individual tools not exported - only used internally)
+// Convex functions call runAgentTurn directly
 
 // Assessments
 export {
@@ -43,7 +36,6 @@ export {
   safetyGuardrail,
   allInputGuardrails,
   allOutputGuardrails,
-  detectCrisis,
 } from './src/safety';
 
 // Instructions

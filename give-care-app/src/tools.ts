@@ -13,6 +13,16 @@ import type { BurnoutScore } from './burnoutCalculator';
 import { api } from '../convex/_generated/api';
 
 /**
+ * Type-safe helper to extract Convex client from RunContext
+ * Replaces unsafe (runContext as any)?.convexClient pattern
+ */
+export function getConvexClient(runContext: any): any | null {
+  if (!runContext) return null;
+  if (!runContext.convexClient) return null;
+  return runContext.convexClient;
+}
+
+/**
  * Format assessment completion message (trauma-informed)
  * Aligns with P1 (Acknowledge > Answer > Advance) and P6 (Deliver Value)
  */
@@ -370,7 +380,7 @@ export const findInterventions = tool({
     }> = [];
 
     // Guard: Only query database if convexClient is available
-    const convexClient = (runContext as any)?.convexClient;
+    const convexClient = getConvexClient(runContext);
     if (convexClient) {
       try {
         resources = await convexClient.query(
@@ -389,7 +399,7 @@ export const findInterventions = tool({
     if (resources.length === 0) {
       const topZones = zones.slice(0, 2);
       const matches = topZones
-        .map(zone => ZONE_INTERVENTIONS[zone]?.[0])
+        .map(zone => ZONE_INTERVENTIONS[zone])
         .filter(Boolean);
 
       return intro + matches
@@ -452,7 +462,7 @@ export const setWellnessSchedule = tool({
     }
 
     // Create trigger via Convex
-    const convexClient = (runContext as any)?.convexClient;
+    const convexClient = getConvexClient(runContext);
     if (!convexClient) {
       return "Schedule feature not available right now. Try again in a moment.";
     }
@@ -519,7 +529,7 @@ Importance rating (1-10):
     const context = runContext!.context as GiveCareContext;
 
     // Call Convex mutation to save memory
-    const convexClient = (runContext as any)?.convexClient;
+    const convexClient = getConvexClient(runContext);
     if (!convexClient) {
       return 'Memory recording not available right now. I can still help with other things.';
     }
