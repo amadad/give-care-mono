@@ -6,6 +6,7 @@ import { motion } from 'framer-motion';
 import { ScrollAnimationWrapper } from '@/app/hooks/useScrollAnimation';
 import AnimatedChat from '@/app/components/AnimatedChat';
 import Image from 'next/image';
+import Link from 'next/link';
 import { useState } from 'react';
 
 const scenarios = {
@@ -259,9 +260,9 @@ export default function HowItWorksPage() {
                 <div className="card-editorial text-center">
                   <h3 className="text-lg font-normal text-amber-950 mb-2">GC-SDOH-28</h3>
                   <p className="text-sm text-amber-700 font-light">
-                    <a href="/words/care-sdoh" className="hover:text-amber-950 underline underline-offset-2 transition-colors">
+                    <Link href="/words/care-sdoh" className="hover:text-amber-950 underline underline-offset-2 transition-colors">
                       Evidence-based wellness framework
-                    </a>
+                    </Link>
                   </p>
                   <p className="text-xs text-amber-600 mt-2 font-light">Created by GiveCare</p>
                 </div>

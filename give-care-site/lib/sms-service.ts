@@ -16,16 +16,6 @@ function getTwilioClient() {
 }
 
 /**
- * Get Twilio messaging configuration
- * Uses Messaging Service SID instead of individual phone number
- */
-function getMessagingConfig() {
-  return {
-    messagingServiceSid: env.TWILIO_MESSAGING_SERVICE_SID,
-  }
-}
-
-/**
  * SMS message templates
  */
 const SMS_TEMPLATES = {

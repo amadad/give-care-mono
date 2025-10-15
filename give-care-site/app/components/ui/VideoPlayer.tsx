@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
+import Image from 'next/image';
 import { motion, AnimatePresence } from 'framer-motion';
 
 interface VideoPlayerProps {
@@ -44,10 +45,11 @@ export default function VideoPlayer({
         {/* Thumbnail */}
         <div className="relative bg-gradient-to-br from-amber-100 to-amber-200 aspect-video flex items-center justify-center">
           {thumbnail ? (
-            <img
+            <Image
               src={thumbnail}
               alt={title}
-              className="w-full h-full object-cover"
+              fill
+              className="object-cover"
             />
           ) : (
             <div className="text-amber-600 text-center p-8">

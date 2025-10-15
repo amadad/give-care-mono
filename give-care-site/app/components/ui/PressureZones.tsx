@@ -1,7 +1,6 @@
 'use client';
 
 import React from 'react';
-import Badge from './Badge';
 
 export interface PressureZone {
   name: string;

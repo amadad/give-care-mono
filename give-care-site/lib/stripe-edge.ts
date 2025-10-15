@@ -47,10 +47,10 @@ async function stripeRequest<T>(
 /**
  * Convert object to URL-encoded form data for Stripe API
  */
-function encodeFormData(data: Record<string, any>): string {
+function encodeFormData(data: Record<string, unknown>): string {
   const params = new URLSearchParams();
 
-  function addParam(key: string, value: any) {
+  function addParam(key: string, value: unknown): void {
     if (value === null || value === undefined) return;
 
     if (typeof value === 'object' && !Array.isArray(value)) {
@@ -147,7 +147,7 @@ export interface StripeWebhookEvent {
   id: string;
   type: string;
   data: {
-    object: any;
+    object: Record<string, unknown>;
   };
   created: number;
 }

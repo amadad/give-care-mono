@@ -1,20 +1,11 @@
 "use client"
 
 import React, { useMemo, useState } from "react"
-import { loadStripe } from "@stripe/stripe-js"
-import { EmbeddedCheckout, EmbeddedCheckoutProvider } from "@stripe/react-stripe-js"
 import { usePhoneFormat } from "@/app/hooks/usePhoneFormat"
 import { useAction } from "convex/react"
 import { api } from "give-care-app/convex/_generated/api"
 
 type PlanType = "monthly" | "annual"
-
-const STRIPE_PUBLISHABLE_KEY = process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY
-
-// Only initialize Stripe if the key is available
-const stripePromise = STRIPE_PUBLISHABLE_KEY
-  ? loadStripe(STRIPE_PUBLISHABLE_KEY)
-  : null
 
 // Stripe Price IDs from environment (required - no defaults to prevent prod/staging mixups)
 const MONTHLY_PRICE_ID = process.env.NEXT_PUBLIC_STRIPE_MONTHLY_PRICE_ID
@@ -31,7 +22,6 @@ export function SignupFormConvex() {
   const phone = usePhoneFormat("")
   const [consentSms, setConsentSms] = useState(false)
   const [consentTerms, setConsentTerms] = useState(false)
-  const [clientSecret, setClientSecret] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -273,21 +263,6 @@ export function SignupFormConvex() {
           </div>
         </div>
 
-        {/* Stripe Checkout Overlay */}
-        {clientSecret && (
-          <div className="absolute inset-0 bg-base-100 p-4 lg:p-8 flex items-center justify-center">
-            <div className="w-full max-w-lg">
-              <EmbeddedCheckoutProvider
-                stripe={stripePromise}
-                options={{ clientSecret }}
-              >
-                <div className="min-h-[500px] rounded-lg" data-testid="stripe-checkout">
-                  <EmbeddedCheckout />
-                </div>
-              </EmbeddedCheckoutProvider>
-            </div>
-          </div>
-        )}
       </div>
     </div>
   )
