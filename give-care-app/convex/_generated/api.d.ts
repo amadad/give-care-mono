@@ -16,6 +16,7 @@ import type * as functions_assessmentResults from "../functions/assessmentResult
 import type * as functions_assessments from "../functions/assessments.js";
 import type * as functions_cleanup from "../functions/cleanup.js";
 import type * as functions_conversations from "../functions/conversations.js";
+import type * as functions_memories from "../functions/memories.js";
 import type * as functions_newsletter from "../functions/newsletter.js";
 import type * as functions_rateLimitMonitoring from "../functions/rateLimitMonitoring.js";
 import type * as functions_resources from "../functions/resources.js";
@@ -65,6 +66,7 @@ declare const fullApi: ApiFromModules<{
   "functions/assessments": typeof functions_assessments;
   "functions/cleanup": typeof functions_cleanup;
   "functions/conversations": typeof functions_conversations;
+  "functions/memories": typeof functions_memories;
   "functions/newsletter": typeof functions_newsletter;
   "functions/rateLimitMonitoring": typeof functions_rateLimitMonitoring;
   "functions/resources": typeof functions_resources;

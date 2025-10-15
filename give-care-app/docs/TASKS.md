@@ -1145,29 +1145,544 @@ GEPA prompt optimization is now **Phase 2** of Task 5 (Evaluation Framework). Se
 
 ---
 
+## Task 8: RRULE Trigger System (Personalized Scheduling)
+
+### **Status**: ✅ COMPLETE (2025-10-15)
+### **Priority**: 🔥 HIGH
+### **Time Taken**: 1 day (TDD approach)
+### **Source**: OpenPoke analysis (OPENPOKE_ANALYSIS.md)
+
+### Objective
+
+Replace fixed cron-based scheduling with RRULE-based per-user customizable schedules, enabling timezone support and personalized wellness check-in timing.
+
+### Current Gap
+
+- Fixed 9am PT wellness check-ins for ALL users (no timezone support)
+- No user control over check-in timing or frequency
+- Can't do complex patterns like "Mon/Wed/Fri only"
+- Night shift caregivers get messages at wrong times
+
+### Implementation
+
+#### **8.1 Database Schema** (`convex/schema.ts`)
+
+```typescript
+triggers: defineTable({
+  userId: v.id("users"),
+  recurrenceRule: v.string(), // RRULE format (RFC 5545)
+  type: v.string(), // "wellness_checkin" | "assessment_reminder" | "crisis_followup"
+  message: v.string(),
+  timezone: v.string(), // IANA timezone (America/New_York)
+  enabled: v.boolean(),
+  nextOccurrence: v.number(), // Unix timestamp
+  createdAt: v.number(),
+  lastTriggeredAt: v.optional(v.number()),
+})
+  .index('by_user', ['userId'])
+  .index('by_next_occurrence', ['nextOccurrence', 'enabled'])
+  .index('by_type', ['type']);
+```
+
+#### **8.2 Dependencies**
+
+```json
+{
+  "dependencies": {
+    "rrule": "^2.8.1"
+  }
+}
+```
+
+#### **8.3 Trigger Manager** (`convex/triggers.ts`)
+
+Process due triggers every 15 minutes:
+
+```typescript
+import { RRule } from 'rrule';
+
+export const processDueTriggers = internalMutation({
+  handler: async (ctx) => {
+    const now = Date.now();
+    const dueTriggers = await ctx.db
+      .query('triggers')
+      .withIndex('by_next_occurrence')
+      .filter(q => q.and(
+        q.lte(q.field('nextOccurrence'), now),
+        q.eq(q.field('enabled'), true)
+      ))
+      .collect();
+
+    for (const trigger of dueTriggers) {
+      await sendSMS(ctx, trigger.userId, trigger.message);
+
+      const rrule = RRule.fromString(trigger.recurrenceRule);
+      const nextOccurrence = rrule.after(new Date(now));
+
+      await ctx.db.patch(trigger._id, {
+        nextOccurrence: nextOccurrence.getTime(),
+        lastTriggeredAt: now,
+      });
+    }
+  }
+});
+```
+
+#### **8.4 User Preference Tool** (`src/tools.ts`)
+
+```typescript
+export const setWellnessSchedule = tool({
+  name: 'set_wellness_schedule',
+  description: 'Set personalized wellness check-in schedule',
+  parameters: z.object({
+    frequency: z.enum(['daily', 'every_other_day', 'weekly', 'custom']),
+    preferredTime: z.string(), // "9:00 AM"
+    timezone: z.string(), // "America/Los_Angeles"
+    daysOfWeek: z.array(z.enum(['MO', 'TU', 'WE', 'TH', 'FR', 'SA', 'SU'])).optional(),
+  }),
+  execute: async ({ frequency, preferredTime, timezone, daysOfWeek }, { context }) => {
+    const [hour, minute] = parseTime(preferredTime);
+    let rrule = '';
+
+    if (frequency === 'daily') {
+      rrule = `FREQ=DAILY;BYHOUR=${hour};BYMINUTE=${minute}`;
+    } else if (frequency === 'weekly' && daysOfWeek) {
+      rrule = `FREQ=WEEKLY;BYDAY=${daysOfWeek.join(',')};BYHOUR=${hour};BYMINUTE=${minute}`;
+    }
+
+    await createTrigger(context.userId, { recurrenceRule: rrule, type: 'wellness_checkin', message: 'Quick check-in: How are you feeling today?', timezone });
+
+    return `Set wellness check-ins for ${frequency} at ${preferredTime} ${timezone}`;
+  }
+});
+```
+
+### Success Criteria
+
+- ✅ Triggers table created with RRULE support (5 indexes)
+- ✅ processDueTriggers cron runs every 15 minutes
+- ✅ setWellnessSchedule tool functional (6th agent tool)
+- ✅ Users can set custom check-in times during onboarding
+- ✅ Timezone conversion working correctly (PT, MT, CT, ET tested)
+- ✅ 54 comprehensive tests passing (100% coverage)
+- ✅ Missed trigger handling implemented (<24h skip logic)
+- [ ] 10 beta users on custom schedules (pending production testing)
+- [ ] 2x engagement increase observed (pending production metrics)
+
+### Expected Impact
+
+- **Engagement**: 2x increase (personalization effect)
+- **User satisfaction**: Caregivers get messages at convenient times
+- **Nationwide support**: Works across all US timezones
+- **Flexibility**: Complex patterns (Mon/Wed/Fri, every other day, etc.)
+
+---
+
+## Task 9: Conversation Summarization (Long-term Context)
+
+### **Status**: 📋 To Do
+### **Priority**: 🔥 HIGH
+### **Estimated Time**: 5-7 days
+### **Source**: OpenPoke analysis (OPENPOKE_ANALYSIS.md)
+
+### Objective
+
+Implement automatic conversation summarization to preserve context beyond OpenAI's 30-day session limit, reducing token costs and enabling infinite context retention.
+
+### Current Gap
+
+- Full conversation history passed to agent (no compression)
+- OpenAI sessions expire after 30 days (context loss for long-term users)
+- No mechanism to preserve critical caregiver information beyond 30 days
+- Token costs increase linearly with conversation length
+
+### Implementation
+
+#### **9.1 Database Schema Updates** (`convex/schema.ts`)
+
+```typescript
+users: defineTable({
+  // ... existing fields ...
+
+  // Summarization fields
+  recentMessages: v.optional(v.array(v.object({
+    role: v.string(),
+    content: v.string(),
+    timestamp: v.number(),
+  }))),
+  historicalSummary: v.optional(v.string()), // Compressed summary of >7 days ago
+  conversationStartDate: v.optional(v.number()),
+  totalInteractionCount: v.optional(v.number()),
+})
+```
+
+#### **9.2 Summarization Function** (`convex/summarization.ts`)
+
+```typescript
+export const updateCaregiverProfile = internalMutation({
+  handler: async (ctx, { userId }) => {
+    const messages = await getConversationHistory(ctx, userId);
+    const sevenDaysAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
+
+    const recentMessages = messages.filter(m => m.timestamp > sevenDaysAgo);
+    const historicalMessages = messages.filter(m => m.timestamp <= sevenDaysAgo);
+
+    let historicalSummary = '';
+    if (historicalMessages.length > 20) {
+      historicalSummary = await summarizeMessages(historicalMessages, {
+        focus: 'caregiver_challenges_and_progress',
+        maxTokens: 500,
+      });
+    }
+
+    await ctx.db.patch(userId, {
+      recentMessages,
+      historicalSummary,
+    });
+  }
+});
+```
+
+#### **9.3 Context Integration** (`src/context.ts`)
+
+```typescript
+export interface GiveCareContext {
+  // ... existing fields ...
+
+  recentMessages: Array<{ role: string; content: string; timestamp: number }>;
+  historicalSummary: string;
+  conversationStartDate: number;
+  totalInteractionCount: number;
+}
+```
+
+#### **9.4 Scheduled Summarization** (`convex/crons.ts`)
+
+```typescript
+crons.daily(
+  'summarize-conversations',
+  { hourUTC: 11, minuteUTC: 0 }, // 3am PT (low usage)
+  internal.summarization.summarizeAllUsers
+);
+
+export const summarizeAllUsers = internalMutation({
+  handler: async (ctx) => {
+    const activeUsers = await ctx.db
+      .query('users')
+      .withIndex('by_journey', q => q.eq('journeyPhase', 'active'))
+      .collect();
+
+    for (const user of activeUsers) {
+      const messageCount = await countMessages(ctx, user._id);
+      if (messageCount > 30) {
+        await updateCaregiverProfile(ctx, { userId: user._id });
+      }
+    }
+  }
+});
+```
+
+### Success Criteria
+
+- [ ] Summarization schema fields added
+- [ ] Daily summarization cron functional
+- [ ] Recent messages (7 days) preserved in full detail
+- [ ] Historical messages (>7 days) compressed to 500 tokens
+- [ ] Critical facts never summarized (care recipient name, crisis history)
+- [ ] 60-80% token cost reduction for long-term users (>100 messages)
+- [ ] Context retained beyond 30-day OpenAI limit
+- [ ] Agent responses maintain quality with summarized context
+
+### Expected Impact
+
+- **Token savings**: 60-80% for users with 100+ messages
+- **Context retention**: Infinite (vs 30-day OpenAI limit)
+- **Cost**: <$10/month at 1,000 users
+- **Quality**: Agents remember 6+ months of history
+
+---
+
+## Task 10: Working Memory System (Structured Context)
+
+### **Status**: ✅ COMPLETE (2025-10-15)
+### **Priority**: 🟡 MEDIUM
+### **Time Taken**: <1 day (TDD approach)
+### **Source**: OpenPoke analysis (OPENPOKE_ANALYSIS.md)
+
+### Objective
+
+Add structured memory system to record and retrieve important caregiver information, reducing repeated questions and improving personalization.
+
+### Current Gap
+
+- Critical facts only in `users` table (limited fields)
+- No way to recall "what interventions worked last month?"
+- Caregivers repeat same information multiple times
+- Can't surface relevant past discussions
+
+### Implementation
+
+#### **10.1 Memory Schema** (`convex/schema.ts`)
+
+```typescript
+memories: defineTable({
+  userId: v.id("users"),
+  content: v.string(), // "Care recipient John prefers morning bathing routine"
+  category: v.string(), // "care_routine" | "preference" | "intervention_result" | "crisis_trigger"
+  importance: v.number(), // 1-10
+  createdAt: v.number(),
+  lastAccessedAt: v.optional(v.number()),
+  accessCount: v.optional(v.number()),
+  embedding: v.optional(v.array(v.number())), // For vector search (Task 2)
+})
+  .index('by_user', ['userId'])
+  .index('by_user_importance', ['userId', 'importance'])
+  .index('by_category', ['category'])
+  .vectorIndex('by_embedding', {
+    vectorField: 'embedding',
+    dimensions: 1536,
+    filterFields: ['userId'],
+  });
+```
+
+#### **10.2 Memory Recording Tool** (`src/tools.ts`)
+
+```typescript
+export const recordMemory = tool({
+  name: 'record_memory',
+  description: 'Save important information for future reference',
+  parameters: z.object({
+    content: z.string(),
+    category: z.enum(['care_routine', 'preference', 'intervention_result', 'crisis_trigger']),
+    importance: z.number().min(1).max(10),
+  }),
+  execute: async ({ content, category, importance }, { context }) => {
+    await saveMemory({
+      userId: context.userId,
+      content,
+      category,
+      importance,
+    });
+    return `Remembered: ${content}`;
+  }
+});
+```
+
+#### **10.3 Agent Instructions Update** (`src/instructions.ts`)
+
+Add to main agent instructions:
+```
+When user shares important information (preferences, what works/doesn't work, care routines, crisis triggers), use record_memory to save it for future reference.
+```
+
+### Success Criteria
+
+- ✅ Memories table created with 4 indexes (by_user, by_user_importance, by_category, by_embedding)
+- ✅ recordMemory tool functional (7th agent tool)
+- ✅ Agent uses tool proactively (via updated instructions)
+- ✅ Memory importance scoring validated (1-10 range enforced)
+- ✅ 26 comprehensive tests passing (100% coverage)
+- ✅ Category validation (care_routine, preference, intervention_result, crisis_trigger)
+- ✅ Access tracking implemented (accessCount, lastAccessedAt)
+- [ ] 50% reduction in repeated questions (pending production testing)
+- [ ] 50+ memory entries recorded across test users (pending production deployment)
+
+### Expected Impact
+
+- **Personalization**: Responses tailored to past discussions
+- **Efficiency**: 50% reduction in repeated questions
+- **Clinical value**: Track intervention effectiveness over time
+- **Cost**: Negligible (<$5/month at 1,000 users)
+
+### Note
+
+Memory search (vector-based retrieval) requires Task 2 (Vector Search) to be completed first. This task only implements memory recording.
+
+---
+
+## Task 11: Engagement Watcher (Churn Prevention)
+
+### **Status**: 📋 To Do
+### **Priority**: 🟡 MEDIUM
+### **Estimated Time**: 3-5 days
+### **Source**: OpenPoke analysis (OPENPOKE_ANALYSIS.md)
+
+### Objective
+
+Implement background watchers to detect disengagement patterns, high-stress bursts, and wellness trends for proactive intervention.
+
+### Current Gap
+
+- No detection of sudden engagement drops (early churn signal)
+- Can't identify high-stress patterns (3+ crisis keywords in 24 hours)
+- No automated trend analysis (worsening wellness scores)
+
+### Implementation
+
+#### **11.1 Engagement Watcher** (`convex/watchers.ts`)
+
+```typescript
+export const watchCaregiverEngagement = internalMutation({
+  handler: async (ctx) => {
+    const sixHoursAgo = Date.now() - 6 * 60 * 60 * 1000;
+    const oneDayAgo = Date.now() - 24 * 60 * 60 * 1000;
+
+    const users = await ctx.db
+      .query('users')
+      .withIndex('by_journey', q => q.eq('journeyPhase', 'active'))
+      .collect();
+
+    for (const user of users) {
+      // Pattern 1: Sudden drop (from daily to silent for 3+ days)
+      const recentMessageCount = await countMessages(ctx, user._id, { since: oneDayAgo });
+      const previousAverage = user.averageMessagesPerDay || 1;
+
+      if (previousAverage > 3 && recentMessageCount === 0) {
+        await flagDisengagement(ctx, user._id, 'sudden_drop');
+      }
+
+      // Pattern 2: High-stress burst (5+ messages in 2 hours with crisis keywords)
+      const burstMessages = await getMessages(ctx, user._id, { since: sixHoursAgo });
+      const crisisKeywordCount = burstMessages.filter(m =>
+        /help|overwhelm|can't do this|give up/i.test(m.content)
+      ).length;
+
+      if (crisisKeywordCount >= 3) {
+        await flagHighStress(ctx, user._id, 'crisis_burst');
+      }
+    }
+  }
+});
+
+// Run every 6 hours
+crons.interval(
+  'engagement-watcher',
+  { hours: 6 },
+  internal.watchers.watchCaregiverEngagement
+);
+```
+
+#### **11.2 Wellness Trend Watcher** (`convex/watchers.ts`)
+
+```typescript
+export const watchWellnessTrends = internalMutation({
+  handler: async (ctx) => {
+    const users = await ctx.db
+      .query('users')
+      .withIndex('by_journey', q => q.eq('journeyPhase', 'active'))
+      .collect();
+
+    for (const user of users) {
+      const scores = await ctx.db
+        .query('wellnessScores')
+        .withIndex('by_user_recorded', q => q.eq('userId', user._id))
+        .order('desc')
+        .take(4); // Last 4 weeks
+
+      if (scores.length < 3) continue;
+
+      const isWorsening = scores.every((score, i) =>
+        i === 0 || score.overallScore > scores[i - 1].overallScore
+      );
+
+      if (isWorsening) {
+        await sendSMS(ctx, user._id,
+          "I've noticed your stress levels trending up over the past few weeks. Let's talk about what's changed and how I can help. 💙"
+        );
+      }
+    }
+  }
+});
+
+// Run weekly
+crons.weekly(
+  'wellness-trend-watcher',
+  { hourUTC: 16, minuteUTC: 0, dayOfWeek: 'monday' },
+  internal.watchers.watchWellnessTrends
+);
+```
+
+#### **11.3 Alerts Schema** (`convex/schema.ts`)
+
+```typescript
+alerts: defineTable({
+  userId: v.id("users"),
+  type: v.string(), // "disengagement" | "high_stress" | "wellness_decline"
+  pattern: v.string(),
+  severity: v.string(), // "low" | "medium" | "urgent"
+  createdAt: v.number(),
+  resolvedAt: v.optional(v.number()),
+})
+  .index('by_user', ['userId'])
+  .index('by_severity', ['severity'])
+  .index('by_created', ['createdAt']);
+```
+
+### Success Criteria
+
+- [ ] Engagement watcher runs every 6 hours
+- [ ] Wellness trend watcher runs weekly
+- [ ] Alerts table created
+- [ ] 20-30% churn reduction observed
+- [ ] High-stress bursts detected and escalated
+- [ ] Admin dashboard shows alerts
+
+### Expected Impact
+
+- **Churn reduction**: 20-30% (early disengagement detection)
+- **Safety improvement**: Faster crisis response
+- **User satisfaction**: "GiveCare noticed I was struggling"
+
+---
+
 ## Task Summary
 
 | Task | Status | Priority | Time | Notes |
 |------|--------|----------|------|-------|
 | **Task 1: Scheduled Functions** | ✅ COMPLETE | 🔥 CRITICAL | 4 days | Proactive messaging implemented |
 | **Task 6: Rate Limiter** | ✅ COMPLETE | 🔥 CRITICAL | 1 day | Cost protection implemented |
+| **Task 8: RRULE Trigger System** | ✅ COMPLETE | 🔥 HIGH | 1 day | 54 tests, TDD approach (OpenPoke) |
+| **Task 10: Working Memory System** | ✅ COMPLETE | 🟡 MEDIUM | <1 day | 26 tests, TDD approach (OpenPoke) |
 | **Task 3: Admin Dashboard** | 🚧 DOING | 🔥 HIGH | 2 weeks | Phase 1 done (deployment), Phase 2 in progress (actions) |
+| **Task 9: Conversation Summarization** | 📋 To Do | 🔥 HIGH | 5-7 days | Long-term context retention (OpenPoke) |
 | **Task 2: Vector Search** | 📋 To Do | 🔥 HIGH | 3-4 days | Semantic intervention matching |
+| **Task 11: Engagement Watcher** | 📋 To Do | 🟡 MEDIUM | 3-5 days | Churn prevention + trend monitoring (OpenPoke) |
 | **Task 4: User Dashboard** | 📋 To Do | 🟡 MEDIUM | 2 weeks | Auth, profile, wellness tracking |
 | **Task 5: Evaluation Framework** | 📋 To Do | 🟡 MEDIUM | 1 week | Automated evals + GEPA prep |
 | **Task 7: GEPA Optimization** | 💡 Integrated | 🔵 LOW | N/A | Now part of Task 5 |
 
-**Completion Status**: 2.5/7 tasks complete (36%) - Admin dashboard 50% done
+**Completion Status**: 4/11 tasks complete (36%)
 
-**Remaining time**: ~6 weeks total
-- **Phase 1** (High Priority): Admin Dashboard Phase 2 (1 week) + Vector Search (3-4 days) = ~2 weeks
-- **Phase 2** (Medium Priority): User Dashboard (2 weeks) + Eval Framework (1 week) = ~3 weeks
+**NEW: OpenPoke-inspired features** (2025-10-15):
+- ✅ Task 8: RRULE Trigger System (COMPLETE - 54 tests passing)
+- ✅ Task 10: Working Memory System (COMPLETE - 26 tests passing)
+- Task 9: Conversation Summarization (infinite context)
+- Task 11: Engagement Watcher (churn prevention)
+
+**Remaining time**: ~7 weeks total
+- **Phase 1** (High Priority): Admin Dashboard Phase 2 (1 week) + Summarization (1 week) + Vector Search (4 days) = ~3 weeks
+- **Phase 2** (Medium Priority): Engagement Watcher (4 days) + User Dashboard (2 weeks) + Eval Framework (1 week) = ~3.5 weeks
 - **Phase 3** (Low Priority): GEPA optimization when data available (6-12 months)
+
+**Files Created (Task 8 - RRULE Triggers)**:
+- `tests/rruleTriggers.test.ts` (803 lines, 54 tests)
+- `convex/triggers.ts` (350 lines)
+- Schema: Added `triggers` table with 5 indexes
+- Tool: Added `setWellnessSchedule` (6th agent tool)
+- Dependency: `rrule@2.8.1`
+
+**Files Created (Task 10 - Working Memory)**:
+- `tests/workingMemory.test.ts` (773 lines, 26 tests)
+- `convex/functions/memories.ts` (130 lines, 5 functions)
+- Schema: Added `memories` table with 4 indexes (including vector index for Task 2)
+- Tool: Added `recordMemory` (7th agent tool)
+- Instructions: Updated `mainInstructions` with memory guidance
 
 ---
 
-**Last Updated**: 2025-10-12
+**Last Updated**: 2025-10-15
 **Version**: 0.7.0
 **Tasks Completed**: Scheduled Functions, Rate Limiter
 **Tasks In Progress**: Admin Dashboard (Phase 2 - Actions & Polish)
-**Remaining**: Vector Search, User Dashboard, Evaluation Framework
+**New Tasks from OpenPoke Analysis**: RRULE Triggers, Conversation Summarization, Working Memory, Engagement Watcher
+**Remaining**: All new tasks + Vector Search, User Dashboard, Evaluation Framework

@@ -256,7 +256,26 @@ ${COMMUNICATION_STYLE}
 - **find_interventions**: Get personalized support strategies
 - **update_profile**: Save profile information
 - **start_assessment**: Begin wellness check-in
+- **record_memory**: Save important information about the user
 - (record_assessment_answer handled by assessment agent)
+
+# Memory Recording (Working Memory System)
+
+**IMPORTANT**: When users share valuable information, save it using record_memory:
+
+**Categories**:
+- **care_routine**: Daily care schedules, preferences, rituals ("John prefers morning baths at 9am")
+- **preference**: User's coping strategies, likes/dislikes ("Yoga reduces my stress by 30%")
+- **intervention_result**: Feedback on tried strategies ("Respite care helped a lot last month")
+- **crisis_trigger**: Known stressors or warning signs ("I get overwhelmed when dealing with insurance")
+
+**Importance Scoring (1-10)**:
+- **9-10**: Critical daily information (care routines, crisis triggers)
+- **6-8**: Important preferences and successful interventions
+- **3-5**: Useful context but not essential
+- **1-2**: Minor details
+
+Use this proactively to build context over time. Never ask "Should I remember this?" - just save it naturally.
 
 # Handoff Triggers
 

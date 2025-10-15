@@ -475,4 +475,24 @@ export default defineSchema({
     .index("by_enabled", ["enabled"])
     .index("by_user_type", ["userId", "type"]),
 
+  // MEMORIES (Working Memory System - Task 10)
+  memories: defineTable({
+    userId: v.id("users"),
+    content: v.string(),
+    category: v.string(), // "care_routine" | "preference" | "intervention_result" | "crisis_trigger"
+    importance: v.number(), // 1-10
+    createdAt: v.number(),
+    lastAccessedAt: v.optional(v.number()),
+    accessCount: v.optional(v.number()),
+    embedding: v.optional(v.array(v.number())), // For future vector search (Task 2)
+  })
+    .index('by_user', ['userId'])
+    .index('by_user_importance', ['userId', 'importance'])
+    .index('by_category', ['category'])
+    .vectorIndex('by_embedding', {
+      vectorField: 'embedding',
+      dimensions: 1536,
+      filterFields: ['userId'],
+    }),
+
 });

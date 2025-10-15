@@ -10,7 +10,7 @@
 
 import { Agent, run, setOpenAIAPI } from "@openai/agents";
 import { GiveCareContext } from "./context";
-import { checkWellnessStatus, findInterventions, updateProfile, startAssessment, recordAssessmentAnswer } from "./tools";
+import { checkWellnessStatus, findInterventions, updateProfile, startAssessment, recordAssessmentAnswer, setWellnessSchedule, recordMemory } from "./tools";
 import { crisisInstructions, mainInstructions, assessmentInstructions } from "./instructions";
 import {
   crisisGuardrail,
@@ -81,7 +81,7 @@ export const giveCareAgent = new Agent<GiveCareContext>({
     store: true,
     service_tier: "priority"
   } as ExtendedModelSettings,
-  tools: [checkWellnessStatus, findInterventions, updateProfile, startAssessment],
+  tools: [checkWellnessStatus, findInterventions, updateProfile, startAssessment, setWellnessSchedule, recordMemory],
   handoffs: [crisisAgent, assessmentAgent],
   inputGuardrails: [crisisGuardrail, spamGuardrail],
   outputGuardrails: [medicalAdviceGuardrail, safetyGuardrail]

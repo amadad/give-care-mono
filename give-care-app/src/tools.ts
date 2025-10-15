@@ -492,6 +492,57 @@ export const setWellnessSchedule = tool({
   },
 });
 
+// Working Memory (Task 10)
+export const recordMemory = tool({
+  name: 'record_memory',
+  description: `Save important information about the caregiver for future reference. Use this when the user shares preferences, care routines, intervention results, or crisis triggers.
+
+WHEN TO CALL:
+- User shares care routine: "John prefers morning baths at 9am" → category: care_routine
+- User mentions preference: "Yoga reduces my stress by 30%" → category: preference
+- User reports intervention result: "Respite care helped a lot last month" → category: intervention_result
+- User identifies crisis trigger: "I get overwhelmed dealing with insurance" → category: crisis_trigger
+
+Importance rating (1-10):
+- 9-10: Critical daily information (care routines, crisis triggers)
+- 6-8: Important preferences and successful interventions
+- 3-5: Useful context but not essential
+- 1-2: Minor details`,
+
+  parameters: z.object({
+    content: z.string().min(1, 'Content cannot be empty'),
+    category: z.enum(['care_routine', 'preference', 'intervention_result', 'crisis_trigger']),
+    importance: z.number().min(1).max(10),
+  }),
+
+  execute: async ({ content, category, importance }, runContext) => {
+    const context = runContext!.context as GiveCareContext;
+
+    // Call Convex mutation to save memory
+    const convexClient = (runContext as any)?.convexClient;
+    if (!convexClient) {
+      return 'Memory recording not available right now. I can still help with other things.';
+    }
+
+    try {
+      await convexClient.mutation(
+        api.functions.memories.saveMemory,
+        {
+          userId: context.userId,
+          content: content,
+          category: category,
+          importance: importance,
+        }
+      );
+
+      return `Remembered: ${content} (${category}, importance: ${importance}/10)`;
+    } catch (error) {
+      console.error('[recordMemory] Error saving memory:', error);
+      return 'I tried to remember that, but encountered an error. Please try again.';
+    }
+  },
+});
+
 // Export all tools
 export const allTools = [
   updateProfile,
@@ -500,4 +551,5 @@ export const allTools = [
   checkWellnessStatus,
   findInterventions,
   setWellnessSchedule,
+  recordMemory,
 ];
