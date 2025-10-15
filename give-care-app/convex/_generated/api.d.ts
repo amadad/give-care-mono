@@ -16,6 +16,7 @@ import type * as functions_assessmentResults from "../functions/assessmentResult
 import type * as functions_assessments from "../functions/assessments.js";
 import type * as functions_cleanup from "../functions/cleanup.js";
 import type * as functions_conversations from "../functions/conversations.js";
+import type * as functions_embeddings from "../functions/embeddings.js";
 import type * as functions_memories from "../functions/memories.js";
 import type * as functions_newsletter from "../functions/newsletter.js";
 import type * as functions_rateLimitMonitoring from "../functions/rateLimitMonitoring.js";
@@ -23,6 +24,7 @@ import type * as functions_resources from "../functions/resources.js";
 import type * as functions_scheduling from "../functions/scheduling.js";
 import type * as functions_seedResources from "../functions/seedResources.js";
 import type * as functions_users from "../functions/users.js";
+import type * as functions_vectorSearch from "../functions/vectorSearch.js";
 import type * as functions_wellness from "../functions/wellness.js";
 import type * as http from "../http.js";
 import type * as ingestion_adapters_eldercareLocatorAdapter from "../ingestion/adapters/eldercareLocatorAdapter.js";
@@ -39,9 +41,11 @@ import type * as resources_matchResources from "../resources/matchResources.js";
 import type * as services_MessageHandler from "../services/MessageHandler.js";
 import type * as stripe from "../stripe.js";
 import type * as subscriptions from "../subscriptions.js";
+import type * as summarization from "../summarization.js";
 import type * as test from "../test.js";
 import type * as triggers from "../triggers.js";
 import type * as twilio from "../twilio.js";
+import type * as watchers from "../watchers.js";
 
 import type {
   ApiFromModules,
@@ -66,6 +70,7 @@ declare const fullApi: ApiFromModules<{
   "functions/assessments": typeof functions_assessments;
   "functions/cleanup": typeof functions_cleanup;
   "functions/conversations": typeof functions_conversations;
+  "functions/embeddings": typeof functions_embeddings;
   "functions/memories": typeof functions_memories;
   "functions/newsletter": typeof functions_newsletter;
   "functions/rateLimitMonitoring": typeof functions_rateLimitMonitoring;
@@ -73,6 +78,7 @@ declare const fullApi: ApiFromModules<{
   "functions/scheduling": typeof functions_scheduling;
   "functions/seedResources": typeof functions_seedResources;
   "functions/users": typeof functions_users;
+  "functions/vectorSearch": typeof functions_vectorSearch;
   "functions/wellness": typeof functions_wellness;
   http: typeof http;
   "ingestion/adapters/eldercareLocatorAdapter": typeof ingestion_adapters_eldercareLocatorAdapter;
@@ -89,9 +95,11 @@ declare const fullApi: ApiFromModules<{
   "services/MessageHandler": typeof services_MessageHandler;
   stripe: typeof stripe;
   subscriptions: typeof subscriptions;
+  summarization: typeof summarization;
   test: typeof test;
   triggers: typeof triggers;
   twilio: typeof twilio;
+  watchers: typeof watchers;
 }>;
 declare const fullApiWithMounts: typeof fullApi;
 

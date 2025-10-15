@@ -196,7 +196,10 @@ export default defineSchema({
 
     // Timestamps
     createdAt: v.number(),
-    updatedAt: v.number()
+    updatedAt: v.number(),
+
+    // Vector Search (Task 2)
+    embedding: v.optional(v.array(v.number())), // 1536-dim vector (text-embedding-3-small)
   })
     .index("by_type", ["type"])
     .index("by_status", ["status"])
@@ -205,6 +208,11 @@ export default defineSchema({
     .searchIndex("search_content", {
       searchField: "content",
       filterFields: ["type", "status", "pressureZones"]
+    })
+    .vectorIndex("by_embedding", {
+      vectorField: "embedding",
+      dimensions: 1536,
+      filterFields: ["status", "type", "language"],
     }),
 
   // KNOWLEDGE_USAGE (maps to public.knowledge_usage)

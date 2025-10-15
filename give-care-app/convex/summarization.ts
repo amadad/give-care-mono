@@ -1,5 +1,3 @@
-"use node";
-
 /**
  * Conversation Summarization (Task 9)
  *
@@ -14,6 +12,8 @@
  * - Critical facts: Never summarized (care recipient name, crisis history)
  *
  * Scheduled: Daily at 3am PT (11:00 UTC) for active users with >30 messages
+ *
+ * NOTE: Only actions use "use node" directive - queries/mutations run in Convex runtime
  */
 
 import { internalMutation, internalAction, internalQuery } from './_generated/server';
@@ -21,10 +21,6 @@ import { internal } from './_generated/api';
 import { v } from 'convex/values';
 import type { Id } from './_generated/dataModel';
 import OpenAI from 'openai';
-
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-});
 
 /**
  * Split conversation history into recent (< 7 days) and historical (>= 7 days)
@@ -73,6 +69,7 @@ export const splitMessagesByRecency = internalMutation({
  * Focuses on caregiver challenges and progress
  */
 async function summarizeMessages(
+  openai: OpenAI,
   messages: Array<{ role: string; content: string; timestamp: number }>,
   options: { focus: string; maxTokens: number }
 ): Promise<string> {
@@ -115,6 +112,8 @@ export const updateCaregiverProfile = internalAction({
     userId: v.id('users'),
   },
   handler: async (ctx, args) => {
+    "use node";
+
     // Split messages by recency
     const { recentMessages, historicalMessages } = await ctx.runMutation(
       internal.summarization.splitMessagesByRecency,
@@ -127,7 +126,13 @@ export const updateCaregiverProfile = internalAction({
     // Only summarize if historical messages > 20
     if (historicalMessages.length > 20) {
       summarizationTriggered = true;
-      historicalSummary = await summarizeMessages(historicalMessages, {
+
+      // Initialize OpenAI client
+      const openai = new OpenAI({
+        apiKey: process.env.OPENAI_API_KEY,
+      });
+
+      historicalSummary = await summarizeMessages(openai, historicalMessages, {
         focus: 'caregiver_challenges_and_progress',
         maxTokens: 500,
       });
@@ -186,6 +191,8 @@ export const patchUserSummary = internalMutation({
  */
 export const summarizeAllUsers = internalAction({
   handler: async (ctx) => {
+    "use node";
+
     // Get active users (not churned)
     const users = await ctx.runQuery(internal.summarization.getActiveUsers, {});
 
