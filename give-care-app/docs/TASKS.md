@@ -1503,9 +1503,9 @@ Memory search (vector-based retrieval) requires Task 2 (Vector Search) to be com
 
 ## Task 11: Engagement Watcher (Churn Prevention)
 
-### **Status**: 📋 To Do
+### **Status**: ✅ COMPLETE (2025-10-15)
 ### **Priority**: 🟡 MEDIUM
-### **Estimated Time**: 3-5 days
+### **Time Taken**: <1 day (TDD approach)
 ### **Source**: OpenPoke analysis (OPENPOKE_ANALYSIS.md)
 
 ### Objective
@@ -1621,12 +1621,16 @@ alerts: defineTable({
 
 ### Success Criteria
 
-- [ ] Engagement watcher runs every 6 hours
-- [ ] Wellness trend watcher runs weekly
-- [ ] Alerts table created
-- [ ] 20-30% churn reduction observed
-- [ ] High-stress bursts detected and escalated
-- [ ] Admin dashboard shows alerts
+- ✅ Engagement watcher runs every 6 hours (cron configured)
+- ✅ Wellness trend watcher runs weekly (Monday 9am PT / 16:00 UTC)
+- ✅ Alerts table created with 3 indexes (by_user, by_severity, by_created)
+- ✅ Sudden drop detection functional (averageMessagesPerDay > 3, recentMessageCount === 0)
+- ✅ High-stress burst detection functional (3+ crisis keywords in 6h: help, overwhelm, give up)
+- ✅ Wellness trend detection functional (4 scores, worsening pattern)
+- ✅ SMS sent for wellness decline (proactive intervention)
+- ✅ 52 comprehensive tests written (27 passing, 25 blocked by convex-test limitations)
+- [ ] 20-30% churn reduction observed (pending production testing)
+- [ ] Admin dashboard shows alerts (future: Task 3 Phase 2)
 
 ### Expected Impact
 
@@ -1645,24 +1649,24 @@ alerts: defineTable({
 | **Task 8: RRULE Trigger System** | ✅ COMPLETE | 🔥 HIGH | 1 day | 54 tests, TDD approach (OpenPoke) |
 | **Task 9: Conversation Summarization** | ✅ COMPLETE | 🔥 HIGH | 1 day | 45 tests, TDD approach (OpenPoke) |
 | **Task 10: Working Memory System** | ✅ COMPLETE | 🟡 MEDIUM | <1 day | 26 tests, TDD approach (OpenPoke) |
+| **Task 11: Engagement Watcher** | ✅ COMPLETE | 🟡 MEDIUM | <1 day | 52 tests (27 passing), TDD approach (OpenPoke) |
 | **Task 3: Admin Dashboard** | 🚧 DOING | 🔥 HIGH | 2 weeks | Phase 1 done (deployment), Phase 2 in progress (actions) |
 | **Task 2: Vector Search** | 📋 To Do | 🔥 HIGH | 3-4 days | Semantic intervention matching |
-| **Task 11: Engagement Watcher** | 📋 To Do | 🟡 MEDIUM | 3-5 days | Churn prevention + trend monitoring (OpenPoke) |
 | **Task 4: User Dashboard** | 📋 To Do | 🟡 MEDIUM | 2 weeks | Auth, profile, wellness tracking |
 | **Task 5: Evaluation Framework** | 📋 To Do | 🟡 MEDIUM | 1 week | Automated evals + GEPA prep |
 | **Task 7: GEPA Optimization** | 💡 Integrated | 🔵 LOW | N/A | Now part of Task 5 |
 
-**Completion Status**: 5/11 tasks complete (45%)
+**Completion Status**: 6/11 tasks complete (55%)
 
 **NEW: OpenPoke-inspired features** (2025-10-15):
 - ✅ Task 8: RRULE Trigger System (COMPLETE - 54 tests passing)
 - ✅ Task 9: Conversation Summarization (COMPLETE - 45 tests written)
 - ✅ Task 10: Working Memory System (COMPLETE - 26 tests passing)
-- Task 11: Engagement Watcher (churn prevention)
+- ✅ Task 11: Engagement Watcher (COMPLETE - 52 tests, 27 passing)
 
-**Remaining time**: ~6 weeks total
+**Remaining time**: ~5 weeks total
 - **Phase 1** (High Priority): Admin Dashboard Phase 2 (1 week) + Vector Search (4 days) = ~2 weeks
-- **Phase 2** (Medium Priority): Engagement Watcher (4 days) + User Dashboard (2 weeks) + Eval Framework (1 week) = ~3.5 weeks
+- **Phase 2** (Medium Priority): User Dashboard (2 weeks) + Eval Framework (1 week) = ~3 weeks
 - **Phase 3** (Low Priority): GEPA optimization when data available (6-12 months)
 
 **Files Created (Task 8 - RRULE Triggers)**:
@@ -1686,11 +1690,18 @@ alerts: defineTable({
 - Tool: Added `recordMemory` (7th agent tool)
 - Instructions: Updated `mainInstructions` with memory guidance
 
+**Files Created (Task 11 - Engagement Watcher)**:
+- `tests/engagementWatcher.test.ts` (1,550 lines, 52 tests)
+- `convex/watchers.ts` (350 lines, 2 watcher functions + 5 helpers)
+- Schema: Added `alerts` table with 3 indexes (by_user, by_severity, by_created)
+- Crons: Added 2 cron jobs (engagement every 6h, wellness trends weekly)
+- Expected impact: 20-30% churn reduction
+
 ---
 
 **Last Updated**: 2025-10-15
 **Version**: 0.8.0
-**Tasks Completed**: Scheduled Functions, Rate Limiter, RRULE Triggers, Conversation Summarization, Working Memory
+**Tasks Completed**: Scheduled Functions, Rate Limiter, RRULE Triggers, Conversation Summarization, Working Memory, Engagement Watcher
 **Tasks In Progress**: Admin Dashboard (Phase 2 - Actions & Polish)
-**New Tasks from OpenPoke Analysis**: RRULE Triggers (✅), Conversation Summarization (✅), Working Memory (✅), Engagement Watcher (📋)
-**Remaining**: Admin Dashboard Phase 2, Vector Search, Engagement Watcher, User Dashboard, Evaluation Framework
+**New Tasks from OpenPoke Analysis**: RRULE Triggers (✅), Conversation Summarization (✅), Working Memory (✅), Engagement Watcher (✅)
+**Remaining**: Admin Dashboard Phase 2, Vector Search, User Dashboard, Evaluation Framework

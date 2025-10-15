@@ -112,4 +112,41 @@ crons.daily(
   internal.summarization.summarizeAllUsers
 );
 
+/**
+ * ENGAGEMENT WATCHER (Task 11)
+ * Runs every 6 hours
+ *
+ * Detects disengagement patterns and high-stress bursts:
+ * - Pattern 1: Sudden drop (averageMessagesPerDay > 3, recentMessageCount === 0)
+ * - Pattern 2: Crisis burst (3+ crisis keywords in 6 hours: help, overwhelm, give up)
+ *
+ * Creates alerts for admin dashboard intervention
+ */
+crons.interval(
+  'engagement-watcher',
+  { hours: 6 },
+  internal.watchers.watchCaregiverEngagement
+);
+
+/**
+ * WELLNESS TREND WATCHER (Task 11)
+ * Runs weekly on Monday at 9am PT (16:00 UTC during standard time)
+ *
+ * Detects worsening wellness trends over 4 consecutive weeks:
+ * - Analyzes last 4 wellness scores (by_user_recorded index)
+ * - Flags if scores consistently worsen (overallScore increasing each week)
+ * - Sends proactive SMS: "I've noticed your stress levels trending up..."
+ *
+ * Expected impact: 20-30% churn reduction through early intervention
+ */
+crons.weekly(
+  'wellness-trend-watcher',
+  {
+    hourUTC: 16,
+    minuteUTC: 0,
+    dayOfWeek: 'monday',
+  },
+  internal.watchers.watchWellnessTrends
+);
+
 export default crons;

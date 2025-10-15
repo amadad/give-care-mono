@@ -505,4 +505,17 @@ export default defineSchema({
       filterFields: ['userId'],
     }),
 
+  // ALERTS (Engagement Watcher - Task 11)
+  alerts: defineTable({
+    userId: v.id("users"),
+    type: v.string(), // "disengagement" | "high_stress" | "wellness_decline"
+    pattern: v.string(), // "sudden_drop" | "crisis_burst" | "worsening_scores"
+    severity: v.string(), // "low" | "medium" | "urgent"
+    createdAt: v.number(),
+    resolvedAt: v.optional(v.number()),
+  })
+    .index('by_user', ['userId'])
+    .index('by_severity', ['severity'])
+    .index('by_created', ['createdAt']),
+
 });
