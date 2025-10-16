@@ -7,7 +7,7 @@
  */
 
 import { discoverSources } from "./discovery.simple";
-import { extractResourceFromUrl } from "./extraction.llm-scraper";
+import { extractResourceFromUrl } from "./extraction.jina";
 import { categorizeRecord } from "./categorizer.simple";
 import { validateRecord } from "./validator.simple";
 import { ETLConvexClient } from "../utils/convex";
@@ -92,8 +92,7 @@ export async function executePipeline(config: PipelineConfig): Promise<PipelineR
         logger.info("Extracting from source", { url: source.url });
         const record = await extractResourceFromUrl(
           source.url,
-          config.openaiApiKey,
-          config.browserBinding
+          config.openaiApiKey
         );
 
         if (record) {
@@ -187,7 +186,9 @@ export async function executePipeline(config: PipelineConfig): Promise<PipelineR
           }
         });
       } catch (error) {
-        logger.error("Validation error", { title: record.title, error });
+        logger.error("Validation error", error instanceof Error ? error : new Error(String(error)), {
+          title: record.title
+        });
         errors.push(`Validation error: ${record.title}`);
       }
     }

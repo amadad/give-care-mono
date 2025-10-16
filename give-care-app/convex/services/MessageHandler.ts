@@ -64,8 +64,8 @@ export class MessageHandler {
         return subscriptionCheck; // Return signup message if not subscribed
       }
 
-      // 5. Build context
-      const context = this.buildContext(user, message.from, rateLimitResult.assessmentRateLimited);
+      // 5. Build context (now async to hydrate assessment responses)
+      const context = await this.buildContext(user, message.from, rateLimitResult.assessmentRateLimited);
 
       // 5b. Clone context before agent execution to prevent mutation bugs
       // The agent mutates context.assessmentResponses, so we need a snapshot
@@ -257,11 +257,28 @@ export class MessageHandler {
   /**
    * Step 5: Build GiveCareContext from user record
    */
-  private buildContext(
+  private async buildContext(
     user: any,
     phoneNumber: string,
     assessmentRateLimited: boolean
-  ): GiveCareContext {
+  ): Promise<GiveCareContext> {
+    // FIX #1: Hydrate assessment responses from database if assessment in progress
+    let assessmentResponses: Record<string, string | number> = {};
+
+    if (user.assessmentInProgress && user.assessmentSessionId) {
+      const responses = await this.ctx.runQuery(
+        internal.functions.assessments.getSessionResponses,
+        { sessionId: user.assessmentSessionId }
+      );
+
+      // Build map of question_id -> response_value
+      assessmentResponses = Object.fromEntries(
+        responses.map((r: any) => [r.questionId, r.responseValue])
+      );
+
+      console.log(`[Context] Hydrated ${Object.keys(assessmentResponses).length} prior assessment responses`);
+    }
+
     return {
       userId: user._id,
       phoneNumber: user.phoneNumber,
@@ -279,13 +296,13 @@ export class MessageHandler {
       assessmentType: (user.assessmentType as any) || null,
       assessmentCurrentQuestion: user.assessmentCurrentQuestion || 0,
       assessmentSessionId: user.assessmentSessionId || null,
-      assessmentResponses: {},
+      assessmentResponses, // FIX #1: Now includes all prior answers
       assessmentRateLimited, // Use passed-in value from rate limit check
       burnoutScore: user.burnoutScore || null,
-      burnoutBand: null,
-      burnoutConfidence: null,
+      burnoutBand: (user.burnoutBand as any) || null, // FIX #3: Preserve stored band
+      burnoutConfidence: user.burnoutConfidence || null, // FIX #3: Preserve confidence
       pressureZones: user.pressureZones || [],
-      pressureZoneScores: {},
+      pressureZoneScores: user.pressureZoneScores || {}, // FIX #3: Preserve zone scores
       rcsCapable: user.rcsCapable || false,
       deviceType: user.deviceType || null,
       consentAt: user.consentAt ? String(user.consentAt) : null,
@@ -505,6 +522,7 @@ export class MessageHandler {
 
   /**
    * Async version - fires and forgets (no await)
+   * FIX #4: Now includes onboardingCooldownUntil
    */
   private updateUserContextAsync(userId: any, context: GiveCareContext): void {
     this.ctx.runMutation(internal.functions.users.updateContextState, {
@@ -515,6 +533,7 @@ export class MessageHandler {
       zipCode: context.zipCode || undefined,
       journeyPhase: context.journeyPhase,
       onboardingAttempts: context.onboardingAttempts,
+      onboardingCooldownUntil: context.onboardingCooldownUntil || undefined, // FIX #4: Persist cooldown
       assessmentInProgress: context.assessmentInProgress,
       assessmentType: context.assessmentType || undefined,
       assessmentCurrentQuestion: context.assessmentCurrentQuestion,

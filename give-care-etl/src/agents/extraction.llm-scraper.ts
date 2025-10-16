@@ -174,6 +174,8 @@ async function fallbackExtraction(
   openaiApiKey: string
 ): Promise<IntermediateRecord | null> {
   try {
+    logger.info("Fetching URL", { url });
+
     const response = await fetch(url, {
       headers: { "User-Agent": "GiveCareBot/1.0 (+https://givecareapp.com)" }
     });
@@ -192,34 +194,92 @@ async function fallbackExtraction(
       .trim()
       .substring(0, 8000);
 
-    // Use OpenAI to extract
-    const openai = createOpenAI({ apiKey: openaiApiKey });
-    const llm = openai.chat("gpt-4o-mini");
+    logger.info("Extracted text", { url, textLength: text.length });
 
-    const prompt = `Extract caregiver support resource information from this text.
-Return JSON matching this schema: ${JSON.stringify(CaregiverResourceSchema.shape)}
+    // Use OpenAI direct API call with response_format
+    const openaiResponse = await fetch("https://api.openai.com/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${openaiApiKey}`
+      },
+      body: JSON.stringify({
+        model: "gpt-4o-mini",
+        messages: [
+          {
+            role: "system",
+            content: "You are a data extraction assistant. Extract caregiver support resource information from HTML content and return structured JSON."
+          },
+          {
+            role: "user",
+            content: `Extract the following information from this webpage content:
+- title: Name of the program or service
+- providerName: Organization providing the service
+- phones: Array of phone numbers (strings)
+- website: Website URL
+- serviceTypes: Array of service types (respite, support_group, counseling, crisis_support, financial_aid, medicare_help, legal_planning, navigation, equipment_devices, education_training, caregiver_support)
+- coverage: Geographic coverage (national, state, county, zip, or radius)
+- description: Brief description of the service
+- state: 2-letter state code if mentioned
 
 TEXT:
-${text}`;
-
-    const completion = await llm.doGenerate({
-      inputFormat: "messages",
-      mode: { type: "json", schema: CaregiverResourceSchema },
-      prompt: [{ role: "user", content: [{ type: "text", text: prompt }] }]
+${text}`
+          }
+        ],
+        response_format: { type: "json_object" }
+      })
     });
 
-    const extracted = JSON.parse(completion.text);
+    if (!openaiResponse.ok) {
+      const errorText = await openaiResponse.text();
+      logger.error("OpenAI API error", {
+        url,
+        status: openaiResponse.status,
+        statusText: openaiResponse.statusText,
+        error: errorText,
+        headers: Object.fromEntries(openaiResponse.headers.entries())
+      });
+      return null;
+    }
+
+    const result = await openaiResponse.json();
+    const extracted = JSON.parse(result.choices[0].message.content);
+
+    logger.info("Extraction successful", {
+      url,
+      title: extracted.title,
+      hasServiceTypes: !!extracted.serviceTypes
+    });
 
     return {
-      ...extracted,
+      title: extracted.title || "Unknown Service",
+      providerName: extracted.providerName || "Unknown Provider",
+      phones: extracted.phones || [],
+      website: extracted.website || url,
+      email: undefined,
+      serviceTypes: extracted.serviceTypes || ["caregiver_support"],
       zones: [],
+      coverage: extracted.coverage || "state",
+      description: extracted.description,
+      eligibility: undefined,
+      languages: undefined,
+      hours: undefined,
+      address: undefined,
+      city: undefined,
+      state: extracted.state,
+      zip: undefined,
+      fundingSource: undefined,
       dataSourceType: "scraped" as const,
       aggregatorSource: determineAggregatorSource(url),
       sourceUrl: url,
       lastVerified: new Date().toISOString()
     };
   } catch (error) {
-    logger.error("Fallback extraction failed", { url, error });
+    logger.error("Fallback extraction failed", {
+      url,
+      error: error instanceof Error ? error.message : String(error),
+      stack: error instanceof Error ? error.stack : undefined
+    });
     return null;
   }
 }

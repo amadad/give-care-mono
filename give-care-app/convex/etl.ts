@@ -260,10 +260,12 @@ export const addValidatedRecord = mutation({
       validatedCount: workflow.validatedCount + 1,
     });
 
-    // Mark extracted record as validated
-    await ctx.db.patch(args.extractedRecordId, {
-      validationStatus: "passed",
-    });
+    // Mark extracted record as validated (only if it exists)
+    if (args.extractedRecordId) {
+      await ctx.db.patch(args.extractedRecordId, {
+        validationStatus: "passed",
+      });
+    }
 
     return { recordId };
   },

@@ -95,9 +95,28 @@ export const contextHelpers = {
    * Check if we can ask for a profile field per P2/P3 (trauma-informed)
    *
    * P2: Never ask same field twice in session
-   * P3: Two attempts max, then cooldown
+   * P3: Two attempts max, then 24-hour cooldown
+   *
+   * FIX #4: Now honors cooldown period and resets attempts when cooldown expires
    */
   canAskForField(ctx: GiveCareContext, field: string): boolean {
+    // Check if cooldown is active
+    if (ctx.onboardingCooldownUntil) {
+      const cooldownEnd = new Date(ctx.onboardingCooldownUntil).getTime();
+      const now = Date.now();
+
+      if (now < cooldownEnd) {
+        // Still in cooldown period - cannot ask any field
+        return false;
+      }
+
+      // Cooldown expired - reset for next attempt
+      // Note: This mutation should happen in the updateProfile tool,
+      // but we signal here that cooldown has expired
+      ctx.onboardingCooldownUntil = null;
+      ctx.onboardingAttempts = {}; // Reset all attempts after cooldown
+    }
+
     const attempts = ctx.onboardingAttempts[field] || 0;
     return attempts < 2;
   },

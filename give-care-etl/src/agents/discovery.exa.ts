@@ -51,18 +51,11 @@ export async function discoverWithExa(
   });
 
   try {
+    // Use searchAndContents for simplicity (subpages feature isn't working reliably)
     const results = await exa.searchAndContents(semanticQuery, {
       type: "neural",  // Semantic understanding
-      numResults: options.limit ?? 20,
+      numResults: Math.min((options.limit ?? 20) * 3, 50),  // Request 3x to account for filtering
       category: "health",
-      includeDomains: [".gov", ".edu", ".org"],
-      excludeDomains: [
-        "facebook.com",
-        "yelp.com",
-        "yellowpages.com",
-        "bbb.org",  // Business directory
-        "mapquest.com"
-      ],
       useAutoprompt: true,  // Let Exa optimize the query
       text: {
         maxCharacters: 2000,  // Get enough for quality assessment
@@ -79,26 +72,60 @@ export async function discoverWithExa(
       autopromptString: results.autopromptString
     });
 
-    return results.results.map((result, index) => {
-      const source: DiscoveredSource = {
-        url: result.url,
-        title: result.title || extractTitleFromUrl(result.url),
-        snippet: result.text?.substring(0, 300) || "",
-        sourceType: detectSourceType(result.url),
-        credibilityScore: calculateCredibilityScore(result, options.serviceType),
-        priority: index < 5 ? "high" : index < 15 ? "medium" : "low",
-        estimatedResourceCount: estimateResourceCount(result.highlights || [], result.text || "")
-      };
+    // Filter and map results
+    const sources = results.results
+      .filter(result => {
+        // Filter out bad URLs
+        const url = result.url.toLowerCase();
+        const title = (result.title || "").toLowerCase();
 
-      logger.info("Discovered source", {
-        url: source.url,
-        title: source.title,
-        credibilityScore: source.credibilityScore,
-        sourceType: source.sourceType
-      });
+        // Skip error pages, search pages, and generic directories
+        if (
+          url.includes("/error") ||
+          url.includes("/404") ||
+          url.includes("/search") ||
+          url.includes("/browse-search") ||
+          url.includes("?aspxerrorpath") ||
+          title.includes("error") ||
+          title === "error" ||
+          title === "welcome" ||
+          !result.text ||
+          result.text.length < 200  // Skip pages with too little content
+        ) {
+          logger.info("Filtered out bad URL", { url, title, reason: "error/search page or insufficient content" });
+          return false;
+        }
 
-      return source;
+        return true;
+      })
+      .map((result, index) => {
+        const source: DiscoveredSource = {
+          url: result.url,
+          title: result.title || extractTitleFromUrl(result.url),
+          snippet: result.text?.substring(0, 300) || "",
+          sourceType: detectSourceType(result.url),
+          credibilityScore: calculateCredibilityScore(result, options.serviceType),
+          priority: index < 5 ? "high" : index < 15 ? "medium" : "low",
+          estimatedResourceCount: estimateResourceCount(result.highlights || [], result.text || "")
+        };
+
+        logger.info("Discovered source", {
+          url: source.url,
+          title: source.title,
+          credibilityScore: source.credibilityScore,
+          sourceType: source.sourceType
+        });
+
+        return source;
+      })
+      .slice(0, options.limit);  // Return only requested number after filtering
+
+    logger.info("Filtered sources", {
+      original: results.results.length,
+      filtered: sources.length
     });
+
+    return sources;
 
   } catch (error) {
     logger.error("Exa search failed", {

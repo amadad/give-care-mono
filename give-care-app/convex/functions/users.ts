@@ -143,6 +143,7 @@ export const updateContextState = internalMutation({
     zipCode: v.optional(v.string()),
     journeyPhase: v.optional(v.string()),
     onboardingAttempts: v.optional(v.any()),
+    onboardingCooldownUntil: v.optional(v.string()), // FIX #4: Add cooldown field
     assessmentInProgress: v.optional(v.boolean()),
     assessmentType: v.optional(v.string()),
     assessmentCurrentQuestion: v.optional(v.number()),
@@ -165,6 +166,12 @@ export const updateContextState = internalMutation({
     if (updates.zipCode !== undefined) cleanUpdates.zipCode = updates.zipCode;
     if (updates.journeyPhase !== undefined) cleanUpdates.journeyPhase = updates.journeyPhase;
     if (updates.onboardingAttempts !== undefined) cleanUpdates.onboardingAttempts = updates.onboardingAttempts;
+    // FIX #4: Persist cooldown timestamp
+    if (updates.onboardingCooldownUntil !== undefined) {
+      cleanUpdates.onboardingCooldownUntil = updates.onboardingCooldownUntil
+        ? Date.parse(updates.onboardingCooldownUntil)
+        : undefined;
+    }
     if (updates.assessmentInProgress !== undefined) cleanUpdates.assessmentInProgress = updates.assessmentInProgress;
     if (updates.assessmentType !== undefined) cleanUpdates.assessmentType = updates.assessmentType;
     if (updates.assessmentCurrentQuestion !== undefined) cleanUpdates.assessmentCurrentQuestion = updates.assessmentCurrentQuestion;

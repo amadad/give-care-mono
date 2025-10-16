@@ -1,19 +1,20 @@
 "use node";
 
 /**
- * Hybrid Discovery Agent
+ * Discovery Agent - Exa API Only
  *
- * Phase 1: Combines hardcoded authoritative sources + Exa API semantic search
- * Phase 2: Add workers-research for autonomous discovery
+ * Uses Exa.ai semantic search for dynamic resource discovery.
+ * No hardcoded sources - all discovery is done via neural search.
  */
 
 import { DiscoveredSource } from "../shared/types";
 import { discoverWithExa } from "./discovery.exa";
 
 /**
- * Curated list of authoritative caregiver resource sources
+ * REMOVED: Hardcoded authoritative sources
+ * All discovery now uses Exa API for real-time, semantic search
  */
-const AUTHORITATIVE_SOURCES: Record<string, DiscoveredSource[]> = {
+const AUTHORITATIVE_SOURCES_REMOVED: Record<string, DiscoveredSource[]> = {
   // National resources (all states)
   national: [
     {
@@ -113,61 +114,53 @@ const AUTHORITATIVE_SOURCES: Record<string, DiscoveredSource[]> = {
 };
 
 /**
- * Discover caregiver resource sources using hybrid approach
+ * Discover caregiver resource sources using Exa API ONLY
  *
  * Strategy:
- * 1. Hardcoded authoritative sources (fast, free, reliable)
- * 2. Exa API semantic search (dynamic, comprehensive, semantic)
- * 3. Deduplicate and merge results
- * 4. Sort by credibility score and priority
+ * 1. Exa API semantic search (dynamic, comprehensive, semantic)
+ * 2. Deduplicate results
+ * 3. Sort by credibility score and priority
+ *
+ * REMOVED: Hardcoded sources - all discovery is now dynamic via Exa
  */
 export async function discoverSources(
   state?: string,
   limit: number = 20,
   exaApiKey?: string
 ): Promise<DiscoveredSource[]> {
-  const sources: DiscoveredSource[] = [];
-
-  // STEP 1: Always include hardcoded authoritative sources
-  sources.push(...AUTHORITATIVE_SOURCES.national);
-  if (state && AUTHORITATIVE_SOURCES[state]) {
-    sources.push(...AUTHORITATIVE_SOURCES[state]);
+  // Require Exa API key - no fallback to hardcoded sources
+  if (!exaApiKey) {
+    throw new Error("Exa API key is required for discovery. No hardcoded sources available.");
   }
 
-  // STEP 2: Use Exa API for dynamic discovery (if API key provided)
-  if (exaApiKey) {
-    try {
-      const query = state
-        ? `caregiver support services in ${state}`
-        : "caregiver support services";
+  try {
+    const query = state
+      ? `caregiver support services and resources in ${state}`
+      : "caregiver support services and resources nationwide";
 
-      const exaSources = await discoverWithExa(query, {
-        state,
-        limit: Math.max(limit - sources.length, 10), // Request enough to reach desired limit
-        apiKey: exaApiKey
-      });
+    const exaSources = await discoverWithExa(query, {
+      state,
+      limit,
+      apiKey: exaApiKey
+    });
 
-      sources.push(...exaSources);
-    } catch (error) {
-      console.error("Exa API error (falling back to hardcoded sources):", error);
-      // Continue with hardcoded sources only
-    }
+    // Deduplicate by URL
+    const uniqueSources = Array.from(
+      new Map(exaSources.map(s => [s.url, s])).values()
+    );
+
+    // Sort by credibility score and priority
+    uniqueSources.sort((a, b) => {
+      if (a.priority !== b.priority) {
+        const priorityOrder = { high: 0, medium: 1, low: 2 };
+        return priorityOrder[a.priority] - priorityOrder[b.priority];
+      }
+      return b.credibilityScore - a.credibilityScore;
+    });
+
+    return uniqueSources.slice(0, limit);
+  } catch (error) {
+    console.error("Exa API error:", error);
+    throw new Error(`Discovery failed: ${error instanceof Error ? error.message : String(error)}`);
   }
-
-  // STEP 3: Deduplicate by URL
-  const uniqueSources = Array.from(
-    new Map(sources.map(s => [s.url, s])).values()
-  );
-
-  // STEP 4: Sort by credibility score and priority
-  uniqueSources.sort((a, b) => {
-    if (a.priority !== b.priority) {
-      const priorityOrder = { high: 0, medium: 1, low: 2 };
-      return priorityOrder[a.priority] - priorityOrder[b.priority];
-    }
-    return b.credibilityScore - a.credibilityScore;
-  });
-
-  // STEP 5: Return limited number of sources
-  return uniqueSources.slice(0, limit);
 }

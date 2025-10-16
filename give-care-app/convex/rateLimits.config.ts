@@ -19,8 +19,9 @@ export const rateLimiter = new RateLimiter((components as any).rateLimiter);
  * Rate limit configurations using token bucket algorithm
  *
  * Token Bucket Params:
- * - rate: Tokens added per time period (steady-state rate)
- * - burst: Max tokens in bucket (allows temporary spikes)
+ * - rate: Tokens added per period (steady-state rate)
+ * - period: Time period in milliseconds
+ * - capacity: Max tokens in bucket (optional, defaults to rate)
  * - maxReserved: Max tokens that can be reserved across all users
  */
 export const RATE_LIMITS = {
@@ -37,8 +38,9 @@ export const RATE_LIMITS = {
    */
   smsPerUser: {
     kind: 'token bucket' as const,
-    rate: { count: 10, period: 'day' as const },
-    burst: 3, // Allow burst for conversation flow
+    rate: 10,
+    period: 24 * 60 * 60 * 1000, // 1 day in milliseconds
+    capacity: 13, // rate + burst capacity (10 + 3)
     maxReserved: 100, // Support 100 concurrent users at burst
   },
 
@@ -53,8 +55,9 @@ export const RATE_LIMITS = {
    */
   smsGlobal: {
     kind: 'token bucket' as const,
-    rate: { count: 1000, period: 'hour' as const },
-    burst: 50, // Allow spikes for scheduled messages
+    rate: 1000,
+    period: 60 * 60 * 1000, // 1 hour in milliseconds
+    capacity: 1050, // rate + burst capacity (1000 + 50)
     maxReserved: 500,
   },
 
@@ -72,8 +75,9 @@ export const RATE_LIMITS = {
    */
   assessmentPerUser: {
     kind: 'token bucket' as const,
-    rate: { count: 3, period: 'day' as const },
-    burst: 1, // No burst for assessments
+    rate: 3,
+    period: 24 * 60 * 60 * 1000, // 1 day in milliseconds
+    capacity: 4, // rate + burst capacity (3 + 1)
     maxReserved: 10,
   },
 
@@ -90,8 +94,9 @@ export const RATE_LIMITS = {
    */
   openaiCalls: {
     kind: 'token bucket' as const,
-    rate: { count: 100, period: 'minute' as const },
-    burst: 20,
+    rate: 100,
+    period: 60 * 1000, // 1 minute in milliseconds
+    capacity: 120, // rate + burst capacity (100 + 20)
     maxReserved: 200,
   },
 
@@ -110,8 +115,9 @@ export const RATE_LIMITS = {
    */
   spamProtection: {
     kind: 'token bucket' as const,
-    rate: { count: 20, period: 'hour' as const },
-    burst: 5,
+    rate: 20,
+    period: 60 * 60 * 1000, // 1 hour in milliseconds
+    capacity: 25, // rate + burst capacity (20 + 5)
     maxReserved: 50,
   },
 };

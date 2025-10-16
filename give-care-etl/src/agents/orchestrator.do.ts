@@ -87,6 +87,19 @@ export class OrchestratorAgent extends DurableObject<Env> {
   async fetch(request: Request): Promise<Response> {
     const url = new URL(request.url);
 
+    // CORS headers for all responses
+    const corsHeaders = {
+      "Access-Control-Allow-Origin": "*",
+      "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+      "Access-Control-Allow-Headers": "Content-Type",
+      "Content-Type": "application/json"
+    };
+
+    // Handle CORS preflight
+    if (request.method === "OPTIONS") {
+      return new Response(null, { headers: corsHeaders });
+    }
+
     try {
       // Handle both /start and /orchestrate/start patterns
       const pathname = url.pathname.replace(/^\/orchestrate/, '') || '/';
@@ -94,16 +107,16 @@ export class OrchestratorAgent extends DurableObject<Env> {
       switch (pathname) {
         case "/start":
         case "/":
-          return this.handleStart(request);
+          return this.handleStart(request, corsHeaders);
 
         case "/status":
-          return this.handleStatus();
+          return this.handleStatus(corsHeaders);
 
         case "/continue":
-          return this.handleContinue(request);
+          return this.handleContinue(request, corsHeaders);
 
         default:
-          return new Response("Not Found", { status: 404 });
+          return new Response("Not Found", { status: 404, headers: corsHeaders });
       }
     } catch (error) {
       logger.error("Orchestrator error", error);
@@ -111,7 +124,7 @@ export class OrchestratorAgent extends DurableObject<Env> {
         error: error instanceof Error ? error.message : "Unknown error"
       }), {
         status: 500,
-        headers: { "Content-Type": "application/json" }
+        headers: corsHeaders
       });
     }
   }
@@ -119,7 +132,7 @@ export class OrchestratorAgent extends DurableObject<Env> {
   /**
    * Start a new orchestration workflow
    */
-  private async handleStart(request: Request): Promise<Response> {
+  private async handleStart(request: Request, corsHeaders: Record<string, string>): Promise<Response> {
     const body = await request.json() as { task: string; state?: string; limit?: number; trigger?: string };
 
     const sessionId = `orch-${Date.now()}`;
@@ -179,14 +192,14 @@ export class OrchestratorAgent extends DurableObject<Env> {
       status: "started",
       message: "Pipeline executing. Check /status for progress."
     }), {
-      headers: { "Content-Type": "application/json" }
+      headers: corsHeaders
     });
   }
 
   /**
    * Get current status of workflow
    */
-  private async handleStatus(): Promise<Response> {
+  private async handleStatus(corsHeaders: Record<string, string>): Promise<Response> {
     const state = await this.ctx.storage.get<OrchestratorState>("state");
 
     if (!state) {

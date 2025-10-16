@@ -18,10 +18,6 @@ class_name = "OrchestratorAgent"
 tag = "v1"
 new_sqlite_classes = ["OrchestratorAgent"]
 
-[[migrations]]
-tag = "v2"
-deleted_classes = ["DiscoveryAgent", "ExtractionAgent", "CategorizerAgent", "ValidatorAgent"]
-
 # Browser Rendering API (for Puppeteer)
 browser = { binding = "BROWSER" }
 

@@ -33,11 +33,6 @@ const navItems = [
     icon: BarChart3,
   },
   {
-    title: 'ETL Pipeline',
-    href: '/etl',
-    icon: Database,
-  },
-  {
     title: 'Traces',
     href: '/traces',
     icon: GitBranch,
@@ -46,6 +41,11 @@ const navItems = [
     title: 'System',
     href: '/system',
     icon: Activity,
+  },
+  {
+    title: 'ETL Pipeline',
+    href: '/etl',
+    icon: Database,
   },
 ]
 

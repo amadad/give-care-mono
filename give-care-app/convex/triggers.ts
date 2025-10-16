@@ -265,12 +265,25 @@ export const getUserTriggers = internalMutation({
 // ========================================
 
 /**
- * Calculate next occurrence from RRULE
+ * Calculate next occurrence from RRULE with timezone support
+ *
+ * FIX #2: This function now properly handles user timezones by:
+ * 1. Parsing the RRULE (which uses hour/minute in local time)
+ * 2. Interpreting the result as being in the user's timezone
+ * 3. Converting to UTC for storage
+ *
+ * Example:
+ * - User in PT sets "daily at 9am"
+ * - RRULE: "FREQ=DAILY;BYHOUR=9;BYMINUTE=0"
+ * - RRule.after() returns Date with 9:00 (interpreted as UTC by JavaScript)
+ * - We reinterpret that 9:00 as 9:00 PT
+ * - Convert to UTC: 9:00 PT = 17:00 UTC (during DST) or 18:00 UTC (standard time)
+ * - Store UTC timestamp
  *
  * @param rruleString - RRULE format string (e.g., "FREQ=DAILY;BYHOUR=9;BYMINUTE=0")
  * @param timezone - IANA timezone (e.g., "America/Los_Angeles")
  * @param after - Calculate next occurrence after this timestamp (default: now)
- * @returns Unix timestamp (milliseconds) of next occurrence
+ * @returns Unix timestamp (milliseconds) of next occurrence in UTC
  */
 function calculateNextOccurrence(
   rruleString: string,
@@ -278,22 +291,104 @@ function calculateNextOccurrence(
   after: number = Date.now()
 ): number {
   try {
+    // Parse RRULE (hour/minute are in local time, but RRule treats them as UTC)
     const rrule = RRule.fromString(rruleString);
 
-    // Calculate next occurrence after the given timestamp
-    const nextDate = rrule.after(new Date(after), false); // false = exclude 'after' date
+    // Get next occurrence from RRule (this returns a Date with the time in UTC)
+    const nextDateUTC = rrule.after(new Date(after), false); // false = exclude 'after' date
 
-    if (!nextDate) {
+    if (!nextDateUTC) {
       // RRULE has no more occurrences (e.g., UNTIL date passed)
       // Return far future timestamp to prevent re-processing
       return Date.now() + 365 * 24 * 60 * 60 * 1000; // 1 year from now
     }
 
-    return nextDate.getTime();
+    // FIX #2: Reinterpret the time as being in the user's timezone
+    // RRule gave us 2025-10-17T09:00:00.000Z (9am UTC)
+    // But user meant 9am in their timezone
+
+    // Extract the date/time components (these are what the user meant)
+    const year = nextDateUTC.getUTCFullYear();
+    const month = nextDateUTC.getUTCMonth() + 1; // JS months are 0-indexed
+    const day = nextDateUTC.getUTCDate();
+    const hour = nextDateUTC.getUTCHours();
+    const minute = nextDateUTC.getUTCMinutes();
+
+    // Build ISO string in user's timezone format: "2025-10-17T09:00"
+    const localTimeString = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}T${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}:00`;
+
+    // Parse as being in the user's timezone and convert to UTC
+    // We'll use a simple offset calculation based on timezone
+    const utcTimestamp = convertLocalToUTC(localTimeString, timezone);
+
+    return utcTimestamp;
   } catch (error) {
     console.error(`[calculateNextOccurrence] Error parsing RRULE: ${rruleString}`, error);
     throw error;
   }
+}
+
+/**
+ * Convert local time string in a given timezone to UTC timestamp
+ *
+ * This is a simplified implementation that uses Intl.DateTimeFormat
+ * to determine timezone offsets without requiring external libraries.
+ *
+ * @param localTimeString - ISO format without timezone: "2025-10-17T09:00:00"
+ * @param timezone - IANA timezone: "America/Los_Angeles"
+ * @returns UTC timestamp in milliseconds
+ */
+function convertLocalToUTC(localTimeString: string, timezone: string): number {
+  // Parse the local time string as if it's in the target timezone
+  // We create two Date objects: one in UTC, one in the target timezone
+  // The difference tells us the offset
+
+  const date = new Date(localTimeString + 'Z'); // Parse as UTC
+
+  // Get the offset for this timezone at this specific date
+  // (handles DST transitions automatically)
+  const formatter = new Intl.DateTimeFormat('en-US', {
+    timeZone: timezone,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    hour12: false,
+  });
+
+  // Format the date as it would appear in the target timezone
+  const parts = formatter.formatToParts(date);
+  const tzTime: any = {};
+  parts.forEach(part => {
+    if (part.type !== 'literal') {
+      tzTime[part.type] = parseInt(part.value, 10);
+    }
+  });
+
+  // Create a date object representing that same time in the local timezone
+  const tzDate = new Date(
+    tzTime.year,
+    tzTime.month - 1, // JS months are 0-indexed
+    tzTime.day,
+    tzTime.hour,
+    tzTime.minute,
+    tzTime.second
+  );
+
+  // The difference between these two dates is the timezone offset
+  const offset = date.getTime() - tzDate.getTime();
+
+  // Parse the original local time string as a local date
+  const [datePart, timePart] = localTimeString.split('T');
+  const [year, month, day] = datePart.split('-').map(Number);
+  const [hour, minute] = timePart.split(':').map(Number);
+
+  const localDate = new Date(year, month - 1, day, hour, minute, 0);
+
+  // Apply the offset to convert to UTC
+  return localDate.getTime() - offset;
 }
 
 /**
