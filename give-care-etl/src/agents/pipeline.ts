@@ -23,6 +23,7 @@ export interface PipelineConfig {
   limit?: number;
   openaiApiKey: string;
   exaApiKey?: string;
+  browserBinding?: Fetcher;
   convexUrl: string;
 }
 
@@ -89,7 +90,11 @@ export async function executePipeline(config: PipelineConfig): Promise<PipelineR
     for (const source of sources.slice(0, 3)) {
       try {
         logger.info("Extracting from source", { url: source.url });
-        const record = await extractResourceFromUrl(source.url, config.openaiApiKey);
+        const record = await extractResourceFromUrl(
+          source.url,
+          config.openaiApiKey,
+          config.browserBinding
+        );
 
         if (record) {
           extractedRecords.push(record);
