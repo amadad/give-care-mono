@@ -1,22 +1,50 @@
 #:schema node_modules/wrangler/config-schema.json
 name = "give-care-etl"
-main = "src/workers/orchestrator.worker.ts"
+main = "src/index.ts"
 compatibility_date = "2024-12-18"
 node_compat = true
 
 # Cloudflare Workers Configuration
 workers_dev = true
-account_id = "" # Add your Cloudflare account ID
-route = ""
+account_id = "a900bd453c783129d31920f492a3ef1a"
+
+# Durable Objects (persistent agents)
+[[durable_objects.bindings]]
+name = "ORCHESTRATOR_AGENT"
+class_name = "OrchestratorAgent"
+
+[[durable_objects.bindings]]
+name = "DISCOVERY_AGENT"
+class_name = "DiscoveryAgent"
+
+[[durable_objects.bindings]]
+name = "EXTRACTION_AGENT"
+class_name = "ExtractionAgent"
+
+[[durable_objects.bindings]]
+name = "CATEGORIZER_AGENT"
+class_name = "CategorizerAgent"
+
+[[durable_objects.bindings]]
+name = "VALIDATOR_AGENT"
+class_name = "ValidatorAgent"
+
+# Migrations for Durable Objects (free tier requires new_sqlite_classes)
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["OrchestratorAgent", "DiscoveryAgent", "ExtractionAgent", "CategorizerAgent", "ValidatorAgent"]
 
 # Browser Rendering API (for Puppeteer)
 browser = { binding = "BROWSER" }
 
 # KV Namespaces (for caching and state)
-kv_namespaces = [
-  { binding = "ETL_STATE", id = "", preview_id = "" },
-  { binding = "RESOURCE_CACHE", id = "", preview_id = "" }
-]
+[[kv_namespaces]]
+binding = "ETL_STATE"
+id = "dc1bc17743dd469eba022bb4b8d71571"
+
+[[kv_namespaces]]
+binding = "RESOURCE_CACHE"
+id = "e5d1b5d4fc1043d6a4e47a8fa0dca546"
 
 # D1 Database (optional - for local QA workflow)
 # [[d1_databases]]
