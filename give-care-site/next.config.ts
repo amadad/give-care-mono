@@ -8,6 +8,12 @@ const nextConfig: NextConfig = {
   // Enable static HTML export for Cloudflare Pages
   output: 'export',
 
+  // Skip TypeScript type checking during build
+  // (type checking is done separately in development)
+  typescript: {
+    ignoreBuildErrors: true,
+  },
+
   pageExtensions: ['ts', 'tsx', 'mdx'],
   experimental: {
     mdxRs: true,

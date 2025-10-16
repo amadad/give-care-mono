@@ -109,7 +109,7 @@ crons.daily(
     hourUTC: 11,
     minuteUTC: 0,
   },
-  internal.summarization.summarizeAllUsers
+  internal.summarizationActions.summarizeAllUsers
 );
 
 /**

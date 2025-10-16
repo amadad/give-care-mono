@@ -37,25 +37,13 @@ export const searchInterventions = internalAction({
     );
 
     // Vector search with filters
+    // Vector search with status filter (only 'active' interventions)
+    // Note: Vector filter only supports q.eq and q.or, not q.and
+    // So we filter by status here and post-filter by language
     const results = await ctx.vectorSearch('knowledgeBase', 'by_embedding', {
       vector: queryEmbedding,
       limit: limit * 2, // Get more candidates for post-filtering
-      filter: (q) => {
-        // Base filters: active status, English language
-        let baseFilter = q.and(
-          q.eq(q.field('status'), 'active'),
-          q.eq(q.field('language'), 'en')
-        );
-
-        // Optional: filter by pressure zone if provided
-        if (args.pressureZone) {
-          // Note: pressureZones is an array, so we need to check if it contains the value
-          // Convex doesn't have array.includes in filters, so we'll post-filter
-          return baseFilter;
-        }
-
-        return baseFilter;
-      },
+      filter: (q) => q.eq('status', 'active'),
     });
 
     // Fetch full documents with similarity scores
@@ -66,6 +54,11 @@ export const searchInterventions = internalAction({
       });
 
       if (!doc) continue;
+
+      // Post-filter by language (only English)
+      if (doc.language !== 'en') {
+        continue;
+      }
 
       // Post-filter by pressure zone if specified
       if (args.pressureZone && !doc.pressureZones.includes(args.pressureZone)) {
@@ -131,10 +124,10 @@ export const searchByBurnoutLevel = internalAction({
     });
 
     // Re-rank by zone priority + similarity score
-    const ranked = interventions.map(int => {
+    const ranked = interventions.map((int: any) => {
       // Find highest priority zone that matches
       const zonePriorityScore = Math.max(
-        ...int.pressureZones.map(zone => {
+        ...int.pressureZones.map((zone: string) => {
           const priority = zones.indexOf(zone);
           return priority === -1 ? 999 : priority;
         })
@@ -149,7 +142,7 @@ export const searchByBurnoutLevel = internalAction({
 
     // Sort by combined score and return top results
     return ranked
-      .sort((a, b) => b.combinedScore - a.combinedScore)
+      .sort((a: any, b: any) => b.combinedScore - a.combinedScore)
       .slice(0, limit);
   },
 });
@@ -205,8 +198,8 @@ export const searchByPressureZones = internalAction({
     });
 
     // Filter to only include interventions matching at least one pressure zone
-    const filtered = interventions.filter(int =>
-      int.pressureZones.some(zone => args.pressureZones.includes(zone))
+    const filtered = interventions.filter((int: any) =>
+      int.pressureZones.some((zone: string) => args.pressureZones.includes(zone))
     );
 
     return filtered.slice(0, limit);

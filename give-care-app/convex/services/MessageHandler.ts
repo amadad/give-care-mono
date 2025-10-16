@@ -290,6 +290,11 @@ export class MessageHandler {
       deviceType: user.deviceType || null,
       consentAt: user.consentAt ? String(user.consentAt) : null,
       languagePreference: user.languagePreference || 'en',
+      // Conversation summarization fields
+      recentMessages: user.recentMessages || [],
+      historicalSummary: user.historicalSummary || '',
+      conversationStartDate: user.conversationStartDate || null,
+      totalInteractionCount: user.totalInteractionCount || null,
     };
   }
 
