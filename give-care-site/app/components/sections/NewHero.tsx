@@ -16,7 +16,7 @@ export default function NewHero() {
             className="text-center mb-4 md:mb-6"
           >
             <h1 className="heading-hero mb-6">
-              AI caregiving support that remembers everything—<br />no app required
+              You're carrying more than anyone sees—<br />we remember all of it
             </h1>
 
             {/* Forbes Badge */}
@@ -44,8 +44,8 @@ export default function NewHero() {
             </motion.div>
 
             <p className="body-large max-w-2xl mx-auto">
-              Track your burnout score. Get help matched to YOUR struggles.
-              We remember everything and check in before crisis hits. Works on any phone—no app required.
+              Track your capacity. Get help matched to YOUR needs.
+              We check in before things get hard. Works on any phone—no app required.
             </p>
           </motion.div>
 
@@ -80,7 +80,7 @@ export default function NewHero() {
             <div className="relative w-full max-w-3xl md:max-w-4xl">
               <Image
                 src="/w.webp"
-                alt="Caregiver using GiveCare"
+                alt="Parent using GiveCare to check in on their wellbeing"
                 width={1200}
                 height={1200}
                 className="w-full h-auto block"

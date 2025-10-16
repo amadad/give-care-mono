@@ -44,9 +44,9 @@ export default function CTA() {
           viewport={{ once: true }}
           className="text-center max-w-3xl mx-auto"
         >
-          <h2 className="heading-section mb-4">Ready to Simplify Your Caregiving Journey?</h2>
+          <h2 className="heading-section mb-4">Ready for Support That Actually Helps?</h2>
           <p className="body-standard mb-8 max-w-2xl mx-auto">
-            Get weekly caregiving support and resources.
+            Weekly support and resources for families navigating care.
           </p>
         
           <div className="max-w-md mx-auto">

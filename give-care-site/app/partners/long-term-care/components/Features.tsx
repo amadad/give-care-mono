@@ -19,44 +19,44 @@ interface FeatureCard {
 const features: FeatureCard[] = [
   {
     icon: <FaClock className="h-6 w-6" />,
-    title: "24/7 SMS Line",
-    description: "Always-On Help for Families",
-    badge: "Always on",
+    title: "Stop After-Hours Staff Calls",
+    description: "Families get instant answers 24/7—no one paged at midnight. 40% fewer after-hours calls.*",
+    badge: "Always available",
     color: 'primary'
   },
   {
     icon: <FaUserMd className="h-6 w-6" />,
-    title: "Adaptive Guidance",
-    description: "Personalizes Tips as Needs Change",
-    badge: "Smart",
+    title: "Support That Evolves With Residents",
+    description: "Guidance adapts automatically as care needs change—your team doesn't have to update anything.",
+    badge: "Adapts automatically",
     color: 'secondary'
   },
   {
     icon: <FaShieldAlt className="h-6 w-6" />,
-    title: "Safety-First Design",
-    description: "Three-Tier Medical Guardrails Screen Every Reply.",
-    badge: "Protected",
+    title: "Protected From Liability Risks",
+    description: "Every response checked by clinical guardrails—bad advice gets flagged before it reaches families.",
+    badge: "Clinically verified",
     color: 'accent'
   },
   {
     icon: <FaCogs className="h-6 w-6" />,
-    title: "Plug-and-Play Integration",
-    description: "Works With Your Existing Care Software.",
-    badge: "Seamless",
+    title: "No IT Project Required",
+    description: "Works with your existing systems—your team won't learn another platform.",
+    badge: "No integration headaches",
     color: 'info'
   },
   {
     icon: <FaMobileAlt className="h-6 w-6" />,
-    title: "Zero Apps",
-    description: "Any Phone, Any Caregiver.",
-    badge: "Simple",
+    title: "Works on Any Family's Phone",
+    description: "No apps to download or teach. Works via SMS on flip phones and smartphones alike.",
+    badge: "Zero barriers",
     color: 'success'
   },
   {
     icon: <FaHandsHelping className="h-6 w-6" />,
-    title: "Family Updates",
-    description: "Reduce After-Hours Calls by 40%*",
-    badge: "Efficient",
+    title: "Keep Families Informed Without Draining Staff",
+    description: "Automated updates reduce repetitive questions—your team focuses on direct care.",
+    badge: "Staff time saved",
     color: 'warning'
   }
 ];
@@ -67,13 +67,13 @@ export default function Features() {
       <div className="container mx-auto px-4">
         <div className="text-center max-w-3xl mx-auto mb-16">
           <span className="inline-block px-4 py-1.5 text-sm font-medium bg-amber-100 text-amber-800 rounded-full mb-4">
-            Our Features
+            What Your Team Gains
           </span>
           <h2 className="text-4xl font-serif font-bold text-amber-900 mb-4">
-            Purpose-Built for Long-Term Care
+            Solve Your Biggest Challenges Without Adding to Your Workload
           </h2>
           <p className="text-lg text-amber-800/90">
-            Designed specifically for long-term care facilities to enhance resident care and staff efficiency.
+            Your staff is stretched thin. Families need constant updates. Residents need consistent support. Here's how we help—without creating more work for your team.
           </p>
           <p className="text-sm text-amber-800/70 mt-2">*Based on pilot program data</p>
         </div>

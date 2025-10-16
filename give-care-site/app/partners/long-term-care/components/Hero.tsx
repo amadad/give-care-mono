@@ -4,8 +4,8 @@ export default function Hero() {
   return (
     <PartnerHero
       badge="Pilot Program Now Available"
-      title="AI-Powered SMS Support for Long-Term-Care Teams"
-      description="24/7 SMS companion that lowers staff burnout, cuts after-hours calls, and boosts family satisfaction—no apps needed."
+      title="Support Your Care Team 24/7—Without Adding Burnout"
+      description="Your staff is stretched thin. Families need answers at 2 AM. We provide instant support without paging your team—works via SMS, no apps required."
       primaryButtonText="Book Your Pilot Spot"
     />
   );

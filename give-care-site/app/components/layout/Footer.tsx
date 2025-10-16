@@ -24,7 +24,7 @@ const socialLinks = [
     icon: <FaInstagram size={28} />
   },
   {
-    href: "https://github.com/orgs/givecareapp/repositories",
+    href: "https://github.com/givecareapp",
     label: "GitHub",
     icon: <FaGithub size={28} />
   }
@@ -42,7 +42,7 @@ export default function Footer() {
           height={40}
         />
         <p className="mt-2">
-        Your Personal Caregiver Companion
+          Support for care partners and families
           <br />
           © 2025 GiveCare. All rights reserved.
         </p>

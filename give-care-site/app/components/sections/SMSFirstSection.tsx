@@ -85,8 +85,8 @@ export default function SMSFirstSection() {
           className="mt-12 text-center"
         >
           <p className="text-sm text-gray-500 max-w-xl mx-auto">
-            Screen reader compatible • Large text mode supported • Voice-to-text enabled •
-            Works with assistive technology
+            Works with screen readers, voice dictation, and all assistive technology—
+            because SMS works with everything
           </p>
         </motion.div>
       </div>

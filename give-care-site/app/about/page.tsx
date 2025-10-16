@@ -49,7 +49,7 @@ export default function AboutPage() {
                   I had a close support circle. I had family. But if you've been a caregiver, you know the despair—the invisible weight that's hard to explain, even to those who love you. The decisions nobody prepares you for. You don't know what you don't know. The exhaustion that goes bone-deep.
                 </p>
                 <p>
-                  I didn't need another app to manage tasks. I didn't need fake empathy from a chatbot. I needed a tool that learned my situation and helped me stay grounded before burnout set in. Something that complemented the support I had—not replaced it.
+                  I didn't need another app to manage tasks. I didn't need fake empathy from a chatbot. I needed a tool that learned my situation and helped me stay grounded when things got hard. Something that complemented the support I had—not replaced it.
                 </p>
                 <p>
                   That's why GiveCare doesn't try to be your friend. It's a tool. A companion. Something that remembers your story, tracks your stress patterns, and finds real resources when you need them—not when you remember to ask.
@@ -58,7 +58,10 @@ export default function AboutPage() {
                   No app. No login. Just text when you need support. Because at 2 AM when you're exhausted and alone, you don't need another password. You need someone who gets it.
                 </p>
                 <p>
-                  We built this for the caregiver who's drowning in invisible labor. The one nobody sees. The one who can't pour from an empty cup.
+                  We built this for family members managing invisible labor that nobody sees. The ones making complex decisions every day while maintaining someone else's dignity. The ones who need support to sustain themselves.
+                </p>
+                <p>
+                  You're already the expert in your loved one's care. You've learned more about medical systems, insurance navigation, and advocacy than you ever wanted to know. GiveCare exists to support that expertise, not replace it.
                 </p>
                 <p>
                   This is for you.
@@ -83,7 +86,7 @@ export default function AboutPage() {
               transition={{ duration: 0.6 }}
               className="max-w-3xl mx-auto"
             >
-              <h2 className="heading-section text-center mb-4">Questions We Get</h2>
+              <h2 className="heading-section text-center mb-4">Questions You Might Have</h2>
               <p className="body-standard text-center mb-12">Honest answers about what GiveCare is (and isn't)</p>
               
               <div className="join join-vertical w-full">
@@ -169,7 +172,7 @@ export default function AboutPage() {
                   </div>
                   <div className="collapse-content text-amber-800">
                     <div className="pt-4">
-                      <p>Consider this: 40-70% of caregivers experience clinical depression. 59% report their health has gotten worse due to caregiving. Caregiver burnout increases hospitalization rates by 23%.</p>
+                      <p>Consider this: 40-70% of family caregivers experience clinical depression. 59% report their health has gotten worse. The stress of managing complex care increases hospitalization rates by 23%.</p>
                       <p className="mt-3">GiveCare exists to mitigate caregiver burden. We give caregivers a safe space that focuses on YOU - not just your loved one. This is care for caregivers, made by caregivers who understand what you're going through.</p>
                       <p className="mt-3">We help in ways not found elsewhere because we remember your story, track your stress patterns, and proactively check in when you need it most. It's about preventing burnout before it happens.</p>
                     </div>
