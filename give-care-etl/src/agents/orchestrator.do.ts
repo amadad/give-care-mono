@@ -1,3 +1,5 @@
+"use node";
+
 /**
  * Orchestrator Agent - Durable Object Implementation
  *
@@ -7,11 +9,10 @@
 
 import { DurableObject } from "cloudflare:workers";
 import { createLogger } from "../utils/logger";
+import { Agent, run, type RunState } from "@openai/agents";
+import { ETLConvexClient } from "../utils/convex";
 
 const logger = createLogger({ agentName: "orchestrator" });
-
-// OpenAI Agents SDK will be imported in Phase 1
-// import { Agent, run, RunState } from "@openai/agents";
 
 /**
  * Orchestrator Agent Instructions
@@ -109,7 +110,7 @@ export class OrchestratorAgent extends DurableObject {
    * Start a new orchestration workflow
    */
   private async handleStart(request: Request): Promise<Response> {
-    const body = await request.json() as { task: string; state?: string; limit?: number };
+    const body = await request.json() as { task: string; state?: string; limit?: number; trigger?: string };
 
     const sessionId = `orch-${Date.now()}`;
     const initialState: OrchestratorState = {
@@ -124,11 +125,27 @@ export class OrchestratorAgent extends DurableObject {
       startedAt: new Date().toISOString()
     };
 
-    // Save initial state
+    // Save initial state to Durable Object storage
     await this.ctx.storage.put("state", initialState);
     await this.ctx.storage.put("task", body);
 
     logger.info("Started orchestration", { sessionId, task: body.task });
+
+    // Persist workflow to Convex for admin dashboard
+    try {
+      const convexClient = new ETLConvexClient(this.env.CONVEX_URL);
+      await convexClient.createWorkflow({
+        sessionId,
+        task: body.task,
+        state: body.state,
+        limit: body.limit,
+        trigger: body.trigger || "manual",
+      });
+      logger.info("Workflow persisted to Convex", { sessionId });
+    } catch (error) {
+      logger.error("Failed to persist workflow to Convex", error);
+      // Continue anyway - Durable Object state is source of truth
+    }
 
     // Run agent (this will be implemented in Phase 1)
     // For now, return placeholder

@@ -526,4 +526,103 @@ export default defineSchema({
     .index('by_severity', ['severity'])
     .index('by_created', ['createdAt']),
 
+  // ETL WORKFLOWS (Resource Discovery Pipeline)
+  etlWorkflows: defineTable({
+    sessionId: v.string(), // orch-{timestamp} from Durable Object
+    task: v.string(), // "discover_eldercare_resources", "discover_all_states"
+    state: v.optional(v.string()), // "NY", "CA", etc. (if state-specific)
+    limit: v.optional(v.number()), // Max sources to discover
+    currentStep: v.string(), // "discovery" | "extraction" | "categorization" | "validation" | "complete" | "failed"
+    status: v.string(), // "running" | "completed" | "failed" | "paused"
+    trigger: v.optional(v.string()), // "cron" | "manual" | "api"
+    sourcesCount: v.number(), // Total sources discovered
+    extractedCount: v.number(), // Records extracted
+    categorizedCount: v.number(), // Records categorized
+    validatedCount: v.number(), // Records validated (ready for QA)
+    errorCount: v.number(), // Total errors encountered
+    errors: v.array(v.string()), // Error messages
+    startedAt: v.number(),
+    completedAt: v.optional(v.number()),
+    durationMs: v.optional(v.number()),
+  })
+    .index('by_session', ['sessionId'])
+    .index('by_status', ['status'])
+    .index('by_started', ['startedAt'])
+    .index('by_task', ['task']),
+
+  // ETL DISCOVERED SOURCES (Output from Discovery Agent)
+  etlSources: defineTable({
+    workflowId: v.id("etlWorkflows"),
+    url: v.string(),
+    title: v.string(),
+    description: v.optional(v.string()),
+    sourceType: v.string(), // "government" | "nonprofit" | "medical" | "directory"
+    trustScore: v.number(), // 0-10 from Discovery Agent
+    discoveredAt: v.number(),
+  })
+    .index('by_workflow', ['workflowId'])
+    .index('by_url', ['url'])
+    .index('by_trust_score', ['trustScore']),
+
+  // ETL EXTRACTED RECORDS (Output from Extraction Agent, input to Validator)
+  etlExtractedRecords: defineTable({
+    workflowId: v.id("etlWorkflows"),
+    sourceId: v.id("etlSources"),
+    title: v.string(),
+    providerName: v.string(),
+    phones: v.array(v.string()),
+    website: v.string(),
+    serviceTypes: v.array(v.string()), // From taxonomy
+    coverage: v.string(), // "national" | "state" | "county" | "zip" | "radius"
+    state: v.optional(v.string()),
+    county: v.optional(v.string()),
+    zipCodes: v.optional(v.array(v.string())),
+    description: v.optional(v.string()),
+    eligibility: v.optional(v.string()),
+    cost: v.optional(v.string()),
+    extractedAt: v.number(),
+    validationStatus: v.optional(v.string()), // "pending" | "passed" | "failed"
+    validationErrors: v.optional(v.array(v.string())),
+  })
+    .index('by_workflow', ['workflowId'])
+    .index('by_source', ['sourceId'])
+    .index('by_validation_status', ['validationStatus']),
+
+  // ETL VALIDATED RECORDS (Output from Validator, ready for human QA)
+  etlValidatedRecords: defineTable({
+    workflowId: v.id("etlWorkflows"),
+    extractedRecordId: v.id("etlExtractedRecords"),
+    title: v.string(),
+    providerName: v.string(),
+    phones: v.array(v.string()), // E.164 normalized
+    website: v.string(), // Validated (HEAD check)
+    serviceTypes: v.array(v.string()),
+    zones: v.array(v.string()), // Mapped from serviceTypes
+    coverage: v.string(),
+    state: v.optional(v.string()),
+    county: v.optional(v.string()),
+    zipCodes: v.optional(v.array(v.string())),
+    description: v.optional(v.string()),
+    eligibility: v.optional(v.string()),
+    cost: v.optional(v.string()),
+    qualityScore: v.number(), // 0-10 from Validator
+    phoneValidation: v.object({
+      valid: v.boolean(),
+      normalized: v.array(v.string()),
+    }),
+    urlValidation: v.object({
+      valid: v.boolean(),
+      statusCode: v.optional(v.number()),
+    }),
+    validatedAt: v.number(),
+    qaStatus: v.string(), // "pending" | "approved" | "rejected" | "edited"
+    qaReviewedAt: v.optional(v.number()),
+    qaReviewedBy: v.optional(v.id("users")),
+    qaFeedback: v.optional(v.string()),
+  })
+    .index('by_workflow', ['workflowId'])
+    .index('by_qa_status', ['qaStatus'])
+    .index('by_quality_score', ['qualityScore'])
+    .index('by_validated', ['validatedAt']),
+
 });
