@@ -11,6 +11,8 @@
  */
 
 import { IntermediateRecord, NormalizedRecord } from "./types";
+import { validateRecord, normalizePhoneE164, validateUrl, canonicalKey } from "./validation";
+import { mapServicesToZones } from "./registry";
 
 // ============================================================================
 // CONTACT INFO NORMALIZATION
@@ -291,18 +293,31 @@ export function extractEligibility(text: string): string | null {
 // FULL NORMALIZATION PIPELINE
 // ============================================================================
 
-export function normalizeRecord(
-  raw: IntermediateRecord,
-  metadata: {
-    dataSourceType: string;
-    aggregatorSource: string;
-    license: string;
-    fundingSource?: string;
-  }
-): NormalizedRecord {
+/**
+ * Normalize IntermediateRecord → NormalizedRecord
+ *
+ * VALIDATION: Throws error if record fails validation
+ */
+export function normalizeRecord(raw: IntermediateRecord): NormalizedRecord {
   const now = Date.now();
 
-  // Parse address
+  // STEP 1: Validate
+  const validation = validateRecord(raw);
+  if (!validation.valid) {
+    throw new Error(`Validation failed for ${raw.title}: ${validation.errors.join(', ')}`);
+  }
+
+  // Log warnings (non-fatal)
+  if (validation.warnings.length > 0) {
+    console.warn(`Warnings for ${raw.title}:`, validation.warnings);
+  }
+
+  // STEP 2: Normalize phones
+  const normalizedPhones = (raw.phones || [])
+    .map(p => normalizePhoneE164(p))
+    .filter((p): p is string => p !== null);
+
+  // STEP 3: Parse address
   const parsedAddress = parseAddress(
     raw.address,
     raw.city,
@@ -310,61 +325,72 @@ export function normalizeRecord(
     raw.zip
   );
 
-  // Categorize
-  const text = `${raw.title} ${raw.description}`;
-  const categories = categorizeService(text);
-  const zones = mapCategoriesToZones(categories);
-
-  // Extract eligibility
-  const eligibility =
-    raw.eligibility ||
-    extractEligibility(text) ||
-    "Contact provider for details";
-
-  // Determine service area type
-  let serviceAreaType: "county" | "city" | "zip_cluster" | "statewide" | "national" = "county";
-  if (text.toLowerCase().includes("national") || !parsedAddress.zip) {
-    serviceAreaType = "national";
-  } else if (text.toLowerCase().includes("statewide")) {
-    serviceAreaType = "statewide";
+  // STEP 4: Merge zones from serviceTypes + explicit zones
+  let zones = [...raw.zones];
+  if (raw.serviceTypes && raw.serviceTypes.length > 0) {
+    const mappedZones = mapServicesToZones(raw.serviceTypes);
+    zones = [...new Set([...zones, ...mappedZones])];
   }
 
-  // Generate geo codes
+  // STEP 5: Extract eligibility
+  const eligibility =
+    raw.eligibility ||
+    extractEligibility(raw.description || raw.title) ||
+    "Contact provider for details";
+
+  // STEP 6: Map coverage to service area
+  const serviceAreaMapping: Record<string, "county" | "city" | "zip_cluster" | "statewide" | "national"> = {
+    national: "national",
+    state: "statewide",
+    county: "county",
+    zip: "zip_cluster",
+    radius: "zip_cluster"
+  };
+  const serviceAreaType = serviceAreaMapping[raw.coverage];
+
+  // STEP 7: Generate geo codes
   const geoCodes: string[] = [];
   if (serviceAreaType === "national") {
     geoCodes.push("national");
   } else if (parsedAddress.zip) {
     geoCodes.push(parsedAddress.zip.slice(0, 3)); // ZIP3 cluster
+  } else if (parsedAddress.state) {
+    geoCodes.push(parsedAddress.state); // State code
   }
+
+  // STEP 8: Normalize URL
+  const primaryUrl = validateUrl(raw.website || '')
+    ? (raw.website!.startsWith('http') ? raw.website : `https://${raw.website}`)
+    : undefined;
 
   return {
     program: {
       name: raw.title,
-      description: raw.description,
-      resourceCategory: categories,
+      description: raw.description || "",
+      resourceCategory: raw.serviceTypes,
       pressureZones: zones,
       eligibility,
       languageSupport: raw.languages || ["en"],
-      fundingSource: metadata.fundingSource
+      fundingSource: raw.fundingSource
     },
 
     provider: {
       name: raw.providerName,
       sector: inferSector(raw.providerName),
-      operatorUrl: normalizeUrl(raw.providerUrl || raw.website),
-      license: metadata.license,
-      notes: `Imported from ${metadata.aggregatorSource} on ${new Date().toISOString()}`
+      operatorUrl: primaryUrl,
+      license: raw.license || "Unknown",
+      notes: `Imported from ${raw.aggregatorSource} on ${new Date().toISOString()}. Last verified: ${raw.lastVerified || 'unknown'}`
     },
 
     facility: {
       name: raw.providerName, // Often same as provider for small orgs
-      phoneE164: normalizePhone(raw.phone),
+      phoneE164: normalizedPhones[0] || undefined,
       email: normalizeEmail(raw.email),
       address: parsedAddress.street,
       city: parsedAddress.city,
       state: parsedAddress.state,
       zip: parsedAddress.zip,
-      geo: undefined, // Would need geocoding API
+      geo: (raw.lat && raw.lng) ? { lat: raw.lat, lon: raw.lng } : undefined,
       hours: raw.hours || undefined,
       languages: raw.languages || ["en"]
     },
@@ -372,13 +398,13 @@ export function normalizeRecord(
     serviceArea: {
       type: serviceAreaType,
       geoCodes,
-      jurisdictionLevel: serviceAreaType === "national" ? "national" : "county"
+      jurisdictionLevel: raw.coverage === "national" ? "national" : "county"
     },
 
     metadata: {
-      dataSourceType: metadata.dataSourceType,
-      aggregatorSource: metadata.aggregatorSource,
-      externalId: raw.sourceId,
+      dataSourceType: raw.dataSourceType,
+      aggregatorSource: raw.aggregatorSource,
+      externalId: undefined,
       externalUrl: raw.sourceUrl
     }
   };

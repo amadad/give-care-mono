@@ -3,39 +3,55 @@
  *
  * All source adapters output this intermediate format,
  * which is then processed by shared transform/load functions.
+ *
+ * PRODUCTION CONTRACT (locked 2025-10-15)
  */
 
 /**
  * Intermediate format after parsing (before normalization)
+ *
+ * REQUIRED: title, providerName, at least one of (phones|website), at least one of (serviceTypes|zones)
  */
 export interface IntermediateRecord {
-  // Program details
+  // Program details (REQUIRED)
   title: string;
-  description: string;
+  description?: string;
 
-  // Provider details
+  // Provider details (REQUIRED)
   providerName: string;
-  providerUrl?: string;
 
-  // Location
+  // Contact (at least one REQUIRED)
+  phones?: string[]; // Raw format; will be normalized to E.164
+  website?: string;
+  email?: string;
+
+  // Location (optional but recommended)
   address?: string;
   city?: string;
   state?: string;
   zip?: string;
+  lat?: number;
+  lng?: number;
 
-  // Contact
-  phone?: string;
-  email?: string;
-  website?: string;
+  // Categorization (at least one REQUIRED)
+  serviceTypes: string[]; // ['respite', 'support_group', 'financial_aid', ...]
+  zones: string[]; // ['emotional_wellbeing', 'time_management', ...]
+
+  // Coverage (REQUIRED)
+  coverage: 'national' | 'state' | 'county' | 'zip' | 'radius';
 
   // Service details
   hours?: string;
   eligibility?: string;
   languages?: string[];
 
-  // Metadata
-  sourceId?: string; // External ID from source system
+  // Metadata (REQUIRED)
   sourceUrl?: string; // URL where this was found
+  license?: string;
+  dataSourceType: 'scraped' | 'manual_entry' | 'api';
+  aggregatorSource: 'eldercare' | '211' | 'carelinq' | 'manual' | 'other';
+  fundingSource?: 'federal' | 'state' | 'nonprofit' | 'private';
+  lastVerified?: string; // ISO date string
 }
 
 /**

@@ -1,0 +1,40 @@
+#:schema node_modules/wrangler/config-schema.json
+name = "give-care-etl"
+main = "src/workers/orchestrator.worker.ts"
+compatibility_date = "2024-12-18"
+node_compat = true
+
+# Cloudflare Workers Configuration
+workers_dev = true
+account_id = "" # Add your Cloudflare account ID
+route = ""
+
+# Browser Rendering API (for Puppeteer)
+browser = { binding = "BROWSER" }
+
+# KV Namespaces (for caching and state)
+kv_namespaces = [
+  { binding = "ETL_STATE", id = "", preview_id = "" },
+  { binding = "RESOURCE_CACHE", id = "", preview_id = "" }
+]
+
+# D1 Database (optional - for local QA workflow)
+# [[d1_databases]]
+# binding = "DB"
+# database_name = "give-care-etl-qa"
+# database_id = ""
+
+# Cron Triggers (weekly scraping)
+[triggers]
+crons = ["0 6 * * 1"] # Every Monday at 6am UTC
+
+# Environment Variables (set via wrangler secret put)
+[vars]
+CONVEX_URL = "https://agreeable-lion-831.convex.cloud"
+ENVIRONMENT = "development"
+
+# No service bindings needed - agents imported directly from monorepo
+# All agents are in src/agents/ and imported as modules
+
+# Limits
+limits = { cpu_ms = 50000 }

@@ -1,0 +1,40 @@
+{
+  "name": "give-care-etl",
+  "version": "0.1.0",
+  "description": "Autonomous resource discovery and curation pipeline for GiveCare using OpenAI Agents SDK and Cloudflare Workers",
+  "type": "module",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "test": "vitest",
+    "lint": "eslint src --ext .ts",
+    "format": "prettier --write \"src/**/*.ts\"",
+    "type-check": "tsc --noEmit"
+  },
+  "keywords": [
+    "cloudflare-workers",
+    "openai-agents",
+    "resource-discovery",
+    "web-scraping",
+    "etl-pipeline"
+  ],
+  "author": "GiveCare",
+  "license": "MIT",
+  "dependencies": {
+    "@openai/agents": "^0.1.9",
+    "@ai-sdk/openai": "^1.0.0",
+    "@cloudflare/ai": "^1.0.0",
+    "zod": "^3.22.4",
+    "convex": "^1.16.0",
+    "puppeteer-core": "^23.0.0"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^4.20241218.0",
+    "@types/node": "^20.11.19",
+    "typescript": "^5.3.3",
+    "vitest": "^1.2.2",
+    "wrangler": "^3.90.0",
+    "eslint": "^8.56.0",
+    "prettier": "^3.2.5"
+  }
+}

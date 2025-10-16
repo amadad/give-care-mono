@@ -74,7 +74,7 @@
 4. **Financial Concerns** → Assistance programs, budgeting
 5. **Time Management** → Task prioritization, delegation
 
-**20 Evidence-Based Strategies**: Matched to your top 2-3 pressure zones
+**5 Evidence-Based Strategies** (expanding to 15 in Q1 2026): Matched to your top 2-3 pressure zones
 **Real-Time Resources**: Local support groups, respite care, financial aid
 
 ---

@@ -297,7 +297,7 @@ Each zone gets a score (0-100 based on subscale averages), and top zones are sto
 
 **Tool**: `findInterventions` (`src/tools.ts:284-325`)
 
-**Source**: `src/interventionData.ts` (10,000+ evidence-based resources)
+**Source**: `src/interventionData.ts` (5 curated interventions, expanding in Q1 2026)
 
 #### Matching Logic
 

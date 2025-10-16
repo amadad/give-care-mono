@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "private": true,
   "description": "GiveCare AI-powered caregiving support platform monorepo",
-  "packageManager": "pnpm@9.0.0",
+  "packageManager": "pnpm@10.18.3",
   "scripts": {
     "dev": "pnpm --filter give-care-site dev",
     "dev:site": "pnpm --filter give-care-site dev",

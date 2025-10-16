@@ -4,3 +4,4 @@ packages:
   - 'give-care-app/admin-frontend'    # Admin dashboard (Vite + React)
   - 'give-care-site'                   # Marketing website
   - 'give-care-story'                  # Presentation system
+  - 'give-care-etl'                    # Resource discovery ETL pipeline
