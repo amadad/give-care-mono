@@ -18,6 +18,7 @@ const logger = createLogger({ agentName: "orchestrator" });
 // Environment bindings type
 interface Env {
   OPENAI_API_KEY: string;
+  EXA_API_KEY?: string;
   CONVEX_URL: string;
   ENVIRONMENT?: string;
 }
@@ -155,7 +156,7 @@ export class OrchestratorAgent extends DurableObject<Env> {
       // Continue anyway - Durable Object state is source of truth
     }
 
-    // Execute the complete ETL pipeline (Phase 1 implementation)
+    // Execute the complete ETL pipeline (Phase 1 implementation with Exa)
     this.ctx.waitUntil(
       executePipeline({
         sessionId,
@@ -163,6 +164,7 @@ export class OrchestratorAgent extends DurableObject<Env> {
         state: body.state,
         limit: body.limit || 10,
         openaiApiKey: this.env.OPENAI_API_KEY,
+        exaApiKey: this.env.EXA_API_KEY,
         convexUrl: this.env.CONVEX_URL
       }).catch((error) => {
         logger.error("Pipeline execution failed", { sessionId, error });

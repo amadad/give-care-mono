@@ -2,6 +2,7 @@
 # Copy this file to .dev.vars and fill in your values
 
 OPENAI_API_KEY=sk-proj-...
+EXA_API_KEY=your-exa-api-key-here
 CONVEX_URL=https://agreeable-lion-831.convex.cloud
 CONVEX_ADMIN_KEY=your-admin-key-here
 ENVIRONMENT=development

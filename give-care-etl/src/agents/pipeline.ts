@@ -7,7 +7,7 @@
  */
 
 import { discoverSources } from "./discovery.simple";
-import { extractResourceFromUrl } from "./extraction.simple";
+import { extractResourceFromUrl } from "./extraction.llm-scraper";
 import { categorizeRecord } from "./categorizer.simple";
 import { validateRecord } from "./validator.simple";
 import { ETLConvexClient } from "../utils/convex";
@@ -22,6 +22,7 @@ export interface PipelineConfig {
   state?: string;
   limit?: number;
   openaiApiKey: string;
+  exaApiKey?: string;
   convexUrl: string;
 }
 
@@ -46,7 +47,7 @@ export async function executePipeline(config: PipelineConfig): Promise<PipelineR
   logger.info("Starting pipeline", { sessionId: config.sessionId, task: config.task });
 
   try {
-    // STEP 1: DISCOVERY
+    // STEP 1: DISCOVERY (Hybrid: Hardcoded + Exa API)
     logger.info("Step 1: Discovery", { sessionId: config.sessionId });
     await convex.updateWorkflow({
       sessionId: config.sessionId,
@@ -54,7 +55,7 @@ export async function executePipeline(config: PipelineConfig): Promise<PipelineR
       status: "running"
     });
 
-    const sources = await discoverSources(config.state, config.limit);
+    const sources = await discoverSources(config.state, config.limit, config.exaApiKey);
     logger.info("Discovery complete", { sessionId: config.sessionId, sourcesFound: sources.length });
 
     // Save sources to Convex

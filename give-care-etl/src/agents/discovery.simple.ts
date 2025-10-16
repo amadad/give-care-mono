@@ -1,13 +1,14 @@
 "use node";
 
 /**
- * Simplified Discovery Agent
+ * Hybrid Discovery Agent
  *
- * Returns a curated list of high-quality caregiver resource sources
- * until we integrate workers-research in Phase 2
+ * Phase 1: Combines hardcoded authoritative sources + Exa API semantic search
+ * Phase 2: Add workers-research for autonomous discovery
  */
 
 import { DiscoveredSource } from "../shared/types";
+import { discoverWithExa } from "./discovery.exa";
 
 /**
  * Curated list of authoritative caregiver resource sources
@@ -112,24 +113,54 @@ const AUTHORITATIVE_SOURCES: Record<string, DiscoveredSource[]> = {
 };
 
 /**
- * Discover caregiver resource sources
+ * Discover caregiver resource sources using hybrid approach
+ *
+ * Strategy:
+ * 1. Hardcoded authoritative sources (fast, free, reliable)
+ * 2. Exa API semantic search (dynamic, comprehensive, semantic)
+ * 3. Deduplicate and merge results
+ * 4. Sort by credibility score and priority
  */
 export async function discoverSources(
   state?: string,
-  limit: number = 10
+  limit: number = 20,
+  exaApiKey?: string
 ): Promise<DiscoveredSource[]> {
   const sources: DiscoveredSource[] = [];
 
-  // Always include national sources
+  // STEP 1: Always include hardcoded authoritative sources
   sources.push(...AUTHORITATIVE_SOURCES.national);
-
-  // Add state-specific sources if provided
   if (state && AUTHORITATIVE_SOURCES[state]) {
     sources.push(...AUTHORITATIVE_SOURCES[state]);
   }
 
-  // Sort by credibility score and priority
-  sources.sort((a, b) => {
+  // STEP 2: Use Exa API for dynamic discovery (if API key provided)
+  if (exaApiKey) {
+    try {
+      const query = state
+        ? `caregiver support services in ${state}`
+        : "caregiver support services";
+
+      const exaSources = await discoverWithExa(query, {
+        state,
+        limit: Math.max(limit - sources.length, 10), // Request enough to reach desired limit
+        apiKey: exaApiKey
+      });
+
+      sources.push(...exaSources);
+    } catch (error) {
+      console.error("Exa API error (falling back to hardcoded sources):", error);
+      // Continue with hardcoded sources only
+    }
+  }
+
+  // STEP 3: Deduplicate by URL
+  const uniqueSources = Array.from(
+    new Map(sources.map(s => [s.url, s])).values()
+  );
+
+  // STEP 4: Sort by credibility score and priority
+  uniqueSources.sort((a, b) => {
     if (a.priority !== b.priority) {
       const priorityOrder = { high: 0, medium: 1, low: 2 };
       return priorityOrder[a.priority] - priorityOrder[b.priority];
@@ -137,6 +168,6 @@ export async function discoverSources(
     return b.credibilityScore - a.credibilityScore;
   });
 
-  // Return limited number of sources
-  return sources.slice(0, limit);
+  // STEP 5: Return limited number of sources
+  return uniqueSources.slice(0, limit);
 }

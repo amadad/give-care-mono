@@ -8,31 +8,15 @@ compatibility_flags = ["nodejs_compat"]
 workers_dev = true
 account_id = "a900bd453c783129d31920f492a3ef1a"
 
-# Durable Objects (persistent agents)
+# Durable Objects (Phase 1: Only Orchestrator)
 [[durable_objects.bindings]]
 name = "ORCHESTRATOR_AGENT"
 class_name = "OrchestratorAgent"
 
-[[durable_objects.bindings]]
-name = "DISCOVERY_AGENT"
-class_name = "DiscoveryAgent"
-
-[[durable_objects.bindings]]
-name = "EXTRACTION_AGENT"
-class_name = "ExtractionAgent"
-
-[[durable_objects.bindings]]
-name = "CATEGORIZER_AGENT"
-class_name = "CategorizerAgent"
-
-[[durable_objects.bindings]]
-name = "VALIDATOR_AGENT"
-class_name = "ValidatorAgent"
-
 # Migrations for Durable Objects (free tier requires new_sqlite_classes)
 [[migrations]]
 tag = "v1"
-new_sqlite_classes = ["OrchestratorAgent", "DiscoveryAgent", "ExtractionAgent", "CategorizerAgent", "ValidatorAgent"]
+new_sqlite_classes = ["OrchestratorAgent"]
 
 # Browser Rendering API (for Puppeteer)
 browser = { binding = "BROWSER" }

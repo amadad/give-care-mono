@@ -1,38 +1,32 @@
 /**
  * give-care-etl Main Entry Point
  *
- * Routes requests to Durable Object agents based on Cloudflare's pattern.
- * Reference: https://blog.cloudflare.com/building-agents-openai-cloudflare
+ * Phase 1: Uses Orchestrator Durable Object + simple pipeline functions
+ * Phase 2: Will add individual agent Durable Objects (discovery.do, extraction.do, etc)
  */
 
 import { OrchestratorAgent } from "./agents/orchestrator.do";
-import { DiscoveryAgent } from "./agents/discovery.do";
-import { ExtractionAgent } from "./agents/extraction.do";
-import { CategorizerAgent } from "./agents/categorizer.do";
-import { ValidatorAgent } from "./agents/validator.do";
 
 // Export Durable Object classes (required by Cloudflare Workers)
-export { OrchestratorAgent, DiscoveryAgent, ExtractionAgent, CategorizerAgent, ValidatorAgent };
+// Phase 1: Only Orchestrator
+export { OrchestratorAgent };
 
 /**
  * Environment bindings
  */
 export interface Env {
-  // Durable Object bindings
+  // Durable Object bindings (Phase 1: Only Orchestrator)
   ORCHESTRATOR_AGENT: DurableObjectNamespace<OrchestratorAgent>;
-  DISCOVERY_AGENT: DurableObjectNamespace<DiscoveryAgent>;
-  EXTRACTION_AGENT: DurableObjectNamespace<ExtractionAgent>;
-  CATEGORIZER_AGENT: DurableObjectNamespace<CategorizerAgent>;
-  VALIDATOR_AGENT: DurableObjectNamespace<ValidatorAgent>;
 
-  // OpenAI API key
+  // API keys
   OPENAI_API_KEY: string;
+  EXA_API_KEY?: string;
 
   // Convex deployment
   CONVEX_URL: string;
-  CONVEX_ADMIN_KEY: string;
+  CONVEX_ADMIN_KEY?: string;
 
-  // Browser Rendering API
+  // Browser Rendering API (for llm-scraper-worker)
   BROWSER: Fetcher;
 
   // KV namespaces
@@ -80,22 +74,23 @@ export default {
         case "/health":
           return new Response(JSON.stringify({
             status: "ok",
+            phase: "1",
             durableObjects: {
-              orchestrator: typeof env.ORCHESTRATOR_AGENT !== "undefined",
-              discovery: typeof env.DISCOVERY_AGENT !== "undefined",
-              extraction: typeof env.EXTRACTION_AGENT !== "undefined",
-              categorizer: typeof env.CATEGORIZER_AGENT !== "undefined",
-              validator: typeof env.VALIDATOR_AGENT !== "undefined"
+              orchestrator: typeof env.ORCHESTRATOR_AGENT !== "undefined"
             },
             kv: {
               etl_state: typeof env.ETL_STATE !== "undefined",
               resource_cache: typeof env.RESOURCE_CACHE !== "undefined"
+            },
+            features: {
+              exaDiscovery: !!env.EXA_API_KEY,
+              llmScraper: true
             }
           }), {
             headers: { ...corsHeaders, "Content-Type": "application/json" }
           });
 
-        // Route to Orchestrator Agent
+        // Route to Orchestrator Agent (Phase 1: Only agent)
         case "/orchestrate":
         case "/orchestrate/start":
         case "/orchestrate/status":
@@ -103,42 +98,6 @@ export default {
           return routeToAgent(
             env.ORCHESTRATOR_AGENT,
             "orchestrator",
-            request,
-            corsHeaders
-          );
-
-        // Route to Discovery Agent
-        case "/discover":
-          return routeToAgent(
-            env.DISCOVERY_AGENT,
-            "discovery",
-            request,
-            corsHeaders
-          );
-
-        // Route to Extraction Agent
-        case "/extract":
-          return routeToAgent(
-            env.EXTRACTION_AGENT,
-            "extraction",
-            request,
-            corsHeaders
-          );
-
-        // Route to Categorizer Agent
-        case "/categorize":
-          return routeToAgent(
-            env.CATEGORIZER_AGENT,
-            "categorizer",
-            request,
-            corsHeaders
-          );
-
-        // Route to Validator Agent
-        case "/validate":
-          return routeToAgent(
-            env.VALIDATOR_AGENT,
-            "validator",
             request,
             corsHeaders
           );
