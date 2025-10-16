@@ -6,17 +6,17 @@ import Link from 'next/link';
 
 export default function NewHero() {
   return (
-    <section className="pt-8 md:pt-12 pb-0 bg-base-100">
-        <div className="container-editorial pb-0">
+    <section className="pt-6 sm:pt-8 md:pt-12 pb-0 bg-base-100">
+        <div className="container mx-auto px-4 sm:px-6 max-w-5xl pb-0">
           {/* Minimal Headline */}
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ duration: 0.6 }}
-            className="text-center mb-4 md:mb-6"
+            className="text-center mb-4 md:mb-6 px-4"
           >
-            <h1 className="heading-hero mb-6">
-              You're carrying more than anyone sees—<br />we remember all of it
+            <h1 className="text-3xl sm:text-4xl md:text-6xl font-serif font-light tracking-tight text-amber-950 leading-[1.2] mb-4 sm:mb-6">
+              You're carrying more than anyone sees—we remember all of it
             </h1>
 
             {/* Forbes Badge */}
@@ -43,7 +43,7 @@ export default function NewHero() {
               </a>
             </motion.div>
 
-            <p className="body-large max-w-2xl mx-auto">
+            <p className="text-base sm:text-lg md:text-xl font-serif font-light text-amber-700 leading-relaxed max-w-2xl mx-auto px-4">
               Track your capacity. Get help matched to YOUR needs.
               We check in before things get hard. Works on any phone—no app required.
             </p>
@@ -54,17 +54,17 @@ export default function NewHero() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ duration: 0.6, delay: 0.2 }}
-            className="flex flex-col sm:flex-row gap-4 justify-center items-center mb-0"
+            className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center items-center mb-0 px-4 w-full sm:w-auto"
           >
             <Link
               href="/assessment"
-              className="btn-editorial-primary"
+              className="w-full sm:w-auto inline-block px-8 sm:px-10 py-3 sm:py-4 bg-amber-950 text-white text-sm tracking-widest hover:bg-amber-900 transition-colors duration-200 rounded-lg text-center"
             >
               Start Free Assessment
             </Link>
             <Link
               href="/how-it-works"
-              className="btn-editorial-secondary"
+              className="w-full sm:w-auto inline-block px-8 sm:px-10 py-3 sm:py-4 bg-white text-amber-950 text-sm tracking-widest hover:bg-amber-50 transition-colors duration-200 rounded-lg border border-amber-200 text-center"
             >
               See How It Works →
             </Link>
