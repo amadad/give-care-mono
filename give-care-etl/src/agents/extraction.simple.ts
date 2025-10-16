@@ -138,7 +138,7 @@ ${text}`;
       return null;
     }
 
-    const data = await response.json();
+    const data = await response.json() as any;
     const extracted = JSON.parse(data.choices[0].message.content);
 
     // Add metadata

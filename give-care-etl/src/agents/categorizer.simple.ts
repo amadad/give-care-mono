@@ -22,9 +22,9 @@ export function categorizeRecord(record: IntermediateRecord): CategorizedRecord 
 
   // Map each service type to its pressure zones
   for (const serviceType of record.serviceTypes) {
-    const serviceZones = SERVICE_TO_ZONES[serviceType];
+    const serviceZones = SERVICE_TO_ZONES[serviceType as keyof typeof SERVICE_TO_ZONES];
     if (serviceZones) {
-      serviceZones.forEach(zone => zones.add(zone));
+      serviceZones.forEach((zone: string) => zones.add(zone));
       matchedServices++;
     } else {
       logger.warn("Unknown service type", { serviceType, record: record.title });

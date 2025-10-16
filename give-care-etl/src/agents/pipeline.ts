@@ -167,7 +167,6 @@ export async function executePipeline(config: PipelineConfig): Promise<PipelineR
           zones: validated.zones,
           coverage: validated.coverage,
           state: validated.state,
-          county: validated.county,
           zipCodes: validated.zip ? [validated.zip] : undefined,
           description: validated.description,
           eligibility: validated.eligibility,

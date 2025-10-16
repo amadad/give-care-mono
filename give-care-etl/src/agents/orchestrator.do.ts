@@ -15,6 +15,13 @@ import { executePipeline } from "./pipeline";
 
 const logger = createLogger({ agentName: "orchestrator" });
 
+// Environment bindings type
+interface Env {
+  OPENAI_API_KEY: string;
+  CONVEX_URL: string;
+  ENVIRONMENT?: string;
+}
+
 /**
  * Orchestrator Agent Instructions
  */
@@ -69,7 +76,7 @@ export interface OrchestratorState {
   completedAt?: string;
 }
 
-export class OrchestratorAgent extends DurableObject {
+export class OrchestratorAgent extends DurableObject<Env> {
   constructor(ctx: DurableObjectState, env: Env) {
     super(ctx, env);
     // Agent initialization will be added in Phase 1
