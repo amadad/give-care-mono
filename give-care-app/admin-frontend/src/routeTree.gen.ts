@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as TracesRouteImport } from './routes/traces'
 import { Route as SystemRouteImport } from './routes/system'
 import { Route as LoginRouteImport } from './routes/login'
+import { Route as EtlRouteImport } from './routes/etl'
 import { Route as CrisisRouteImport } from './routes/crisis'
 import { Route as AnalyticsRouteImport } from './routes/analytics'
 import { Route as IndexRouteImport } from './routes/index'
@@ -31,6 +32,11 @@ const SystemRoute = SystemRouteImport.update({
 const LoginRoute = LoginRouteImport.update({
   id: '/login',
   path: '/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const EtlRoute = EtlRouteImport.update({
+  id: '/etl',
+  path: '/etl',
   getParentRoute: () => rootRouteImport,
 } as any)
 const CrisisRoute = CrisisRouteImport.update({
@@ -63,6 +69,7 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/analytics': typeof AnalyticsRoute
   '/crisis': typeof CrisisRoute
+  '/etl': typeof EtlRoute
   '/login': typeof LoginRoute
   '/system': typeof SystemRoute
   '/traces': typeof TracesRoute
@@ -73,6 +80,7 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/analytics': typeof AnalyticsRoute
   '/crisis': typeof CrisisRoute
+  '/etl': typeof EtlRoute
   '/login': typeof LoginRoute
   '/system': typeof SystemRoute
   '/traces': typeof TracesRoute
@@ -84,6 +92,7 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/analytics': typeof AnalyticsRoute
   '/crisis': typeof CrisisRoute
+  '/etl': typeof EtlRoute
   '/login': typeof LoginRoute
   '/system': typeof SystemRoute
   '/traces': typeof TracesRoute
@@ -96,6 +105,7 @@ export interface FileRouteTypes {
     | '/'
     | '/analytics'
     | '/crisis'
+    | '/etl'
     | '/login'
     | '/system'
     | '/traces'
@@ -106,6 +116,7 @@ export interface FileRouteTypes {
     | '/'
     | '/analytics'
     | '/crisis'
+    | '/etl'
     | '/login'
     | '/system'
     | '/traces'
@@ -116,6 +127,7 @@ export interface FileRouteTypes {
     | '/'
     | '/analytics'
     | '/crisis'
+    | '/etl'
     | '/login'
     | '/system'
     | '/traces'
@@ -127,6 +139,7 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AnalyticsRoute: typeof AnalyticsRoute
   CrisisRoute: typeof CrisisRoute
+  EtlRoute: typeof EtlRoute
   LoginRoute: typeof LoginRoute
   SystemRoute: typeof SystemRoute
   TracesRoute: typeof TracesRoute
@@ -155,6 +168,13 @@ declare module '@tanstack/react-router' {
       path: '/login'
       fullPath: '/login'
       preLoaderRoute: typeof LoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/etl': {
+      id: '/etl'
+      path: '/etl'
+      fullPath: '/etl'
+      preLoaderRoute: typeof EtlRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/crisis': {
@@ -199,6 +219,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AnalyticsRoute: AnalyticsRoute,
   CrisisRoute: CrisisRoute,
+  EtlRoute: EtlRoute,
   LoginRoute: LoginRoute,
   SystemRoute: SystemRoute,
   TracesRoute: TracesRoute,

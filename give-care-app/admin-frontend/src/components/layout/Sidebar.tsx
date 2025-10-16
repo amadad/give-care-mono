@@ -5,7 +5,8 @@ import {
   AlertTriangle,
   BarChart3,
   Activity,
-  GitBranch
+  GitBranch,
+  Database
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet'
@@ -30,6 +31,11 @@ const navItems = [
     title: 'Analytics',
     href: '/analytics',
     icon: BarChart3,
+  },
+  {
+    title: 'ETL Pipeline',
+    href: '/etl',
+    icon: Database,
   },
   {
     title: 'Traces',
