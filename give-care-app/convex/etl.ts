@@ -198,7 +198,7 @@ export const addExtractedRecord = mutation({
 export const addValidatedRecord = mutation({
   args: {
     sessionId: v.string(),
-    extractedRecordId: v.id("etlExtractedRecords"),
+    extractedRecordId: v.optional(v.id("etlExtractedRecords")), // Optional for Phase 1
     title: v.string(),
     providerName: v.string(),
     phones: v.array(v.string()),

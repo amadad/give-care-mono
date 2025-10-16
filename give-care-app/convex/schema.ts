@@ -591,7 +591,7 @@ export default defineSchema({
   // ETL VALIDATED RECORDS (Output from Validator, ready for human QA)
   etlValidatedRecords: defineTable({
     workflowId: v.id("etlWorkflows"),
-    extractedRecordId: v.id("etlExtractedRecords"),
+    extractedRecordId: v.optional(v.id("etlExtractedRecords")), // Optional for Phase 1
     title: v.string(),
     providerName: v.string(),
     phones: v.array(v.string()), // E.164 normalized

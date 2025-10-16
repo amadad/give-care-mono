@@ -161,10 +161,9 @@ export async function executePipeline(config: PipelineConfig): Promise<PipelineR
         const validated = await validateRecord(record);
         validatedRecords.push(validated);
 
-        // Save to Convex
+        // Save to Convex (skip extractedRecordId for now - Phase 1 doesn't need it)
         await convex.addValidatedRecord({
           sessionId: config.sessionId,
-          extractedRecordId: "temp", // TODO: Get actual ID
           title: validated.title,
           providerName: validated.providerName,
           phones: validated.phoneE164 || validated.phones || [],
