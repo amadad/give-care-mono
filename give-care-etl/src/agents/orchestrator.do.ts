@@ -11,6 +11,7 @@ import { DurableObject } from "cloudflare:workers";
 import { createLogger } from "../utils/logger";
 import { Agent, run, type RunState } from "@openai/agents";
 import { ETLConvexClient } from "../utils/convex";
+import { executePipeline } from "./pipeline";
 
 const logger = createLogger({ agentName: "orchestrator" });
 
@@ -147,12 +148,25 @@ export class OrchestratorAgent extends DurableObject {
       // Continue anyway - Durable Object state is source of truth
     }
 
-    // Run agent (this will be implemented in Phase 1)
-    // For now, return placeholder
+    // Execute the complete ETL pipeline (Phase 1 implementation)
+    this.ctx.waitUntil(
+      executePipeline({
+        sessionId,
+        task: body.task,
+        state: body.state,
+        limit: body.limit || 10,
+        openaiApiKey: this.env.OPENAI_API_KEY,
+        convexUrl: this.env.CONVEX_URL
+      }).catch((error) => {
+        logger.error("Pipeline execution failed", { sessionId, error });
+      })
+    );
+
+    // Return immediately (pipeline runs in background)
     return new Response(JSON.stringify({
       sessionId,
       status: "started",
-      message: "Orchestration workflow started. Implementation pending in Phase 1."
+      message: "Pipeline executing. Check /status for progress."
     }), {
       headers: { "Content-Type": "application/json" }
     });
