@@ -10,6 +10,7 @@
 
 import type * as auth from "../auth.js";
 import type * as crons from "../crons.js";
+import type * as etl from "../etl.js";
 import type * as functions_admin from "../functions/admin.js";
 import type * as functions_analytics from "../functions/analytics.js";
 import type * as functions_assessmentResults from "../functions/assessmentResults.js";
@@ -21,6 +22,7 @@ import type * as functions_memories from "../functions/memories.js";
 import type * as functions_newsletter from "../functions/newsletter.js";
 import type * as functions_rateLimitMonitoring from "../functions/rateLimitMonitoring.js";
 import type * as functions_resources from "../functions/resources.js";
+import type * as functions_resourcesGeoLite from "../functions/resourcesGeoLite.js";
 import type * as functions_scheduling from "../functions/scheduling.js";
 import type * as functions_seedResources from "../functions/seedResources.js";
 import type * as functions_users from "../functions/users.js";
@@ -31,12 +33,17 @@ import type * as ingestion_adapters_eldercareLocatorAdapter from "../ingestion/a
 import type * as ingestion_adapters_nysOaaAdapter from "../ingestion/adapters/nysOaaAdapter.js";
 import type * as ingestion_adapters_openReferralAdapter from "../ingestion/adapters/openReferralAdapter.js";
 import type * as ingestion_eldercare_scraper from "../ingestion/eldercare_scraper.js";
+import type * as ingestion_federalPrograms from "../ingestion/federalPrograms.js";
+import type * as ingestion_federalProgramsSeed from "../ingestion/federalProgramsSeed.js";
 import type * as ingestion_importResources from "../ingestion/importResources.js";
 import type * as ingestion_nys_oaa_parser from "../ingestion/nys_oaa_parser.js";
 import type * as ingestion_nys_oaa_parser_verbose from "../ingestion/nys_oaa_parser_verbose.js";
 import type * as ingestion_shared_load from "../ingestion/shared/load.js";
 import type * as ingestion_shared_normalize from "../ingestion/shared/normalize.js";
+import type * as ingestion_shared_registry from "../ingestion/shared/registry.js";
+import type * as ingestion_shared_scoring from "../ingestion/shared/scoring.js";
 import type * as ingestion_shared_types from "../ingestion/shared/types.js";
+import type * as ingestion_shared_validation from "../ingestion/shared/validation.js";
 import type * as resources_matchResources from "../resources/matchResources.js";
 import type * as services_MessageHandler from "../services/MessageHandler.js";
 import type * as stripe from "../stripe.js";
@@ -65,6 +72,7 @@ import type {
 declare const fullApi: ApiFromModules<{
   auth: typeof auth;
   crons: typeof crons;
+  etl: typeof etl;
   "functions/admin": typeof functions_admin;
   "functions/analytics": typeof functions_analytics;
   "functions/assessmentResults": typeof functions_assessmentResults;
@@ -76,6 +84,7 @@ declare const fullApi: ApiFromModules<{
   "functions/newsletter": typeof functions_newsletter;
   "functions/rateLimitMonitoring": typeof functions_rateLimitMonitoring;
   "functions/resources": typeof functions_resources;
+  "functions/resourcesGeoLite": typeof functions_resourcesGeoLite;
   "functions/scheduling": typeof functions_scheduling;
   "functions/seedResources": typeof functions_seedResources;
   "functions/users": typeof functions_users;
@@ -86,12 +95,17 @@ declare const fullApi: ApiFromModules<{
   "ingestion/adapters/nysOaaAdapter": typeof ingestion_adapters_nysOaaAdapter;
   "ingestion/adapters/openReferralAdapter": typeof ingestion_adapters_openReferralAdapter;
   "ingestion/eldercare_scraper": typeof ingestion_eldercare_scraper;
+  "ingestion/federalPrograms": typeof ingestion_federalPrograms;
+  "ingestion/federalProgramsSeed": typeof ingestion_federalProgramsSeed;
   "ingestion/importResources": typeof ingestion_importResources;
   "ingestion/nys_oaa_parser": typeof ingestion_nys_oaa_parser;
   "ingestion/nys_oaa_parser_verbose": typeof ingestion_nys_oaa_parser_verbose;
   "ingestion/shared/load": typeof ingestion_shared_load;
   "ingestion/shared/normalize": typeof ingestion_shared_normalize;
+  "ingestion/shared/registry": typeof ingestion_shared_registry;
+  "ingestion/shared/scoring": typeof ingestion_shared_scoring;
   "ingestion/shared/types": typeof ingestion_shared_types;
+  "ingestion/shared/validation": typeof ingestion_shared_validation;
   "resources/matchResources": typeof resources_matchResources;
   "services/MessageHandler": typeof services_MessageHandler;
   stripe: typeof stripe;
