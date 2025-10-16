@@ -213,7 +213,7 @@ export const orchestratorAgent = new Agent({
 /**
  * Execute orchestrator workflow
  *
- * @param task - Task description (e.g., "discover_eldercare_resources")
+ * @param task - Task description (e.g., "discover_caregiver_resources")
  * @param context - Initial context
  * @returns Final context with results
  */

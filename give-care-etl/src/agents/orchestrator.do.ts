@@ -40,12 +40,12 @@ You can hand off to these specialist agents:
 
 ## Typical Workflow
 
-1. Receive task (e.g., "discover eldercare resources in NY")
-2. Hand off to Discovery Agent → Get 10-20 sources
+1. Receive task (e.g., "discover caregiver support resources in NY")
+2. Hand off to Discovery Agent → Get 10-20 authoritative sources
 3. Hand off to Extraction Agent for each source (parallel)
-4. Hand off to Categorizer Agent for each extracted record
-5. Hand off to Validator Agent for final quality check
-6. Return summary of validated resources
+4. Hand off to Categorizer Agent to map to 11 service types + 5 pressure zones
+5. Hand off to Validator Agent for final quality check (phone/URL validation)
+6. Return summary of validated resources ready for QA review
 
 When you complete a workflow, return a structured summary with:
 - Total sources discovered
