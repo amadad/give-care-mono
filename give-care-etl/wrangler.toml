@@ -13,10 +13,14 @@ account_id = "a900bd453c783129d31920f492a3ef1a"
 name = "ORCHESTRATOR_AGENT"
 class_name = "OrchestratorAgent"
 
-# Migrations for Durable Objects (free tier requires new_sqlite_classes)
+# Migrations for Durable Objects
 [[migrations]]
 tag = "v1"
 new_sqlite_classes = ["OrchestratorAgent"]
+
+[[migrations]]
+tag = "v2"
+deleted_classes = ["DiscoveryAgent", "ExtractionAgent", "CategorizerAgent", "ValidatorAgent"]
 
 # Browser Rendering API (for Puppeteer)
 browser = { binding = "BROWSER" }
