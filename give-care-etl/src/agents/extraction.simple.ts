@@ -129,7 +129,12 @@ ${text}`;
     });
 
     if (!response.ok) {
-      logger.error("OpenAI API error", { status: response.status });
+      const errorBody = await response.text();
+      logger.error("OpenAI API error", {
+        status: response.status,
+        statusText: response.statusText,
+        body: errorBody.substring(0, 500) // First 500 chars
+      });
       return null;
     }
 
@@ -152,7 +157,10 @@ ${text}`;
 
     return record;
   } catch (error) {
-    logger.error("GPT extraction error", { error });
+    logger.error("GPT extraction error", {
+      error: error instanceof Error ? error.message : String(error),
+      stack: error instanceof Error ? error.stack : undefined
+    });
     return null;
   }
 }
