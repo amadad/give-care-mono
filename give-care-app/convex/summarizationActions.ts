@@ -12,6 +12,23 @@ import { internal } from './_generated/api';
 import { v } from 'convex/values';
 import OpenAI from 'openai';
 
+const SUMMARY_VERSION = process.env.SUMMARY_VERSION || 'baseline-v1';
+const INPUT_COST_PER_MILLION = 0.15; // gpt-4o-mini input pricing ($/1M tokens)
+const OUTPUT_COST_PER_MILLION = 0.6; // gpt-4o-mini output pricing ($/1M tokens)
+
+type SummaryUsage = {
+  promptTokens: number;
+  completionTokens: number;
+  totalTokens: number;
+  costUsd: number;
+  recordedAt: number;
+};
+
+type SummaryResult = {
+  summary: string;
+  usage?: SummaryUsage;
+};
+
 /**
  * Generate summary of historical messages using OpenAI
  * Focuses on caregiver challenges and progress
@@ -20,9 +37,9 @@ async function summarizeMessages(
   openai: OpenAI,
   messages: Array<{ role: string; content: string; timestamp: number }>,
   options: { focus: string; maxTokens: number }
-): Promise<string> {
+): Promise<SummaryResult> {
   if (messages.length === 0) {
-    return '';
+    return { summary: '' };
   }
 
   // Format messages for summarization
@@ -49,7 +66,30 @@ Maximum length: ${options.maxTokens} tokens.`;
     temperature: 0.3, // Lower temperature for consistent summaries
   });
 
-  return response.choices[0].message.content || '';
+  const content = response.choices[0].message.content || '';
+  const usage = response.usage;
+
+  if (!usage) {
+    return { summary: content };
+  }
+
+  const promptTokens = usage.prompt_tokens ?? usage.promptTokens ?? 0;
+  const completionTokens = usage.completion_tokens ?? usage.completionTokens ?? 0;
+  const totalTokens = usage.total_tokens ?? usage.totalTokens ?? promptTokens + completionTokens;
+  const costUsd =
+    (promptTokens / 1_000_000) * INPUT_COST_PER_MILLION +
+    (completionTokens / 1_000_000) * OUTPUT_COST_PER_MILLION;
+
+  return {
+    summary: content,
+    usage: {
+      promptTokens,
+      completionTokens,
+      totalTokens,
+      costUsd: Number(costUsd.toFixed(6)),
+      recordedAt: Date.now(),
+    },
+  };
 }
 
 /**
@@ -68,6 +108,7 @@ export const updateCaregiverProfile = internalAction({
 
     let historicalSummary = '';
     let summarizationTriggered = false;
+    let summaryUsage: SummaryUsage | undefined;
 
     // Only summarize if historical messages > 20
     if (historicalMessages.length > 20) {
@@ -78,10 +119,12 @@ export const updateCaregiverProfile = internalAction({
         apiKey: process.env.OPENAI_API_KEY,
       });
 
-      historicalSummary = await summarizeMessages(openai, historicalMessages, {
+      const result = await summarizeMessages(openai, historicalMessages, {
         focus: 'caregiver_challenges_and_progress',
         maxTokens: 500,
       });
+      historicalSummary = result.summary;
+      summaryUsage = result.usage;
     }
 
     // Get first message timestamp for conversationStartDate
@@ -96,6 +139,12 @@ export const updateCaregiverProfile = internalAction({
       historicalSummary,
       conversationStartDate,
       totalInteractionCount: allMessages.length,
+      ...(summarizationTriggered
+        ? {
+            historicalSummaryVersion: SUMMARY_VERSION,
+            ...(summaryUsage ? { historicalSummaryTokenUsage: summaryUsage } : {}),
+          }
+        : {}),
     });
 
     return {
@@ -103,6 +152,8 @@ export const updateCaregiverProfile = internalAction({
       historicalMessages,
       historicalSummary,
       summarizationTriggered,
+      summaryUsage,
+      summaryVersion: summarizationTriggered ? SUMMARY_VERSION : undefined,
     };
   },
 });

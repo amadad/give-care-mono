@@ -1,6 +1,6 @@
 {
   "name": "give-care-app",
-  "version": "0.7.0",
+  "version": "0.8.2",
   "private": true,
   "packageManager": "pnpm@9.0.0",
   "type": "module",
@@ -14,19 +14,29 @@
     "dev": "convex dev",
     "lint": "eslint \"src/**/*.ts\" \"convex/**/*.ts\" \"index.ts\"",
     "test": "vitest",
-    "format": "prettier --write \"src/**/*.ts\" \"convex/**/*.ts\" \"index.ts\""
+    "format": "prettier --write \"src/**/*.ts\" \"convex/**/*.ts\" \"index.ts\"",
+    "optimize": "tsx dspy_optimization/run-optimization.ts",
+    "optimize:main": "tsx dspy_optimization/run-optimization.ts --agent main",
+    "optimize:crisis": "tsx dspy_optimization/run-optimization.ts --agent crisis",
+    "optimize:assessment": "tsx dspy_optimization/run-optimization.ts --agent assessment",
+    "optimize:ax": "tsx dspy_optimization/run-ax-optimization.ts",
+    "optimize:ax:bootstrap": "tsx dspy_optimization/run-ax-optimization.ts --optimizer bootstrap --trials 10 --sample 50",
+    "optimize:ax:mipro": "tsx dspy_optimization/run-ax-optimization.ts --optimizer mipro --trials 30 --candidates 5 --sample 50",
+    "optimize:ax:gepa": "tsx dspy_optimization/run-ax-optimization.ts --optimizer gepa --trials 16 --sample 50"
   },
   "dependencies": {
     "@auth/core": "^0.37.0",
+    "@ax-llm/ax": "^14.0.32",
     "@convex-dev/auth": "^0.0.90",
     "@convex-dev/rate-limiter": "^0.2.13",
     "@convex-dev/twilio": "^0.1.7",
+    "@google/genai": "^1.25.0",
     "@openai/agents": "^0.1.9",
     "@openai/agents-extensions": "^0.1.5",
     "convex": "^1.28.0",
     "dotenv": "^17.2.3",
     "event-target-polyfill": "^0.0.4",
-    "openai": "^4.0.0",
+    "openai": "^5.23.2",
     "rrule": "^2.8.1",
     "stripe": "^19.1.0",
     "twilio": "^5.0.0",
@@ -37,6 +47,7 @@
     "convex-test": "^0.0.38",
     "eslint": "^9.0.0",
     "prettier": "^3.0.0",
+    "tsx": "^4.20.6",
     "typescript": "^5.4.0",
     "vitest": "^2.0.0"
   }

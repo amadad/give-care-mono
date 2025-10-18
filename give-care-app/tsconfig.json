@@ -13,6 +13,6 @@
       "@/convex/*": ["convex/*"]
     }
   },
-  "include": ["src", "convex", "index.ts"],
+  "include": ["src", "convex", "index.ts", "dspy_optimization"],
   "exclude": ["node_modules"]
 }

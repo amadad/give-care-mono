@@ -532,7 +532,7 @@ describe('Conversation Summarization - Summarization Function', () => {
         });
       }
 
-      const result = await t.action(internal.summarization.updateCaregiverProfile, {
+      const result = await t.action(internal.summarizationActions.updateCaregiverProfile, {
         userId: userId as Id<'users'>,
       });
 
@@ -563,7 +563,7 @@ describe('Conversation Summarization - Summarization Function', () => {
         });
       }
 
-      const result = await t.action(internal.summarization.updateCaregiverProfile, {
+      const result = await t.action(internal.summarizationActions.updateCaregiverProfile, {
         userId: userId as Id<'users'>,
       });
 
@@ -595,7 +595,7 @@ describe('Conversation Summarization - Summarization Function', () => {
         });
       }
 
-      const result = await t.action(internal.summarization.updateCaregiverProfile, {
+      const result = await t.action(internal.summarizationActions.updateCaregiverProfile, {
         userId: userId as Id<'users'>,
       });
 
@@ -636,7 +636,7 @@ describe('Conversation Summarization - Summarization Function', () => {
         });
       }
 
-      const result = await t.action(internal.summarization.updateCaregiverProfile, {
+      const result = await t.action(internal.summarizationActions.updateCaregiverProfile, {
         userId: userId as Id<'users'>,
       });
 
@@ -690,7 +690,7 @@ describe('Conversation Summarization - Summarization Function', () => {
         });
       }
 
-      await t.mutation(internal.summarization.updateCaregiverProfile, {
+      await t.action(internal.summarizationActions.updateCaregiverProfile, {
         userId: userId as Id<'users'>,
       });
 
@@ -726,7 +726,7 @@ describe('Conversation Summarization - Summarization Function', () => {
         });
       });
 
-      await t.mutation(internal.summarization.updateCaregiverProfile, {
+      await t.action(internal.summarizationActions.updateCaregiverProfile, {
         userId: userId as Id<'users'>,
       });
 
@@ -777,7 +777,7 @@ describe('Conversation Summarization - Summarization Function', () => {
         });
       }
 
-      await t.mutation(internal.summarization.updateCaregiverProfile, {
+      await t.action(internal.summarizationActions.updateCaregiverProfile, {
         userId: userId as Id<'users'>,
       });
 
@@ -797,7 +797,7 @@ describe('Conversation Summarization - Summarization Function', () => {
         });
       });
 
-      const result = await t.action(internal.summarization.updateCaregiverProfile, {
+      const result = await t.action(internal.summarizationActions.updateCaregiverProfile, {
         userId: userId as Id<'users'>,
       });
 
@@ -830,7 +830,7 @@ describe('Conversation Summarization - Summarization Function', () => {
         });
       });
 
-      await t.mutation(internal.summarization.updateCaregiverProfile, {
+      await t.action(internal.summarizationActions.updateCaregiverProfile, {
         userId: userId as Id<'users'>,
       });
 
@@ -866,7 +866,7 @@ describe('Conversation Summarization - Summarization Function', () => {
         });
       }
 
-      await t.mutation(internal.summarization.updateCaregiverProfile, {
+      await t.action(internal.summarizationActions.updateCaregiverProfile, {
         userId: userId as Id<'users'>,
       });
 
@@ -904,7 +904,7 @@ describe('Conversation Summarization - Critical Facts Preservation', () => {
         });
       });
 
-      await t.mutation(internal.summarization.updateCaregiverProfile, {
+      await t.action(internal.summarizationActions.updateCaregiverProfile, {
         userId: userId as Id<'users'>,
       });
 
@@ -943,7 +943,7 @@ describe('Conversation Summarization - Critical Facts Preservation', () => {
         });
       }
 
-      await t.mutation(internal.summarization.updateCaregiverProfile, {
+      await t.action(internal.summarizationActions.updateCaregiverProfile, {
         userId: userId as Id<'users'>,
       });
 
@@ -982,7 +982,7 @@ describe('Conversation Summarization - Critical Facts Preservation', () => {
         });
       }
 
-      await t.mutation(internal.summarization.updateCaregiverProfile, {
+      await t.action(internal.summarizationActions.updateCaregiverProfile, {
         userId: userId as Id<'users'>,
       });
 
@@ -1020,7 +1020,7 @@ describe('Conversation Summarization - Critical Facts Preservation', () => {
         });
       }
 
-      await t.mutation(internal.summarization.updateCaregiverProfile, {
+      await t.action(internal.summarizationActions.updateCaregiverProfile, {
         userId: userId as Id<'users'>,
       });
 
@@ -1063,7 +1063,7 @@ describe('Conversation Summarization - Critical Facts Preservation', () => {
         return convos.length;
       });
 
-      await t.mutation(internal.summarization.updateCaregiverProfile, {
+      await t.action(internal.summarizationActions.updateCaregiverProfile, {
         userId: userId as Id<'users'>,
       });
 
@@ -1110,7 +1110,7 @@ describe('Conversation Summarization - Critical Facts Preservation', () => {
         });
       }
 
-      await t.mutation(internal.summarization.updateCaregiverProfile, {
+      await t.action(internal.summarizationActions.updateCaregiverProfile, {
         userId: userId as Id<'users'>,
       });
 
@@ -1312,7 +1312,7 @@ describe('Conversation Summarization - Cron Scheduling', () => {
         });
       }
 
-      const result = await t.action(internal.summarization.summarizeAllUsers, {});
+      const result = await t.action(internal.summarizationActions.summarizeAllUsers, {});
 
       expect(result.processedCount).toBe(1); // Only user1 processed
       expect(result.skippedCount).toBe(1); // user2 skipped
@@ -1342,7 +1342,7 @@ describe('Conversation Summarization - Cron Scheduling', () => {
         });
       }
 
-      const result = await t.action(internal.summarization.summarizeAllUsers, {});
+      const result = await t.action(internal.summarizationActions.summarizeAllUsers, {});
 
       expect(result.processedCount).toBe(0);
       expect(result.skippedCount).toBe(1);
@@ -1387,7 +1387,7 @@ describe('Conversation Summarization - Cron Scheduling', () => {
         });
       }
 
-      const result = await t.action(internal.summarization.summarizeAllUsers, {});
+      const result = await t.action(internal.summarizationActions.summarizeAllUsers, {});
 
       expect(result.processedCount).toBe(2);
       expect(result.skippedCount).toBe(0);
@@ -1421,7 +1421,7 @@ describe('Conversation Summarization - Token Cost Reduction', () => {
         });
       }
 
-      const result = await t.mutation(internal.summarization.calculateTokenSavings, {
+      const result = await t.action(internal.summarization.calculateTokenSavings, {
         userId: userId as Id<'users'>,
       });
 
@@ -1453,7 +1453,7 @@ describe('Conversation Summarization - Token Cost Reduction', () => {
         });
       }
 
-      const result = await t.mutation(internal.summarization.calculateTokenSavings, {
+      const result = await t.action(internal.summarization.calculateTokenSavings, {
         userId: userId as Id<'users'>,
       });
 
@@ -1489,7 +1489,7 @@ describe('Conversation Summarization - Token Cost Reduction', () => {
         });
       }
 
-      const result = await t.mutation(internal.summarization.calculateTokenSavings, {
+      const result = await t.action(internal.summarization.calculateTokenSavings, {
         userId: userId as Id<'users'>,
       });
 
@@ -1537,7 +1537,7 @@ describe('Conversation Summarization - Token Cost Reduction', () => {
         });
       }
 
-      const result = await t.mutation(internal.summarization.calculateTokenSavings, {
+      const result = await t.action(internal.summarization.calculateTokenSavings, {
         userId: userId as Id<'users'>,
       });
 

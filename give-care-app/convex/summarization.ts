@@ -16,7 +16,7 @@
  * NOTE: Actions that use Node.js (OpenAI) are in summarizationActions.ts
  */
 
-import { internalMutation, internalQuery } from './_generated/server';
+import { internalMutation, internalQuery, internalAction } from './_generated/server';
 import { internal } from './_generated/api';
 import { v } from 'convex/values';
 import type { Id } from './_generated/dataModel';
@@ -77,6 +77,14 @@ export const patchUserSummary = internalMutation({
     historicalSummary: v.string(),
     conversationStartDate: v.number(),
     totalInteractionCount: v.number(),
+    historicalSummaryVersion: v.optional(v.string()),
+    historicalSummaryTokenUsage: v.optional(v.object({
+      promptTokens: v.number(),
+      completionTokens: v.number(),
+      totalTokens: v.number(),
+      costUsd: v.number(),
+      recordedAt: v.number(),
+    })),
   },
   handler: async (ctx, args) => {
     await ctx.db.patch(args.userId, {
@@ -84,6 +92,8 @@ export const patchUserSummary = internalMutation({
       historicalSummary: args.historicalSummary,
       conversationStartDate: args.conversationStartDate,
       totalInteractionCount: args.totalInteractionCount,
+      historicalSummaryVersion: args.historicalSummaryVersion,
+      historicalSummaryTokenUsage: args.historicalSummaryTokenUsage,
     });
   },
 });
@@ -117,9 +127,21 @@ export const countUserMessages = internalQuery({
 });
 
 /**
+ * Helper: Get user by ID (for actions)
+ */
+export const _getUser = internalQuery({
+  args: {
+    userId: v.id('users'),
+  },
+  handler: async (ctx, args) => {
+    return await ctx.db.get(args.userId);
+  },
+});
+
+/**
  * Calculate token savings from summarization
  */
-export const calculateTokenSavings: any = internalMutation({
+export const calculateTokenSavings: any = internalAction({
   args: {
     userId: v.id('users'),
   },
@@ -129,7 +151,7 @@ export const calculateTokenSavings: any = internalMutation({
       { userId: args.userId }
     );
 
-    const user = await ctx.db.get(args.userId);
+    const user = await ctx.runQuery(internal.summarization._getUser, { userId: args.userId });
 
     // Rough token estimation: 1 token ≈ 4 characters
     const estimateTokens = (text: string) => Math.ceil(text.length / 4);

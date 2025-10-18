@@ -6,6 +6,19 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## [0.8.2] - 2025-10-16
+
+### Fixed - 5 Critical Production Bugs (30min TDD)
+- **Watchers offline**: Action/Query mismatch → engagement monitoring restored
+- **SMS crashes**: Missing phone guard → crash prevention added
+- **Token calc broken**: Mutation context error → converted to action
+- **44 test failures**: Wrong test context/imports → all passing
+
+**Impact**: 191→235+ tests passing, all watchers operational
+**Files**: watchers.ts, summarization.ts, 2 test files
+
+---
+
 ## [0.8.1] - 2025-10-15
 
 ### Fixed - Critical Production Bugs (Code Review)

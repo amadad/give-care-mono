@@ -1,5 +1,6 @@
 /**
- * Agent tools (5 total) - OpenAI Agents SDK 0.1.9
+ * Agent tools (6 total) - OpenAI Agents SDK 0.1.9
+ * - Includes Google Maps Grounding (Gemini 2.5 Flash-Lite)
  */
 
 import { tool } from '@openai/agents';
@@ -11,6 +12,7 @@ import { calculateCompositeScore, formatZoneName } from './burnoutCalculator';
 import { ZONE_INTERVENTIONS } from './interventionData';
 import type { BurnoutScore } from './burnoutCalculator';
 import { api } from '../convex/_generated/api';
+import { GoogleGenAI } from '@google/genai';
 
 /**
  * Type-safe helper to extract Convex client from RunContext
@@ -342,7 +344,7 @@ export const checkWellnessStatus = tool({
   },
 });
 
-// Interventions
+// Interventions (Vector Search + Fallback)
 export const findInterventions = tool({
   name: 'find_interventions',
   description: `Find evidence-based interventions matched to pressure zones from burnout score.`,
@@ -371,56 +373,89 @@ export const findInterventions = tool({
       ? "Things are tough. These might help lighten the load:\n\n"
       : "Here are some strategies that might help:\n\n";
 
-    // Try to get real resources from database (only if convexClient is available)
-    let resources: Array<{
-      title: string;
-      provider: string;
-      description: string;
-      phone: string | null;
-      website: string | null;
-      location: string;
-    }> = [];
-
-    // Guard: Only query database if convexClient is available
     const convexClient = getConvexClient(runContext);
-    if (convexClient) {
+    
+    // PRIORITY 1: Try vector search from knowledgeBase
+    if (convexClient && context.burnoutBand) {
       try {
-        resources = await convexClient.query(
-          api.functions.resources.getResourceRecommendations,
-          { userId: context.userId, limit: 3 }
+        const interventions = await convexClient.action(
+          api.functions.vectorSearch.searchByBurnoutLevel,
+          {
+            burnoutBand: context.burnoutBand,
+            query: input.context || undefined,
+            limit: 3,
+          }
         );
-      } catch (e) {
-        // Log error only in development to avoid log spam
-        if (process.env.NODE_ENV === 'development') {
-          console.error("[Tools] Resource query failed:", e);
+
+        if (interventions && interventions.length > 0) {
+          const formatted = interventions.map((int: any, i: number) => {
+            let text = `${i + 1}. **${int.title}**\n   ${int.description}`;
+            
+            // Add delivery info based on format
+            if (int.deliveryFormat === 'sms_text' && int.deliveryData?.phoneNumber) {
+              text += `\n   📱 Text ${int.deliveryData.initialMessage || 'START'} to ${int.deliveryData.phoneNumber}`;
+            } else if (int.deliveryFormat === 'phone_number' && int.deliveryData?.phoneNumber) {
+              text += `\n   📞 ${int.deliveryData.phoneNumber}`;
+            } else if (int.deliveryFormat === 'url' && int.deliveryData?.url) {
+              text += `\n   🔗 ${int.deliveryData.url}`;
+            }
+            
+            // Add effectiveness
+            if (int.effectivenessPct) {
+              text += `\n   ✓ ${int.effectivenessPct}% found helpful`;
+            }
+            
+            return text;
+          }).join('\n\n');
+
+          return intro + formatted + '\n\nTry one that feels doable today.';
         }
+      } catch (e) {
+        if (process.env.NODE_ENV === 'development') {
+          console.error("[Tools] Vector search failed:", e);
+        }
+        // Fall through to legacy resource query
       }
     }
 
-    // If database empty or client unavailable, use static fallback
-    if (resources.length === 0) {
-      const topZones = zones.slice(0, 2);
-      const matches = topZones
-        .map(zone => ZONE_INTERVENTIONS[zone])
-        .filter(Boolean); // matches is Intervention[], not Intervention[][]
+    // PRIORITY 2: Try legacy resources table
+    if (convexClient) {
+      try {
+        const resources = await convexClient.query(
+          api.functions.resources.getResourceRecommendations,
+          { userId: context.userId, limit: 3 }
+        );
 
-      return intro + matches
-        .map((int, i) => `${i + 1}. **${int.title}**: ${int.desc}\n   ✓ ${int.helpful}% found helpful`)
-        .join('\n\n') +
-        '\n\nTry one that feels doable today.';
+        if (resources && resources.length > 0) {
+          const formatted = resources.map((r: any, i: number) => {
+            let text = `${i + 1}. **${r.title}**`;
+            if (r.provider) text += ` (${r.provider})`;
+            text += `\n   ${r.description.slice(0, 100)}${r.description.length > 100 ? '...' : ''}`;
+            if (r.phone) text += `\n   📞 ${r.phone}`;
+            if (r.website) text += `\n   🔗 ${r.website}`;
+            return text;
+          }).join('\n\n');
+
+          return intro + formatted + '\n\nWould any of these be helpful? Let me know if you need more info.';
+        }
+      } catch (e) {
+        if (process.env.NODE_ENV === 'development') {
+          console.error("[Tools] Resource query failed:", e);
+        }
+        // Fall through to static fallback
+      }
     }
 
-    // Format database resources for SMS
-    const formatted = resources.map((r, i) => {
-      let text = `${i + 1}. **${r.title}**`;
-      if (r.provider) text += ` (${r.provider})`;
-      text += `\n   ${r.description.slice(0, 100)}${r.description.length > 100 ? '...' : ''}`;
-      if (r.phone) text += `\n   📞 ${r.phone}`;
-      if (r.website) text += `\n   🔗 ${r.website}`;
-      return text;
-    }).join('\n\n');
+    // PRIORITY 3: Static fallback (always works)
+    const topZones = zones.slice(0, 2);
+    const matches = topZones
+      .map(zone => ZONE_INTERVENTIONS[zone])
+      .filter(Boolean);
 
-    return intro + formatted + '\n\nWould any of these be helpful? Let me know if you need more info.';
+    return intro + matches
+      .map((int, i) => `${i + 1}. **${int.title}**: ${int.desc}\n   ✓ ${int.helpful}% found helpful`)
+      .join('\n\n') +
+      '\n\nTry one that feels doable today.';
   },
 });
 
@@ -555,6 +590,104 @@ Importance rating (1-10):
   },
 });
 
+// Google Maps Grounding (Gemini 2.5 Flash-Lite)
+export const findLocalResources = tool({
+  name: 'find_local_resources',
+  description: `Find local places and resources near the caregiver using Google Maps.
+
+USE FOR:
+- Cafes with wifi and quiet atmosphere for respite breaks
+- Parks and walking trails for stress relief
+- Restaurants for meal breaks
+- Community centers, libraries, gyms
+- Pharmacies, grocery stores, errands
+- Physical locations the caregiver needs
+
+DO NOT USE FOR:
+- Caregiver support programs (use findInterventions instead)
+- Government assistance (use findInterventions instead)
+- Clinical services or assessments (use findInterventions instead)
+- Any non-physical resources
+
+WHEN TO CALL:
+- User asks "where can I..." or "is there a..."
+- User needs a specific type of place nearby
+- User wants local recommendations
+
+If user hasn't shared their location yet, ask for zip code or city first.`,
+
+  parameters: z.object({
+    query: z.string().min(1, 'Search query required (e.g., "quiet cafe with wifi")'),
+    latitude: z.union([z.number(), z.null()]).default(null),
+    longitude: z.union([z.number(), z.null()]).default(null),
+  }),
+
+  execute: async ({ query, latitude, longitude }, runContext) => {
+    const context = runContext!.context as GiveCareContext;
+
+    // If no lat/lng provided, try to use context (if available from future geocoding)
+    // For now, require explicit location
+    if (!latitude || !longitude) {
+      return "I'd love to help find local places! Can you share your zip code or city so I know where to look?";
+    }
+
+    // Initialize Gemini with API key
+    const apiKey = process.env.GEMINI_API_KEY;
+    if (!apiKey) {
+      console.error('[findLocalResources] GEMINI_API_KEY not configured');
+      return "Local search isn't available right now. Try asking me for other types of support!";
+    }
+
+    try {
+      const ai = new GoogleGenAI({ apiKey });
+
+      // Call Gemini with Maps grounding
+      const response = await ai.models.generateContent({
+        model: 'gemini-2.5-flash-lite',
+        contents: query,
+        config: {
+          tools: [{ googleMaps: { enableWidget: false } }],
+          toolConfig: {
+            retrievalConfig: {
+              latLng: { latitude, longitude }
+            }
+          }
+        }
+      });
+
+      // Extract grounded results
+      const text = response.text || '';
+      const groundingMetadata = response.candidates?.[0]?.groundingMetadata;
+      const chunks = groundingMetadata?.groundingChunks || [];
+
+      // Format for SMS (concise, trauma-informed)
+      let result = text;
+
+      // Add sources (max 3 for SMS readability)
+      if (chunks.length > 0) {
+        result += '\n\n📍 **Places**:\n';
+        chunks.slice(0, 3).forEach((chunk, i) => {
+          if (chunk.maps) {
+            result += `${i + 1}. ${chunk.maps.title}\n`;
+            result += `   ${chunk.maps.uri}\n`;
+          }
+        });
+      }
+
+      // Trauma-informed closing
+      result += '\n\nTake the time you need. You deserve a break. 💙';
+
+      return result;
+
+    } catch (error) {
+      console.error('[findLocalResources] Gemini API error:', error);
+
+      // Graceful degradation
+      return "I'm having trouble searching right now. In the meantime, I can help with wellness check-ins or finding support programs. What would be most helpful?";
+    }
+  },
+});
+
 // Export all tools
 export const allTools = [
   updateProfile,
@@ -564,4 +697,5 @@ export const allTools = [
   findInterventions,
   setWellnessSchedule,
   recordMemory,
+  findLocalResources,
 ];

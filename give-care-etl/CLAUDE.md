@@ -4,6 +4,20 @@
 
 ---
 
+## 🚨 DRACONIAN DOCUMENTATION POLICY
+
+**Active Docs: 2 MAX** (CLAUDE.md + docs/ARCHITECTURE.md)
+
+### Rules
+1. **UPDATE, DON'T CREATE** - Edit ARCHITECTURE.md, never create new docs
+2. **PRUNE AS YOU GO** - Delete outdated sections when updating
+3. **CHANGELOG IN COMMITS** - Git history is your changelog
+4. **NO GUIDES/SUMMARIES** - Everything goes in ARCHITECTURE.md
+
+**Current**: 2/2 ✅ (CLAUDE.md + docs/ARCHITECTURE.md)
+
+---
+
 ## Project Overview
 
 **give-care-etl** is an autonomous resource discovery and curation pipeline for GiveCare using:

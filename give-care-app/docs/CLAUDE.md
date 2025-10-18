@@ -4,11 +4,73 @@
 
 ---
 
+## 🚨 DRACONIAN DOCUMENTATION POLICY
+
+### Golden Rules
+1. **UPDATE, DON'T CREATE** - Edit existing files. New docs require explicit approval.
+2. **PRUNE AS YOU GO** - Delete outdated sections when updating. History lives in git, not docs.
+3. **ONE TRUTH** - Each topic gets ONE file. No duplicates, summaries, or "guides."
+4. **CHANGELOG IS HISTORY** - Don't document implementation details. Log what changed, why it matters.
+
+### When to Create a New Doc (NEVER without approval)
+- ✅ New architectural domain (e.g., first billing system) - still needs approval
+- ❌ Bug fixes (→ CHANGELOG.md)
+- ❌ Task planning (→ TASKS.md, delete after)
+- ❌ "Summary" docs (→ update source)
+- ❌ "Guide" docs (→ merge into existing)
+- ❌ Research (→ external tools)
+- ❌ Archive/internal folders (→ git history)
+
+### Active Docs: 15 MAX (Current: 15 ✅)
+
+**Enforcement**:
+- Before creating: Must delete existing doc OR prove it's new domain
+- Weekly: Delete completed task details, prune old sections
+- Monthly: Consolidate overlapping docs, archive >6mo content
+
+**What NEVER needs a doc**:
+- Bug fixes → CHANGELOG.md (1-2 lines)
+- Tasks → TASKS.md (delete details after completion)
+- Research → External (Notion, Google Docs)
+- Summaries → Update source doc instead
+- Status → CHANGELOG.md or TASKS.md
+
+---
+
 ## Quick Start
 
 1. **Run `npx convex dev` first** - Generates required types
 2. Read [DEVELOPMENT.md](DEVELOPMENT.md) - Development setup
 3. Read [ARCHITECTURE.md](ARCHITECTURE.md) - System design
+
+---
+
+## Current Doc Roster (15/15 ✅)
+
+### Core (6 - Never Delete)
+1. CLAUDE.md - AI navigation
+2. ARCHITECTURE.md - System design
+3. DEVELOPMENT.md - Dev setup
+4. DEPLOYMENT.md - Production
+5. CHANGELOG.md - History
+6. TASKS.md - Active sprint
+
+### Domain (2)
+7. ASSESSMENTS.md - Clinical tools
+8. TAXONOMY.md - Nomenclature
+
+### Operations (4)
+9. SOP.md - Troubleshooting
+10. SCHEDULING.md - Cron jobs
+11. RATE_LIMITS.md - Rate limiting
+12. LOGGING_GUIDE.md - Logging
+
+### Product (1)
+13. FEATURES.md - Feature status
+
+### Integrations (2)
+14. ADMIN_DASHBOARD_GUIDE.md - Admin
+15. STRIPE_PRODUCTION_GUIDE.md - Payments
 
 ---
 
@@ -19,7 +81,6 @@
 | Doc | What | How | Why |
 |-----|------|-----|-----|
 | **[ARCHITECTURE.md](ARCHITECTURE.md)** | Multi-agent system design | 3 agents (main/crisis/assessment), 5 tools, Convex DB | Understand system components & data flow |
-| **[SYSTEM_OVERVIEW.md](SYSTEM_OVERVIEW.md)** | Product walkthrough | User journey: onboarding → assessments → scoring → interventions | Understand what the product does |
 | **[ASSESSMENTS.md](ASSESSMENTS.md)** | Clinical tools | 4 assessments (EMA, CWBS, REACH-II, SDOH) with scoring algorithms | Understand wellness measurement |
 | **[TAXONOMY.md](TAXONOMY.md)** | Nomenclature & visual reference | Scores, bands, zones, phases, tiers, formatting rules + visual diagrams | Understand naming conventions across systems |
 | **[DEVELOPMENT.md](DEVELOPMENT.md)** | Local dev setup | Commands, testing, debugging | Get started coding |

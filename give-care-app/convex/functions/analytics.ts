@@ -140,6 +140,75 @@ export const getAgentPerformance = query({
 });
 
 /**
+ * Summarization performance metrics grouped by summary version
+ */
+export const getSummaryPerformance = query({
+  args: {},
+  handler: async (ctx) => {
+    const users = await ctx.db.query('users').collect();
+
+    type AggregatedStats = {
+      count: number;
+      usageCount: number;
+      totalCost: number;
+      totalTokens: number;
+    };
+
+    const stats: Record<string, AggregatedStats> = {};
+    let totalCost = 0;
+    let totalTokens = 0;
+    let totalUsageCount = 0;
+
+    users.forEach((user) => {
+      const hasSummary = typeof user.historicalSummary === 'string' && user.historicalSummary.length > 0;
+      const version = user.historicalSummaryVersion || 'unversioned';
+      const usage = user.historicalSummaryTokenUsage;
+
+      if (!hasSummary && !usage) {
+        return;
+      }
+
+      if (!stats[version]) {
+        stats[version] = { count: 0, usageCount: 0, totalCost: 0, totalTokens: 0 };
+      }
+
+      stats[version].count += 1;
+
+      if (usage) {
+        stats[version].usageCount += 1;
+        stats[version].totalCost += usage.costUsd;
+        stats[version].totalTokens += usage.totalTokens;
+        totalCost += usage.costUsd;
+        totalTokens += usage.totalTokens;
+        totalUsageCount += 1;
+      }
+    });
+
+    const versions = Object.entries(stats)
+      .map(([version, value]) => ({
+        version,
+        count: value.count,
+        avgCostUsd: value.usageCount > 0 ? Number((value.totalCost / value.usageCount).toFixed(4)) : 0,
+        avgTokens: value.usageCount > 0 ? Math.round(value.totalTokens / value.usageCount) : 0,
+      }))
+      .sort((a, b) => b.count - a.count);
+
+    const totalSummaries = versions.reduce((sum, entry) => sum + entry.count, 0);
+
+    return {
+      versions,
+      totals: {
+        distinctVersions: versions.length,
+        totalSummaries,
+        totalCostUsd: Number(totalCost.toFixed(4)),
+        avgCostUsd: totalUsageCount > 0 ? Number((totalCost / totalUsageCount).toFixed(4)) : 0,
+        avgTokens: totalUsageCount > 0 ? Math.round(totalTokens / totalUsageCount) : 0,
+      },
+    };
+  },
+});
+
+/**
  * Get quality metrics (evaluation scores by dimension)
  * Returns average ratings and week-over-week changes
  */

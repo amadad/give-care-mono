@@ -8,6 +8,7 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { BurnoutChart } from '@/components/dashboard/BurnoutChart'
 import { QualityMetrics } from '@/components/dashboard/QualityMetrics'
 import { AgentPerformance } from '@/components/dashboard/AgentPerformance'
+import { SummaryPerformance } from '@/components/dashboard/SummaryPerformance'
 
 export const Route = createFileRoute('/analytics')({
   component: AnalyticsPage,
@@ -141,6 +142,7 @@ function AnalyticsPage() {
         {/* Tab 2: Quality Evaluations */}
         <TabsContent value="quality" className="space-y-6">
           <QualityMetrics />
+          <SummaryPerformance />
         </TabsContent>
 
         {/* Tab 3: Agent Performance */}

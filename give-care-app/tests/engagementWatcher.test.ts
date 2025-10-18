@@ -368,9 +368,7 @@ describe('Engagement Watcher - Sudden Drop Detection', () => {
       const averageMessagesPerDay = 4;
 
       // Run engagement watcher
-      const result = await t.run(async (ctx) => {
-        return await ctx.runAction(internal.watchers.watchCaregiverEngagement);
-      });
+      const result = await t.action(internal.watchers.watchCaregiverEngagement);
 
       // Should create disengagement alert
       const alerts = await t.run(async (ctx) => {
@@ -404,9 +402,7 @@ describe('Engagement Watcher - Sudden Drop Detection', () => {
       });
 
       // Run engagement watcher
-      await t.run(async (ctx) => {
-        return await ctx.runAction(internal.watchers.watchCaregiverEngagement);
-      });
+      await t.action(internal.watchers.watchCaregiverEngagement);
 
       // Should NOT create alert
       const alerts = await t.run(async (ctx) => {
@@ -433,9 +429,7 @@ describe('Engagement Watcher - Sudden Drop Detection', () => {
       });
 
       // Run engagement watcher
-      await t.run(async (ctx) => {
-        return await ctx.runAction(internal.watchers.watchCaregiverEngagement);
-      });
+      await t.action(internal.watchers.watchCaregiverEngagement);
 
       // Should NOT create alert (average < 3/day)
       const alerts = await t.run(async (ctx) => {
@@ -462,9 +456,7 @@ describe('Engagement Watcher - Sudden Drop Detection', () => {
       });
 
       // Run engagement watcher
-      await t.run(async (ctx) => {
-        return await ctx.runAction(internal.watchers.watchCaregiverEngagement);
-      });
+      await t.action(internal.watchers.watchCaregiverEngagement);
 
       // Should NOT create alert (user is churned)
       const alerts = await t.run(async (ctx) => {
@@ -495,9 +487,7 @@ describe('Engagement Watcher - Sudden Drop Detection', () => {
       });
 
       // Run engagement watcher
-      await t.run(async (ctx) => {
-        return await ctx.runAction(internal.watchers.watchCaregiverEngagement);
-      });
+      await t.action(internal.watchers.watchCaregiverEngagement);
 
       // Should detect sudden drop (4 > 3)
       const alerts = await t.run(async (ctx) => {
@@ -530,9 +520,7 @@ describe('Engagement Watcher - Sudden Drop Detection', () => {
       });
 
       // Run engagement watcher
-      await t.run(async (ctx) => {
-        return await ctx.runAction(internal.watchers.watchCaregiverEngagement);
-      });
+      await t.action(internal.watchers.watchCaregiverEngagement);
 
       // Should detect sudden drop (message outside 24h window = 0 recent)
       const alerts = await t.run(async (ctx) => {
@@ -559,12 +547,8 @@ describe('Engagement Watcher - Sudden Drop Detection', () => {
       });
 
       // Run watcher twice
-      await t.run(async (ctx) => {
-        return await ctx.runAction(internal.watchers.watchCaregiverEngagement);
-      });
-      await t.run(async (ctx) => {
-        return await ctx.runAction(internal.watchers.watchCaregiverEngagement);
-      });
+      await t.action(internal.watchers.watchCaregiverEngagement);
+      await t.action(internal.watchers.watchCaregiverEngagement);
 
       // Should only have 1 alert (no duplicates)
       const alerts = await t.run(async (ctx) => {
@@ -599,9 +583,7 @@ describe('Engagement Watcher - High-Stress Burst Detection', () => {
       });
 
       // Run engagement watcher
-      await t.run(async (ctx) => {
-        return await ctx.runAction(internal.watchers.watchCaregiverEngagement);
-      });
+      await t.action(internal.watchers.watchCaregiverEngagement);
 
       // Should create high_stress alert
       const alerts = await t.run(async (ctx) => {
@@ -634,9 +616,7 @@ describe('Engagement Watcher - High-Stress Burst Detection', () => {
       });
 
       // Run engagement watcher
-      await t.run(async (ctx) => {
-        return await ctx.runAction(internal.watchers.watchCaregiverEngagement);
-      });
+      await t.action(internal.watchers.watchCaregiverEngagement);
 
       // Should NOT create alert (only 1 crisis keyword)
       const alerts = await t.run(async (ctx) => {
@@ -667,9 +647,7 @@ describe('Engagement Watcher - High-Stress Burst Detection', () => {
       });
 
       // Run engagement watcher
-      await t.run(async (ctx) => {
-        return await ctx.runAction(internal.watchers.watchCaregiverEngagement);
-      });
+      await t.action(internal.watchers.watchCaregiverEngagement);
 
       const alerts = await t.run(async (ctx) => {
         return await ctx.db
@@ -699,9 +677,7 @@ describe('Engagement Watcher - High-Stress Burst Detection', () => {
       });
 
       // Run engagement watcher
-      await t.run(async (ctx) => {
-        return await ctx.runAction(internal.watchers.watchCaregiverEngagement);
-      });
+      await t.action(internal.watchers.watchCaregiverEngagement);
 
       const alerts = await t.run(async (ctx) => {
         return await ctx.db
@@ -731,9 +707,7 @@ describe('Engagement Watcher - High-Stress Burst Detection', () => {
       });
 
       // Run engagement watcher
-      await t.run(async (ctx) => {
-        return await ctx.runAction(internal.watchers.watchCaregiverEngagement);
-      });
+      await t.action(internal.watchers.watchCaregiverEngagement);
 
       const alerts = await t.run(async (ctx) => {
         return await ctx.db
@@ -763,9 +737,7 @@ describe('Engagement Watcher - High-Stress Burst Detection', () => {
       });
 
       // Run engagement watcher
-      await t.run(async (ctx) => {
-        return await ctx.runAction(internal.watchers.watchCaregiverEngagement);
-      });
+      await t.action(internal.watchers.watchCaregiverEngagement);
 
       const alerts = await t.run(async (ctx) => {
         return await ctx.db
@@ -797,9 +769,7 @@ describe('Engagement Watcher - High-Stress Burst Detection', () => {
       });
 
       // Run engagement watcher
-      await t.run(async (ctx) => {
-        return await ctx.runAction(internal.watchers.watchCaregiverEngagement);
-      });
+      await t.action(internal.watchers.watchCaregiverEngagement);
 
       // Should NOT create alert (only 2 keywords in 6h window)
       const alerts = await t.run(async (ctx) => {
@@ -866,9 +836,7 @@ describe('Engagement Watcher - Wellness Trend Detection', () => {
       });
 
       // Run wellness trend watcher
-      await t.run(async (ctx) => {
-        return await ctx.runAction(internal.watchers.watchWellnessTrends);
-      });
+      await t.action(internal.watchers.watchWellnessTrends);
 
       // Should create wellness_decline alert
       const alerts = await t.run(async (ctx) => {
@@ -934,9 +902,7 @@ describe('Engagement Watcher - Wellness Trend Detection', () => {
       });
 
       // Run wellness trend watcher
-      await t.run(async (ctx) => {
-        return await ctx.runAction(internal.watchers.watchWellnessTrends);
-      });
+      await t.action(internal.watchers.watchWellnessTrends);
 
       // Should NOT create alert (scores improving)
       const alerts = await t.run(async (ctx) => {
@@ -999,9 +965,7 @@ describe('Engagement Watcher - Wellness Trend Detection', () => {
       });
 
       // Run wellness trend watcher
-      await t.run(async (ctx) => {
-        return await ctx.runAction(internal.watchers.watchWellnessTrends);
-      });
+      await t.action(internal.watchers.watchWellnessTrends);
 
       // Should NOT create alert (scores stable)
       const alerts = await t.run(async (ctx) => {
@@ -1048,9 +1012,7 @@ describe('Engagement Watcher - Wellness Trend Detection', () => {
       });
 
       // Run wellness trend watcher
-      await t.run(async (ctx) => {
-        return await ctx.runAction(internal.watchers.watchWellnessTrends);
-      });
+      await t.action(internal.watchers.watchWellnessTrends);
 
       // Should NOT create alert (insufficient data)
       const alerts = await t.run(async (ctx) => {
@@ -1128,9 +1090,7 @@ describe('Engagement Watcher - Wellness Trend Detection', () => {
       });
 
       // Run wellness trend watcher
-      await t.run(async (ctx) => {
-        return await ctx.runAction(internal.watchers.watchWellnessTrends);
-      });
+      await t.action(internal.watchers.watchWellnessTrends);
 
       // Should detect worsening trend in latest 4 scores
       const alerts = await t.run(async (ctx) => {
@@ -1192,9 +1152,7 @@ describe('Engagement Watcher - Wellness Trend Detection', () => {
       });
 
       // Run wellness trend watcher
-      await t.run(async (ctx) => {
-        return await ctx.runAction(internal.watchers.watchWellnessTrends);
-      });
+      await t.action(internal.watchers.watchWellnessTrends);
 
       // Should NOT create alert (user is churned)
       const alerts = await t.run(async (ctx) => {
@@ -1255,9 +1213,7 @@ describe('Engagement Watcher - Wellness Trend Detection', () => {
       });
 
       // Run wellness trend watcher
-      await t.run(async (ctx) => {
-        return await ctx.runAction(internal.watchers.watchWellnessTrends);
-      });
+      await t.action(internal.watchers.watchWellnessTrends);
 
       // Should detect worsening trend
       const alerts = await t.run(async (ctx) => {
@@ -1320,13 +1276,66 @@ describe('Engagement Watcher - Wellness Trend Detection', () => {
       });
 
       // Run wellness trend watcher
-      const result = await t.run(async (ctx) => {
-        return await ctx.runAction(internal.watchers.watchWellnessTrends);
-      });
+      const result = await t.action(internal.watchers.watchWellnessTrends);
 
       // Should send SMS (check that function was called)
       expect(result).toBeDefined();
       // Note: Actual SMS sending requires Twilio mock in full implementation
+    });
+
+    it('should NOT send SMS when user has no phone number', async () => {
+      const t = convexTest(schema, modules);
+
+      const now = Date.now();
+      const userId = await t.run(async (ctx) => {
+        return await ctx.db.insert('users', {
+          // phoneNumber intentionally missing
+          firstName: 'NoPhone',
+          journeyPhase: 'active',
+        });
+      });
+
+      // Create 4 worsening scores
+      await t.run(async (ctx) => {
+        await ctx.db.insert('wellnessScores', {
+          userId: userId as Id<'users'>,
+          overallScore: 30,
+          band: 'mild',
+          pressureZones: [],
+          pressureZoneScores: {},
+          recordedAt: now - 3 * 7 * 24 * 60 * 60 * 1000,
+        });
+        await ctx.db.insert('wellnessScores', {
+          userId: userId as Id<'users'>,
+          overallScore: 50,
+          band: 'moderate',
+          pressureZones: [],
+          pressureZoneScores: {},
+          recordedAt: now - 2 * 7 * 24 * 60 * 60 * 1000,
+        });
+        await ctx.db.insert('wellnessScores', {
+          userId: userId as Id<'users'>,
+          overallScore: 70,
+          band: 'high',
+          pressureZones: [],
+          pressureZoneScores: {},
+          recordedAt: now - 1 * 7 * 24 * 60 * 60 * 1000,
+        });
+        await ctx.db.insert('wellnessScores', {
+          userId: userId as Id<'users'>,
+          overallScore: 85,
+          band: 'crisis',
+          pressureZones: [],
+          pressureZoneScores: {},
+          recordedAt: now,
+        });
+      });
+
+      // Run wellness trend watcher - should not crash
+      const result = await t.action(internal.watchers.watchWellnessTrends);
+
+      expect(result).toBeDefined();
+      // Should complete without throwing error
     });
   });
 });
@@ -1364,9 +1373,7 @@ describe('Engagement Watcher - Cron Scheduling', () => {
       });
 
       // Run watcher
-      const result = await t.run(async (ctx) => {
-        return await ctx.runAction(internal.watchers.watchCaregiverEngagement);
-      });
+      const result = await t.action(internal.watchers.watchCaregiverEngagement);
 
       // Should process multiple users
       expect(result).toBeDefined();

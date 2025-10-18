@@ -33,7 +33,7 @@ export const watchCaregiverEngagement = internalAction({
     const oneDayAgo = now - 24 * 60 * 60 * 1000;
 
     // Get all active users
-    const users = await ctx.runQuery(internal.watchers.getActiveUsers);
+    const users = await ctx.runQuery(internal.watchers._getActiveUsers);
     console.log(`[Watcher] Monitoring ${users.length} active users`);
 
     let suddenDropCount = 0;
@@ -115,7 +115,7 @@ export const watchWellnessTrends = internalAction({
     const now = Date.now();
 
     // Get all active users
-    const users = await ctx.runQuery(internal.watchers.getActiveUsers);
+    const users = await ctx.runQuery(internal.watchers._getActiveUsers);
     console.log(`[Watcher] Monitoring wellness trends for ${users.length} active users`);
 
     let wellnessDeclineCount = 0;
@@ -154,7 +154,13 @@ export const watchWellnessTrends = internalAction({
               createdAt: now,
             });
 
-            // Send proactive SMS
+            // Send proactive SMS (only if user has phone number)
+            if (!user.phoneNumber) {
+              console.error(`[Watcher] Cannot send SMS to user ${user._id}: missing phone number`);
+              wellnessDeclineCount++;
+              continue;
+            }
+
             const message = user.firstName
               ? `Hi ${user.firstName}, I've noticed your stress levels trending up over the past few weeks. Let's talk about what's changed and how I can help. 💙`
               : `I've noticed your stress levels trending up over the past few weeks. Let's talk about what's changed and how I can help. 💙`;

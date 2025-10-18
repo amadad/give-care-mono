@@ -61,6 +61,14 @@ export default defineSchema({
     historicalSummary: v.optional(v.string()),
     conversationStartDate: v.optional(v.number()),
     totalInteractionCount: v.optional(v.number()),
+    historicalSummaryVersion: v.optional(v.string()),
+    historicalSummaryTokenUsage: v.optional(v.object({
+      promptTokens: v.number(),
+      completionTokens: v.number(),
+      totalTokens: v.number(),
+      costUsd: v.number(),
+      recordedAt: v.number(),
+    })),
   })
     .index("email", ["email"]) // For admin login
     .index("by_phone", ["phoneNumber"]) // For SMS user lookup

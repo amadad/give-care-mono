@@ -24,6 +24,7 @@ import type * as functions_rateLimitMonitoring from "../functions/rateLimitMonit
 import type * as functions_resources from "../functions/resources.js";
 import type * as functions_resourcesGeoLite from "../functions/resourcesGeoLite.js";
 import type * as functions_scheduling from "../functions/scheduling.js";
+import type * as functions_seedKnowledgeBase from "../functions/seedKnowledgeBase.js";
 import type * as functions_seedResources from "../functions/seedResources.js";
 import type * as functions_users from "../functions/users.js";
 import type * as functions_vectorSearch from "../functions/vectorSearch.js";
@@ -86,6 +87,7 @@ declare const fullApi: ApiFromModules<{
   "functions/resources": typeof functions_resources;
   "functions/resourcesGeoLite": typeof functions_resourcesGeoLite;
   "functions/scheduling": typeof functions_scheduling;
+  "functions/seedKnowledgeBase": typeof functions_seedKnowledgeBase;
   "functions/seedResources": typeof functions_seedResources;
   "functions/users": typeof functions_users;
   "functions/vectorSearch": typeof functions_vectorSearch;
