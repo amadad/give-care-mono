@@ -11,6 +11,7 @@
     "format": "prettier --write \"src/**/*.ts\"",
     "type-check": "tsc --noEmit"
   },
+  "packageManager": "pnpm@9.0.0",
   "keywords": [
     "cloudflare-workers",
     "openai-agents",

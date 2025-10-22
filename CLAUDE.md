@@ -4,11 +4,12 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Repository Overview
 
-GiveCare is an AI-powered SMS/RCS caregiving support platform built as a monorepo with 3 core applications:
+GiveCare is an AI-powered SMS/RCS caregiving support platform built as a monorepo with 4 core applications:
 
 - **give-care-app**: TypeScript/Convex multi-agent SMS backend with admin dashboard
 - **give-care-site**: Next.js 15 marketing website
 - **give-care-story**: Next.js presentation system
+- **give-care-etl**: Cloudflare Workers autonomous resource discovery pipeline
 
 ## Project Structure
 
@@ -18,7 +19,7 @@ givecare/
 │   ├── src/                  # Agent, tools, assessments, guardrails
 │   ├── convex/              # Convex database functions & schema
 │   ├── admin-frontend/      # Admin dashboard (React + Convex)
-│   ├── tests/               # Vitest suite (179 passing tests)
+│   ├── tests/               # Vitest suite (235+ passing tests)
 │   ├── docs/                # Comprehensive documentation
 │   └── package.json         # pnpm@9.0.0
 ├── give-care-site/          # Next.js 15 marketing site
@@ -29,6 +30,11 @@ givecare/
 ├── give-care-story/         # Presentation system
 │   ├── app/                 # Next.js App Router
 │   ├── components/slides/   # Slide component library
+│   └── package.json         # pnpm@9.0.0
+├── give-care-etl/           # Resource discovery ETL pipeline
+│   ├── src/agents/           # 5 specialized agents (orchestrator, discovery, extraction, categorizer, validator)
+│   ├── src/schemas/          # Zod validation schemas
+│   ├── wrangler.toml        # Cloudflare Workers config
 │   └── package.json         # pnpm@9.0.0
 ├── package.json             # Root workspace config
 └── pnpm-workspace.yaml      # Workspace definition
@@ -44,14 +50,14 @@ givecare/
 - **Database**: Convex (built-in PostgreSQL)
 - **Sessions**: OpenAI SDK sessions (30-day retention)
 - **SMS/RCS**: Twilio webhooks via Convex HTTP router
-- **Testing**: Vitest (179 tests passing)
+- **Testing**: Vitest (235+ tests passing)
 - **Validation**: Zod schemas + Convex validators
 - **Performance**: ~900ms average response time
-- **Version**: 0.7.0 (Production Ready)
+- **Version**: 0.8.2 (Production Ready)
 
 **Architecture**: Multi-agent system with seamless handoffs
 - **3 Specialized Agents**: Main (orchestrator), Crisis, Assessment
-- **5 Agent Tools**: updateProfile, startAssessment, recordAssessmentAnswer, checkWellnessStatus, findInterventions
+- **8 Agent Tools**: updateProfile, startAssessment, recordAssessmentAnswer, checkWellnessStatus, findInterventions, setWellnessSchedule, recordMemory, findLocalResources
 - **4 Clinical Assessments**: EMA, CWBS, REACH-II, SDOH
 - **Burnout Calculator**: Composite scoring (0-100) → 5 pressure zones
 - **20 Interventions**: Mapped to pressure zones
@@ -255,6 +261,7 @@ The GiveCare monorepo separates concerns:
 1. **Backend** (give-care-app): AI SMS agent + admin dashboard
 2. **Marketing** (give-care-site): Public-facing content + SEO
 3. **Presentations** (give-care-story): Slide decks + storytelling
+4. **Data Pipeline** (give-care-etl): Autonomous resource discovery and validation
 
 This enables:
 - Independent scaling and deployment
@@ -342,11 +349,16 @@ Each project has its own `.env.local` (or `.env`) file:
 
 **give-care-story**: No environment variables required
 
+**give-care-etl (.dev.vars for local, secrets for production)**:
+- `OPENAI_API_KEY` - OpenAI API key for agent execution
+- `CONVEX_URL` - Convex deployment URL
+- `CONVEX_ADMIN_KEY` - Convex admin API key
+
 **Security**: Never commit `.env*` files (except `.env.example`)
 
 ## Testing
 
-**give-care-app**: 179 tests passing
+**give-care-app**: 235+ tests passing
 ```bash
 cd give-care-app
 npm test                              # All tests
@@ -359,6 +371,12 @@ npm test -- --coverage                # Coverage report
 cd give-care-site
 pnpm test                             # Unit tests
 pnpm test:e2e                         # E2E tests
+```
+
+**give-care-etl**: Vitest (in progress)
+```bash
+cd give-care-etl
+pnpm test                             # Run tests when implemented
 ```
 
 ## Deployment
@@ -385,6 +403,15 @@ Build command: pnpm install && pnpm --filter give-care-story build
 Build output: give-care-story/out
 Root directory: give-care-story
 Framework: Next.js (Static Export)
+```
+
+**give-care-etl (ETL Pipeline)** - Cloudflare Workers:
+```bash
+cd give-care-etl
+npx wrangler secret put OPENAI_API_KEY
+npx wrangler secret put CONVEX_URL
+npx wrangler secret put CONVEX_ADMIN_KEY
+pnpm deploy
 ```
 
 **Note**: Both Next.js apps use `output: 'export'` for static HTML generation, optimized for Cloudflare Pages global CDN.
@@ -415,8 +442,8 @@ See `MONOREPO_INTEGRATION.md` for complete deployment guide.
 
 ## Project Status
 
-**give-care-app**: ✅ Production-ready v0.7.0
-- 179 tests passing
+**give-care-app**: ✅ Production-ready v0.8.2
+- 235+ tests passing
 - ~900ms response time
 - Admin dashboard live at https://dash.givecareapp.com
 
@@ -427,6 +454,11 @@ See `MONOREPO_INTEGRATION.md` for complete deployment guide.
 **give-care-story**: ✅ Stable v1.0.0
 - Component library mature
 - Multiple presentations deployed
+
+**give-care-etl**: 🚧 In progress v0.1.0
+- 5-agent pipeline scaffold complete
+- Cloudflare Workers implementation in progress
+- Testing suite pending
 
 ## Contributing Guidelines
 

@@ -4,13 +4,14 @@ AI-powered SMS/RCS caregiving support platform built with TypeScript, Convex, an
 
 ## 🏗️ Architecture
 
-This monorepo contains 3 core applications:
+This monorepo contains 4 core applications:
 
 | App | Description | Tech Stack | Status |
 |-----|-------------|------------|--------|
-| **give-care-app** | Multi-agent SMS backend + admin dashboard | TypeScript, Convex, OpenAI Agents SDK | ✅ Production (v0.7.0) |
+| **give-care-app** | Multi-agent SMS backend + admin dashboard | TypeScript, Convex, OpenAI Agents SDK | ✅ Production (v0.8.2) |
 | **give-care-site** | Marketing website | Next.js 15, Tailwind CSS v4 | 🚧 Active development |
 | **give-care-story** | Presentation system | Next.js 15, Framer Motion | ✅ Stable (v1.0.0) |
+| **give-care-etl** | Resource discovery ETL pipeline | Cloudflare Workers, OpenAI Agents SDK | 🚧 In progress (v0.1.0) |
 
 ## 🚀 Quick Start
 
@@ -60,6 +61,9 @@ givecare/
 ├── give-care-story/        # Presentations (989 MB)
 │   ├── app/                # Next.js App Router
 │   └── components/slides/  # Slide component library
+├── give-care-etl/          # ETL pipeline
+│   ├── src/agents/         # 5 specialized agents
+│   └── src/schemas/        # Zod validation schemas
 ├── package.json            # Workspace root
 └── pnpm-workspace.yaml     # Workspace config
 ```
@@ -185,9 +189,10 @@ See `.env.example` in each project directory.
 
 | Project | Version | Tests | Status |
 |---------|---------|-------|--------|
-| give-care-app | 0.7.0 | 179 passing | ✅ Production |
+| give-care-app | 0.8.2 | 235+ passing | ✅ Production |
 | give-care-site | 0.1.0 | Active dev | 🚧 Development |
 | give-care-story | 1.0.0 | N/A | ✅ Stable |
+| give-care-etl | 0.1.0 | In progress | 🚧 Development |
 
 ## 🤝 Contributing
 

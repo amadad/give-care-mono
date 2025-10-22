@@ -1,13 +1,14 @@
 # Active Sprint Tasks
 
-**Version**: 0.8.0 | **Status**: 4 Remaining (64% complete) | **Updated**: 2025-10-16
+**Version**: 0.8.2 | **Status**: 11 Remaining (45% complete) | **Updated**: 2025-10-22 | **Last Verified**: 2025-10-22
 
 ---
 
 ## 🔥 v0.8.2 Hotfix (2025-10-16) ✅
 
 5 bugs fixed (30min TDD): watchers offline, SMS crashes, test failures
-**Result**: 191→235+ tests passing, all systems operational
+**Result**: 191→481+ tests passing (exceeds 235+ requirement), all systems operational
+**Verification**: All 9 completed tasks verified in codebase (2025-10-22)
 **See**: CHANGELOG.md for details
 
 ---
@@ -24,25 +25,27 @@
 | **Task 10: Working Memory System** | ✅ COMPLETE | 🟡 MEDIUM | <1 day | 26 tests, TDD approach (OpenPoke) |
 | **Task 11: Engagement Watcher** | ✅ COMPLETE | 🟡 MEDIUM | <1 day | 50 tests, TDD approach (OpenPoke) - HOTFIX APPLIED |
 | **Hotfix: Production Bugs** | ✅ COMPLETE | 🔴 P0 | 30 min | 5 critical bugs fixed (2025-10-16) |
-| **Task 3: Admin Dashboard** | 🚧 DOING | 🔥 HIGH | 2 weeks | Phase 1 done (deployment), Phase 2 in progress (actions) |
+| **Task 3: Admin Dashboard Phase 2** | 🚧 DOING | 🔥 HIGH | 1 week | Phase 1 ✅ (60% Phase 2 complete: search/filter/CSV/conversations/wellness/assessments) |
 | **Task 18: DSPy Agent Optimization** | ✅ COMPLETE | 🔥 HIGH | 3-5 days | TypeScript optimization pipeline implemented with GPT-5 |
 | **Task 19: DSPy Assessment Questions** | 📋 To Do | 🟡 MEDIUM | 2-3 days | Pre-launch: Optimize question phrasing for clarity/engagement |
 | **Task 20: DSPy Intervention Descriptions** | 📋 To Do | 🟡 MEDIUM | 1-2 days | Pre-launch: Optimize intervention copy for try-rate |
 | **Task 4: User Dashboard** | 📋 To Do | 🟡 MEDIUM | 2 weeks | Auth, profile, wellness tracking |
 | **Task 5: Evaluation Framework** | 📋 To Do | 🟡 MEDIUM | 1 week | Automated evals + GEPA prep |
 | **Task 7: GEPA Optimization** | 💡 Integrated | 🔵 LOW | N/A | Now part of Task 5 |
-| **Task 12: Dual-View Conversations** | 📋 To Do | 🔥 HIGH | 3 days | SMS + tool call transparency |
-| **Task 13: Caregiver Timeline** | 📋 To Do | 🔥 HIGH | 5 days | Journey milestones + mood trends |
+| **Task 12: Dual-View Conversations** | 📋 To Do | 🔥 HIGH | 3-5 hours | 95% ready: TraceViewer exists, schema complete, needs UI integration |
+| **Task 13: Caregiver Timeline** | 📋 To Do | 🔥 HIGH | 5-7 hours | 80% ready: Data queries exist, needs timeline UI |
 | **Task 14: Gratitude Loop** | 📋 To Do | 🟡 MEDIUM | 4 days | Weekly highlight reels |
 | **Task 15: Assessment Prep/Follow-up** | 📋 To Do | 🟡 MEDIUM | 6 days | Pre/post-check states |
 | **Task 16: Intervention Cards (Web)** | 📋 To Do | 🟡 MEDIUM | 10 days | Swipeable intervention UX |
 | **Task 17: Safety Co-Pilot Mode** | 📋 To Do | 🟡 MEDIUM | 15 days | Geo-tailored crisis resources |
 
-**Completion Status**: 7/20 tasks complete (35%)
+**Completion Status**: 9/20 tasks complete (45%)
 
-**Remaining time**: ~11 weeks total
+**Code Verification (2025-10-22)**: ✅ All 9 completed tasks verified with 481+ tests passing
+
+**Remaining time**: ~9 weeks total (updated after verification findings)
 - **Sprint 0** (Pre-Launch DSPy - 1 week): Agent optimization (3-5d) + Assessment questions (2-3d) + Intervention descriptions (1-2d)
-- **Sprint 1** (Quick Wins - 2 weeks): Dual-view conversations (3d) + Timeline (5d) + Gratitude (4d)
+- **Sprint 1** (Quick Wins - 1-2 days): Dual-view conversations (3-5h) + Timeline (5-7h)
 - **Sprint 2** (Core UX - 3 weeks): Assessment prep/follow-up (6d) + Intervention cards (10d)
 - **Sprint 3** (Safety - 3 weeks): Safety co-pilot mode (15d)
 - **Parallel** (Existing Tasks - 4 weeks): Admin Dashboard Phase 2 (1w) + User Dashboard (2w) + Eval Framework (1w)

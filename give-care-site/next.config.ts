@@ -8,10 +8,10 @@ const nextConfig: NextConfig = {
   // Enable static HTML export for Cloudflare Pages
   output: 'export',
 
-  // Skip TypeScript type checking during build
-  // (type checking is done separately in development)
+  // TypeScript checking: allow build but warn about errors in give-care-site
+  // Note: Workspace dependency (give-care-app) type errors are handled separately
   typescript: {
-    ignoreBuildErrors: true,
+    ignoreBuildErrors: false,
   },
 
   pageExtensions: ['ts', 'tsx', 'mdx'],

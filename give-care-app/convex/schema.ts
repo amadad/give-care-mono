@@ -33,8 +33,18 @@ export default defineSchema({
     assessmentCurrentQuestion: v.optional(v.number()),
     assessmentSessionId: v.optional(v.string()),
     pressureZones: v.optional(v.array(v.string())),
-    pressureZoneScores: v.optional(v.any()),
-    onboardingAttempts: v.optional(v.any()),
+    pressureZoneScores: v.optional(v.object({
+      physical_health: v.optional(v.number()),
+      emotional_wellbeing: v.optional(v.number()),
+      financial_concerns: v.optional(v.number()),
+      time_management: v.optional(v.number()),
+      social_support: v.optional(v.number()),
+    })),
+    onboardingAttempts: v.optional(v.object({
+      count: v.number(),
+      lastAttemptAt: v.number(),
+      failureReasons: v.optional(v.array(v.string())),
+    })),
     onboardingCooldownUntil: v.optional(v.number()),
     rcsCapable: v.optional(v.boolean()),
     deviceType: v.optional(v.string()),
@@ -43,7 +53,11 @@ export default defineSchema({
     stripeCustomerId: v.optional(v.string()),
     stripeSubscriptionId: v.optional(v.string()),
     subscriptionStatus: v.optional(v.string()),
-    appState: v.optional(v.any()),
+    appState: v.optional(v.object({
+      lastActivity: v.optional(v.number()),
+      sessionCount: v.optional(v.number()),
+      metadata: v.optional(v.string()), // JSON string for flexible data
+    })),
     createdAt: v.optional(v.number()),
     updatedAt: v.optional(v.number()),
     lastContactAt: v.optional(v.number()),

@@ -21,7 +21,7 @@
 - ❌ Research (→ external tools)
 - ❌ Archive/internal folders (→ git history)
 
-### Active Docs: 15 MAX (Current: 15 ✅)
+### Active Docs: 15 MAX (Current: 21 ⚠️ OVER LIMIT - Cleanup Required)
 
 **Enforcement**:
 - Before creating: Must delete existing doc OR prove it's new domain
@@ -71,6 +71,14 @@
 ### Integrations (2)
 14. ADMIN_DASHBOARD_GUIDE.md - Admin
 15. STRIPE_PRODUCTION_GUIDE.md - Payments
+
+### ⚠️ CANDIDATES FOR DELETION (6 docs over limit):
+16. **IMPLEMENTATION_GUIDE.md** → Merge into ARCHITECTURE.md or DEVELOPMENT.md
+17. **MAPS_GROUNDING_INTEGRATION.md** → Merge into ARCHITECTURE.md (Google Maps Grounding section)
+18. **MINIMAL_ONBOARDING.md** → Delete (completed task, info in FEATURES.md)
+19. **MINIMAL_RETENTION.md** → Delete (completed task, info in FEATURES.md)
+20. **PAPER_REVIEW_COMPREHENSIVE.md** → Move to archive/ (research, not operational)
+21. **VECTOR_SEARCH_SETUP.md** → Delete (setup complete, info in ARCHITECTURE.md)
 
 ---
 
