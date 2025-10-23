@@ -202,13 +202,22 @@ export class MessageHandler {
    * Step 3: Get or create user
    */
   private async getUser(phoneNumber: string) {
+    logSafe('GetUser', 'Fetching or creating user', { phone: phoneNumber });
+
     const user = await this.ctx.runMutation(internal.functions.users.getOrCreateByPhone, {
       phoneNumber,
     });
 
     if (!user) {
+      console.error('[GetUser] CRITICAL: getOrCreateByPhone returned null/undefined');
       throw new Error('Failed to get or create user');
     }
+
+    logSafe('GetUser', 'User retrieved', {
+      userId: user._id,
+      hasAssessmentField: user.assessmentInProgress !== undefined,
+      subscriptionStatus: user.subscriptionStatus,
+    });
 
     return user;
   }

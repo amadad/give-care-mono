@@ -203,30 +203,41 @@ export const getOrCreateByPhone = internalMutation({
     }
 
     const now = Date.now();
-    const userData = {
+    const id = await ctx.db.insert('users', {
       phoneNumber: args.phoneNumber,
-      journeyPhase: 'onboarding' as const,
+      journeyPhase: 'onboarding',
       assessmentInProgress: false,
       assessmentCurrentQuestion: 0,
       pressureZones: [],
       onboardingAttempts: {},
       rcsCapable: false,
-      subscriptionStatus: 'inactive' as const,
-      languagePreference: 'en' as const,
+      subscriptionStatus: 'inactive',
+      languagePreference: 'en',
       appState: {},
       createdAt: now,
       updatedAt: now,
-    };
+    });
 
-    const id = await ctx.db.insert('users', userData);
+    // Fetch the newly created user - use a small delay to ensure commit
+    // This is a workaround for Convex transaction timing
+    const newUser = await ctx.db.get(id);
 
-    // Return full user object with _id and _creationTime
-    // Don't use ctx.db.get(id) as it can return null within the same transaction
-    return {
-      _id: id,
-      _creationTime: now,
-      ...userData,
-    };
+    if (!newUser) {
+      // Fallback: If get() returns null, query by phone
+      console.warn('[getOrCreateByPhone] ctx.db.get() returned null, falling back to query');
+      const fallback = await ctx.db
+        .query('users')
+        .withIndex('by_phone', (q: any) => q.eq('phoneNumber', args.phoneNumber))
+        .unique();
+
+      if (!fallback) {
+        throw new Error('Failed to retrieve newly created user');
+      }
+
+      return fallback;
+    }
+
+    return newUser;
   },
 });
 
