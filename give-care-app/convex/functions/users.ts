@@ -202,22 +202,31 @@ export const getOrCreateByPhone = internalMutation({
       return existing;
     }
 
-    const id = await ctx.db.insert('users', {
+    const now = Date.now();
+    const userData = {
       phoneNumber: args.phoneNumber,
-      journeyPhase: 'onboarding',
+      journeyPhase: 'onboarding' as const,
       assessmentInProgress: false,
       assessmentCurrentQuestion: 0,
       pressureZones: [],
       onboardingAttempts: {},
       rcsCapable: false,
-      subscriptionStatus: 'inactive',
-      languagePreference: 'en',
+      subscriptionStatus: 'inactive' as const,
+      languagePreference: 'en' as const,
       appState: {},
-      createdAt: Date.now(),
-      updatedAt: Date.now(),
-    });
+      createdAt: now,
+      updatedAt: now,
+    };
 
-    return await ctx.db.get(id);
+    const id = await ctx.db.insert('users', userData);
+
+    // Return full user object with _id and _creationTime
+    // Don't use ctx.db.get(id) as it can return null within the same transaction
+    return {
+      _id: id,
+      _creationTime: now,
+      ...userData,
+    };
   },
 });
 
