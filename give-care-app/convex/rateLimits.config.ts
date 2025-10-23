@@ -10,10 +10,10 @@
  * Without rate limiting: One bad actor caused $1200 in SMS overages (real incident)
  */
 
-import { RateLimiter } from '@convex-dev/rate-limiter';
-import { components } from './_generated/api';
+import { RateLimiter } from '@convex-dev/rate-limiter'
+import { components } from './_generated/api'
 
-export const rateLimiter = new RateLimiter((components as any).rateLimiter);
+export const rateLimiter = new RateLimiter((components as any).rateLimiter)
 
 /**
  * Rate limit configurations using token bucket algorithm
@@ -120,7 +120,7 @@ export const RATE_LIMITS = {
     capacity: 25, // rate + burst capacity (20 + 5)
     maxReserved: 50,
   },
-};
+}
 
 /**
  * Rate limit response messages (user-facing)
@@ -129,11 +129,9 @@ export const RATE_LIMITS = {
 export const RATE_LIMIT_MESSAGES = {
   smsPerUser:
     "You've sent quite a few messages today. Let's take a break and reconnect tomorrow. For urgent support, call 988 💙",
-  smsGlobal:
-    "I'm supporting a lot of caregivers right now. For crisis support, call 988 💙",
+  smsGlobal: "I'm supporting a lot of caregivers right now. For crisis support, call 988 💙",
   assessmentPerUser:
     "You've completed your check-ins for today. Taking breaks helps get a clearer picture. Let's try again tomorrow 💙",
-  openaiCalls:
-    "I'm with a lot of caregivers right now. Can you give me a moment and try again? 💙",
+  openaiCalls: "I'm with a lot of caregivers right now. Can you give me a moment and try again? 💙",
   spam: '', // No message - silently drop
-};
+}

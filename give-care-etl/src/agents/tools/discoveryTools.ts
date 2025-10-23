@@ -14,23 +14,26 @@ import { createLogger } from '../../utils/logger';
 const logger = createLogger({ agentName: 'discovery-tools' });
 
 /**
- * Search web for caregiver resources using Exa API
+ * Factory function to create discovery tools with bound environment variables
  */
-export const searchWeb = tool({
-  name: 'searchWeb',
-  description: 'Search the web for authoritative caregiver resource sources. Returns ranked URLs with credibility scores.',
-  parameters: z.object({
-    query: z.string().describe('Search query (e.g., "New York Area Agency on Aging")'),
-    state: z.string().optional().describe('State filter (e.g., "NY", "CA")'),
-    limit: z.number().default(10).describe('Maximum number of results'),
-  }),
-  execute: async ({ query, state, limit }, { ctx }) => {
-    try {
-      // Get Exa API key from environment
-      const exaApiKey = (ctx as any).env?.EXA_API_KEY;
-      if (!exaApiKey) {
-        throw new Error('EXA_API_KEY not configured');
-      }
+export function createDiscoveryTools(exaApiKey?: string) {
+  /**
+   * Search web for caregiver resources using Exa API
+   */
+  const searchWeb = tool({
+    name: 'searchWeb',
+    description: 'Search the web for authoritative caregiver resource sources. Returns ranked URLs with credibility scores.',
+    parameters: z.object({
+      query: z.string().describe('Search query (e.g., "New York Area Agency on Aging")'),
+      state: z.string().optional().nullable().describe('State filter (e.g., "NY", "CA")'),
+      limit: z.number().default(10).describe('Maximum number of results'),
+    }),
+    execute: async ({ query, state, limit }) => {
+      try {
+        // Use bound Exa API key
+        if (!exaApiKey) {
+          throw new Error('EXA_API_KEY not configured');
+        }
 
       const exa = new Exa(exaApiKey);
 
@@ -46,7 +49,6 @@ export const searchWeb = tool({
         numResults: limit,
         useAutoprompt: true,
         type: 'neural',
-        category: 'reference',
       });
 
       // Transform results
@@ -73,10 +75,10 @@ export const searchWeb = tool({
   },
 });
 
-/**
- * Evaluate credibility of a source based on domain, SSL, and authority
- */
-export const evaluateSource = tool({
+  /**
+   * Evaluate credibility of a source based on domain, SSL, and authority
+   */
+  const evaluateSource = tool({
   name: 'evaluateSource',
   description: 'Evaluate the credibility of a source URL. Returns a score from 0-100.',
   parameters: z.object({
@@ -153,10 +155,10 @@ export const evaluateSource = tool({
   },
 });
 
-/**
- * Rank sources by credibility and relevance
- */
-export const rankSources = tool({
+  /**
+   * Rank sources by credibility and relevance
+   */
+  const rankSources = tool({
   name: 'rankSources',
   description: 'Rank a list of sources by credibility score. Returns sorted list with top sources first.',
   parameters: z.object({
@@ -187,9 +189,13 @@ export const rankSources = tool({
   },
 });
 
-// Export all discovery tools
-export const discoveryTools = [
-  searchWeb,
-  evaluateSource,
-  rankSources,
-];
+  // Return all discovery tools
+  return [
+    searchWeb,
+    evaluateSource,
+    rankSources,
+  ];
+}
+
+// Export legacy default for backward compatibility (uses process.env)
+export const discoveryTools = createDiscoveryTools(process.env.EXA_API_KEY);

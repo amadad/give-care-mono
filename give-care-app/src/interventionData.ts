@@ -4,9 +4,9 @@
  */
 
 export interface Intervention {
-  title: string;
-  desc: string;
-  helpful: number;
+  title: string
+  desc: string
+  helpful: number
 }
 
 /**
@@ -26,26 +26,26 @@ export const ZONE_INTERVENTIONS: Record<string, Intervention> = {
   emotional_wellbeing: {
     title: 'Crisis Text Line',
     desc: 'Text HOME to 741741 for 24/7 emotional support',
-    helpful: 92
+    helpful: 92,
   },
   physical_health: {
     title: 'Respite Care Finder',
     desc: 'Find temporary care support in your area',
-    helpful: 78
+    helpful: 78,
   },
   financial_concerns: {
     title: 'Financial Assistance Programs',
     desc: 'Government and nonprofit support resources',
-    helpful: 81
+    helpful: 81,
   },
   time_management: {
     title: 'Caregiving Task Checklist',
     desc: 'Organize and prioritize daily responsibilities',
-    helpful: 79
+    helpful: 79,
   },
   social_support: {
     title: 'Local Caregiver Support Groups',
     desc: 'Connect with others who understand',
-    helpful: 88
+    helpful: 88,
   },
-};
+}

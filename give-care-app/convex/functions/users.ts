@@ -3,17 +3,17 @@
  * CRUD operations for users table
  */
 
-import { mutation, query, internalMutation, internalQuery } from '../_generated/server';
-import { v } from 'convex/values';
+import { mutation, query, internalMutation, internalQuery } from '../_generated/server'
+import { v } from 'convex/values'
 
-// QUERIES 
+// QUERIES
 
 export const getUser = internalQuery({
   args: { userId: v.id('users') },
   handler: async (ctx, args) => {
-    return await ctx.db.get(args.userId);
+    return await ctx.db.get(args.userId)
   },
-});
+})
 
 export const getUserByPhone = internalQuery({
   args: { phoneNumber: v.string() },
@@ -21,9 +21,9 @@ export const getUserByPhone = internalQuery({
     return await ctx.db
       .query('users')
       .withIndex('by_phone', (q: any) => q.eq('phoneNumber', args.phoneNumber))
-      .unique();
+      .unique()
   },
-});
+})
 
 // MUTATIONS
 
@@ -33,7 +33,7 @@ export const createUser = internalMutation({
     rcsCapable: v.boolean(),
   },
   handler: async (ctx, args) => {
-    const now = Date.now();
+    const now = Date.now()
 
     const userId = await ctx.db.insert('users', {
       phoneNumber: args.phoneNumber,
@@ -48,11 +48,11 @@ export const createUser = internalMutation({
       appState: {},
       createdAt: now,
       updatedAt: now,
-    });
+    })
 
-    return userId;
+    return userId
   },
-});
+})
 
 export const updateProfile = internalMutation({
   args: {
@@ -63,21 +63,21 @@ export const updateProfile = internalMutation({
     zipCode: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    const { userId, ...updates } = args;
+    const { userId, ...updates } = args
 
     // Filter out undefined values
-    const cleanUpdates: Record<string, any> = { updatedAt: Date.now() };
-    if (updates.firstName !== undefined) cleanUpdates.firstName = updates.firstName;
-    if (updates.relationship !== undefined) cleanUpdates.relationship = updates.relationship;
+    const cleanUpdates: Record<string, any> = { updatedAt: Date.now() }
+    if (updates.firstName !== undefined) cleanUpdates.firstName = updates.firstName
+    if (updates.relationship !== undefined) cleanUpdates.relationship = updates.relationship
     if (updates.careRecipientName !== undefined)
-      cleanUpdates.careRecipientName = updates.careRecipientName;
-    if (updates.zipCode !== undefined) cleanUpdates.zipCode = updates.zipCode;
+      cleanUpdates.careRecipientName = updates.careRecipientName
+    if (updates.zipCode !== undefined) cleanUpdates.zipCode = updates.zipCode
 
-    await ctx.db.patch(userId, cleanUpdates);
+    await ctx.db.patch(userId, cleanUpdates)
 
-    return { success: true };
+    return { success: true }
   },
-});
+})
 
 export const updateWellness = internalMutation({
   args: {
@@ -90,9 +90,9 @@ export const updateWellness = internalMutation({
       burnoutScore: args.burnoutScore,
       pressureZones: args.pressureZones,
       updatedAt: Date.now(),
-    });
+    })
   },
-});
+})
 
 export const updateAssessmentState = internalMutation({
   args: {
@@ -102,14 +102,14 @@ export const updateAssessmentState = internalMutation({
     assessmentCurrentQuestion: v.number(),
   },
   handler: async (ctx, args) => {
-    const { userId, ...updates } = args;
+    const { userId, ...updates } = args
 
     await ctx.db.patch(userId, {
       ...updates,
       updatedAt: Date.now(),
-    });
+    })
   },
-});
+})
 
 export const updateLastContact = internalMutation({
   args: { userId: v.id('users') },
@@ -117,9 +117,9 @@ export const updateLastContact = internalMutation({
     await ctx.db.patch(args.userId, {
       lastContactAt: Date.now(),
       updatedAt: Date.now(),
-    });
+    })
   },
-});
+})
 
 export const updateJourneyPhase = internalMutation({
   args: {
@@ -130,9 +130,9 @@ export const updateJourneyPhase = internalMutation({
     await ctx.db.patch(args.userId, {
       journeyPhase: args.journeyPhase,
       updatedAt: Date.now(),
-    });
+    })
   },
-});
+})
 
 export const updateContextState = internalMutation({
   args: {
@@ -155,38 +155,45 @@ export const updateContextState = internalMutation({
     pressureZoneScores: v.optional(v.any()),
   },
   handler: async (ctx, args) => {
-    const { userId, ...updates } = args;
+    const { userId, ...updates } = args
 
     // Filter out undefined values
-    const cleanUpdates: Record<string, any> = { updatedAt: Date.now() };
+    const cleanUpdates: Record<string, any> = { updatedAt: Date.now() }
 
-    if (updates.firstName !== undefined) cleanUpdates.firstName = updates.firstName;
-    if (updates.relationship !== undefined) cleanUpdates.relationship = updates.relationship;
-    if (updates.careRecipientName !== undefined) cleanUpdates.careRecipientName = updates.careRecipientName;
-    if (updates.zipCode !== undefined) cleanUpdates.zipCode = updates.zipCode;
-    if (updates.journeyPhase !== undefined) cleanUpdates.journeyPhase = updates.journeyPhase;
-    if (updates.onboardingAttempts !== undefined) cleanUpdates.onboardingAttempts = updates.onboardingAttempts;
+    if (updates.firstName !== undefined) cleanUpdates.firstName = updates.firstName
+    if (updates.relationship !== undefined) cleanUpdates.relationship = updates.relationship
+    if (updates.careRecipientName !== undefined)
+      cleanUpdates.careRecipientName = updates.careRecipientName
+    if (updates.zipCode !== undefined) cleanUpdates.zipCode = updates.zipCode
+    if (updates.journeyPhase !== undefined) cleanUpdates.journeyPhase = updates.journeyPhase
+    if (updates.onboardingAttempts !== undefined)
+      cleanUpdates.onboardingAttempts = updates.onboardingAttempts
     // FIX #4: Persist cooldown timestamp
     if (updates.onboardingCooldownUntil !== undefined) {
       cleanUpdates.onboardingCooldownUntil = updates.onboardingCooldownUntil
         ? Date.parse(updates.onboardingCooldownUntil)
-        : undefined;
+        : undefined
     }
-    if (updates.assessmentInProgress !== undefined) cleanUpdates.assessmentInProgress = updates.assessmentInProgress;
-    if (updates.assessmentType !== undefined) cleanUpdates.assessmentType = updates.assessmentType;
-    if (updates.assessmentCurrentQuestion !== undefined) cleanUpdates.assessmentCurrentQuestion = updates.assessmentCurrentQuestion;
-    if (updates.assessmentSessionId !== undefined) cleanUpdates.assessmentSessionId = updates.assessmentSessionId;
-    if (updates.burnoutScore !== undefined) cleanUpdates.burnoutScore = updates.burnoutScore;
-    if (updates.burnoutBand !== undefined) cleanUpdates.burnoutBand = updates.burnoutBand;
-    if (updates.burnoutConfidence !== undefined) cleanUpdates.burnoutConfidence = updates.burnoutConfidence;
-    if (updates.pressureZones !== undefined) cleanUpdates.pressureZones = updates.pressureZones;
-    if (updates.pressureZoneScores !== undefined) cleanUpdates.pressureZoneScores = updates.pressureZoneScores;
+    if (updates.assessmentInProgress !== undefined)
+      cleanUpdates.assessmentInProgress = updates.assessmentInProgress
+    if (updates.assessmentType !== undefined) cleanUpdates.assessmentType = updates.assessmentType
+    if (updates.assessmentCurrentQuestion !== undefined)
+      cleanUpdates.assessmentCurrentQuestion = updates.assessmentCurrentQuestion
+    if (updates.assessmentSessionId !== undefined)
+      cleanUpdates.assessmentSessionId = updates.assessmentSessionId
+    if (updates.burnoutScore !== undefined) cleanUpdates.burnoutScore = updates.burnoutScore
+    if (updates.burnoutBand !== undefined) cleanUpdates.burnoutBand = updates.burnoutBand
+    if (updates.burnoutConfidence !== undefined)
+      cleanUpdates.burnoutConfidence = updates.burnoutConfidence
+    if (updates.pressureZones !== undefined) cleanUpdates.pressureZones = updates.pressureZones
+    if (updates.pressureZoneScores !== undefined)
+      cleanUpdates.pressureZoneScores = updates.pressureZoneScores
 
-    await ctx.db.patch(userId, cleanUpdates);
+    await ctx.db.patch(userId, cleanUpdates)
 
-    return { success: true };
+    return { success: true }
   },
-});
+})
 
 // PUBLIC MUTATIONS (for external use)
 
@@ -196,13 +203,13 @@ export const getOrCreateByPhone = internalMutation({
     const existing = await ctx.db
       .query('users')
       .withIndex('by_phone', (q: any) => q.eq('phoneNumber', args.phoneNumber))
-      .unique();
+      .unique()
 
     if (existing) {
-      return existing;
+      return existing
     }
 
-    const now = Date.now();
+    const now = Date.now()
     const id = await ctx.db.insert('users', {
       phoneNumber: args.phoneNumber,
       journeyPhase: 'onboarding',
@@ -216,30 +223,30 @@ export const getOrCreateByPhone = internalMutation({
       appState: {},
       createdAt: now,
       updatedAt: now,
-    });
+    })
 
     // Fetch the newly created user - use a small delay to ensure commit
     // This is a workaround for Convex transaction timing
-    const newUser = await ctx.db.get(id);
+    const newUser = await ctx.db.get(id)
 
     if (!newUser) {
       // Fallback: If get() returns null, query by phone
-      console.warn('[getOrCreateByPhone] ctx.db.get() returned null, falling back to query');
+      console.warn('[getOrCreateByPhone] ctx.db.get() returned null, falling back to query')
       const fallback = await ctx.db
         .query('users')
         .withIndex('by_phone', (q: any) => q.eq('phoneNumber', args.phoneNumber))
-        .unique();
+        .unique()
 
       if (!fallback) {
-        throw new Error('Failed to retrieve newly created user');
+        throw new Error('Failed to retrieve newly created user')
       }
 
-      return fallback;
+      return fallback
     }
 
-    return newUser;
+    return newUser
   },
-});
+})
 
 export const patchProfile = mutation({
   args: {
@@ -252,17 +259,17 @@ export const patchProfile = mutation({
     }),
   },
   handler: async (ctx, args) => {
-    const user = await ctx.db.get(args.userId);
-    if (!user) throw new Error('user not found');
+    const user = await ctx.db.get(args.userId)
+    if (!user) throw new Error('user not found')
 
     await ctx.db.patch(args.userId, {
       ...args.updates,
       updatedAt: Date.now(),
-    });
+    })
 
-    return { success: true };
+    return { success: true }
   },
-});
+})
 
 // Generic update function for scheduling module
 export const updateUser = internalMutation({
@@ -275,144 +282,152 @@ export const updateUser = internalMutation({
     reactivationMessageCount: v.optional(v.number()),
   },
   handler: async (ctx, args) => {
-    const { userId, ...updates } = args;
+    const { userId, ...updates } = args
 
     // Filter out undefined values
-    const cleanUpdates: Record<string, any> = { updatedAt: Date.now() };
-    if (updates.journeyPhase !== undefined) cleanUpdates.journeyPhase = updates.journeyPhase;
-    if (updates.lastProactiveMessageAt !== undefined) cleanUpdates.lastProactiveMessageAt = updates.lastProactiveMessageAt;
-    if (updates.lastCrisisEventAt !== undefined) cleanUpdates.lastCrisisEventAt = updates.lastCrisisEventAt;
-    if (updates.crisisFollowupCount !== undefined) cleanUpdates.crisisFollowupCount = updates.crisisFollowupCount;
-    if (updates.reactivationMessageCount !== undefined) cleanUpdates.reactivationMessageCount = updates.reactivationMessageCount;
+    const cleanUpdates: Record<string, any> = { updatedAt: Date.now() }
+    if (updates.journeyPhase !== undefined) cleanUpdates.journeyPhase = updates.journeyPhase
+    if (updates.lastProactiveMessageAt !== undefined)
+      cleanUpdates.lastProactiveMessageAt = updates.lastProactiveMessageAt
+    if (updates.lastCrisisEventAt !== undefined)
+      cleanUpdates.lastCrisisEventAt = updates.lastCrisisEventAt
+    if (updates.crisisFollowupCount !== undefined)
+      cleanUpdates.crisisFollowupCount = updates.crisisFollowupCount
+    if (updates.reactivationMessageCount !== undefined)
+      cleanUpdates.reactivationMessageCount = updates.reactivationMessageCount
 
-    await ctx.db.patch(userId, cleanUpdates);
+    await ctx.db.patch(userId, cleanUpdates)
 
-    return { success: true };
+    return { success: true }
   },
-});
+})
 
 // =============================================================================
 // ELIGIBILITY QUERIES FOR SCHEDULED FUNCTIONS (Task 1)
 // =============================================================================
 
-const DAY_MS = 24 * 60 * 60 * 1000;
+const DAY_MS = 24 * 60 * 60 * 1000
 
 /**
  * Get crisis users eligible for DAILY check-ins (first 7 days post-crisis)
  */
 export const getEligibleForCrisisDaily = internalQuery({
-  handler: async (ctx) => {
-    const now = Date.now();
-    const twoDaysAgo = now - 2 * DAY_MS;
-    const sevenDaysAgo = now - 7 * DAY_MS;
+  handler: async ctx => {
+    const now = Date.now()
+    const twoDaysAgo = now - 2 * DAY_MS
+    const sevenDaysAgo = now - 7 * DAY_MS
 
     const users = await ctx.db
       .query('users')
       .withIndex('by_burnout_band', (q: any) => q.eq('burnoutBand', 'crisis'))
-      .collect();
+      .collect()
 
     // Filter: crisis within last 7 days, not contacted in 2+ days
-    return users.filter(user =>
-      user.journeyPhase === 'active' &&
-      user.lastCrisisEventAt &&
-      user.lastCrisisEventAt > sevenDaysAgo &&
-      (!user.lastContactAt || user.lastContactAt < twoDaysAgo)
-    );
+    return users.filter(
+      user =>
+        user.journeyPhase === 'active' &&
+        user.lastCrisisEventAt &&
+        user.lastCrisisEventAt > sevenDaysAgo &&
+        (!user.lastContactAt || user.lastContactAt < twoDaysAgo)
+    )
   },
-});
+})
 
 /**
  * Get crisis users eligible for WEEKLY check-ins (after day 7)
  */
 export const getEligibleForCrisisWeekly = internalQuery({
-  handler: async (ctx) => {
-    const now = Date.now();
-    const threeDaysAgo = now - 3 * DAY_MS;
-    const sevenDaysAgo = now - 7 * DAY_MS;
-    const oneWeekAgo = now - 7 * DAY_MS;
+  handler: async ctx => {
+    const now = Date.now()
+    const threeDaysAgo = now - 3 * DAY_MS
+    const sevenDaysAgo = now - 7 * DAY_MS
+    const oneWeekAgo = now - 7 * DAY_MS
 
     const users = await ctx.db
       .query('users')
       .withIndex('by_burnout_band', (q: any) => q.eq('burnoutBand', 'crisis'))
-      .collect();
+      .collect()
 
     // Filter: crisis >7 days ago, not proactively messaged in 7+ days, not contacted in 3+ days
-    return users.filter(user =>
-      user.journeyPhase === 'active' &&
-      user.lastCrisisEventAt &&
-      user.lastCrisisEventAt <= sevenDaysAgo &&
-      (!user.lastProactiveMessageAt || user.lastProactiveMessageAt < oneWeekAgo) &&
-      (!user.lastContactAt || user.lastContactAt < threeDaysAgo)
-    );
+    return users.filter(
+      user =>
+        user.journeyPhase === 'active' &&
+        user.lastCrisisEventAt &&
+        user.lastCrisisEventAt <= sevenDaysAgo &&
+        (!user.lastProactiveMessageAt || user.lastProactiveMessageAt < oneWeekAgo) &&
+        (!user.lastContactAt || user.lastContactAt < threeDaysAgo)
+    )
   },
-});
+})
 
 /**
  * Get high burnout users eligible for check-ins (every 3 days)
  */
 export const getEligibleForHighBurnoutCheckin = internalQuery({
-  handler: async (ctx) => {
-    const now = Date.now();
-    const twoDaysAgo = now - 2 * DAY_MS;
-    const threeDaysAgo = now - 3 * DAY_MS;
+  handler: async ctx => {
+    const now = Date.now()
+    const twoDaysAgo = now - 2 * DAY_MS
+    const threeDaysAgo = now - 3 * DAY_MS
 
     const users = await ctx.db
       .query('users')
       .withIndex('by_burnout_band', (q: any) => q.eq('burnoutBand', 'high'))
-      .collect();
+      .collect()
 
     // Filter: active, not proactively messaged in 3+ days, not contacted in 2+ days
-    return users.filter(user =>
-      user.journeyPhase === 'active' &&
-      (!user.lastProactiveMessageAt || user.lastProactiveMessageAt < threeDaysAgo) &&
-      (!user.lastContactAt || user.lastContactAt < twoDaysAgo)
-    );
+    return users.filter(
+      user =>
+        user.journeyPhase === 'active' &&
+        (!user.lastProactiveMessageAt || user.lastProactiveMessageAt < threeDaysAgo) &&
+        (!user.lastContactAt || user.lastContactAt < twoDaysAgo)
+    )
   },
-});
+})
 
 /**
  * Get moderate burnout users eligible for check-ins (weekly)
  */
 export const getEligibleForModerateCheckin = internalQuery({
-  handler: async (ctx) => {
-    const now = Date.now();
-    const threeDaysAgo = now - 3 * DAY_MS;
-    const oneWeekAgo = now - 7 * DAY_MS;
+  handler: async ctx => {
+    const now = Date.now()
+    const threeDaysAgo = now - 3 * DAY_MS
+    const oneWeekAgo = now - 7 * DAY_MS
 
     const users = await ctx.db
       .query('users')
       .withIndex('by_burnout_band', (q: any) => q.eq('burnoutBand', 'moderate'))
-      .collect();
+      .collect()
 
     // Filter: active, not proactively messaged in 7+ days, not contacted in 3+ days
-    return users.filter(user =>
-      user.journeyPhase === 'active' &&
-      (!user.lastProactiveMessageAt || user.lastProactiveMessageAt < oneWeekAgo) &&
-      (!user.lastContactAt || user.lastContactAt < threeDaysAgo)
-    );
+    return users.filter(
+      user =>
+        user.journeyPhase === 'active' &&
+        (!user.lastProactiveMessageAt || user.lastProactiveMessageAt < oneWeekAgo) &&
+        (!user.lastContactAt || user.lastContactAt < threeDaysAgo)
+    )
   },
-});
+})
 
 /**
  * Get dormant users at specific milestones (day 7, 14, 30, 31+)
  */
 export const getDormantAtMilestones = internalQuery({
-  handler: async (ctx) => {
-    const now = Date.now();
-    const sevenDaysAgo = now - 7 * DAY_MS;
+  handler: async ctx => {
+    const now = Date.now()
+    const sevenDaysAgo = now - 7 * DAY_MS
 
     const users = await ctx.db
       .query('users')
       .withIndex('by_last_contact')
-      .filter((q) =>
+      .filter(q =>
         q.and(
           q.lte(q.field('lastContactAt'), sevenDaysAgo),
           q.eq(q.field('journeyPhase'), 'active') // Only active users
         )
       )
-      .collect();
+      .collect()
 
     // Filter out users who already received 3 reactivation messages (in memory)
-    return users.filter(user => (user.reactivationMessageCount || 0) < 3);
+    return users.filter(user => (user.reactivationMessageCount || 0) < 3)
   },
-});
+})

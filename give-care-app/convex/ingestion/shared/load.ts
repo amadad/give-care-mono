@@ -7,32 +7,32 @@
  * - Error handling
  */
 
-import { NormalizedRecord } from "./types";
+import { NormalizedRecord } from './types'
 
 export async function loadNormalizedRecord(
   ctx: any,
   record: NormalizedRecord
 ): Promise<{
-  providerId: string;
-  facilityId: string;
-  programId: string;
-  resourceId: string;
+  providerId: string
+  facilityId: string
+  programId: string
+  resourceId: string
 }> {
-  const now = Date.now();
+  const now = Date.now()
 
   // 1. Check if provider already exists (deduplication)
   const existingProvider = await ctx.db
-    .query("providers")
-    .withIndex("by_name", (q: any) => q.eq("name", record.provider.name))
-    .first();
+    .query('providers')
+    .withIndex('by_name', (q: any) => q.eq('name', record.provider.name))
+    .first()
 
-  let providerId;
+  let providerId
   if (existingProvider) {
-    providerId = existingProvider._id;
-    console.log(`Provider exists: ${record.provider.name}`);
+    providerId = existingProvider._id
+    console.log(`Provider exists: ${record.provider.name}`)
   } else {
     // Create provider
-    providerId = await ctx.db.insert("providers", {
+    providerId = await ctx.db.insert('providers', {
       name: record.provider.name,
       sector: record.provider.sector,
       operatorUrl: record.provider.operatorUrl || undefined,
@@ -42,13 +42,13 @@ export async function loadNormalizedRecord(
       robotsAllowed: undefined,
       lastCrawledAt: undefined,
       createdAt: now,
-      updatedAt: now
-    });
-    console.log(`Created provider: ${record.provider.name}`);
+      updatedAt: now,
+    })
+    console.log(`Created provider: ${record.provider.name}`)
   }
 
   // 2. Create facility
-  const facilityId = await ctx.db.insert("facilities", {
+  const facilityId = await ctx.db.insert('facilities', {
     providerId,
     name: record.facility.name,
     phoneE164: record.facility.phoneE164 || undefined,
@@ -59,11 +59,11 @@ export async function loadNormalizedRecord(
     hours: record.facility.hours || undefined,
     languages: record.facility.languages,
     createdAt: now,
-    updatedAt: now
-  });
+    updatedAt: now,
+  })
 
   // 3. Create program
-  const programId = await ctx.db.insert("programs", {
+  const programId = await ctx.db.insert('programs', {
     providerId,
     name: record.program.name,
     description: record.program.description || undefined,
@@ -73,27 +73,27 @@ export async function loadNormalizedRecord(
     eligibility: record.program.eligibility || undefined,
     languageSupport: record.program.languageSupport,
     createdAt: now,
-    updatedAt: now
-  });
+    updatedAt: now,
+  })
 
   // 4. Create service area
-  await ctx.db.insert("serviceAreas", {
+  await ctx.db.insert('serviceAreas', {
     programId,
     type: record.serviceArea.type,
     geoCodes: record.serviceArea.geoCodes,
     jurisdictionLevel: record.serviceArea.jurisdictionLevel || undefined,
     createdAt: now,
-    updatedAt: now
-  });
+    updatedAt: now,
+  })
 
   // 5. Create resource (join all together)
-  const resourceId = await ctx.db.insert("resources", {
+  const resourceId = await ctx.db.insert('resources', {
     programId,
     facilityId,
     primaryUrl: record.provider.operatorUrl || undefined,
     dataSourceType: record.metadata.dataSourceType,
     aggregatorSource: record.metadata.aggregatorSource,
-    verificationStatus: "unverified",
+    verificationStatus: 'unverified',
     jurisdictionLevel: record.serviceArea.jurisdictionLevel || undefined,
     license: record.provider.license,
     lastCrawledAt: now,
@@ -107,10 +107,10 @@ export async function loadNormalizedRecord(
     lastFeedbackAt: undefined,
     notes: undefined,
     createdAt: now,
-    updatedAt: now
-  });
+    updatedAt: now,
+  })
 
-  return { providerId, facilityId, programId, resourceId };
+  return { providerId, facilityId, programId, resourceId }
 }
 
 /**
@@ -120,41 +120,41 @@ export async function loadNormalizedRecords(
   ctx: any,
   records: NormalizedRecord[]
 ): Promise<{
-  imported: number;
-  failed: number;
+  imported: number
+  failed: number
   details: Array<{
-    provider: string;
-    program: string;
-    error?: string;
-    providerId?: string;
-    resourceId?: string;
-  }>;
+    provider: string
+    program: string
+    error?: string
+    providerId?: string
+    resourceId?: string
+  }>
 }> {
-  const results = [];
+  const results = []
 
   for (const record of records) {
     try {
-      const ids = await loadNormalizedRecord(ctx, record);
+      const ids = await loadNormalizedRecord(ctx, record)
 
       results.push({
         provider: record.provider.name,
         program: record.program.name,
         providerId: ids.providerId,
-        resourceId: ids.resourceId
-      });
+        resourceId: ids.resourceId,
+      })
     } catch (error) {
-      console.error(`Failed to load ${record.program.name}:`, error);
+      console.error(`Failed to load ${record.program.name}:`, error)
       results.push({
         provider: record.provider.name,
         program: record.program.name,
-        error: String(error)
-      });
+        error: String(error),
+      })
     }
   }
 
   return {
     imported: results.filter(r => !r.error).length,
     failed: results.filter(r => r.error).length,
-    details: results
-  };
+    details: results,
+  }
 }

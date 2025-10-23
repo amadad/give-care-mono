@@ -1,5 +1,5 @@
-import { cronJobs } from 'convex/server';
-import { internal } from './_generated/api';
+import { cronJobs } from 'convex/server'
+import { internal } from './_generated/api'
 
 /**
  * Scheduled cron jobs for proactive messaging (Task 1: Scheduled Functions)
@@ -10,7 +10,7 @@ import { internal } from './_generated/api';
  *
  * Example: 9am PT Standard = 5pm UTC (17:00)
  */
-const crons = cronJobs();
+const crons = cronJobs()
 
 /**
  * TIERED WELLNESS CHECK-INS
@@ -30,7 +30,7 @@ crons.daily(
     minuteUTC: 0,
   },
   internal.functions.scheduling.sendTieredWellnessCheckins
-);
+)
 
 /**
  * DORMANT USER REACTIVATION
@@ -49,7 +49,7 @@ crons.daily(
     minuteUTC: 0,
   },
   internal.functions.scheduling.reactivateDormantUsers
-);
+)
 
 /**
  * WEEKLY ADMIN REPORT
@@ -68,7 +68,7 @@ crons.weekly(
     dayOfWeek: 'monday',
   },
   internal.functions.scheduling.generateWeeklyReport
-);
+)
 
 /**
  * RRULE TRIGGER PROCESSOR (Task 8)
@@ -83,11 +83,7 @@ crons.weekly(
  * - Automatic next occurrence calculation
  * - Missed trigger handling (skips >24h old)
  */
-crons.interval(
-  'process-rrule-triggers',
-  { minutes: 15 },
-  internal.triggers.processDueTriggers
-);
+crons.interval('process-rrule-triggers', { minutes: 15 }, internal.triggers.processDueTriggers)
 
 /**
  * CONVERSATION SUMMARIZATION (Task 9)
@@ -110,7 +106,7 @@ crons.daily(
     minuteUTC: 0,
   },
   internal.summarizationActions.summarizeAllUsers
-);
+)
 
 /**
  * ENGAGEMENT WATCHER (Task 11)
@@ -122,11 +118,7 @@ crons.daily(
  *
  * Creates alerts for admin dashboard intervention
  */
-crons.interval(
-  'engagement-watcher',
-  { hours: 6 },
-  internal.watchers.watchCaregiverEngagement
-);
+crons.interval('engagement-watcher', { hours: 6 }, internal.watchers.watchCaregiverEngagement)
 
 /**
  * WELLNESS TREND WATCHER (Task 11)
@@ -147,6 +139,6 @@ crons.weekly(
     dayOfWeek: 'monday',
   },
   internal.watchers.watchWellnessTrends
-);
+)
 
-export default crons;
+export default crons

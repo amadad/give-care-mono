@@ -2,6 +2,9 @@
  * Convex Client Utility for ETL Pipeline
  *
  * Allows Cloudflare Workers to call Convex mutations for persisting workflow state
+ *
+ * Updated for 3-agent architecture (v0.3.0):
+ * - Removed categorizedCount (categorization now part of extraction)
  */
 
 import { ConvexHttpClient } from "convex/browser";
@@ -44,6 +47,7 @@ export class ETLConvexClient {
 
   /**
    * Update workflow progress
+   * Note: categorizedCount removed in v0.3.0 (categorization now part of extraction)
    */
   async updateWorkflow(args: {
     sessionId: string;
@@ -51,7 +55,6 @@ export class ETLConvexClient {
     status?: string;
     sourcesCount?: number;
     extractedCount?: number;
-    categorizedCount?: number;
     validatedCount?: number;
     errorCount?: number;
     errors?: string[];

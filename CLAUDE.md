@@ -221,7 +221,8 @@ Agent handoffs are invisible to users - they experience one unified conversation
 - Agent instructions are **functions** that receive `RunContext<GiveCareContext>`, not static strings
 - Agent tools use `tool({ name, description, parameters, execute })` wrapper
 - Always extract `result.state?.context` after agent execution to get updated context
-- Database schema uses Convex validators; 16 tables with indexes for performance
+- Use `hasContextState()` type guard before accessing `result.state.context` - SDK may return empty state object
+- Database schema uses Convex validators; 19 tables with indexes for performance
 
 **Convex-Specific**:
 - `query` = read-only database operations (client can call)
@@ -493,6 +494,22 @@ See `MONOREPO_INTEGRATION.md` for complete deployment guide.
 ### Convex deployment fails
 **Problem**: Missing environment variables in production
 **Solution**: Set env vars in Convex dashboard (Settings → Environment Variables). Never commit secrets to code.
+
+### OpenAI SDK context is undefined
+**Problem**: `TypeError: Cannot read properties of undefined (reading 'assessmentInProgress')` or similar errors when accessing context fields
+**Root Cause**: OpenAI SDK may return `state: {}` (empty object) instead of no state property when context is not stored
+**Solution**: Always use `hasContextState()` type guard before accessing `result.state.context`. The guard validates that `result.state.context` actually exists, not just that `state` property exists.
+**Example**:
+```typescript
+const updatedContext = hasContextState(result)
+  ? result.state.context  // Safe - guaranteed to exist
+  : context;  // Fallback to original context
+```
+
+### Convex not picking up code changes
+**Problem**: Deployed code doesn't reflect recent changes, line numbers in errors don't match
+**Root Cause**: Convex may not rebundle imported modules when only the module changed
+**Solution**: Touch the parent file to force rebundle: `touch convex/twilio.ts && npx convex dev --once`
 
 ## Quick Reference
 

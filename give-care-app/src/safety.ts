@@ -3,11 +3,7 @@
  * Target: <500ms response, 100% crisis detection accuracy
  */
 
-import type {
-  InputGuardrail,
-  OutputGuardrail,
-  TextOutput
-} from '@openai/agents';
+import type { InputGuardrail, OutputGuardrail, TextOutput } from '@openai/agents'
 
 // Crisis detection data
 const CRISIS_KEYWORDS = [
@@ -21,10 +17,11 @@ const CRISIS_KEYWORDS = [
   'no reason to live',
   'self harm',
   'hurt myself',
-];
+]
 
 // Pre-compiled regex for faster crisis detection (single-pass vs 10 string.includes calls)
-const CRISIS_PATTERN = /suicide|kill myself|end my life|want to die|better off dead|can't go on|end it all|no reason to live|self harm|hurt myself/i;
+const CRISIS_PATTERN =
+  /suicide|kill myself|end my life|want to die|better off dead|can't go on|end it all|no reason to live|self harm|hurt myself/i
 
 const CRISIS_RESOURCES = `I hear you, and I'm really glad you reached out.
 
@@ -33,7 +30,7 @@ const CRISIS_RESOURCES = `I hear you, and I'm really glad you reached out.
 • Text 741741 (Crisis Text Line)
 • Call 911 (emergency)
 
-You don't have to face this alone. These services are free, confidential, and available 24/7.`;
+You don't have to face this alone. These services are free, confidential, and available 24/7.`
 
 // Input guardrails (run before agent)
 export const crisisGuardrail: InputGuardrail = {
@@ -58,16 +55,15 @@ export const crisisGuardrail: InputGuardrail = {
      */
 
     // Convert input to string
-    const message = typeof input === 'string'
-      ? input
-      : input.map(i => (i as any).text || '').join(' ');
-    const messageLower = message.toLowerCase();
+    const message =
+      typeof input === 'string' ? input : input.map(i => (i as any).text || '').join(' ')
+    const messageLower = message.toLowerCase()
 
     // Check for crisis keywords using pre-compiled regex (faster than loop)
-    const match = messageLower.match(CRISIS_PATTERN);
+    const match = messageLower.match(CRISIS_PATTERN)
 
     if (match) {
-      const detectedKeyword = match[0];
+      const detectedKeyword = match[0]
       // TRIPWIRE - Stop agent execution
       return {
         outputInfo: {
@@ -76,16 +72,16 @@ export const crisisGuardrail: InputGuardrail = {
           response: CRISIS_RESOURCES,
         },
         tripwireTriggered: true, // Agent will not run
-      };
+      }
     }
 
     // No crisis detected - continue to agent
     return {
       outputInfo: { crisisDetected: false },
       tripwireTriggered: false,
-    };
+    }
   },
-};
+}
 
 export const spamGuardrail: InputGuardrail = {
   name: 'spam-filter',
@@ -109,10 +105,9 @@ export const spamGuardrail: InputGuardrail = {
      *   GuardrailFunctionOutput with tripwireTriggered=true if spam detected
      */
 
-    const message = typeof input === 'string'
-      ? input
-      : input.map(i => (i as any).text || '').join(' ');
-    const messageLower = message.toLowerCase();
+    const message =
+      typeof input === 'string' ? input : input.map(i => (i as any).text || '').join(' ')
+    const messageLower = message.toLowerCase()
 
     // Spam indicators
     const spamPatterns = [
@@ -131,10 +126,10 @@ export const spamGuardrail: InputGuardrail = {
       'risk free',
       'no credit card',
       'apply now',
-    ];
+    ]
 
     // Check for spam
-    const spamScore = spamPatterns.filter(pattern => messageLower.includes(pattern)).length;
+    const spamScore = spamPatterns.filter(pattern => messageLower.includes(pattern)).length
 
     if (spamScore >= 2) {
       // Multiple spam indicators
@@ -145,7 +140,7 @@ export const spamGuardrail: InputGuardrail = {
           response: "I'm here to support caregivers. How can I help you today?",
         },
         tripwireTriggered: true,
-      };
+      }
     }
 
     // Extreme profanity/abuse filter (basic)
@@ -156,9 +151,9 @@ export const spamGuardrail: InputGuardrail = {
       'piece of shit',
       'you suck',
       'stupid bot',
-    ];
+    ]
 
-    const abuseDetected = abusePatterns.some(pattern => messageLower.includes(pattern));
+    const abuseDetected = abusePatterns.some(pattern => messageLower.includes(pattern))
 
     if (abuseDetected) {
       return {
@@ -167,16 +162,16 @@ export const spamGuardrail: InputGuardrail = {
           response: "I'm here to help. Let me know if you'd like support with caregiving.",
         },
         tripwireTriggered: true,
-      };
+      }
     }
 
     // Pass through
     return {
       outputInfo: { spamDetected: false, abuseDetected: false },
       tripwireTriggered: false,
-    };
+    }
   },
-};
+}
 
 // Output guardrails (run after agent)
 export const medicalAdviceGuardrail: OutputGuardrail<TextOutput> = {
@@ -204,8 +199,8 @@ export const medicalAdviceGuardrail: OutputGuardrail<TextOutput> = {
      */
 
     // Extract text from agent output
-    const outputText = String(agentOutput);
-    const outputLower = outputText.toLowerCase();
+    const outputText = String(agentOutput)
+    const outputLower = outputText.toLowerCase()
 
     // Medical advice red flags
     const medicalPatterns = [
@@ -223,17 +218,17 @@ export const medicalAdviceGuardrail: OutputGuardrail<TextOutput> = {
       'you need to see a doctor immediately',
       'this could be',
       'sounds like you have',
-    ];
+    ]
 
     // Check for medical advice
-    let medicalDetected = false;
-    let detectedPattern: string | null = null;
+    let medicalDetected = false
+    let detectedPattern: string | null = null
 
     for (const pattern of medicalPatterns) {
       if (outputLower.includes(pattern)) {
-        medicalDetected = true;
-        detectedPattern = pattern;
-        break;
+        medicalDetected = true
+        detectedPattern = pattern
+        break
       }
     }
 
@@ -246,7 +241,7 @@ For medical questions about medications or symptoms, please consult with:
 • Pharmacist
 • Nurse hotline
 
-How else can I support you today?`;
+How else can I support you today?`
 
       return {
         outputInfo: {
@@ -255,16 +250,16 @@ How else can I support you today?`;
           safeResponse: safeResponse,
         },
         tripwireTriggered: true,
-      };
+      }
     }
 
     // Safe - allow response
     return {
       outputInfo: { medicalAdviceDetected: false },
       tripwireTriggered: false,
-    };
+    }
   },
-};
+}
 
 export const safetyGuardrail: OutputGuardrail<TextOutput> = {
   name: 'safety-check',
@@ -288,17 +283,17 @@ export const safetyGuardrail: OutputGuardrail<TextOutput> = {
      */
 
     // Extract text from agent output
-    const outputText = String(agentOutput);
-    const outputLower = outputText.toLowerCase();
+    const outputText = String(agentOutput)
+    const outputLower = outputText.toLowerCase()
 
     // Check for forbidden language (P1-P6 compliance)
-    const forbiddenWords = ['should', 'must', 'wrong', 'fault', 'blame', 'stupid', 'lazy'];
+    const forbiddenWords = ['should', 'must', 'wrong', 'fault', 'blame', 'stupid', 'lazy']
 
-    const forbiddenDetected: string[] = [];
+    const forbiddenDetected: string[] = []
     for (const word of forbiddenWords) {
       // Check for word boundaries to avoid false positives
       if (` ${outputLower} `.includes(` ${word} `) || outputLower.startsWith(`${word} `)) {
-        forbiddenDetected.push(word);
+        forbiddenDetected.push(word)
       }
     }
 
@@ -311,7 +306,7 @@ export const safetyGuardrail: OutputGuardrail<TextOutput> = {
           warning: 'Response contains forbidden language per P1-P6 principles',
         },
         tripwireTriggered: false, // Don't block, just warn
-      };
+      }
     }
 
     // Check for very long responses (SMS constraint)
@@ -323,17 +318,17 @@ export const safetyGuardrail: OutputGuardrail<TextOutput> = {
           warning: 'Response exceeds SMS-friendly length (>500 chars)',
         },
         tripwireTriggered: false, // Don't block, just warn
-      };
+      }
     }
 
     // Pass
     return {
       outputInfo: { safetyCheck: 'passed' },
       tripwireTriggered: false,
-    };
+    }
   },
-};
+}
 
 // Export all guardrails
-export const allInputGuardrails = [crisisGuardrail, spamGuardrail];
-export const allOutputGuardrails = [medicalAdviceGuardrail, safetyGuardrail];
+export const allInputGuardrails = [crisisGuardrail, spamGuardrail]
+export const allOutputGuardrails = [medicalAdviceGuardrail, safetyGuardrail]

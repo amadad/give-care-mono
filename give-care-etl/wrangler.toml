@@ -13,13 +13,12 @@ account_id = "a900bd453c783129d31920f492a3ef1a"
 name = "ORCHESTRATOR_AGENT"
 class_name = "OrchestratorAgent"
 
-# Migrations for Durable Objects
-[[migrations]]
-tag = "v1"
-new_sqlite_classes = ["OrchestratorAgent"]
+# Migrations for Durable Objects (OrchestratorAgent already exists in production)
+# No new migrations needed - DO already deployed
 
 # Browser Rendering API (for Puppeteer)
-browser = { binding = "BROWSER" }
+[browser]
+binding = "BROWSER"
 
 # KV Namespaces (for caching and state)
 [[kv_namespaces]]

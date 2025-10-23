@@ -28,6 +28,35 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 **Architecture**: Poke-inspired passive collection (no UI changes, zero user friction)
 **Performance**: Async tracking (doesn't block SMS response)
 
+### Fixed - Critical Production Bugs (5 fixes)
+1. **Crypto module incompatibility** - Replaced Node.js crypto with FNV-1a hash in `convex/utils/logger.ts`
+   - Fixed: `ERROR: Could not resolve "crypto"` in Convex isolate runtime
+   - Solution: Pure JavaScript string hashing for phone number redaction
+
+2. **PHI logging leak in rate limiter** - Fixed `console.warn()` exposing full phone numbers
+   - Location: `convex/services/MessageHandler.ts:178`
+   - Changed: `console.warn(\`Spam detected from ${phoneNumber}\`)` → `logSafe('RateLimit', 'Spam detected', { phone: phoneNumber })`
+   - Impact: HIPAA compliance restored across all SMS paths
+
+3. **Non-existent messages table** - Fixed feedback system querying wrong table
+   - Changed: `messageId: v.id("messages")` → `conversationId: v.id("conversations")`
+   - Files: `convex/schema.ts`, `convex/feedback.ts`, `convex/functions/messages.ts`, `convex/services/MessageHandler.ts`
+   - Impact: Feedback tracking now operational
+
+4. **OpenAI SDK upgrade breaking change** - Fixed context undefined crash
+   - Root cause: SDK now returns `state: {}` even when no context stored
+   - Fixed: `hasContextState()` type guard in `src/types/openai-extensions.ts` now validates `result.state.context` exists
+   - Error fixed: `TypeError: Cannot read properties of undefined (reading 'assessmentInProgress')`
+   - Impact: All SMS messages now process correctly
+
+5. **Rate limit HTTP 500 errors** - Fixed rate limit messages not delivered as SMS
+   - Problem: Rate limit errors thrown but caught as HTTP 500 instead of delivered via TwiML
+   - Solution: Detect rate limit errors in catch block, return as successful message (HTTP 200)
+   - Impact: Users now receive rate limit messages via SMS: "You've sent quite a few messages today. Let's take a break and reconnect tomorrow. For urgent support, call 988 💙"
+
+**Testing**: All fixes verified in production SMS flow
+**Deployment**: Resolved bundling cache issue by touching parent files to force Convex rebundle
+
 ---
 
 ## [0.8.2] - 2025-10-16

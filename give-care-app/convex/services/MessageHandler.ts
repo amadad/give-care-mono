@@ -1,4 +1,4 @@
-"use node";
+'use node'
 
 /**
  * MessageHandler Service
@@ -16,35 +16,39 @@
  * Extracted from convex/twilio.ts to improve testability and maintainability.
  */
 
-import type { ActionCtx } from '../_generated/server';
-import { internal } from '../_generated/api';
-import { validateRequest } from 'twilio';
-import { rateLimiter, RATE_LIMITS, RATE_LIMIT_MESSAGES } from '../rateLimits.config';
-import { runAgentTurn } from '../../src/agents';
-import type { GiveCareContext } from '../../src/context';
-import { getAssessmentDefinition, calculateAssessmentScore, calculateQuestionScore } from '../../src/assessmentTools';
-import { logSafe } from '../utils/logger';
+import type { ActionCtx } from '../_generated/server'
+import { internal } from '../_generated/api'
+import { validateRequest } from 'twilio'
+import { rateLimiter, RATE_LIMITS, RATE_LIMIT_MESSAGES } from '../rateLimits.config'
+import { runAgentTurn } from '../../src/agents'
+import type { GiveCareContext } from '../../src/context'
+import {
+  getAssessmentDefinition,
+  calculateAssessmentScore,
+  calculateQuestionScore,
+} from '../../src/assessmentTools'
+import { logSafe } from '../utils/logger'
 import {
   containsGratitude,
   containsFrustration,
   containsConfusion,
   isSimilarQuery,
   calculateEngagementScore,
-} from '../../src/utils/sentiment';
+} from '../../src/utils/sentiment'
 
 interface IncomingMessage {
-  from: string;
-  body: string;
-  messageSid: string;
-  twilioSignature: string;
-  requestUrl: string;
-  params: any;
+  from: string
+  body: string
+  messageSid: string
+  twilioSignature: string
+  requestUrl: string
+  params: any
 }
 
 interface MessageResult {
-  message: string;
-  latency: number;
-  error?: string;
+  message: string
+  latency: number
+  error?: string
 }
 
 export class MessageHandler {
@@ -54,58 +58,69 @@ export class MessageHandler {
    * Main message processing pipeline
    */
   async handle(message: IncomingMessage): Promise<MessageResult> {
-    const startTime = Date.now();
+    const startTime = Date.now()
 
     try {
       // 1. Validate webhook signature
-      this.validateWebhook(message);
+      this.validateWebhook(message)
 
       // 2. Check rate limits (5 layers)
-      const rateLimitResult = await this.checkRateLimits(message.from);
+      const rateLimitResult = await this.checkRateLimits(message.from)
 
       // 3. Get or create user
-      const user = await this.getUser(message.from);
+      const user = await this.getUser(message.from)
 
       // 4. Validate subscription
-      const subscriptionCheck = await this.checkSubscription(user, message.body, startTime);
+      const subscriptionCheck = await this.checkSubscription(user, message.body, startTime)
       if (subscriptionCheck) {
-        return subscriptionCheck; // Return signup message if not subscribed
+        return subscriptionCheck // Return signup message if not subscribed
       }
 
       // 5. Build context (now async to hydrate assessment responses)
-      const context = await this.buildContext(user, message.from, rateLimitResult.assessmentRateLimited);
+      const context = await this.buildContext(
+        user,
+        message.from,
+        rateLimitResult.assessmentRateLimited
+      )
 
       // 5b. Clone context before agent execution to prevent mutation bugs
       // The agent mutates context.assessmentResponses, so we need a snapshot
       // for the diff comparison in persistAssessmentResponses
-      const originalContext = structuredClone(context);
+      const originalContext = structuredClone(context)
 
       // 6. Execute agent
-      const agentResult = await this.executeAgent(message.body, context);
+      const agentResult = await this.executeAgent(message.body, context)
 
       // 7. Persist changes (compare originalContext vs agentResult.context)
-      await this.persistChanges(user, originalContext, agentResult, message.body, message.messageSid, startTime);
+      await this.persistChanges(
+        user,
+        originalContext,
+        agentResult,
+        message.body,
+        message.messageSid,
+        startTime
+      )
 
       // 8. Schedule follow-ups
-      await this.scheduleFollowups(user, context, agentResult.context);
+      await this.scheduleFollowups(user, context, agentResult.context)
 
       // 9. Return response
       return {
         message: agentResult.message,
         latency: Date.now() - startTime,
-      };
+      }
     } catch (error) {
-      const errorMessage = String(error);
-      console.error('[MessageHandler] Error:', errorMessage);
+      const errorMessage = String(error)
+      logSafe('MessageHandler', 'Error processing message', { error: errorMessage })
 
       // Check if this is a rate limit error - return the helpful message
       if (errorMessage.includes('Rate limited') || errorMessage.includes('quite a few messages')) {
         // Extract the rate limit message (it's in the format "Error: <message>")
-        const rateLimitMessage = errorMessage.replace(/^Error:\s*/, '');
+        const rateLimitMessage = errorMessage.replace(/^Error:\s*/, '')
         return {
           message: rateLimitMessage,
           latency: Date.now() - startTime,
-        };
+        }
       }
 
       // For other errors, return generic message
@@ -113,7 +128,7 @@ export class MessageHandler {
         message: "Sorry, I'm having trouble right now. Please try again in a moment.",
         latency: Date.now() - startTime,
         error: errorMessage,
-      };
+      }
     }
   }
 
@@ -123,17 +138,17 @@ export class MessageHandler {
   private validateWebhook(message: IncomingMessage): void {
     // Allow bypass in development (like Python implementation)
     if (process.env.SKIP_TWILIO_VALIDATION === 'true') {
-      console.log('[Dev] Skipping Twilio signature validation');
-      return;
+      logSafe('MessageHandler', 'Dev mode - skipping Twilio signature validation')
+      return
     }
 
-    const authToken = process.env.TWILIO_AUTH_TOKEN;
+    const authToken = process.env.TWILIO_AUTH_TOKEN
     if (!authToken) {
-      throw new Error('TWILIO_AUTH_TOKEN not configured');
+      throw new Error('TWILIO_AUTH_TOKEN not configured')
     }
 
     if (!message.twilioSignature) {
-      throw new Error('Missing X-Twilio-Signature header');
+      throw new Error('Missing X-Twilio-Signature header')
     }
 
     const isValid = validateRequest(
@@ -141,10 +156,10 @@ export class MessageHandler {
       message.twilioSignature,
       message.requestUrl,
       message.params
-    );
+    )
 
     if (!isValid) {
-      throw new Error('Invalid webhook signature - possible spoofing attempt');
+      throw new Error('Invalid webhook signature - possible spoofing attempt')
     }
   }
 
@@ -184,55 +199,55 @@ export class MessageHandler {
         key: phoneNumber,
         config: RATE_LIMITS.assessmentPerUser as any,
       }),
-    ]);
+    ])
 
     // Check results and throw appropriate errors
     if (!spamCheck.ok) {
-      logSafe('RateLimit', 'Spam detected', { phone: phoneNumber });
-      throw new Error('Rate limited (spam)');
+      logSafe('RateLimit', 'Spam detected', { phone: phoneNumber })
+      throw new Error('Rate limited (spam)')
     }
 
     if (!smsCheck.ok) {
-      throw new Error(RATE_LIMIT_MESSAGES.smsPerUser);
+      throw new Error(RATE_LIMIT_MESSAGES.smsPerUser)
     }
 
     if (!globalCheck.ok) {
-      console.error('[Rate Limit] ALERT: Global SMS limit reached!');
-      throw new Error(RATE_LIMIT_MESSAGES.smsGlobal);
+      logSafe('RateLimit', 'ALERT: Global SMS limit reached', { severity: 'critical' })
+      throw new Error(RATE_LIMIT_MESSAGES.smsGlobal)
     }
 
     if (!openaiCheck.ok) {
-      console.error('[Rate Limit] OpenAI quota reached!');
-      throw new Error(RATE_LIMIT_MESSAGES.openaiCalls);
+      logSafe('RateLimit', 'OpenAI quota reached', { severity: 'critical' })
+      throw new Error(RATE_LIMIT_MESSAGES.openaiCalls)
     }
 
     return {
       assessmentRateLimited: !assessmentCheck.ok,
-    };
+    }
   }
 
   /**
    * Step 3: Get or create user
    */
   private async getUser(phoneNumber: string) {
-    logSafe('GetUser', 'Fetching or creating user', { phone: phoneNumber });
+    logSafe('GetUser', 'Fetching or creating user', { phone: phoneNumber })
 
     const user = await this.ctx.runMutation(internal.functions.users.getOrCreateByPhone, {
       phoneNumber,
-    });
+    })
 
     if (!user) {
-      console.error('[GetUser] CRITICAL: getOrCreateByPhone returned null/undefined');
-      throw new Error('Failed to get or create user');
+      logSafe('GetUser', 'CRITICAL: getOrCreateByPhone returned null', { severity: 'critical' })
+      throw new Error('Failed to get or create user')
     }
 
     logSafe('GetUser', 'User retrieved', {
       userId: user._id,
       hasAssessmentField: user.assessmentInProgress !== undefined,
       subscriptionStatus: user.subscriptionStatus,
-    });
+    })
 
-    return user;
+    return user
   }
 
   /**
@@ -245,26 +260,26 @@ export class MessageHandler {
     timestamp: number
   ): Promise<MessageResult | null> {
     const isSubscribed =
-      user.subscriptionStatus === 'active' || user.subscriptionStatus === 'trialing';
+      user.subscriptionStatus === 'active' || user.subscriptionStatus === 'trialing'
 
     if (isSubscribed) {
       logSafe('Subscription', 'User is subscribed - proceeding', {
         userId: user._id,
         phone: user.phoneNumber,
-      });
-      return null;
+      })
+      return null
     }
 
     logSafe('Subscription', 'User has no active subscription - access denied', {
       userId: user._id,
       phone: user.phoneNumber,
       status: user.subscriptionStatus,
-    });
+    })
 
     const signupMessage =
       'Hi! To access GiveCare, please subscribe at:\n\n' +
       'https://www.givecareapp.com/signup\n\n' +
-      "Questions about our service? Visit givecareapp.com or text 'info' for details.";
+      "Questions about our service? Visit givecareapp.com or text 'info' for details."
 
     // Log interaction for analytics
     await this.ctx.runMutation(internal.functions.conversations.logMessage, {
@@ -273,7 +288,7 @@ export class MessageHandler {
       text: messageBody,
       mode: 'sms',
       timestamp,
-    });
+    })
 
     await this.ctx.runMutation(internal.functions.conversations.logMessage, {
       userId: user._id,
@@ -281,12 +296,12 @@ export class MessageHandler {
       text: signupMessage,
       mode: 'sms',
       timestamp: Date.now(),
-    });
+    })
 
     return {
       message: signupMessage,
       latency: Date.now() - timestamp,
-    };
+    }
   }
 
   /**
@@ -299,36 +314,38 @@ export class MessageHandler {
   ): Promise<GiveCareContext> {
     // CRITICAL VALIDATION: Ensure user object exists
     if (!user) {
-      console.error('[BuildContext] FATAL: user is null/undefined', {
+      logSafe('BuildContext', 'FATAL: user is null', {
         phoneNumber,
         assessmentRateLimited,
-      });
-      throw new Error('User object is null - getUser() should have prevented this');
+      })
+      throw new Error('User object is null - getUser() should have prevented this')
     }
 
     if (typeof user !== 'object') {
-      console.error('[BuildContext] FATAL: user is not an object', {
+      logSafe('BuildContext', 'FATAL: user is not an object', {
         userType: typeof user,
         userValue: String(user),
-      });
-      throw new Error(`User is not an object, got: ${typeof user}`);
+      })
+      throw new Error(`User is not an object, got: ${typeof user}`)
     }
 
     // FIX #1: Hydrate assessment responses from database if assessment in progress
-    let assessmentResponses: Record<string, string | number> = {};
+    let assessmentResponses: Record<string, string | number> = {}
 
     if (user.assessmentInProgress && user.assessmentSessionId) {
       const responses = await this.ctx.runQuery(
         internal.functions.assessments.getSessionResponses,
         { sessionId: user.assessmentSessionId }
-      );
+      )
 
       // Build map of question_id -> response_value
       assessmentResponses = Object.fromEntries(
         responses.map((r: any) => [r.questionId, r.responseValue])
-      );
+      )
 
-      console.log(`[Context] Hydrated ${Object.keys(assessmentResponses).length} prior assessment responses`);
+      logSafe('Context', 'Hydrated assessment responses', {
+        count: Object.keys(assessmentResponses).length,
+      })
     }
 
     return {
@@ -364,7 +381,7 @@ export class MessageHandler {
       historicalSummary: user.historicalSummary || '',
       conversationStartDate: user.conversationStartDate || null,
       totalInteractionCount: user.totalInteractionCount || null,
-    };
+    }
   }
 
   /**
@@ -374,13 +391,13 @@ export class MessageHandler {
     logSafe('Agent', 'Running agent', {
       userId: context.userId,
       message: messageBody,
-    });
-    const result = await runAgentTurn(messageBody, context);
+    })
+    const result = await runAgentTurn(messageBody, context)
     logSafe('Agent', 'Agent execution complete', {
       userId: context.userId,
       message: result.message,
-    });
-    return result;
+    })
+    return result
   }
 
   /**
@@ -394,7 +411,7 @@ export class MessageHandler {
     messageSid: string,
     startTime: number
   ): Promise<void> {
-    const updatedContext = agentResult.context;
+    const updatedContext = agentResult.context
 
     // 7a. Handle assessment session creation
     if (
@@ -402,7 +419,7 @@ export class MessageHandler {
       !updatedContext.assessmentSessionId &&
       updatedContext.assessmentType
     ) {
-      await this.createAssessmentSession(updatedContext, user._id);
+      await this.createAssessmentSession(updatedContext, user._id)
     }
 
     // 7b. Persist assessment responses
@@ -413,7 +430,7 @@ export class MessageHandler {
         originalContext,
         updatedContext,
         updatedContext.assessmentSessionId
-      );
+      )
     }
 
     // 7c. Complete assessment if finished
@@ -422,7 +439,7 @@ export class MessageHandler {
       !updatedContext.assessmentInProgress &&
       originalContext.assessmentInProgress
     ) {
-      await this.completeAssessment(updatedContext);
+      await this.completeAssessment(updatedContext)
     }
 
     // 7d. Log conversation
@@ -433,29 +450,26 @@ export class MessageHandler {
       agentResult,
       messageSid,
       startTime
-    );
+    )
 
     // 7e. Track implicit feedback (ASYNC - Poke-style passive collection)
-    this.trackImplicitFeedbackAsync(user._id, userMessage, agentResult, startTime);
+    this.trackImplicitFeedbackAsync(user._id, userMessage, agentResult, startTime)
 
     // 7f. Update user context (ASYNC - don't block response)
-    this.updateUserContextAsync(user._id, updatedContext);
+    this.updateUserContextAsync(user._id, updatedContext)
 
     // 7g. Save wellness score if changed (ASYNC - don't block response)
-    if (
-      updatedContext.burnoutScore !== null &&
-      updatedContext.burnoutScore !== user.burnoutScore
-    ) {
-      this.saveWellnessScoreAsync(user._id, updatedContext);
+    if (updatedContext.burnoutScore !== null && updatedContext.burnoutScore !== user.burnoutScore) {
+      this.saveWellnessScoreAsync(user._id, updatedContext)
     }
 
     // 7h. Update last contact (ASYNC - don't block response)
-    this.updateLastContactAsync(user._id);
+    this.updateLastContactAsync(user._id)
   }
 
   private async createAssessmentSession(context: GiveCareContext, userId: any): Promise<void> {
-    const definition = getAssessmentDefinition(context.assessmentType!);
-    const totalQuestions = definition?.questions.length ?? 0;
+    const definition = getAssessmentDefinition(context.assessmentType!)
+    const totalQuestions = definition?.questions.length ?? 0
 
     const sessionId = (await this.ctx.runMutation(
       internal.functions.assessments.insertAssessmentSession,
@@ -464,10 +478,10 @@ export class MessageHandler {
         type: context.assessmentType!,
         totalQuestions,
       }
-    )) as any;
+    )) as any
 
-    context.assessmentSessionId = sessionId;
-    console.log(`[Assessment] Created session ${sessionId}`);
+    context.assessmentSessionId = sessionId
+    logSafe('Assessment', 'Created assessment session', { sessionId })
   }
 
   private async persistAssessmentResponses(
@@ -475,22 +489,20 @@ export class MessageHandler {
     updatedContext: GiveCareContext,
     sessionId: string
   ): Promise<void> {
-    const currentResponses = updatedContext.assessmentResponses;
-    const previousResponses = originalContext.assessmentResponses;
+    const currentResponses = updatedContext.assessmentResponses
+    const previousResponses = originalContext.assessmentResponses
 
-    const newResponseKeys = Object.keys(currentResponses).filter(
-      (key) => !(key in previousResponses)
-    );
+    const newResponseKeys = Object.keys(currentResponses).filter(key => !(key in previousResponses))
 
     for (const questionId of newResponseKeys) {
-      const responseValue = String(currentResponses[questionId]);
-      const definition = getAssessmentDefinition(updatedContext.assessmentType!);
-      const question = definition?.questions.find((q) => q.id === questionId);
+      const responseValue = String(currentResponses[questionId])
+      const definition = getAssessmentDefinition(updatedContext.assessmentType!)
+      const question = definition?.questions.find(q => q.id === questionId)
 
       // Calculate per-question score (0-100 or null if invalid)
       const questionScore = question
         ? calculateQuestionScore(question, currentResponses[questionId])
-        : null;
+        : null
 
       await this.ctx.runMutation(internal.functions.assessments.insertAssessmentResponse, {
         sessionId: sessionId as any,
@@ -499,25 +511,24 @@ export class MessageHandler {
         questionText: question?.text ?? '',
         responseValue,
         score: questionScore ?? undefined, // Store calculated score, not undefined
-      });
+      })
 
-      console.log(`[Assessment] Persisted response for ${questionId} (score: ${questionScore})`);
+      logSafe('Assessment', 'Persisted assessment response', { questionId, questionScore })
     }
   }
 
   private async completeAssessment(context: GiveCareContext): Promise<void> {
-    const scoreData = calculateAssessmentScore(
-      context.assessmentType!,
-      context.assessmentResponses
-    );
+    const scoreData = calculateAssessmentScore(context.assessmentType!, context.assessmentResponses)
 
     await this.ctx.runMutation(internal.functions.assessments.completeAssessmentSession, {
       sessionId: context.assessmentSessionId! as any,
       overallScore: scoreData.overall_score,
       domainScores: scoreData.subscores,
-    });
+    })
 
-    console.log(`[Assessment] Completed session ${context.assessmentSessionId}`);
+    logSafe('Assessment', 'Completed assessment session', {
+      sessionId: context.assessmentSessionId,
+    })
   }
 
   private async logConversation(
@@ -528,7 +539,7 @@ export class MessageHandler {
     messageSid: string,
     startTime: number
   ): Promise<void> {
-    const timestamp = Date.now();
+    const timestamp = Date.now()
 
     // Batch insert both messages in one mutation (50-75ms faster)
     await this.ctx.runMutation(internal.functions.conversations.logMessages, {
@@ -559,7 +570,7 @@ export class MessageHandler {
           timestamp,
         },
       ],
-    });
+    })
   }
 
   private async updateUserContext(userId: any, context: GiveCareContext): Promise<void> {
@@ -580,7 +591,7 @@ export class MessageHandler {
       burnoutConfidence: context.burnoutConfidence || undefined,
       pressureZones: context.pressureZones,
       pressureZoneScores: context.pressureZoneScores,
-    });
+    })
   }
 
   /**
@@ -588,27 +599,29 @@ export class MessageHandler {
    * FIX #4: Now includes onboardingCooldownUntil
    */
   private updateUserContextAsync(userId: any, context: GiveCareContext): void {
-    this.ctx.runMutation(internal.functions.users.updateContextState, {
-      userId,
-      firstName: context.firstName || undefined,
-      relationship: context.relationship || undefined,
-      careRecipientName: context.careRecipientName || undefined,
-      zipCode: context.zipCode || undefined,
-      journeyPhase: context.journeyPhase,
-      onboardingAttempts: context.onboardingAttempts,
-      onboardingCooldownUntil: context.onboardingCooldownUntil || undefined, // FIX #4: Persist cooldown
-      assessmentInProgress: context.assessmentInProgress,
-      assessmentType: context.assessmentType || undefined,
-      assessmentCurrentQuestion: context.assessmentCurrentQuestion,
-      assessmentSessionId: context.assessmentSessionId || undefined,
-      burnoutScore: context.burnoutScore || undefined,
-      burnoutBand: context.burnoutBand || undefined,
-      burnoutConfidence: context.burnoutConfidence || undefined,
-      pressureZones: context.pressureZones,
-      pressureZoneScores: context.pressureZoneScores,
-    }).catch(err => {
-      console.error('[Background] Failed to update user context:', err);
-    });
+    this.ctx
+      .runMutation(internal.functions.users.updateContextState, {
+        userId,
+        firstName: context.firstName || undefined,
+        relationship: context.relationship || undefined,
+        careRecipientName: context.careRecipientName || undefined,
+        zipCode: context.zipCode || undefined,
+        journeyPhase: context.journeyPhase,
+        onboardingAttempts: context.onboardingAttempts,
+        onboardingCooldownUntil: context.onboardingCooldownUntil || undefined, // FIX #4: Persist cooldown
+        assessmentInProgress: context.assessmentInProgress,
+        assessmentType: context.assessmentType || undefined,
+        assessmentCurrentQuestion: context.assessmentCurrentQuestion,
+        assessmentSessionId: context.assessmentSessionId || undefined,
+        burnoutScore: context.burnoutScore || undefined,
+        burnoutBand: context.burnoutBand || undefined,
+        burnoutConfidence: context.burnoutConfidence || undefined,
+        pressureZones: context.pressureZones,
+        pressureZoneScores: context.pressureZoneScores,
+      })
+      .catch(err => {
+        logSafe('Background', 'Failed to update user context', { error: String(err) })
+      })
   }
 
   private async saveWellnessScore(userId: any, context: GiveCareContext): Promise<void> {
@@ -620,24 +633,26 @@ export class MessageHandler {
       pressureZones: context.pressureZones,
       pressureZoneScores: context.pressureZoneScores,
       assessmentType: context.assessmentType || undefined,
-    });
+    })
   }
 
   /**
    * Async version - fires and forgets (no await)
    */
   private saveWellnessScoreAsync(userId: any, context: GiveCareContext): void {
-    this.ctx.runMutation(internal.functions.wellness.saveScore, {
-      userId,
-      overallScore: context.burnoutScore!,
-      band: context.burnoutBand || undefined,
-      confidence: context.burnoutConfidence || undefined,
-      pressureZones: context.pressureZones,
-      pressureZoneScores: context.pressureZoneScores,
-      assessmentType: context.assessmentType || undefined,
-    }).catch(err => {
-      console.error('[Background] Failed to save wellness score:', err);
-    });
+    this.ctx
+      .runMutation(internal.functions.wellness.saveScore, {
+        userId,
+        overallScore: context.burnoutScore!,
+        band: context.burnoutBand || undefined,
+        confidence: context.burnoutConfidence || undefined,
+        pressureZones: context.pressureZones,
+        pressureZoneScores: context.pressureZoneScores,
+        assessmentType: context.assessmentType || undefined,
+      })
+      .catch(err => {
+        logSafe('Background', 'Failed to save wellness score', { error: String(err) })
+      })
   }
 
   /**
@@ -658,46 +673,49 @@ export class MessageHandler {
       const lastAgentMessage = await this.ctx.runQuery(
         internal.functions.messages.getLastAgentMessage,
         { userId }
-      );
+      )
 
-      if (!lastAgentMessage) return;
+      if (!lastAgentMessage) return
 
-      const timeSincePrevious = startTime - lastAgentMessage.timestamp;
+      const timeSincePrevious = startTime - lastAgentMessage.timestamp
 
       // Detect implicit signals
-      const signals: Array<{ signal: string; value: number }> = [];
+      const signals: Array<{ signal: string; value: number }> = []
 
       // Positive signals
       if (containsGratitude(userMessage)) {
-        signals.push({ signal: 'gratitude', value: 1.0 });
+        signals.push({ signal: 'gratitude', value: 1.0 })
       }
 
       // Negative signals
       if (containsFrustration(userMessage)) {
-        signals.push({ signal: 'frustration', value: 0.0 });
+        signals.push({ signal: 'frustration', value: 0.0 })
       }
 
       if (containsConfusion(userMessage)) {
-        signals.push({ signal: 'confusion', value: 0.2 }); // Slightly higher than frustration
+        signals.push({ signal: 'confusion', value: 0.2 }) // Slightly higher than frustration
       }
 
       // Re-ask detection (user asking same question again = previous answer unhelpful)
-      if (lastAgentMessage.userMessage && isSimilarQuery(userMessage, lastAgentMessage.userMessage)) {
-        signals.push({ signal: 're_ask', value: 0.1 });
+      if (
+        lastAgentMessage.userMessage &&
+        isSimilarQuery(userMessage, lastAgentMessage.userMessage)
+      ) {
+        signals.push({ signal: 're_ask', value: 0.1 })
       }
 
       // Engagement signal (quick response = engaged)
-      const fiveMinutes = 5 * 60 * 1000;
+      const fiveMinutes = 5 * 60 * 1000
       if (timeSincePrevious < fiveMinutes) {
-        const engagementScore = calculateEngagementScore(userMessage, timeSincePrevious);
+        const engagementScore = calculateEngagementScore(userMessage, timeSincePrevious)
         if (engagementScore > 0.6) {
-          signals.push({ signal: 'follow_up', value: engagementScore });
+          signals.push({ signal: 'follow_up', value: engagementScore })
         }
       }
 
       // Tool success signal (if tool was used and user responded positively)
       if (agentResult.toolName && containsGratitude(userMessage)) {
-        signals.push({ signal: 'tool_success', value: 1.0 });
+        signals.push({ signal: 'tool_success', value: 1.0 })
       }
 
       // Record all detected signals
@@ -714,22 +732,24 @@ export class MessageHandler {
             timeSincePrevious,
             sessionLength: undefined, // Will be calculated in mutation
           },
-        });
+        })
       }
 
-      console.log(`[Feedback] Recorded ${signals.length} implicit signals for user ${userId}`);
+      logSafe('Feedback', 'Recorded implicit signals', { signalCount: signals.length, userId })
     } catch (error) {
       // Don't throw - this is background work
-      console.error('[Background] Failed to track feedback:', error);
+      logSafe('Background', 'Failed to track feedback', { error: String(error) })
     }
   }
 
   private updateLastContactAsync(userId: any): void {
-    this.ctx.runMutation(internal.functions.users.updateLastContact, {
-      userId,
-    }).catch(err => {
-      console.error('[Background] Failed to update last contact:', err);
-    });
+    this.ctx
+      .runMutation(internal.functions.users.updateLastContact, {
+        userId,
+      })
+      .catch(err => {
+        logSafe('Background', 'Failed to update last contact', { error: String(err) })
+      })
   }
 
   /**
@@ -741,34 +761,34 @@ export class MessageHandler {
     updatedContext: GiveCareContext
   ): Promise<void> {
     // 8a. Crisis follow-ups
-    const wasCrisis = user.burnoutBand === 'crisis';
-    const nowCrisis = updatedContext.burnoutBand === 'crisis';
+    const wasCrisis = user.burnoutBand === 'crisis'
+    const nowCrisis = updatedContext.burnoutBand === 'crisis'
 
     if (!wasCrisis && nowCrisis) {
-      console.log(`[Crisis] User ${user._id} entered crisis state - scheduling follow-ups`);
+      logSafe('Crisis', 'User entered crisis state - scheduling follow-ups', { userId: user._id })
 
       await this.ctx.runMutation(internal.functions.users.updateUser, {
         userId: user._id,
         lastCrisisEventAt: Date.now(),
         crisisFollowupCount: 0,
-      });
+      })
 
       await this.ctx.runMutation(internal.functions.scheduling.scheduleCrisisFollowups, {
         userId: user._id,
-      });
+      })
     }
 
     // 8b. Onboarding completion nudges
-    const wasOnboarding = user.journeyPhase === 'onboarding';
-    const nowActive = updatedContext.journeyPhase === 'active';
+    const wasOnboarding = user.journeyPhase === 'onboarding'
+    const nowActive = updatedContext.journeyPhase === 'active'
 
     if (wasOnboarding && nowActive) {
-      console.log(`[Onboarding] User ${user._id} completed onboarding`);
+      logSafe('Onboarding', 'User completed onboarding', { userId: user._id })
 
       await this.ctx.runAction(internal.functions.scheduling.checkOnboardingAndNudge, {
         userId: user._id as any,
         nudgeStage: 1, // Start with first nudge (48hr)
-      });
+      })
     }
   }
 }

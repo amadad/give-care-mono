@@ -1,4 +1,4 @@
-import { z } from "zod";
+import { z } from 'zod'
 
 /**
  * Typed context for GiveCare agent.
@@ -17,10 +17,16 @@ export const giveCareContextSchema = z.object({
   // Profile Fields (Onboarding)
   relationship: z.string().nullable().default(null),
   careRecipientName: z.string().nullable().default(null),
-  zipCode: z.string().regex(/^\d{5}$/).nullable().default(null),
+  zipCode: z
+    .string()
+    .regex(/^\d{5}$/)
+    .nullable()
+    .default(null),
 
   // Journey State
-  journeyPhase: z.enum(['onboarding', 'active', 'crisis', 'recovery', 'maintenance', 'churned']).default('onboarding'),
+  journeyPhase: z
+    .enum(['onboarding', 'active', 'crisis', 'recovery', 'maintenance', 'churned'])
+    .default('onboarding'),
 
   // Assessment State
   assessmentInProgress: z.boolean().default(false),
@@ -50,17 +56,21 @@ export const giveCareContextSchema = z.object({
   languagePreference: z.string().default('en'),
 
   // Conversation Summarization (Task 9)
-  recentMessages: z.array(z.object({
-    role: z.string(),
-    content: z.string(),
-    timestamp: z.number(),
-  })).default([]),
+  recentMessages: z
+    .array(
+      z.object({
+        role: z.string(),
+        content: z.string(),
+        timestamp: z.number(),
+      })
+    )
+    .default([]),
   historicalSummary: z.string().default(''),
   conversationStartDate: z.number().nullable().default(null),
   totalInteractionCount: z.number().nullable().default(null),
-});
+})
 
-export type GiveCareContext = z.infer<typeof giveCareContextSchema>;
+export type GiveCareContext = z.infer<typeof giveCareContextSchema>
 
 /**
  * Helper functions for context state management
@@ -71,24 +81,19 @@ export const contextHelpers = {
    * Check if all required profile fields are collected
    */
   profileComplete(ctx: GiveCareContext): boolean {
-    return !!(
-      ctx.firstName &&
-      ctx.relationship &&
-      ctx.careRecipientName &&
-      ctx.zipCode
-    );
+    return !!(ctx.firstName && ctx.relationship && ctx.careRecipientName && ctx.zipCode)
   },
 
   /**
    * Return list of missing profile fields
    */
   missingProfileFields(ctx: GiveCareContext): string[] {
-    const missing: string[] = [];
-    if (!ctx.firstName) missing.push('first_name');
-    if (!ctx.relationship) missing.push('relationship');
-    if (!ctx.careRecipientName) missing.push('care_recipient_name');
-    if (!ctx.zipCode) missing.push('zip_code');
-    return missing;
+    const missing: string[] = []
+    if (!ctx.firstName) missing.push('first_name')
+    if (!ctx.relationship) missing.push('relationship')
+    if (!ctx.careRecipientName) missing.push('care_recipient_name')
+    if (!ctx.zipCode) missing.push('zip_code')
+    return missing
   },
 
   /**
@@ -102,23 +107,23 @@ export const contextHelpers = {
   canAskForField(ctx: GiveCareContext, field: string): boolean {
     // Check if cooldown is active
     if (ctx.onboardingCooldownUntil) {
-      const cooldownEnd = new Date(ctx.onboardingCooldownUntil).getTime();
-      const now = Date.now();
+      const cooldownEnd = new Date(ctx.onboardingCooldownUntil).getTime()
+      const now = Date.now()
 
       if (now < cooldownEnd) {
         // Still in cooldown period - cannot ask any field
-        return false;
+        return false
       }
 
       // Cooldown expired - reset for next attempt
       // Note: This mutation should happen in the updateProfile tool,
       // but we signal here that cooldown has expired
-      ctx.onboardingCooldownUntil = null;
-      ctx.onboardingAttempts = {}; // Reset all attempts after cooldown
+      ctx.onboardingCooldownUntil = null
+      ctx.onboardingAttempts = {} // Reset all attempts after cooldown
     }
 
-    const attempts = ctx.onboardingAttempts[field] || 0;
-    return attempts < 2;
+    const attempts = ctx.onboardingAttempts[field] || 0
+    return attempts < 2
   },
 
   /**
@@ -130,11 +135,11 @@ export const contextHelpers = {
       ...ctx,
       onboardingAttempts: {
         ...ctx.onboardingAttempts,
-        [field]: (ctx.onboardingAttempts[field] || 0) + 1
-      }
-    };
-  }
-};
+        [field]: (ctx.onboardingAttempts[field] || 0) + 1,
+      },
+    }
+  },
+}
 
 /**
  * Create a new context instance with defaults
@@ -147,6 +152,6 @@ export function createGiveCareContext(
   return giveCareContextSchema.parse({
     userId,
     phoneNumber,
-    ...overrides
-  });
+    ...overrides,
+  })
 }

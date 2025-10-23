@@ -13,10 +13,11 @@
  * Processes triggers every 15 minutes via cron job in convex/crons.ts
  */
 
-import { internalMutation, internalAction, mutation } from './_generated/server';
-import { internal } from './_generated/api';
-import { v } from 'convex/values';
-import { RRule } from 'rrule';
+import { internalMutation, mutation } from './_generated/server'
+import { internal } from './_generated/api'
+import { v } from 'convex/values'
+import { RRule } from 'rrule'
+import { logSafe } from './utils/logger'
 
 /**
  * Process all due triggers
@@ -32,58 +33,58 @@ import { RRule } from 'rrule';
  * 3. Skip triggers that are too old (>24h missed)
  */
 export const processDueTriggers = internalMutation({
-  handler: async (ctx) => {
-    const now = Date.now();
-    const twentyFourHoursAgo = now - 24 * 60 * 60 * 1000;
+  handler: async ctx => {
+    const now = Date.now()
+    const twentyFourHoursAgo = now - 24 * 60 * 60 * 1000
 
     // Query all enabled triggers that are due
     const dueTriggers = await ctx.db
       .query('triggers')
       .withIndex('by_next_occurrence')
-      .filter(q => q.and(
-        q.lte(q.field('nextOccurrence'), now),
-        q.eq(q.field('enabled'), true)
-      ))
-      .collect();
+      .filter(q => q.and(q.lte(q.field('nextOccurrence'), now), q.eq(q.field('enabled'), true)))
+      .collect()
 
-    console.log(`[processDueTriggers] Found ${dueTriggers.length} due triggers`);
+    logSafe('Triggers', 'Found due triggers', { count: dueTriggers.length })
 
-    let processed = 0;
-    let skipped = 0;
-    let errors = 0;
+    let processed = 0
+    let skipped = 0
+    let errors = 0
 
     for (const trigger of dueTriggers) {
       try {
         // Skip triggers that are too old (>24h missed) - likely server downtime
         if (trigger.nextOccurrence < twentyFourHoursAgo) {
-          console.warn(`[processDueTriggers] Skipping old trigger ${trigger._id} (${Math.floor((now - trigger.nextOccurrence) / (1000 * 60 * 60))}h old)`);
+          logSafe('Triggers', 'Skipping old trigger', {
+            triggerId: trigger._id,
+            hoursOld: Math.floor((now - trigger.nextOccurrence) / (1000 * 60 * 60)),
+          })
 
           // Recalculate next occurrence without sending message
-          const nextOccurrence = calculateNextOccurrence(trigger.recurrenceRule, trigger.timezone, now);
+          const nextOccurrence = calculateNextOccurrence(
+            trigger.recurrenceRule,
+            trigger.timezone,
+            now
+          )
           await ctx.db.patch(trigger._id, {
             nextOccurrence,
-          });
-          skipped++;
-          continue;
+          })
+          skipped++
+          continue
         }
 
         // Get user
-        const user = await ctx.db.get(trigger.userId);
+        const user = await ctx.db.get(trigger.userId)
         if (!user || !user.phoneNumber) {
-          console.error(`[processDueTriggers] User ${trigger.userId} not found or missing phone number`);
-          errors++;
-          continue;
+          logSafe('Triggers', 'User not found or missing phone', { userId: trigger.userId })
+          errors++
+          continue
         }
 
         // Send SMS
-        await ctx.scheduler.runAfter(
-          0,
-          internal.twilio.sendOutboundSMS,
-          {
-            to: user.phoneNumber,
-            body: trigger.message,
-          }
-        );
+        await ctx.scheduler.runAfter(0, internal.twilio.sendOutboundSMS, {
+          to: user.phoneNumber,
+          body: trigger.message,
+        })
 
         // Log conversation
         await ctx.db.insert('conversations', {
@@ -93,36 +94,46 @@ export const processDueTriggers = internalMutation({
           mode: 'sms',
           agentName: 'scheduled',
           timestamp: now,
-        });
+        })
 
         // Calculate next occurrence
-        const nextOccurrence = calculateNextOccurrence(trigger.recurrenceRule, trigger.timezone, now);
+        const nextOccurrence = calculateNextOccurrence(
+          trigger.recurrenceRule,
+          trigger.timezone,
+          now
+        )
 
         // Update trigger
         await ctx.db.patch(trigger._id, {
           nextOccurrence,
           lastTriggeredAt: now,
-        });
+        })
 
-        console.log(`[processDueTriggers] Processed trigger ${trigger._id} for user ${trigger.userId}, next: ${new Date(nextOccurrence).toISOString()}`);
-        processed++;
-
+        logSafe('Triggers', 'Processed trigger', {
+          triggerId: trigger._id,
+          userId: trigger.userId,
+          next: new Date(nextOccurrence).toISOString(),
+        })
+        processed++
       } catch (error) {
-        console.error(`[processDueTriggers] Error processing trigger ${trigger._id}:`, error);
-        errors++;
+        logSafe('Triggers', 'Error processing trigger', {
+          triggerId: trigger._id,
+          error: String(error),
+        })
+        errors++
       }
     }
 
-    console.log(`[processDueTriggers] Complete: processed=${processed}, skipped=${skipped}, errors=${errors}`);
+    logSafe('Triggers', 'Processing complete', { processed, skipped, errors })
 
     return {
       processed,
       skipped,
       errors,
       total: dueTriggers.length,
-    };
+    }
   },
-});
+})
 
 /**
  * Create a new trigger for a user
@@ -141,20 +152,20 @@ export const createTrigger = mutation({
   handler: async (ctx, args) => {
     // Validate RRULE
     try {
-      RRule.fromString(args.recurrenceRule);
+      RRule.fromString(args.recurrenceRule)
     } catch (error) {
-      throw new Error(`Invalid RRULE: ${error}`);
+      throw new Error(`Invalid RRULE: ${error}`)
     }
 
     // Calculate initial next occurrence
-    const nextOccurrence = calculateNextOccurrence(args.recurrenceRule, args.timezone, Date.now());
+    const nextOccurrence = calculateNextOccurrence(args.recurrenceRule, args.timezone, Date.now())
 
     // Check for existing trigger of same type
     const existing = await ctx.db
       .query('triggers')
       .withIndex('by_user_type', q => q.eq('userId', args.userId).eq('type', args.type))
       .filter(q => q.eq(q.field('enabled'), true))
-      .first();
+      .first()
 
     if (existing) {
       // Update existing trigger
@@ -163,11 +174,14 @@ export const createTrigger = mutation({
         message: args.message,
         timezone: args.timezone,
         nextOccurrence,
-      });
+      })
 
-      console.log(`[createTrigger] Updated existing trigger ${existing._id} for user ${args.userId}`);
+      logSafe('Triggers', 'Updated existing trigger', {
+        triggerId: existing._id,
+        userId: args.userId,
+      })
 
-      return existing._id;
+      return existing._id
     } else {
       // Create new trigger
       const triggerId = await ctx.db.insert('triggers', {
@@ -179,14 +193,18 @@ export const createTrigger = mutation({
         enabled: true,
         nextOccurrence,
         createdAt: Date.now(),
-      });
+      })
 
-      console.log(`[createTrigger] Created trigger ${triggerId} for user ${args.userId}, next: ${new Date(nextOccurrence).toISOString()}`);
+      logSafe('Triggers', 'Created trigger', {
+        triggerId,
+        userId: args.userId,
+        next: new Date(nextOccurrence).toISOString(),
+      })
 
-      return triggerId;
+      return triggerId
     }
   },
-});
+})
 
 /**
  * Disable a trigger for a user
@@ -200,17 +218,17 @@ export const disableTrigger = internalMutation({
     const trigger = await ctx.db
       .query('triggers')
       .withIndex('by_user_type', q => q.eq('userId', args.userId).eq('type', args.type))
-      .first();
+      .first()
 
     if (trigger) {
-      await ctx.db.patch(trigger._id, { enabled: false });
-      console.log(`[disableTrigger] Disabled trigger ${trigger._id} for user ${args.userId}`);
-      return true;
+      await ctx.db.patch(trigger._id, { enabled: false })
+      logSafe('Triggers', 'Disabled trigger', { triggerId: trigger._id, userId: args.userId })
+      return true
     }
 
-    return false;
+    return false
   },
-});
+})
 
 /**
  * Enable a trigger for a user
@@ -224,24 +242,28 @@ export const enableTrigger = internalMutation({
     const trigger = await ctx.db
       .query('triggers')
       .withIndex('by_user_type', q => q.eq('userId', args.userId).eq('type', args.type))
-      .first();
+      .first()
 
     if (trigger) {
       // Recalculate next occurrence when re-enabling
-      const nextOccurrence = calculateNextOccurrence(trigger.recurrenceRule, trigger.timezone, Date.now());
+      const nextOccurrence = calculateNextOccurrence(
+        trigger.recurrenceRule,
+        trigger.timezone,
+        Date.now()
+      )
 
       await ctx.db.patch(trigger._id, {
         enabled: true,
         nextOccurrence,
-      });
+      })
 
-      console.log(`[enableTrigger] Enabled trigger ${trigger._id} for user ${args.userId}`);
-      return true;
+      logSafe('Triggers', 'Enabled trigger', { triggerId: trigger._id, userId: args.userId })
+      return true
     }
 
-    return false;
+    return false
   },
-});
+})
 
 /**
  * Get all triggers for a user
@@ -254,11 +276,11 @@ export const getUserTriggers = internalMutation({
     const triggers = await ctx.db
       .query('triggers')
       .withIndex('by_user', q => q.eq('userId', args.userId))
-      .collect();
+      .collect()
 
-    return triggers;
+    return triggers
   },
-});
+})
 
 // ========================================
 // RRULE Utilities
@@ -292,15 +314,15 @@ function calculateNextOccurrence(
 ): number {
   try {
     // Parse RRULE (hour/minute are in local time, but RRule treats them as UTC)
-    const rrule = RRule.fromString(rruleString);
+    const rrule = RRule.fromString(rruleString)
 
     // Get next occurrence from RRule (this returns a Date with the time in UTC)
-    const nextDateUTC = rrule.after(new Date(after), false); // false = exclude 'after' date
+    const nextDateUTC = rrule.after(new Date(after), false) // false = exclude 'after' date
 
     if (!nextDateUTC) {
       // RRULE has no more occurrences (e.g., UNTIL date passed)
       // Return far future timestamp to prevent re-processing
-      return Date.now() + 365 * 24 * 60 * 60 * 1000; // 1 year from now
+      return Date.now() + 365 * 24 * 60 * 60 * 1000 // 1 year from now
     }
 
     // FIX #2: Reinterpret the time as being in the user's timezone
@@ -308,23 +330,23 @@ function calculateNextOccurrence(
     // But user meant 9am in their timezone
 
     // Extract the date/time components (these are what the user meant)
-    const year = nextDateUTC.getUTCFullYear();
-    const month = nextDateUTC.getUTCMonth() + 1; // JS months are 0-indexed
-    const day = nextDateUTC.getUTCDate();
-    const hour = nextDateUTC.getUTCHours();
-    const minute = nextDateUTC.getUTCMinutes();
+    const year = nextDateUTC.getUTCFullYear()
+    const month = nextDateUTC.getUTCMonth() + 1 // JS months are 0-indexed
+    const day = nextDateUTC.getUTCDate()
+    const hour = nextDateUTC.getUTCHours()
+    const minute = nextDateUTC.getUTCMinutes()
 
     // Build ISO string in user's timezone format: "2025-10-17T09:00"
-    const localTimeString = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}T${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}:00`;
+    const localTimeString = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}T${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}:00`
 
     // Parse as being in the user's timezone and convert to UTC
     // We'll use a simple offset calculation based on timezone
-    const utcTimestamp = convertLocalToUTC(localTimeString, timezone);
+    const utcTimestamp = convertLocalToUTC(localTimeString, timezone)
 
-    return utcTimestamp;
+    return utcTimestamp
   } catch (error) {
-    console.error(`[calculateNextOccurrence] Error parsing RRULE: ${rruleString}`, error);
-    throw error;
+    logSafe('Triggers', 'Error parsing RRULE', { rruleString, error: String(error) })
+    throw error
   }
 }
 
@@ -343,7 +365,7 @@ function convertLocalToUTC(localTimeString: string, timezone: string): number {
   // We create two Date objects: one in UTC, one in the target timezone
   // The difference tells us the offset
 
-  const date = new Date(localTimeString + 'Z'); // Parse as UTC
+  const date = new Date(localTimeString + 'Z') // Parse as UTC
 
   // Get the offset for this timezone at this specific date
   // (handles DST transitions automatically)
@@ -356,16 +378,16 @@ function convertLocalToUTC(localTimeString: string, timezone: string): number {
     minute: '2-digit',
     second: '2-digit',
     hour12: false,
-  });
+  })
 
   // Format the date as it would appear in the target timezone
-  const parts = formatter.formatToParts(date);
-  const tzTime: any = {};
+  const parts = formatter.formatToParts(date)
+  const tzTime: any = {}
   parts.forEach(part => {
     if (part.type !== 'literal') {
-      tzTime[part.type] = parseInt(part.value, 10);
+      tzTime[part.type] = parseInt(part.value, 10)
     }
-  });
+  })
 
   // Create a date object representing that same time in the local timezone
   const tzDate = new Date(
@@ -375,20 +397,20 @@ function convertLocalToUTC(localTimeString: string, timezone: string): number {
     tzTime.hour,
     tzTime.minute,
     tzTime.second
-  );
+  )
 
   // The difference between these two dates is the timezone offset
-  const offset = date.getTime() - tzDate.getTime();
+  const offset = date.getTime() - tzDate.getTime()
 
   // Parse the original local time string as a local date
-  const [datePart, timePart] = localTimeString.split('T');
-  const [year, month, day] = datePart.split('-').map(Number);
-  const [hour, minute] = timePart.split(':').map(Number);
+  const [datePart, timePart] = localTimeString.split('T')
+  const [year, month, day] = datePart.split('-').map(Number)
+  const [hour, minute] = timePart.split(':').map(Number)
 
-  const localDate = new Date(year, month - 1, day, hour, minute, 0);
+  const localDate = new Date(year, month - 1, day, hour, minute, 0)
 
   // Apply the offset to convert to UTC
-  return localDate.getTime() - offset;
+  return localDate.getTime() - offset
 }
 
 /**
@@ -405,42 +427,42 @@ function convertLocalToUTC(localTimeString: string, timezone: string): number {
  */
 export function parseTime(timeString: string): { hour: number; minute: number } {
   // Remove whitespace
-  const cleaned = timeString.trim();
+  const cleaned = timeString.trim()
 
   // Check for AM/PM format
-  const isPM = /PM/i.test(cleaned);
-  const isAM = /AM/i.test(cleaned);
+  const isPM = /PM/i.test(cleaned)
+  const isAM = /AM/i.test(cleaned)
 
   // Extract time components
-  const timeOnly = cleaned.replace(/\s?(AM|PM)/i, '');
-  const [hourStr, minuteStr] = timeOnly.split(':');
+  const timeOnly = cleaned.replace(/\s?(AM|PM)/i, '')
+  const [hourStr, minuteStr] = timeOnly.split(':')
 
-  let hour = parseInt(hourStr, 10);
-  const minute = parseInt(minuteStr, 10);
+  let hour = parseInt(hourStr, 10)
+  const minute = parseInt(minuteStr, 10)
 
   // Validate
   if (isNaN(hour) || isNaN(minute)) {
-    throw new Error(`Invalid time format: ${timeString}`);
+    throw new Error(`Invalid time format: ${timeString}`)
   }
 
   // Convert 12-hour to 24-hour
   if (isAM || isPM) {
     if (isPM && hour !== 12) {
-      hour += 12;
+      hour += 12
     } else if (isAM && hour === 12) {
-      hour = 0;
+      hour = 0
     }
   }
 
   // Validate ranges
   if (hour < 0 || hour > 23) {
-    throw new Error(`Invalid hour: ${hour} (must be 0-23)`);
+    throw new Error(`Invalid hour: ${hour} (must be 0-23)`)
   }
   if (minute < 0 || minute > 59) {
-    throw new Error(`Invalid minute: ${minute} (must be 0-59)`);
+    throw new Error(`Invalid minute: ${minute} (must be 0-59)`)
   }
 
-  return { hour, minute };
+  return { hour, minute }
 }
 
 /**
@@ -456,37 +478,37 @@ export function buildRRule(
   time: { hour: number; minute: number },
   daysOfWeek?: string[]
 ): string {
-  const parts: string[] = [];
+  const parts: string[] = []
 
   switch (frequency) {
     case 'daily':
-      parts.push('FREQ=DAILY');
-      break;
+      parts.push('FREQ=DAILY')
+      break
 
     case 'every_other_day':
-      parts.push('FREQ=DAILY');
-      parts.push('INTERVAL=2');
-      break;
+      parts.push('FREQ=DAILY')
+      parts.push('INTERVAL=2')
+      break
 
     case 'weekly':
       if (!daysOfWeek || daysOfWeek.length === 0) {
-        throw new Error('Weekly frequency requires daysOfWeek');
+        throw new Error('Weekly frequency requires daysOfWeek')
       }
-      parts.push('FREQ=WEEKLY');
-      parts.push(`BYDAY=${daysOfWeek.join(',')}`);
-      break;
+      parts.push('FREQ=WEEKLY')
+      parts.push(`BYDAY=${daysOfWeek.join(',')}`)
+      break
 
     case 'custom':
       // Custom RRULE should be provided directly by user
-      throw new Error('Custom frequency not supported in buildRRule - provide full RRULE string');
+      throw new Error('Custom frequency not supported in buildRRule - provide full RRULE string')
 
     default:
-      throw new Error(`Invalid frequency: ${frequency}`);
+      throw new Error(`Invalid frequency: ${frequency}`)
   }
 
   // Add time components
-  parts.push(`BYHOUR=${time.hour}`);
-  parts.push(`BYMINUTE=${time.minute}`);
+  parts.push(`BYHOUR=${time.hour}`)
+  parts.push(`BYMINUTE=${time.minute}`)
 
-  return parts.join(';');
+  return parts.join(';')
 }

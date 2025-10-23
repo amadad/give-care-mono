@@ -9,13 +9,13 @@
  * 5. User record updated to active + welcome SMS sent
  */
 
-"use node";
+'use node'
 
-import { v } from "convex/values";
-import { action, internalAction } from "./_generated/server";
-import { internal } from "./_generated/api";
-import Stripe from "stripe";
-import { logStripe, logSMS } from "./utils/logger";
+import { v } from 'convex/values'
+import { action, internalAction } from './_generated/server'
+import { internal } from './_generated/api'
+import Stripe from 'stripe'
+import { logStripe, logSMS } from './utils/logger'
 
 /**
  * Create a Stripe Checkout session for subscription signup
@@ -29,27 +29,30 @@ export const createCheckoutSession = action({
     priceId: v.string(), // Stripe Price ID (from your Stripe Dashboard)
     couponCode: v.optional(v.string()), // Optional coupon code (CAREGIVER50, PARTNER-ORG, etc.)
   },
-  handler: async (ctx, { fullName, email, phoneNumber, priceId, couponCode }): Promise<string | null> => {
+  handler: async (
+    ctx,
+    { fullName, email, phoneNumber, priceId, couponCode }
+  ): Promise<string | null> => {
     // Fail fast if HOSTING_URL is missing in production
-    const domain = process.env.HOSTING_URL;
+    const domain = process.env.HOSTING_URL
     if (!domain) {
-      console.error("[Stripe] HOSTING_URL environment variable is not set");
-      throw new Error("Server configuration error: HOSTING_URL is required for checkout");
+      console.error('[Stripe] HOSTING_URL environment variable is not set')
+      throw new Error('Server configuration error: HOSTING_URL is required for checkout')
     }
 
     const stripe = new Stripe(process.env.STRIPE_KEY!, {
-      apiVersion: "2025-09-30.clover",
-    });
+      apiVersion: '2025-09-30.clover',
+    })
 
     // Create or get Stripe customer
     const customers = await stripe.customers.list({
       email,
       limit: 1,
-    });
+    })
 
-    let customer: Stripe.Customer;
+    let customer: Stripe.Customer
     if (customers.data.length > 0) {
-      customer = customers.data[0];
+      customer = customers.data[0]
     } else {
       customer = await stripe.customers.create({
         email,
@@ -58,7 +61,7 @@ export const createCheckoutSession = action({
         metadata: {
           phoneNumber, // Store for reference
         },
-      });
+      })
     }
 
     // Create pending user record in Convex
@@ -67,21 +70,21 @@ export const createCheckoutSession = action({
       email,
       phoneNumber,
       stripeCustomerId: customer.id,
-    });
+    })
 
     // Validate coupon code if provided
-    let discounts: { coupon: string }[] | undefined;
+    let discounts: { coupon: string }[] | undefined
     if (couponCode) {
       try {
-        const coupon = await stripe.coupons.retrieve(couponCode);
+        const coupon = await stripe.coupons.retrieve(couponCode)
         if (coupon.valid) {
-          discounts = [{ coupon: couponCode }];
-          console.log(`[Stripe] Applying coupon: ${couponCode} (${coupon.name})`);
+          discounts = [{ coupon: couponCode }]
+          console.log(`[Stripe] Applying coupon: ${couponCode} (${coupon.name})`)
         } else {
-          console.warn(`[Stripe] Invalid coupon code: ${couponCode}`);
+          console.warn(`[Stripe] Invalid coupon code: ${couponCode}`)
         }
       } catch (error) {
-        console.error(`[Stripe] Coupon validation error: ${couponCode}`, error);
+        console.error(`[Stripe] Coupon validation error: ${couponCode}`, error)
         // Continue without coupon if validation fails
       }
     }
@@ -99,7 +102,7 @@ export const createCheckoutSession = action({
           quantity: 1,
         },
       ],
-      mode: "subscription",
+      mode: 'subscription',
       discounts,
       success_url: `${domain}/welcome?session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${domain}/signup`,
@@ -120,17 +123,17 @@ export const createCheckoutSession = action({
       phone_number_collection: {
         enabled: false, // Don't collect phone - we already have it
       },
-    });
+    })
 
     // Store checkout session ID for verification
     await ctx.runMutation(internal.subscriptions.updateCheckoutSession, {
       userId,
       checkoutSessionId: session.id,
-    });
+    })
 
-    return session.url;
+    return session.url
   },
-});
+})
 
 /**
  * Handle Stripe webhooks (payment confirmations, subscription events)
@@ -143,88 +146,84 @@ export const fulfillCheckout = internalAction({
   },
   handler: async (ctx, { signature, payload }) => {
     const stripe = new Stripe(process.env.STRIPE_KEY!, {
-      apiVersion: "2025-09-30.clover",
-    });
+      apiVersion: '2025-09-30.clover',
+    })
 
-    const webhookSecret = process.env.STRIPE_WEBHOOKS_SECRET!;
+    const webhookSecret = process.env.STRIPE_WEBHOOKS_SECRET!
 
     try {
-      const event = stripe.webhooks.constructEvent(
-        payload,
-        signature,
-        webhookSecret
-      );
+      const event = stripe.webhooks.constructEvent(payload, signature, webhookSecret)
 
       switch (event.type) {
-        case "checkout.session.completed": {
-          const session = event.data.object as Stripe.Checkout.Session;
-          const userId = session.metadata?.userId;
-          const phoneNumber = session.metadata?.phoneNumber;
+        case 'checkout.session.completed': {
+          const session = event.data.object as Stripe.Checkout.Session
+          const userId = session.metadata?.userId
+          const phoneNumber = session.metadata?.phoneNumber
 
           if (!userId || !phoneNumber) {
-            console.error("Missing userId or phoneNumber in session metadata");
-            return { success: false };
+            console.error('Missing userId or phoneNumber in session metadata')
+            return { success: false }
           }
 
           // Activate subscription
           await ctx.runMutation(internal.subscriptions.activateSubscription, {
             userId: userId as any,
             stripeSubscriptionId: session.subscription as string,
-            subscriptionStatus: "active",
-          });
+            subscriptionStatus: 'active',
+          })
 
           // Send welcome SMS
           await ctx.runAction(internal.stripe.sendWelcomeSMS, {
             phoneNumber,
             userId: userId as any,
-          });
+          })
 
-          break;
+          break
         }
 
-        case "customer.subscription.updated": {
-          const subscription = event.data.object as Stripe.Subscription;
-          const userId = subscription.metadata?.userId;
+        case 'customer.subscription.updated': {
+          const subscription = event.data.object as Stripe.Subscription
+          const userId = subscription.metadata?.userId
 
           if (!userId) {
-            console.error("Missing userId in subscription metadata");
-            return { success: false };
+            console.error('Missing userId in subscription metadata')
+            return { success: false }
           }
 
           // Normalize Stripe status (all are now valid in validator)
           await ctx.runMutation(internal.subscriptions.updateSubscriptionStatus, {
             userId: userId as any,
             subscriptionStatus: subscription.status,
-          });
+          })
 
-          break;
+          break
         }
 
-        case "customer.subscription.deleted": {
-          const subscription = event.data.object as Stripe.Subscription;
-          const userId = subscription.metadata?.userId;
+        case 'customer.subscription.deleted': {
+          const subscription = event.data.object as Stripe.Subscription
+          const userId = subscription.metadata?.userId
 
           if (!userId) {
-            console.error("Missing userId in subscription metadata");
-            return { success: false };
+            console.error('Missing userId in subscription metadata')
+            return { success: false }
           }
 
           await ctx.runMutation(internal.subscriptions.updateSubscriptionStatus, {
             userId: userId as any,
-            subscriptionStatus: "canceled",
-          });
+            subscriptionStatus: 'canceled',
+          })
 
-          break;
+          break
         }
       }
 
-      return { success: true };
+      return { success: true }
     } catch (err) {
-      console.error("Stripe webhook error:", err);
-      return { success: false, error: (err as Error).message };
+      console.error('Stripe webhook error:', err)
+      return { success: false, error: (err as Error).message }
     }
   },
-});
+})
 
 /**
  * Send welcome SMS via Twilio when subscription activates
@@ -237,48 +236,48 @@ export const sendWelcomeSMS = internalAction({
   handler: async (ctx, { phoneNumber, userId }) => {
     try {
       // Check if Twilio credentials are configured
-      const accountSid = process.env.TWILIO_ACCOUNT_SID;
-      const authToken = process.env.TWILIO_AUTH_TOKEN;
-      const twilioNumber = process.env.TWILIO_PHONE_NUMBER;
+      const accountSid = process.env.TWILIO_ACCOUNT_SID
+      const authToken = process.env.TWILIO_AUTH_TOKEN
+      const twilioNumber = process.env.TWILIO_PHONE_NUMBER
 
       if (!accountSid || !authToken || !twilioNumber) {
         logStripe('twilio_not_configured', {
           email: phoneNumber, // Use email field for phone (will be redacted)
           status: 'skipped',
-        });
-        console.warn('[Stripe] Set TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, and TWILIO_PHONE_NUMBER');
-        return { success: false, error: 'Twilio not configured' };
+        })
+        console.warn('[Stripe] Set TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, and TWILIO_PHONE_NUMBER')
+        return { success: false, error: 'Twilio not configured' }
       }
 
       // Send welcome SMS via Twilio
-      const twilio = require('twilio')(accountSid, authToken);
+      const twilio = require('twilio')(accountSid, authToken)
 
       const welcomeMessage =
-        "Welcome to GiveCare! 🎉\n\n" +
+        'Welcome to GiveCare! 🎉\n\n' +
         "I'm here to support you on your caregiving journey. " +
-        "Reply anytime with a question or just say hello to get started.\n\n" +
-        "You're not alone in this.";
+        'Reply anytime with a question or just say hello to get started.\n\n' +
+        "You're not alone in this."
 
       const result = await twilio.messages.create({
         body: welcomeMessage,
         from: twilioNumber,
         to: phoneNumber,
-      });
+      })
 
       logSMS('outgoing', {
         phone: phoneNumber,
         message: welcomeMessage,
         messageSid: result.sid,
         userId,
-      });
-      return { success: true };
+      })
+      return { success: true }
     } catch (error) {
       // Don't fail subscription activation if SMS fails
       logStripe('welcome_sms_failed', {
         email: phoneNumber, // Use email field for phone (will be redacted)
         status: 'failed',
-      });
-      return { success: false, error: String(error) };
+      })
+      return { success: false, error: String(error) }
     }
   },
-});
+})

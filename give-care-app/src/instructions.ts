@@ -2,9 +2,9 @@
  * Dynamic instructions with trauma-informed principles (P1-P6)
  */
 
-import type { RunContext } from '@openai/agents';
-import type { GiveCareContext } from './context';
-import { formatZoneName } from './burnoutCalculator';
+import type { RunContext } from '@openai/agents'
+import type { GiveCareContext } from './context'
+import { formatZoneName } from './burnoutCalculator'
 
 // Shared trauma-informed principles for all agents
 
@@ -28,7 +28,7 @@ Every request must include option to skip or defer.
 
 **P6: Deliver Value Every Turn**
 Every interaction must include something useful: validation, tip, resource, or progress update.
-`;
+`
 
 const COMMUNICATION_STYLE = `
 # Communication Style
@@ -44,7 +44,7 @@ Use everyday terms:
 - "Quick check-in" (not EMA)
 - "Support strategy" (not intervention)
 - "How you're doing" (not burnout score)
-`;
+`
 
 const SEAMLESS_HANDOFF_RULE = `
 # CRITICAL: Seamless Experience
@@ -55,18 +55,18 @@ const SEAMLESS_HANDOFF_RULE = `
 
 Continue the conversation naturally as if you've been part of it the whole time.
 Users should feel like they're talking to ONE unified, intelligent presence.
-`;
+`
 
 // =============================================================================
 // CRISIS AGENT INSTRUCTIONS
 // =============================================================================
 
 export function crisisInstructions(runContext: RunContext<GiveCareContext>): string {
-  const context = runContext.context;
-  const userName = context.firstName || 'friend';
+  const context = runContext.context
+  const userName = context.firstName || 'friend'
   const wellnessInfo = context.burnoutScore
     ? `Wellness: ${Math.round(context.burnoutScore)}/100 (${context.burnoutBand})`
-    : 'No wellness data yet';
+    : 'No wellness data yet'
 
   return `You are providing crisis support to ${userName}, a caregiver who has expressed distress.
 
@@ -130,22 +130,22 @@ You don't have to face this alone. Want to talk about what's happening?"
 User: ${userName}
 Journey phase: ${context.journeyPhase}
 ${wellnessInfo}
-`;
+`
 }
 
 // ASSESSMENT AGENT INSTRUCTIONS
 
 export function assessmentInstructions(runContext: RunContext<GiveCareContext>): string {
-  const context = runContext.context;
-  const userName = context.firstName || 'there';
+  const context = runContext.context
+  const userName = context.firstName || 'there'
   const assessmentName = context.assessmentType
     ? {
         ema: 'daily check-in',
         cwbs: 'well-being assessment',
         reach_ii: 'stress check',
-        sdoh: 'needs screening'
+        sdoh: 'needs screening',
       }[context.assessmentType]
-    : 'wellness check';
+    : 'wellness check'
 
   return `You are guiding ${userName} through a ${assessmentName}.
 
@@ -200,7 +200,7 @@ User: ${userName}
 Assessment: ${context.assessmentType || 'none'}
 Question: ${context.assessmentCurrentQuestion + 1}
 Responses so far: ${Object.keys(context.assessmentResponses).length}
-`;
+`
 }
 
 // =============================================================================
@@ -208,15 +208,15 @@ Responses so far: ${Object.keys(context.assessmentResponses).length}
 // =============================================================================
 
 export function mainInstructions(runContext: RunContext<GiveCareContext>): string {
-  const context = runContext.context;
-  const userName = context.firstName || 'there';
-  const careRecipient = context.careRecipientName || 'your loved one';
-  const relationship = context.relationship || 'caregiver';
+  const context = runContext.context
+  const userName = context.firstName || 'there'
+  const careRecipient = context.careRecipientName || 'your loved one'
+  const relationship = context.relationship || 'caregiver'
 
   const wellnessInfo = context.burnoutScore
     ? `Current wellness: ${Math.round(context.burnoutScore)}/100 (${context.burnoutBand})
 Pressure zones: ${context.pressureZones.length > 0 ? context.pressureZones.map(z => formatZoneName(z)).join(', ') : 'none identified yet'}`
-    : 'No wellness data yet - encourage first assessment';
+    : 'No wellness data yet - encourage first assessment'
 
   return `You are GiveCare, an AI companion for ${userName}, a ${relationship} caring for ${careRecipient}.
 
@@ -331,16 +331,22 @@ Total messages: ${context.totalInteractionCount || 0}
 ${wellnessInfo}
 Profile complete: ${context.firstName && context.relationship && context.careRecipientName && context.zipCode ? 'Yes' : 'No'}
 
-${context.firstName && context.relationship && context.careRecipientName && context.zipCode ? '' : `
+${
+  context.firstName && context.relationship && context.careRecipientName && context.zipCode
+    ? ''
+    : `
 Missing fields: ${[
-  !context.firstName && 'first name',
-  !context.relationship && 'relationship',
-  !context.careRecipientName && 'care recipient name',
-  !context.zipCode && 'ZIP code'
-].filter(Boolean).join(', ')}
+        !context.firstName && 'first name',
+        !context.relationship && 'relationship',
+        !context.careRecipientName && 'care recipient name',
+        !context.zipCode && 'ZIP code',
+      ]
+        .filter(Boolean)
+        .join(', ')}
 
 Onboarding attempts so far: ${JSON.stringify(context.onboardingAttempts)}
 (Remember P3: Max 2 attempts per field, then cooldown)
-`}
-`;
+`
+}
+`
 }

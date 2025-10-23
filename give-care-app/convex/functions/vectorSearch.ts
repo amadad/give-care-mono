@@ -7,9 +7,9 @@
  * NOTE: Only actions use "use node" directive - queries run in Convex runtime
  */
 
-import { internalAction, internalQuery } from '../_generated/server';
-import { internal } from '../_generated/api';
-import { v } from 'convex/values';
+import { internalAction, internalQuery } from '../_generated/server'
+import { internal } from '../_generated/api'
+import { v } from 'convex/values'
 
 /**
  * Semantic search for interventions using vector similarity
@@ -26,15 +26,14 @@ export const searchInterventions = internalAction({
     pressureZone: v.optional(v.string()), // Optional filter
   },
   handler: async (ctx, args) => {
-    "use node";
+    'use node'
 
-    const limit = args.limit || 5;
+    const limit = args.limit || 5
 
     // Generate embedding for user query
-    const queryEmbedding = await ctx.runAction(
-      internal.functions.embeddings.generateEmbedding,
-      { text: args.query }
-    );
+    const queryEmbedding = await ctx.runAction(internal.functions.embeddings.generateEmbedding, {
+      text: args.query,
+    })
 
     // Vector search with filters
     // Vector search with status filter (only 'active' interventions)
@@ -43,39 +42,39 @@ export const searchInterventions = internalAction({
     const results = await ctx.vectorSearch('knowledgeBase', 'by_embedding', {
       vector: queryEmbedding,
       limit: limit * 2, // Get more candidates for post-filtering
-      filter: (q) => q.eq('status', 'active'),
-    });
+      filter: q => q.eq('status', 'active'),
+    })
 
     // Fetch full documents with similarity scores
-    const interventions = [];
+    const interventions = []
     for (const result of results) {
       const doc = await ctx.runQuery(internal.functions.vectorSearch.getKnowledgeBaseById, {
         id: result._id,
-      });
+      })
 
-      if (!doc) continue;
+      if (!doc) continue
 
       // Post-filter by language (only English)
       if (doc.language !== 'en') {
-        continue;
+        continue
       }
 
       // Post-filter by pressure zone if specified
       if (args.pressureZone && !doc.pressureZones.includes(args.pressureZone)) {
-        continue;
+        continue
       }
 
       interventions.push({
         ...doc,
         score: result._score, // Similarity score (0-1)
-      });
+      })
 
-      if (interventions.length >= limit) break;
+      if (interventions.length >= limit) break
     }
 
-    return interventions;
+    return interventions
   },
-});
+})
 
 /**
  * Search interventions by burnout level (maps to pressure zones)
@@ -91,61 +90,102 @@ export const searchByBurnoutLevel = internalAction({
     limit: v.optional(v.number()),
   },
   handler: async (ctx, args) => {
-    "use node";
+    'use node'
 
-    const limit = args.limit || 5;
+    const limit = args.limit || 5
 
     // Map burnout band to pressure zones priority
     const zonePriority: Record<string, string[]> = {
-      crisis: ['emotional', 'self_care', 'physical', 'social', 'financial', 'caregiver_tasks', 'time_management'],
-      high: ['self_care', 'emotional', 'physical', 'social', 'time_management', 'caregiver_tasks', 'financial'],
-      moderate: ['time_management', 'self_care', 'social', 'physical', 'caregiver_tasks', 'emotional', 'financial'],
-      healthy: ['social', 'time_management', 'self_care', 'physical', 'caregiver_tasks', 'emotional', 'financial'],
-      thriving: ['social', 'emotional', 'self_care', 'physical', 'time_management', 'caregiver_tasks', 'financial'],
-    };
+      crisis: [
+        'emotional',
+        'self_care',
+        'physical',
+        'social',
+        'financial',
+        'caregiver_tasks',
+        'time_management',
+      ],
+      high: [
+        'self_care',
+        'emotional',
+        'physical',
+        'social',
+        'time_management',
+        'caregiver_tasks',
+        'financial',
+      ],
+      moderate: [
+        'time_management',
+        'self_care',
+        'social',
+        'physical',
+        'caregiver_tasks',
+        'emotional',
+        'financial',
+      ],
+      healthy: [
+        'social',
+        'time_management',
+        'self_care',
+        'physical',
+        'caregiver_tasks',
+        'emotional',
+        'financial',
+      ],
+      thriving: [
+        'social',
+        'emotional',
+        'self_care',
+        'physical',
+        'time_management',
+        'caregiver_tasks',
+        'financial',
+      ],
+    }
 
-    const zones = zonePriority[args.burnoutBand] || zonePriority.moderate;
+    const zones = zonePriority[args.burnoutBand] || zonePriority.moderate
 
     // Build search query based on burnout level
     const burnoutQueries: Record<string, string> = {
       crisis: 'Immediate emotional support, crisis resources, respite care, mental health services',
       high: 'Stress reduction, self-care strategies, emotional support, respite care, practical help',
-      moderate: 'Time management, routine optimization, support groups, self-care tips, work-life balance',
+      moderate:
+        'Time management, routine optimization, support groups, self-care tips, work-life balance',
       healthy: 'Social connections, preventive care, caregiver community, wellness activities',
-      thriving: 'Community engagement, peer support, advanced caregiving strategies, sharing experiences',
-    };
+      thriving:
+        'Community engagement, peer support, advanced caregiving strategies, sharing experiences',
+    }
 
-    const searchQuery = args.query || burnoutQueries[args.burnoutBand] || 'general caregiver support';
+    const searchQuery =
+      args.query || burnoutQueries[args.burnoutBand] || 'general caregiver support'
 
     // Search with priority on top zones
     const interventions = await ctx.runAction(internal.functions.vectorSearch.searchInterventions, {
       query: searchQuery,
       limit: limit * 2, // Get more candidates
-    });
+    })
 
     // Re-rank by zone priority + similarity score
     const ranked = interventions.map((int: any) => {
       // Find highest priority zone that matches
       const zonePriorityScore = Math.max(
         ...int.pressureZones.map((zone: string) => {
-          const priority = zones.indexOf(zone);
-          return priority === -1 ? 999 : priority;
+          const priority = zones.indexOf(zone)
+          return priority === -1 ? 999 : priority
         })
-      );
+      )
 
       return {
         ...int,
         zonePriorityScore,
         combinedScore: int.score * 0.7 + (1 - zonePriorityScore / zones.length) * 0.3,
-      };
-    });
+      }
+    })
 
     // Sort by combined score and return top results
-    return ranked
-      .sort((a: any, b: any) => b.combinedScore - a.combinedScore)
-      .slice(0, limit);
+    return ranked.sort((a: any, b: any) => b.combinedScore - a.combinedScore).slice(0, limit)
   },
-});
+})
 
 /**
  * Get knowledge base entry by ID (internal query)
@@ -153,9 +193,9 @@ export const searchByBurnoutLevel = internalAction({
 export const getKnowledgeBaseById = internalQuery({
   args: { id: v.id('knowledgeBase') },
   handler: async (ctx, args) => {
-    return await ctx.db.get(args.id);
+    return await ctx.db.get(args.id)
   },
-});
+})
 
 /**
  * Search by multiple pressure zones (OR logic)
@@ -171,9 +211,9 @@ export const searchByPressureZones = internalAction({
     limit: v.optional(v.number()),
   },
   handler: async (ctx, args) => {
-    "use node";
+    'use node'
 
-    const limit = args.limit || 5;
+    const limit = args.limit || 5
 
     // Build query from pressure zones
     const zoneLabels: Record<string, string> = {
@@ -184,24 +224,22 @@ export const searchByPressureZones = internalAction({
       financial: 'financial assistance, insurance, medical bills, costs',
       caregiver_tasks: 'caregiving tasks, ADLs, medical management, coordination',
       time_management: 'time management, scheduling, routines, work-life balance',
-    };
+    }
 
-    const queryParts = args.pressureZones.map(zone => zoneLabels[zone] || zone);
-    const searchQuery = args.query
-      ? `${args.query} ${queryParts.join(' ')}`
-      : queryParts.join(', ');
+    const queryParts = args.pressureZones.map(zone => zoneLabels[zone] || zone)
+    const searchQuery = args.query ? `${args.query} ${queryParts.join(' ')}` : queryParts.join(', ')
 
     // Search across all zones
     const interventions = await ctx.runAction(internal.functions.vectorSearch.searchInterventions, {
       query: searchQuery,
       limit: limit * 2,
-    });
+    })
 
     // Filter to only include interventions matching at least one pressure zone
     const filtered = interventions.filter((int: any) =>
       int.pressureZones.some((zone: string) => args.pressureZones.includes(zone))
-    );
+    )
 
-    return filtered.slice(0, limit);
+    return filtered.slice(0, limit)
   },
-});
+})

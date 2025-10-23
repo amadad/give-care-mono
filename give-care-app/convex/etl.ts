@@ -3,10 +3,13 @@
  *
  * Called by give-care-etl Cloudflare Workers to persist workflow state
  * Read by admin-frontend for real-time dashboard updates
+ *
+ * Updated for 3-agent architecture (v0.3.0):
+ * - Orchestrator → Discovery → Extraction (handles categorization + validation)
  */
 
-import { v } from "convex/values";
-import { mutation, query, internalMutation } from "./_generated/server";
+import { v } from 'convex/values'
+import { mutation, query, internalMutation } from './_generated/server'
 
 /**
  * Create a new ETL workflow
@@ -21,30 +24,31 @@ export const createWorkflow = mutation({
     trigger: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    const workflowId = await ctx.db.insert("etlWorkflows", {
+    const workflowId = await ctx.db.insert('etlWorkflows', {
       sessionId: args.sessionId,
       task: args.task,
       state: args.state,
       limit: args.limit,
       trigger: args.trigger,
-      currentStep: "discovery",
-      status: "running",
+      currentStep: 'discovery',
+      status: 'running',
       sourcesCount: 0,
       extractedCount: 0,
-      categorizedCount: 0,
       validatedCount: 0,
       errorCount: 0,
       errors: [],
       startedAt: Date.now(),
-    });
+    })
 
-    return { workflowId };
+    return { workflowId }
   },
-});
+})
 
 /**
  * Update workflow progress
  * Called by agents as they progress through steps
+ *
+ * Note: categorizedCount removed in v0.3.0 (categorization now part of extraction)
  */
 export const updateWorkflow = mutation({
   args: {
@@ -53,42 +57,40 @@ export const updateWorkflow = mutation({
     status: v.optional(v.string()),
     sourcesCount: v.optional(v.number()),
     extractedCount: v.optional(v.number()),
-    categorizedCount: v.optional(v.number()),
     validatedCount: v.optional(v.number()),
     errorCount: v.optional(v.number()),
     errors: v.optional(v.array(v.string())),
   },
   handler: async (ctx, args) => {
     const workflow = await ctx.db
-      .query("etlWorkflows")
-      .withIndex("by_session", (q) => q.eq("sessionId", args.sessionId))
-      .first();
+      .query('etlWorkflows')
+      .withIndex('by_session', q => q.eq('sessionId', args.sessionId))
+      .first()
 
     if (!workflow) {
-      throw new Error(`Workflow not found: ${args.sessionId}`);
+      throw new Error(`Workflow not found: ${args.sessionId}`)
     }
 
-    const updates: any = {};
-    if (args.currentStep !== undefined) updates.currentStep = args.currentStep;
-    if (args.status !== undefined) updates.status = args.status;
-    if (args.sourcesCount !== undefined) updates.sourcesCount = args.sourcesCount;
-    if (args.extractedCount !== undefined) updates.extractedCount = args.extractedCount;
-    if (args.categorizedCount !== undefined) updates.categorizedCount = args.categorizedCount;
-    if (args.validatedCount !== undefined) updates.validatedCount = args.validatedCount;
-    if (args.errorCount !== undefined) updates.errorCount = args.errorCount;
-    if (args.errors !== undefined) updates.errors = args.errors;
+    const updates: any = {}
+    if (args.currentStep !== undefined) updates.currentStep = args.currentStep
+    if (args.status !== undefined) updates.status = args.status
+    if (args.sourcesCount !== undefined) updates.sourcesCount = args.sourcesCount
+    if (args.extractedCount !== undefined) updates.extractedCount = args.extractedCount
+    if (args.validatedCount !== undefined) updates.validatedCount = args.validatedCount
+    if (args.errorCount !== undefined) updates.errorCount = args.errorCount
+    if (args.errors !== undefined) updates.errors = args.errors
 
     // If status is completed or failed, set completedAt
-    if (args.status === "completed" || args.status === "failed") {
-      updates.completedAt = Date.now();
-      updates.durationMs = Date.now() - workflow.startedAt;
+    if (args.status === 'completed' || args.status === 'failed') {
+      updates.completedAt = Date.now()
+      updates.durationMs = Date.now() - workflow.startedAt
     }
 
-    await ctx.db.patch(workflow._id, updates);
+    await ctx.db.patch(workflow._id, updates)
 
-    return { success: true };
+    return { success: true }
   },
-});
+})
 
 /**
  * Add discovered source
@@ -105,15 +107,15 @@ export const addSource = mutation({
   },
   handler: async (ctx, args) => {
     const workflow = await ctx.db
-      .query("etlWorkflows")
-      .withIndex("by_session", (q) => q.eq("sessionId", args.sessionId))
-      .first();
+      .query('etlWorkflows')
+      .withIndex('by_session', q => q.eq('sessionId', args.sessionId))
+      .first()
 
     if (!workflow) {
-      throw new Error(`Workflow not found: ${args.sessionId}`);
+      throw new Error(`Workflow not found: ${args.sessionId}`)
     }
 
-    const sourceId = await ctx.db.insert("etlSources", {
+    const sourceId = await ctx.db.insert('etlSources', {
       workflowId: workflow._id,
       url: args.url,
       title: args.title,
@@ -121,16 +123,16 @@ export const addSource = mutation({
       sourceType: args.sourceType,
       trustScore: args.trustScore,
       discoveredAt: Date.now(),
-    });
+    })
 
     // Update workflow sourcesCount
     await ctx.db.patch(workflow._id, {
       sourcesCount: workflow.sourcesCount + 1,
-    });
+    })
 
-    return { sourceId };
+    return { sourceId }
   },
-});
+})
 
 /**
  * Add extracted record
@@ -139,7 +141,7 @@ export const addSource = mutation({
 export const addExtractedRecord = mutation({
   args: {
     sessionId: v.string(),
-    sourceId: v.id("etlSources"),
+    sourceId: v.id('etlSources'),
     title: v.string(),
     providerName: v.string(),
     phones: v.array(v.string()),
@@ -155,15 +157,15 @@ export const addExtractedRecord = mutation({
   },
   handler: async (ctx, args) => {
     const workflow = await ctx.db
-      .query("etlWorkflows")
-      .withIndex("by_session", (q) => q.eq("sessionId", args.sessionId))
-      .first();
+      .query('etlWorkflows')
+      .withIndex('by_session', q => q.eq('sessionId', args.sessionId))
+      .first()
 
     if (!workflow) {
-      throw new Error(`Workflow not found: ${args.sessionId}`);
+      throw new Error(`Workflow not found: ${args.sessionId}`)
     }
 
-    const recordId = await ctx.db.insert("etlExtractedRecords", {
+    const recordId = await ctx.db.insert('etlExtractedRecords', {
       workflowId: workflow._id,
       sourceId: args.sourceId,
       title: args.title,
@@ -179,17 +181,17 @@ export const addExtractedRecord = mutation({
       eligibility: args.eligibility,
       cost: args.cost,
       extractedAt: Date.now(),
-      validationStatus: "pending",
-    });
+      validationStatus: 'pending',
+    })
 
     // Update workflow extractedCount
     await ctx.db.patch(workflow._id, {
       extractedCount: workflow.extractedCount + 1,
-    });
+    })
 
-    return { recordId };
+    return { recordId }
   },
-});
+})
 
 /**
  * Add validated record (ready for QA)
@@ -198,7 +200,7 @@ export const addExtractedRecord = mutation({
 export const addValidatedRecord = mutation({
   args: {
     sessionId: v.string(),
-    extractedRecordId: v.optional(v.id("etlExtractedRecords")), // Optional for Phase 1
+    extractedRecordId: v.optional(v.id('etlExtractedRecords')), // Optional for Phase 1
     title: v.string(),
     providerName: v.string(),
     phones: v.array(v.string()),
@@ -224,15 +226,15 @@ export const addValidatedRecord = mutation({
   },
   handler: async (ctx, args) => {
     const workflow = await ctx.db
-      .query("etlWorkflows")
-      .withIndex("by_session", (q) => q.eq("sessionId", args.sessionId))
-      .first();
+      .query('etlWorkflows')
+      .withIndex('by_session', q => q.eq('sessionId', args.sessionId))
+      .first()
 
     if (!workflow) {
-      throw new Error(`Workflow not found: ${args.sessionId}`);
+      throw new Error(`Workflow not found: ${args.sessionId}`)
     }
 
-    const recordId = await ctx.db.insert("etlValidatedRecords", {
+    const recordId = await ctx.db.insert('etlValidatedRecords', {
       workflowId: workflow._id,
       extractedRecordId: args.extractedRecordId,
       title: args.title,
@@ -252,24 +254,24 @@ export const addValidatedRecord = mutation({
       phoneValidation: args.phoneValidation,
       urlValidation: args.urlValidation,
       validatedAt: Date.now(),
-      qaStatus: "pending",
-    });
+      qaStatus: 'pending',
+    })
 
     // Update workflow validatedCount
     await ctx.db.patch(workflow._id, {
       validatedCount: workflow.validatedCount + 1,
-    });
+    })
 
     // Mark extracted record as validated (only if it exists)
     if (args.extractedRecordId) {
       await ctx.db.patch(args.extractedRecordId, {
-        validationStatus: "passed",
-      });
+        validationStatus: 'passed',
+      })
     }
 
-    return { recordId };
+    return { recordId }
   },
-});
+})
 
 /**
  * Get all workflows (for dashboard)
@@ -280,23 +282,27 @@ export const listWorkflows = query({
     status: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    const limit = args.limit ?? 50;
+    const limit = args.limit ?? 50
 
-    let query = ctx.db.query("etlWorkflows");
+    let workflows
 
-    if (args.status) {
-      query = query.withIndex("by_status", (q) => q.eq("status", args.status));
+    if (args.status !== undefined) {
+      workflows = await ctx.db
+        .query('etlWorkflows')
+        .withIndex('by_status', q => q.eq('status', args.status!))
+        .order('desc')
+        .take(limit)
     } else {
-      query = query.withIndex("by_started");
+      workflows = await ctx.db
+        .query('etlWorkflows')
+        .withIndex('by_started')
+        .order('desc')
+        .take(limit)
     }
 
-    const workflows = await query
-      .order("desc")
-      .take(limit);
-
-    return workflows;
+    return workflows
   },
-});
+})
 
 /**
  * Get single workflow details
@@ -307,33 +313,33 @@ export const getWorkflow = query({
   },
   handler: async (ctx, args) => {
     const workflow = await ctx.db
-      .query("etlWorkflows")
-      .withIndex("by_session", (q) => q.eq("sessionId", args.sessionId))
-      .first();
+      .query('etlWorkflows')
+      .withIndex('by_session', q => q.eq('sessionId', args.sessionId))
+      .first()
 
     if (!workflow) {
-      return null;
+      return null
     }
 
     // Get sources
     const sources = await ctx.db
-      .query("etlSources")
-      .withIndex("by_workflow", (q) => q.eq("workflowId", workflow._id))
-      .collect();
+      .query('etlSources')
+      .withIndex('by_workflow', q => q.eq('workflowId', workflow._id))
+      .collect()
 
     // Get validated records ready for QA
     const validatedRecords = await ctx.db
-      .query("etlValidatedRecords")
-      .withIndex("by_workflow", (q) => q.eq("workflowId", workflow._id))
-      .collect();
+      .query('etlValidatedRecords')
+      .withIndex('by_workflow', q => q.eq('workflowId', workflow._id))
+      .collect()
 
     return {
       ...workflow,
       sources,
       validatedRecords,
-    };
+    }
   },
-});
+})
 
 /**
  * Get QA queue (validated records pending review)
@@ -343,88 +349,88 @@ export const getQAQueue = query({
     limit: v.optional(v.number()),
   },
   handler: async (ctx, args) => {
-    const limit = args.limit ?? 100;
+    const limit = args.limit ?? 100
 
     const records = await ctx.db
-      .query("etlValidatedRecords")
-      .withIndex("by_qa_status", (q) => q.eq("qaStatus", "pending"))
-      .order("desc")
-      .take(limit);
+      .query('etlValidatedRecords')
+      .withIndex('by_qa_status', q => q.eq('qaStatus', 'pending'))
+      .order('desc')
+      .take(limit)
 
-    return records;
+    return records
   },
-});
+})
 
 /**
  * Approve QA record (move to production)
  */
 export const approveQARecord = mutation({
   args: {
-    recordId: v.id("etlValidatedRecords"),
-    userId: v.id("users"),
+    recordId: v.id('etlValidatedRecords'),
+    userId: v.id('users'),
     feedback: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     await ctx.db.patch(args.recordId, {
-      qaStatus: "approved",
+      qaStatus: 'approved',
       qaReviewedAt: Date.now(),
       qaReviewedBy: args.userId,
       qaFeedback: args.feedback,
-    });
+    })
 
     // TODO: In Phase 2, insert into production resources table
     // await ctx.db.insert("resources", { ... });
 
-    return { success: true };
+    return { success: true }
   },
-});
+})
 
 /**
  * Reject QA record
  */
 export const rejectQARecord = mutation({
   args: {
-    recordId: v.id("etlValidatedRecords"),
-    userId: v.id("users"),
+    recordId: v.id('etlValidatedRecords'),
+    userId: v.id('users'),
     feedback: v.string(),
   },
   handler: async (ctx, args) => {
     await ctx.db.patch(args.recordId, {
-      qaStatus: "rejected",
+      qaStatus: 'rejected',
       qaReviewedAt: Date.now(),
       qaReviewedBy: args.userId,
       qaFeedback: args.feedback,
-    });
+    })
 
-    return { success: true };
+    return { success: true }
   },
-});
+})
 
 /**
  * Get ETL dashboard stats
  */
 export const getDashboardStats = query({
-  handler: async (ctx) => {
-    const workflows = await ctx.db.query("etlWorkflows").collect();
+  handler: async ctx => {
+    const workflows = await ctx.db.query('etlWorkflows').collect()
 
-    const running = workflows.filter(w => w.status === "running").length;
-    const completed = workflows.filter(w => w.status === "completed").length;
-    const failed = workflows.filter(w => w.status === "failed").length;
+    const running = workflows.filter(w => w.status === 'running').length
+    const completed = workflows.filter(w => w.status === 'completed').length
+    const failed = workflows.filter(w => w.status === 'failed').length
 
-    const totalSources = workflows.reduce((sum, w) => sum + w.sourcesCount, 0);
-    const totalExtracted = workflows.reduce((sum, w) => sum + w.extractedCount, 0);
-    const totalValidated = workflows.reduce((sum, w) => sum + w.validatedCount, 0);
-    const totalErrors = workflows.reduce((sum, w) => sum + w.errorCount, 0);
+    const totalSources = workflows.reduce((sum, w) => sum + w.sourcesCount, 0)
+    const totalExtracted = workflows.reduce((sum, w) => sum + w.extractedCount, 0)
+    const totalValidated = workflows.reduce((sum, w) => sum + w.validatedCount, 0)
+    const totalErrors = workflows.reduce((sum, w) => sum + w.errorCount, 0)
 
     const qaQueue = await ctx.db
-      .query("etlValidatedRecords")
-      .withIndex("by_qa_status", (q) => q.eq("qaStatus", "pending"))
-      .collect();
+      .query('etlValidatedRecords')
+      .withIndex('by_qa_status', q => q.eq('qaStatus', 'pending'))
+      .collect()
 
     const qaApproved = await ctx.db
-      .query("etlValidatedRecords")
-      .withIndex("by_qa_status", (q) => q.eq("qaStatus", "approved"))
-      .collect();
+      .query('etlValidatedRecords')
+      .withIndex('by_qa_status', q => q.eq('qaStatus', 'approved'))
+      .collect()
 
     return {
       workflows: {
@@ -443,9 +449,7 @@ export const getDashboardStats = query({
         pending: qaQueue.length,
         approved: qaApproved.length,
       },
-      lastRun: workflows.length > 0
-        ? Math.max(...workflows.map(w => w.startedAt))
-        : null,
-    };
+      lastRun: workflows.length > 0 ? Math.max(...workflows.map(w => w.startedAt)) : null,
+    }
   },
-});
+})

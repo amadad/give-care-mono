@@ -16,6 +16,7 @@
 
 import { internalAction } from './_generated/server';
 import { internal } from './_generated/api';
+import { logSafe } from './utils/logger';
 import type { Id } from './_generated/dataModel';
 
 /**
@@ -26,7 +27,7 @@ import type { Id } from './_generated/dataModel';
  */
 export const watchCaregiverEngagement = internalAction({
   handler: async (ctx) => {
-    console.log('[Watcher] Starting engagement monitoring...');
+    logSafe('Watcher', 'Starting engagement monitoring');
 
     const now = Date.now();
     const sixHoursAgo = now - 6 * 60 * 60 * 1000;
@@ -34,7 +35,7 @@ export const watchCaregiverEngagement = internalAction({
 
     // Get all active users
     const users = await ctx.runQuery(internal.watchers._getActiveUsers);
-    console.log(`[Watcher] Monitoring ${users.length} active users`);
+    logSafe('Watcher', 'Monitoring active users', { count: users.length });
 
     let suddenDropCount = 0;
     let crisisBurstCount = 0;
@@ -62,7 +63,7 @@ export const watchCaregiverEngagement = internalAction({
               createdAt: now,
             });
             suddenDropCount++;
-            console.log(`[Watcher] Sudden drop detected for user ${user._id}`);
+            logSafe('Watcher', 'Sudden drop detected', { userId: user._id });
           }
         }
 
@@ -86,15 +87,15 @@ export const watchCaregiverEngagement = internalAction({
               createdAt: now,
             });
             crisisBurstCount++;
-            console.log(`[Watcher] Crisis burst detected for user ${user._id} (${crisisKeywordCount} keywords)`);
+            logSafe('Watcher', 'Crisis burst detected', { userId: user._id, count: crisisKeywordCount });
           }
         }
       } catch (error) {
-        console.error(`[Watcher] Error processing user ${user._id}:`, error);
+        logSafe('Watcher', 'Error processing user', { userId: user._id, error: String(error) });
       }
     }
 
-    console.log(`[Watcher] Engagement monitoring complete: ${suddenDropCount} sudden drops, ${crisisBurstCount} crisis bursts`);
+    logSafe('Watcher', 'Engagement monitoring complete', { suddenDrops: suddenDropCount, crisisBursts: crisisBurstCount });
     return {
       suddenDrops: suddenDropCount,
       crisisBursts: crisisBurstCount,
@@ -110,13 +111,13 @@ export const watchCaregiverEngagement = internalAction({
  */
 export const watchWellnessTrends = internalAction({
   handler: async (ctx) => {
-    console.log('[Watcher] Starting wellness trend monitoring...');
+    logSafe('Watcher', 'Starting wellness trend monitoring');
 
     const now = Date.now();
 
     // Get all active users
     const users = await ctx.runQuery(internal.watchers._getActiveUsers);
-    console.log(`[Watcher] Monitoring wellness trends for ${users.length} active users`);
+    logSafe('Watcher', 'Monitoring wellness trends', { count: users.length });
 
     let wellnessDeclineCount = 0;
 
@@ -156,7 +157,7 @@ export const watchWellnessTrends = internalAction({
 
             // Send proactive SMS (only if user has phone number)
             if (!user.phoneNumber) {
-              console.error(`[Watcher] Cannot send SMS to user ${user._id}: missing phone number`);
+              logSafe('Watcher', 'Cannot send SMS - missing phone', { userId: user._id });
               wellnessDeclineCount++;
               continue;
             }
@@ -171,15 +172,15 @@ export const watchWellnessTrends = internalAction({
             });
 
             wellnessDeclineCount++;
-            console.log(`[Watcher] Wellness decline detected for user ${user._id}, SMS sent`);
+            logSafe('Watcher', 'Wellness decline detected, SMS sent', { userId: user._id });
           }
         }
       } catch (error) {
-        console.error(`[Watcher] Error processing wellness trend for user ${user._id}:`, error);
+        logSafe('Watcher', 'Error processing wellness trend', { userId: user._id, error: String(error) });
       }
     }
 
-    console.log(`[Watcher] Wellness trend monitoring complete: ${wellnessDeclineCount} declines detected`);
+    logSafe('Watcher', 'Wellness trend monitoring complete', { wellnessDeclines: wellnessDeclineCount });
     return {
       wellnessDeclines: wellnessDeclineCount,
       usersMonitored: users.length,

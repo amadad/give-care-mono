@@ -11,10 +11,8 @@ import { DurableObject } from "cloudflare:workers";
 import { createLogger } from "../utils/logger";
 import { Agent, run, type RunState } from "@openai/agents";
 import { ETLConvexClient } from "../utils/convex";
-import { executePipeline } from "./pipeline";
-import { discoveryTools } from "./tools/discoveryTools";
+import { createDiscoveryTools } from "./tools/discoveryTools";
 import { extractionTools } from "./tools/extractionTools";
-import { validationTools } from "./tools/validationTools";
 import { CacheLayer, CacheTTL } from "../utils/cache";
 import { CircuitBreaker, executeWithRetry } from "../utils/errorRecovery";
 import { executeInParallel } from "../utils/parallelExecution";
@@ -42,10 +40,9 @@ categorizing, and validating caregiver support resources.
 
 You can hand off to these specialist agents:
 
-1. **Discovery Agent** - Find authoritative sources of resources
-2. **Extraction Agent** - Scrape structured data from web pages
-3. **Categorizer Agent** - Map service types to pressure zones
-4. **Validator Agent** - Verify contact info and quality
+1. **Discovery Agent** - Find authoritative sources of resources (uses Exa API)
+2. **Extraction Agent** - Scrape structured data, categorize services, and validate resources
+   - Has tools for: fetchPage, extractStructured, categorizeServices, validatePhone, validateURL, checkQuality
 
 ## Your Responsibilities
 
@@ -59,9 +56,14 @@ You can hand off to these specialist agents:
 1. Receive task (e.g., "discover caregiver support resources in NY")
 2. Hand off to Discovery Agent → Get 10-20 authoritative sources
 3. Hand off to Extraction Agent for each source (parallel)
-4. Hand off to Categorizer Agent to map to 11 service types + 5 pressure zones
-5. Hand off to Validator Agent for final quality check (phone/URL validation)
-6. Return summary of validated resources ready for QA review
+   - Extraction Agent will fetch, extract, categorize, validate, and score each resource
+4. Return summary of validated resources ready for QA review
+
+## Important Notes
+
+- Extraction Agent handles all post-discovery work (extraction, categorization, validation)
+- Categorization uses deterministic SERVICE_TO_ZONES mapping (no AI needed)
+- Validation uses utilities (normalizePhoneE164, HEAD requests) (no AI needed)
 
 When you complete a workflow, return a structured summary with:
 - Total sources discovered
@@ -88,8 +90,6 @@ export class OrchestratorAgent extends DurableObject<Env> {
   private agent: Agent | null = null;
   private discoveryAgent: Agent | null = null;
   private extractionAgent: Agent | null = null;
-  private categorizerAgent: Agent | null = null;
-  private validatorAgent: Agent | null = null;
   private cache: CacheLayer | null = null;
   private circuitBreaker: CircuitBreaker;
   private wsConnections: Set<WebSocket> = new Set();
@@ -110,6 +110,9 @@ export class OrchestratorAgent extends DurableObject<Env> {
     if (this.agent) return; // Already initialized
 
     // Initialize specialist agents with tools and modelSettings
+    // Create discovery tools with env bindings
+    const discoveryTools = createDiscoveryTools(this.env.EXA_API_KEY);
+
     this.discoveryAgent = new Agent({
       name: "Discovery Agent",
       model: "gpt-5-mini",
@@ -124,29 +127,23 @@ export class OrchestratorAgent extends DurableObject<Env> {
     this.extractionAgent = new Agent({
       name: "Extraction Agent",
       model: "gpt-5-nano",
-      instructions: "Extract structured resource data from web pages. Use fetchPage to get content, extractStructured to parse data, and parsePagination if needed.",
+      instructions: `Extract structured resource data from web pages, categorize service types, and validate data.
+
+You have these tools:
+- fetchPage: Get HTML content
+- extractStructured: Parse HTML to structured data (LLM-powered)
+- parsePagination: Handle multi-page resources
+- categorizeServices: Map service types to pressure zones (deterministic lookup)
+- validatePhone: Normalize phone to E.164 format (utility function)
+- validateURL: Check URL format and accessibility (HEAD request)
+- checkQuality: Calculate quality score 0-100 (arithmetic)
+
+After extracting data, ALWAYS:
+1. Categorize service types using categorizeServices
+2. Validate phone numbers using validatePhone
+3. Validate website using validateURL
+4. Calculate quality score using checkQuality`,
       tools: extractionTools,
-      modelSettings: {
-        reasoning: { effort: "minimal" },
-        text: { verbosity: "low" },
-      },
-    });
-
-    this.categorizerAgent = new Agent({
-      name: "Categorizer Agent",
-      model: "gpt-5-nano",
-      instructions: "Map service types to pressure zones. Use SERVICE_TO_ZONES mapping from taxonomy.",
-      modelSettings: {
-        reasoning: { effort: "minimal" },
-        text: { verbosity: "low" },
-      },
-    });
-
-    this.validatorAgent = new Agent({
-      name: "Validator Agent",
-      model: "gpt-5-nano",
-      instructions: "Validate phone numbers, URLs, and calculate quality scores. Use validatePhone for numbers, validateURL for links, and checkQuality for overall score.",
-      tools: validationTools,
       modelSettings: {
         reasoning: { effort: "minimal" },
         text: { verbosity: "low" },
@@ -165,12 +162,10 @@ export class OrchestratorAgent extends DurableObject<Env> {
       handoffs: [
         this.discoveryAgent,
         this.extractionAgent,
-        this.categorizerAgent,
-        this.validatorAgent,
       ],
     });
 
-    logger.info("Agents initialized with handoff configuration");
+    logger.info("Agents initialized (3-agent architecture): Orchestrator, Discovery, Extraction");
   }
 
   async fetch(request: Request): Promise<Response> {

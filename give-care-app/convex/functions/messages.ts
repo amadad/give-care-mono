@@ -2,8 +2,8 @@
  * Message-related queries and mutations
  */
 
-import { v } from "convex/values";
-import { internalQuery } from "../_generated/server";
+import { v } from 'convex/values'
+import { internalQuery } from '../_generated/server'
 
 /**
  * Get the last agent message for a user
@@ -11,17 +11,17 @@ import { internalQuery } from "../_generated/server";
  */
 export const getLastAgentMessage = internalQuery({
   args: {
-    userId: v.id("users"),
+    userId: v.id('users'),
   },
   handler: async (ctx, args) => {
     const message = await ctx.db
-      .query("conversations")
-      .withIndex("by_user", (q) => q.eq("userId", args.userId))
-      .order("desc")
-      .filter((q) => q.eq(q.field("role"), "assistant"))
-      .first();
+      .query('conversations')
+      .withIndex('by_user', q => q.eq('userId', args.userId))
+      .order('desc')
+      .filter(q => q.eq(q.field('role'), 'assistant'))
+      .first()
 
-    if (!message) return null;
+    if (!message) return null
 
     // Return message with fields needed for feedback tracking
     return {
@@ -30,6 +30,6 @@ export const getLastAgentMessage = internalQuery({
       timestamp: message._creationTime, // Use built-in creation time
       toolName: message.agentName, // Agent name (main/crisis/assessment)
       userMessage: undefined, // Not stored in conversations - would need to query previous message
-    };
+    }
   },
-});
+})

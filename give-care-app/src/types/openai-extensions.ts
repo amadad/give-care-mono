@@ -19,11 +19,11 @@
  * Reference: https://platform.openai.com/docs/guides/responses
  */
 export interface ExtendedModelSettings {
-  reasoning?: { effort: "minimal" | "low" | "medium" | "high" };
-  text?: { verbosity: "low" | "medium" | "high" };
-  maxTokens?: number;
-  store?: boolean;
-  service_tier?: "priority" | "auto" | "default" | "flex";
+  reasoning?: { effort: 'minimal' | 'low' | 'medium' | 'high' }
+  text?: { verbosity: 'low' | 'medium' | 'high' }
+  maxTokens?: number
+  store?: boolean
+  service_tier?: 'priority' | 'auto' | 'default' | 'flex'
 }
 
 /**
@@ -33,20 +33,20 @@ export interface ExtendedModelSettings {
  * but this isn't exposed in the public types yet.
  */
 export interface RunResultWithContext<T> {
-  finalOutput: string | object;
-  state?: { context: T };
-  agentName?: string;
+  finalOutput: string | object
+  state?: { context: T }
+  agentName?: string
   toolCalls?: Array<{
-    name: string;
-    arguments: any;
-    result?: any;
-  }>;
+    name: string
+    arguments: any
+    result?: any
+  }>
   usage?: {
-    inputTokens: number;
-    outputTokens: number;
-  };
-  sessionId?: string;
-  serviceTier?: "priority" | "auto" | "default" | "flex";
+    inputTokens: number
+    outputTokens: number
+  }
+  sessionId?: string
+  serviceTier?: 'priority' | 'auto' | 'default' | 'flex'
 }
 
 /**
@@ -60,16 +60,14 @@ export interface RunResultWithContext<T> {
  * }
  * ```
  */
-export function hasContextState<T>(
-  result: any
-): result is RunResultWithContext<T> {
+export function hasContextState<T>(result: any): result is RunResultWithContext<T> {
   return Boolean(
     result &&
-    typeof result === 'object' &&
-    result.state &&
-    typeof result.state === 'object' &&
-    result.state.context
-  );
+      typeof result === 'object' &&
+      result.state &&
+      typeof result.state === 'object' &&
+      result.state.context
+  )
 }
 
 /**
@@ -78,9 +76,9 @@ export function hasContextState<T>(
  * Extracted from result.usage (exists at runtime but not in types)
  */
 export interface TokenUsage {
-  input: number;
-  output: number;
-  total: number;
+  input: number
+  output: number
+  total: number
 }
 
 /**
@@ -96,17 +94,17 @@ export interface TokenUsage {
  * ```
  */
 export function extractTokenUsage(result: any): TokenUsage | undefined {
-  const usage = (result as any)?.usage;
-  if (!usage) return undefined;
+  const usage = (result as any)?.usage
+  if (!usage) return undefined
 
-  const input = usage.inputTokens || 0;
-  const output = usage.outputTokens || 0;
+  const input = usage.inputTokens || 0
+  const output = usage.outputTokens || 0
 
   return {
     input,
     output,
     total: input + output,
-  };
+  }
 }
 
 /**
@@ -122,19 +120,22 @@ export function extractTokenUsage(result: any): TokenUsage | undefined {
  * console.log(`Request used ${tier} service tier`);
  * ```
  */
-export function extractServiceTier(result: any): "priority" | "auto" | "default" | "flex" | undefined {
+export function extractServiceTier(
+  result: any
+): 'priority' | 'auto' | 'default' | 'flex' | undefined {
   // Check for serviceTier in result (may be in different locations depending on SDK version)
-  const tier = (result as any)?.serviceTier
-    || (result as any)?.service_tier
-    || (result as any)?.usage?.serviceTier
-    || (result as any)?.usage?.service_tier;
+  const tier =
+    (result as any)?.serviceTier ||
+    (result as any)?.service_tier ||
+    (result as any)?.usage?.serviceTier ||
+    (result as any)?.usage?.service_tier
 
-  if (!tier) return undefined;
+  if (!tier) return undefined
 
   // Validate it's a known tier value
-  if (tier === "priority" || tier === "auto" || tier === "default" || tier === "flex") {
-    return tier;
+  if (tier === 'priority' || tier === 'auto' || tier === 'default' || tier === 'flex') {
+    return tier
   }
 
-  return undefined;
+  return undefined
 }

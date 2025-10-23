@@ -10,6 +10,8 @@ import { tool } from '@openai/agents';
 import { z } from 'zod';
 import { createLogger } from '../../utils/logger';
 import type { IntermediateRecord } from '../../shared/types';
+import { mapServicesToZones, SERVICE_TYPES } from '../../shared/taxonomy';
+import { normalizePhoneE164 } from '../../utils/phoneValidator';
 
 const logger = createLogger({ agentName: 'extraction-tools' });
 
@@ -23,48 +25,35 @@ export const fetchPage = tool({
     url: z.string().describe('URL to fetch'),
     useJavaScript: z.boolean().default(false).describe('Use Browser Rendering for JS-heavy pages'),
   }),
-  execute: async ({ url, useJavaScript }, { ctx }) => {
+  execute: async ({ url, useJavaScript }) => {
     try {
       logger.info('Fetching page', { url, useJavaScript });
 
       if (useJavaScript) {
-        // Use Cloudflare Browser Rendering API for JS-heavy pages
-        const browser = (ctx as any).env?.BROWSER;
-        if (!browser) {
-          throw new Error('Browser binding not configured');
-        }
-
-        const response = await browser.fetch(url);
-        const html = await response.text();
-
-        return {
-          url,
-          html,
-          length: html.length,
-          method: 'browser-rendering',
-        };
-
-      } else {
-        // Simple fetch for static pages
-        const response = await fetch(url, {
-          headers: {
-            'User-Agent': 'GiveCare-Bot/1.0 (+https://givecareapp.com)',
-          },
-        });
-
-        if (!response.ok) {
-          throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-        }
-
-        const html = await response.text();
-
-        return {
-          url,
-          html,
-          length: html.length,
-          method: 'fetch',
-        };
+        // TODO: Use Cloudflare Browser Rendering API for JS-heavy pages
+        // This requires Cloudflare Workers environment bindings
+        throw new Error('Browser rendering not yet implemented - requires Cloudflare Workers runtime');
       }
+
+      // Use standard fetch for static pages
+      const response = await fetch(url, {
+        headers: {
+          'User-Agent': 'GiveCare-Bot/1.0 (+https://givecareapp.com)',
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+
+      const html = await response.text();
+
+      return {
+        url,
+        html,
+        length: html.length,
+        method: 'fetch',
+      };
 
     } catch (error) {
       logger.error('Fetch failed', { url, error });
@@ -173,7 +162,7 @@ export const parsePagination = tool({
       }
 
       // Deduplicate
-      const uniqueLinks = [...new Set(nextLinks)];
+      const uniqueLinks = Array.from(new Set(nextLinks));
 
       logger.info('Pagination parsed', { linksFound: uniqueLinks.length });
 
@@ -206,7 +195,7 @@ function extractPhones(html: string): string[] {
   // Extract phone numbers using regex
   const phonePattern = /\b(\d{3}[-.]?\d{3}[-.]?\d{4}|\(\d{3}\)\s*\d{3}[-.]?\d{4})\b/g;
   const matches = html.match(phonePattern);
-  return matches ? [...new Set(matches)] : [];
+  return matches ? Array.from(new Set(matches)) : [];
 }
 
 function extractServiceTypes(html: string): string[] {
@@ -242,9 +231,216 @@ function detectCoverage(html: string): 'national' | 'state' | 'county' | 'zip' |
   return 'radius';
 }
 
-// Export all extraction tools
+/**
+ * Categorize service types to pressure zones
+ */
+export const categorizeServices = tool({
+  name: 'categorizeServices',
+  description: 'Map service types to pressure zones using GiveCare taxonomy. Takes service types and returns corresponding pressure zones.',
+  parameters: z.object({
+    serviceTypes: z.array(z.enum(SERVICE_TYPES as unknown as [string, ...string[]])).describe('Array of service types to categorize'),
+  }),
+  execute: async ({ serviceTypes }) => {
+    try {
+      logger.info('Categorizing services', { serviceTypes });
+
+      const zones = mapServicesToZones(serviceTypes);
+
+      logger.info('Categorization complete', { serviceTypes, zones });
+
+      return {
+        success: true,
+        serviceTypes,
+        zones,
+        mappingCount: zones.length,
+      };
+
+    } catch (error) {
+      logger.error('Categorization failed', { serviceTypes, error });
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error',
+      };
+    }
+  },
+});
+
+/**
+ * Validate and normalize phone number to E.164 format
+ */
+export const validatePhone = tool({
+  name: 'validatePhone',
+  description: 'Validate a phone number and normalize to E.164 format (+1XXXXXXXXXX for US).',
+  parameters: z.object({
+    phone: z.string().describe('Phone number to validate'),
+  }),
+  execute: async ({ phone }) => {
+    try {
+      logger.info('Validating phone', { phone });
+
+      const normalized = normalizePhoneE164(phone);
+
+      if (!normalized) {
+        return {
+          valid: false,
+          original: phone,
+          error: 'Invalid phone number format',
+        };
+      }
+
+      return {
+        valid: true,
+        original: phone,
+        normalized,
+        format: 'E.164',
+      };
+
+    } catch (error) {
+      logger.error('Phone validation failed', { phone, error });
+      return {
+        valid: false,
+        original: phone,
+        error: error instanceof Error ? error.message : 'Unknown error',
+      };
+    }
+  },
+});
+
+/**
+ * Validate URL accessibility and format
+ */
+export const validateURL = tool({
+  name: 'validateURL',
+  description: 'Validate a URL by checking format and accessibility (HEAD request).',
+  parameters: z.object({
+    url: z.string().describe('URL to validate'),
+    checkAccessibility: z.boolean().default(true).describe('Check if URL is accessible'),
+  }),
+  execute: async ({ url, checkAccessibility }) => {
+    try {
+      logger.info('Validating URL', { url });
+
+      // Check URL format
+      let parsedUrl;
+      try {
+        parsedUrl = new URL(url);
+      } catch {
+        return {
+          valid: false,
+          url,
+          error: 'Invalid URL format',
+        };
+      }
+
+      // Check if HTTPS
+      const isSecure = parsedUrl.protocol === 'https:';
+
+      // Check accessibility if requested
+      let accessible = null;
+      let statusCode = null;
+
+      if (checkAccessibility) {
+        try {
+          const response = await fetch(url, {
+            method: 'HEAD',
+            headers: {
+              'User-Agent': 'GiveCare-Bot/1.0 (+https://givecareapp.com)',
+            },
+          });
+
+          accessible = response.ok;
+          statusCode = response.status;
+        } catch {
+          accessible = false;
+        }
+      }
+
+      return {
+        valid: true,
+        url,
+        isSecure,
+        accessible,
+        statusCode,
+      };
+
+    } catch (error) {
+      logger.error('URL validation failed', { url, error });
+      return {
+        valid: false,
+        url,
+        error: error instanceof Error ? error.message : 'Unknown error',
+      };
+    }
+  },
+});
+
+/**
+ * Calculate quality score for a resource
+ */
+export const checkQuality = tool({
+  name: 'checkQuality',
+  description: 'Calculate quality score (0-100) based on completeness, validation, and credibility.',
+  parameters: z.object({
+    hasTitle: z.boolean().describe('Has title'),
+    hasProvider: z.boolean().describe('Has provider name'),
+    hasPhone: z.boolean().describe('Has valid phone'),
+    hasWebsite: z.boolean().describe('Has valid website'),
+    hasDescription: z.boolean().describe('Has description'),
+    websiteAccessible: z.boolean().optional().nullable().describe('Website is accessible'),
+    phoneValid: z.boolean().optional().nullable().describe('Phone is valid E.164'),
+    isGovSource: z.boolean().optional().nullable().describe('Source is .gov domain'),
+  }),
+  execute: async ({ hasTitle, hasProvider, hasPhone, hasWebsite, hasDescription, websiteAccessible, phoneValid, isGovSource }) => {
+    try {
+      logger.info('Calculating quality score');
+
+      let score = 0;
+
+      // Completeness (50 points)
+      if (hasTitle) score += 10;
+      if (hasProvider) score += 10;
+      if (hasPhone) score += 10;
+      if (hasWebsite) score += 10;
+      if (hasDescription) score += 10;
+
+      // Validation (30 points)
+      if (websiteAccessible) score += 15;
+      if (phoneValid) score += 15;
+
+      // Credibility (20 points)
+      if (isGovSource) score += 20;
+
+      // Clamp to 0-100
+      score = Math.max(0, Math.min(100, score));
+
+      logger.info('Quality score calculated', { score });
+
+      return {
+        score,
+        breakdown: {
+          completeness: (hasTitle ? 10 : 0) + (hasProvider ? 10 : 0) + (hasPhone ? 10 : 0) + (hasWebsite ? 10 : 0) + (hasDescription ? 10 : 0),
+          validation: (websiteAccessible ? 15 : 0) + (phoneValid ? 15 : 0),
+          credibility: isGovSource ? 20 : 0,
+        },
+      };
+
+    } catch (error) {
+      logger.error('Quality check failed', { error });
+      return {
+        score: 0,
+        error: error instanceof Error ? error.message : 'Unknown error',
+      };
+    }
+  },
+});
+
+// Export all extraction tools (including categorization and validation)
 export const extractionTools = [
   fetchPage,
   extractStructured,
   parsePagination,
+  categorizeServices,
+  validatePhone,
+  validateURL,
+  checkQuality,
 ];

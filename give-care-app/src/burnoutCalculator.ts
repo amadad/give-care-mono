@@ -5,36 +5,36 @@
  */
 
 export interface BurnoutScore {
-  overall_score: number;
-  confidence: number;
-  band: string;
-  ema_contribution?: number;
-  cwbs_contribution?: number;
-  reach_contribution?: number;
-  sdoh_contribution?: number;
-  pressure_zones: string[];
-  pressure_zone_scores: Record<string, number>;
-  previous_score?: number;
-  score_delta?: number;
-  trend_7day: number[];
-  trend_30day: number[];
+  overall_score: number
+  confidence: number
+  band: string
+  ema_contribution?: number
+  cwbs_contribution?: number
+  reach_contribution?: number
+  sdoh_contribution?: number
+  pressure_zones: string[]
+  pressure_zone_scores: Record<string, number>
+  previous_score?: number
+  score_delta?: number
+  trend_7day: number[]
+  trend_30day: number[]
 }
 
 export interface PreviousScore {
-  overall_score: number;
-  calculated_at: Date;
+  overall_score: number
+  calculated_at: Date
 }
 
 // Weights for composite score (PRD §3.2)
 const ASSESSMENT_WEIGHTS = {
-  ema: 0.40,      // 40% - daily pulse
-  cwbs: 0.30,     // 30% - weekly burnout
-  reach_ii: 0.20, // 20% - stress/coping
-  sdoh: 0.10      // 10% - needs screening
-};
+  ema: 0.4, // 40% - daily pulse
+  cwbs: 0.3, // 30% - weekly burnout
+  reach_ii: 0.2, // 20% - stress/coping
+  sdoh: 0.1, // 10% - needs screening
+}
 
 // Temporal decay (PRD §3.2)
-const DECAY_DAYS = 10;  // Exponential decay over 10 days
+const DECAY_DAYS = 10 // Exponential decay over 10 days
 
 /**
  * Calculate composite burnout score from assessments.
@@ -48,72 +48,74 @@ export function calculateCompositeScore(
   previousScores?: PreviousScore[]
 ): BurnoutScore {
   // Calculate weighted contribution from each assessment
-  const contributions: Record<string, number> = {};
-  let totalWeight = 0;
-  let weightedSum = 0;
+  const contributions: Record<string, number> = {}
+  let totalWeight = 0
+  let weightedSum = 0
 
   for (const [assessmentType, weight] of Object.entries(ASSESSMENT_WEIGHTS)) {
     if (assessmentType in assessmentScores) {
-      const scoreData = assessmentScores[assessmentType];
-      const score = scoreData.overall_score;
+      const scoreData = assessmentScores[assessmentType]
+      const score = scoreData.overall_score
 
       // CRITICAL FIX: Skip if score is null or undefined (insufficient data)
       // This handles the case where calculateAssessmentScore returns null
       // when all questions are skipped (division by zero fix)
       if (score === null || score === undefined) {
-        continue;
+        continue
       }
 
       // Apply temporal decay
-      let effectiveWeight = weight;
+      let effectiveWeight = weight
       if (scoreData.timestamp) {
-        const timestamp = new Date(scoreData.timestamp);
-        const ageDays = Math.floor((Date.now() - timestamp.getTime()) / (1000 * 60 * 60 * 24));
-        const decayFactor = Math.exp(-ageDays / DECAY_DAYS);
-        effectiveWeight = weight * decayFactor;
+        const timestamp = new Date(scoreData.timestamp)
+        const ageDays = Math.floor((Date.now() - timestamp.getTime()) / (1000 * 60 * 60 * 24))
+        const decayFactor = Math.exp(-ageDays / DECAY_DAYS)
+        effectiveWeight = weight * decayFactor
       }
 
-      const contribution = score * effectiveWeight;
-      contributions[assessmentType] = contribution;
+      const contribution = score * effectiveWeight
+      contributions[assessmentType] = contribution
 
-      weightedSum += contribution;
-      totalWeight += effectiveWeight;
+      weightedSum += contribution
+      totalWeight += effectiveWeight
     }
   }
 
   // Calculate overall score
-  const overallScore = totalWeight > 0 ? weightedSum / totalWeight : 50.0;
+  const overallScore = totalWeight > 0 ? weightedSum / totalWeight : 50.0
 
   // Calculate confidence based on data completeness
-  const totalPossibleWeight = Object.values(ASSESSMENT_WEIGHTS).reduce((sum, w) => sum + w, 0);
-  const confidence = totalWeight / totalPossibleWeight;
+  const totalPossibleWeight = Object.values(ASSESSMENT_WEIGHTS).reduce((sum, w) => sum + w, 0)
+  const confidence = totalWeight / totalPossibleWeight
 
   // Determine band
-  const band = calculateBand(overallScore);
+  const band = calculateBand(overallScore)
 
   // Identify pressure zones from subscores
-  const [pressureZones, zoneScores] = identifyPressureZones(assessmentScores);
+  const [pressureZones, zoneScores] = identifyPressureZones(assessmentScores)
 
   // Calculate trend
-  let previousScore: number | undefined;
-  let scoreDelta: number | undefined;
-  const trend7day: number[] = [];
-  const trend30day: number[] = [];
+  let previousScore: number | undefined
+  let scoreDelta: number | undefined
+  const trend7day: number[] = []
+  const trend30day: number[] = []
 
   if (previousScores && previousScores.length > 0) {
     // Get most recent score
-    previousScore = previousScores[0].overall_score;
-    scoreDelta = overallScore - previousScore;
+    previousScore = previousScores[0].overall_score
+    scoreDelta = overallScore - previousScore
 
     // Extract trends
-    const now = new Date();
+    const now = new Date()
     for (const prev of previousScores) {
-      const ageDays = Math.floor((now.getTime() - prev.calculated_at.getTime()) / (1000 * 60 * 60 * 24));
+      const ageDays = Math.floor(
+        (now.getTime() - prev.calculated_at.getTime()) / (1000 * 60 * 60 * 24)
+      )
       if (ageDays <= 7) {
-        trend7day.push(prev.overall_score);
+        trend7day.push(prev.overall_score)
       }
       if (ageDays <= 30) {
-        trend30day.push(prev.overall_score);
+        trend30day.push(prev.overall_score)
       }
     }
   }
@@ -131,8 +133,8 @@ export function calculateCompositeScore(
     previous_score: previousScore,
     score_delta: scoreDelta !== undefined ? Math.round(scoreDelta * 10) / 10 : undefined,
     trend_7day: trend7day,
-    trend_30day: trend30day
-  };
+    trend_30day: trend30day,
+  }
 }
 
 /**
@@ -146,11 +148,11 @@ export function calculateCompositeScore(
  */
 function calculateBand(score: number): string {
   // Lower scores indicate MORE burnout/distress
-  if (score < 20) return 'crisis';      // 0-19: Severe burnout, immediate support needed
-  if (score < 40) return 'high';        // 20-39: High burnout, significant distress
-  if (score < 60) return 'moderate';    // 40-59: Moderate burnout, common for caregivers
-  if (score < 80) return 'mild';        // 60-79: Low burnout, managing well
-  return 'thriving';                    // 80-100: Minimal burnout, healthy state
+  if (score < 20) return 'crisis' // 0-19: Severe burnout, immediate support needed
+  if (score < 40) return 'high' // 20-39: High burnout, significant distress
+  if (score < 60) return 'moderate' // 40-59: Moderate burnout, common for caregivers
+  if (score < 80) return 'mild' // 60-79: Low burnout, managing well
+  return 'thriving' // 80-100: Minimal burnout, healthy state
 }
 
 /**
@@ -163,7 +165,7 @@ function calculateBand(score: number): string {
 function identifyPressureZones(
   assessmentScores: Record<string, any>
 ): [string[], Record<string, number>] {
-  const zoneScores: Record<string, number[]> = {};
+  const zoneScores: Record<string, number[]> = {}
 
   // Map subscales to pressure zones
   // IMPORTANT: Zone names must match what tests expect and findInterventions uses
@@ -206,41 +208,38 @@ function identifyPressureZones(
     financial_strain: 'financial_concerns',
     social_isolation: 'social_support',
     social_needs: 'social_support',
-    safety: 'social_support'
-  };
+    safety: 'social_support',
+  }
 
   // Aggregate subscale scores into zones
   for (const [assessmentType, scoreData] of Object.entries(assessmentScores)) {
-    const subscores = scoreData.subscores || {};
+    const subscores = scoreData.subscores || {}
     for (const [subscale, score] of Object.entries(subscores)) {
-      const zone = subscaleToZone[subscale];
+      const zone = subscaleToZone[subscale]
       if (zone && typeof score === 'number') {
         if (!zoneScores[zone]) {
-          zoneScores[zone] = [];
+          zoneScores[zone] = []
         }
         // Invert score (lower assessment score = higher pressure)
-        const pressure = 100 - score;
-        zoneScores[zone].push(pressure);
+        const pressure = 100 - score
+        zoneScores[zone].push(pressure)
       }
     }
   }
 
   // Calculate average for each zone
-  const zoneAverages: Record<string, number> = {};
+  const zoneAverages: Record<string, number> = {}
   for (const [zone, scores] of Object.entries(zoneScores)) {
-    zoneAverages[zone] = scores.reduce((sum, s) => sum + s, 0) / scores.length;
+    zoneAverages[zone] = scores.reduce((sum, s) => sum + s, 0) / scores.length
   }
 
   // Sort by pressure level (highest first)
-  const sortedZones = Object.entries(zoneAverages)
-    .sort((a, b) => b[1] - a[1]);
+  const sortedZones = Object.entries(zoneAverages).sort((a, b) => b[1] - a[1])
 
   // Return top zones (those above threshold of 50)
-  const highPressureZones = sortedZones
-    .filter(([_, score]) => score > 50)
-    .map(([zone, _]) => zone);
+  const highPressureZones = sortedZones.filter(([_, score]) => score > 50).map(([zone, _]) => zone)
 
-  return [highPressureZones, zoneAverages];
+  return [highPressureZones, zoneAverages]
 }
 
 /**
@@ -265,18 +264,18 @@ export function formatZoneName(zone: string): string {
     social_isolation: 'Social Support',
     caregiving_tasks: 'Time Management',
     self_care: 'Self-Care',
-    social_needs: 'Social Support'
-  };
+    social_needs: 'Social Support',
+  }
 
   if (zoneLabels[zone]) {
-    return zoneLabels[zone];
+    return zoneLabels[zone]
   }
 
   // Fallback: Title Case with spaces (e.g., "unknown_zone" → "Unknown Zone")
   return zone
     .split('_')
     .map(word => word.charAt(0).toUpperCase() + word.slice(1))
-    .join(' ');
+    .join(' ')
 }
 
 /**
@@ -301,8 +300,8 @@ export function getZoneDescription(zone: string): string {
     social_isolation: 'Feeling Isolated',
     caregiving_tasks: 'Caregiving Demands',
     self_care: 'Self-Care Neglect',
-    social_needs: 'Social Support Needs'
-  };
+    social_needs: 'Social Support Needs',
+  }
 
-  return descriptions[zone] || zone.replace(/_/g, ' ');
+  return descriptions[zone] || zone.replace(/_/g, ' ')
 }

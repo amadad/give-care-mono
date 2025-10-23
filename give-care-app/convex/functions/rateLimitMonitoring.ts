@@ -4,9 +4,9 @@
  * Provides visibility into rate limit usage and admin controls
  */
 
-import { internalQuery, internalMutation } from '../_generated/server';
-import { v } from 'convex/values';
-import { rateLimiter } from '../rateLimits.config';
+import { internalQuery, internalMutation } from '../_generated/server'
+import { v } from 'convex/values'
+import { rateLimiter } from '../rateLimits.config'
 
 /**
  * Get current rate limit usage statistics
@@ -26,7 +26,7 @@ import { rateLimiter } from '../rateLimits.config';
  * ```
  */
 export const getRateLimitStats = internalQuery({
-  handler: async (ctx) => {
+  handler: async ctx => {
     // Note: This is a placeholder - actual implementation depends on
     // @convex-dev/rate-limiter API for usage queries
     // Check the package docs for the correct method
@@ -42,9 +42,9 @@ export const getRateLimitStats = internalQuery({
       //   openaiCalls: await rateLimiter.getUsage(ctx, 'openai'),
       //   spamProtection: await rateLimiter.getUsage(ctx, 'spam'),
       // },
-    };
+    }
   },
-});
+})
 
 /**
  * Reset all rate limits for a specific user (admin emergency tool)
@@ -67,7 +67,7 @@ export const resetUserRateLimit = internalMutation({
     // @convex-dev/rate-limiter API for reset functionality
     // Check the package docs for the correct method
 
-    console.log(`[Admin] Resetting rate limits for ${args.phoneNumber}`);
+    console.log(`[Admin] Resetting rate limits for ${args.phoneNumber}`)
 
     // TODO: Implement using rateLimiter.reset() or similar
     // await rateLimiter.reset(ctx, 'sms-user', args.phoneNumber);
@@ -77,11 +77,12 @@ export const resetUserRateLimit = internalMutation({
     return {
       success: true,
       phoneNumber: args.phoneNumber,
-      message: 'Rate limits reset (placeholder - needs @convex-dev/rate-limiter API implementation)',
+      message:
+        'Rate limits reset (placeholder - needs @convex-dev/rate-limiter API implementation)',
       timestamp: Date.now(),
-    };
+    }
   },
-});
+})
 
 /**
  * Get rate limit history for a specific user (debugging)
@@ -101,13 +102,14 @@ export const getUserRateLimitHistory = internalQuery({
 
     return {
       phoneNumber: args.phoneNumber,
-      message: 'User rate limit history (placeholder - needs @convex-dev/rate-limiter API implementation)',
+      message:
+        'User rate limit history (placeholder - needs @convex-dev/rate-limiter API implementation)',
       timestamp: Date.now(),
       // TODO: Implement if supported by package
       // history: await rateLimiter.getHistory(ctx, args.phoneNumber),
-    };
+    }
   },
-});
+})
 
 /**
  * Check if a specific user is currently rate limited (for dashboard)
@@ -132,11 +134,12 @@ export const isUserRateLimited = internalQuery({
         assessment: { limited: false, retryAt: null },
         spam: { limited: false, retryAt: null },
       },
-      message: 'User rate limit check (placeholder - needs @convex-dev/rate-limiter API implementation)',
+      message:
+        'User rate limit check (placeholder - needs @convex-dev/rate-limiter API implementation)',
       timestamp: Date.now(),
-    };
+    }
   },
-});
+})
 
 /**
  * Get global rate limit alert status (for admin dashboard)
@@ -149,11 +152,11 @@ export const isUserRateLimited = internalQuery({
  * ```
  */
 export const getGlobalAlerts = internalQuery({
-  handler: async (ctx) => {
+  handler: async ctx => {
     // Note: This is a placeholder - actual implementation depends on
     // @convex-dev/rate-limiter API
 
-    const alerts: Array<{ type: string; message: string; severity: string }> = [];
+    const alerts: Array<{ type: string; message: string; severity: string }> = []
 
     // TODO: Implement threshold checks
     // if (smsGlobal.current > smsGlobal.max * 0.8) {
@@ -168,6 +171,6 @@ export const getGlobalAlerts = internalQuery({
       alerts,
       timestamp: Date.now(),
       message: 'Global alerts (placeholder - needs @convex-dev/rate-limiter API implementation)',
-    };
+    }
   },
-});
+})

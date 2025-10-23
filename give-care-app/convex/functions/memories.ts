@@ -1,5 +1,5 @@
-import { internalMutation, internalQuery } from '../_generated/server';
-import { v } from 'convex/values';
+import { internalMutation, internalQuery } from '../_generated/server'
+import { v } from 'convex/values'
 
 /**
  * Save a new memory entry
@@ -13,19 +13,19 @@ export const saveMemory = internalMutation({
   },
   handler: async (ctx, args) => {
     // Validate category
-    const validCategories = ['care_routine', 'preference', 'intervention_result', 'crisis_trigger'];
+    const validCategories = ['care_routine', 'preference', 'intervention_result', 'crisis_trigger']
     if (!validCategories.includes(args.category)) {
-      throw new Error(`Invalid category. Must be one of: ${validCategories.join(', ')}`);
+      throw new Error(`Invalid category. Must be one of: ${validCategories.join(', ')}`)
     }
 
     // Validate importance
     if (args.importance < 1 || args.importance > 10) {
-      throw new Error('Importance must be between 1 and 10');
+      throw new Error('Importance must be between 1 and 10')
     }
 
     // Validate content
     if (!args.content || args.content.trim().length === 0) {
-      throw new Error('Content cannot be empty');
+      throw new Error('Content cannot be empty')
     }
 
     const memoryId = await ctx.db.insert('memories', {
@@ -34,11 +34,11 @@ export const saveMemory = internalMutation({
       category: args.category,
       importance: args.importance,
       createdAt: Date.now(),
-    });
+    })
 
-    return memoryId;
+    return memoryId
   },
-});
+})
 
 /**
  * Get all memories for a user (newest first)
@@ -49,12 +49,12 @@ export const getUserMemories = internalQuery({
     const memories = await ctx.db
       .query('memories')
       .withIndex('by_user', q => q.eq('userId', args.userId))
-      .collect();
+      .collect()
 
     // Sort by createdAt descending (newest first)
-    return memories.sort((a, b) => b.createdAt - a.createdAt);
+    return memories.sort((a, b) => b.createdAt - a.createdAt)
   },
-});
+})
 
 /**
  * Get memories by category
@@ -69,11 +69,11 @@ export const getMemoriesByCategory = internalQuery({
       .query('memories')
       .withIndex('by_user', q => q.eq('userId', args.userId))
       .filter(q => q.eq(q.field('category'), args.category))
-      .collect();
+      .collect()
 
-    return memories.sort((a, b) => b.createdAt - a.createdAt);
+    return memories.sort((a, b) => b.createdAt - a.createdAt)
   },
-});
+})
 
 /**
  * Get top memories by importance
@@ -87,19 +87,19 @@ export const getTopMemories = internalQuery({
     const memories = await ctx.db
       .query('memories')
       .withIndex('by_user', q => q.eq('userId', args.userId))
-      .collect();
+      .collect()
 
     // Sort by importance descending, then by createdAt descending
     const sorted = memories.sort((a, b) => {
       if (b.importance !== a.importance) {
-        return b.importance - a.importance;
+        return b.importance - a.importance
       }
-      return b.createdAt - a.createdAt;
-    });
+      return b.createdAt - a.createdAt
+    })
 
-    return args.limit ? sorted.slice(0, args.limit) : sorted;
+    return args.limit ? sorted.slice(0, args.limit) : sorted
   },
-});
+})
 
 /**
  * Increment access count for a memory
@@ -107,14 +107,14 @@ export const getTopMemories = internalQuery({
 export const incrementAccessCount = internalMutation({
   args: { memoryId: v.id('memories') },
   handler: async (ctx, args) => {
-    const memory = await ctx.db.get(args.memoryId);
+    const memory = await ctx.db.get(args.memoryId)
     if (!memory) {
-      throw new Error('Memory not found');
+      throw new Error('Memory not found')
     }
 
     await ctx.db.patch(args.memoryId, {
       accessCount: (memory.accessCount || 0) + 1,
       lastAccessedAt: Date.now(),
-    });
+    })
   },
-});
+})

@@ -1,7 +1,7 @@
 {
   "name": "give-care-etl",
-  "version": "0.1.0",
-  "description": "Autonomous resource discovery and curation pipeline for GiveCare using OpenAI Agents SDK and Cloudflare Workers",
+  "version": "0.3.0",
+  "description": "Autonomous resource discovery and curation pipeline for GiveCare using OpenAI Agents SDK and Cloudflare Workers (3-agent architecture)",
   "type": "module",
   "scripts": {
     "dev": "wrangler dev",
@@ -25,7 +25,7 @@
     "@ai-sdk/openai": "^1.3.24",
     "@cloudflare/ai": "^1.0.0",
     "@cloudflare/puppeteer": "^1.0.4",
-    "@openai/agents": "^0.1.9",
+    "@openai/agents": "^0.1.11",
     "convex": "^1.28.0",
     "exa-js": "^1.10.2",
     "llm-scraper-worker": "^0.0.6",

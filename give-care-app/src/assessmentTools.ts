@@ -5,41 +5,41 @@
  * Validated clinical tools with evidence-based scoring.
  */
 
-import { z } from 'zod';
+import { z } from 'zod'
 
 // =============================================================================
 // TYPE DEFINITIONS
 // =============================================================================
 
-export type AssessmentType = 'ema' | 'cwbs' | 'reach_ii' | 'sdoh';
-export type AssessmentStatus = 'in_progress' | 'completed' | 'declined';
+export type AssessmentType = 'ema' | 'cwbs' | 'reach_ii' | 'sdoh'
+export type AssessmentStatus = 'in_progress' | 'completed' | 'declined'
 
 export interface AssessmentQuestion {
-  id: string;
-  text: string;
-  type: 'likert' | 'multiple_choice' | 'text' | 'boolean';
-  scale?: number; // For likert scales (e.g., 1-5)
-  options?: string[]; // For multiple choice
-  subscale?: string; // Subdomain this question measures
-  reverse_score?: boolean; // If true, reverse the scoring
+  id: string
+  text: string
+  type: 'likert' | 'multiple_choice' | 'text' | 'boolean'
+  scale?: number // For likert scales (e.g., 1-5)
+  options?: string[] // For multiple choice
+  subscale?: string // Subdomain this question measures
+  reverse_score?: boolean // If true, reverse the scoring
 }
 
 export interface AssessmentDefinition {
-  type: AssessmentType;
-  name: string;
-  description: string;
-  questions: AssessmentQuestion[];
-  scoring_method: 'sum' | 'average' | 'weighted' | 'subscales';
-  evidence_level: string;
-  validated: boolean;
-  duration_minutes: number;
+  type: AssessmentType
+  name: string
+  description: string
+  questions: AssessmentQuestion[]
+  scoring_method: 'sum' | 'average' | 'weighted' | 'subscales'
+  evidence_level: string
+  validated: boolean
+  duration_minutes: number
 }
 
 export interface AssessmentScore {
-  overall_score: number | null; // 0-100, null if insufficient data
-  subscores: Record<string, number>;
-  band?: 'crisis' | 'high' | 'moderate' | 'mild' | 'thriving';
-  calculated_at: Date;
+  overall_score: number | null // 0-100, null if insufficient data
+  subscores: Record<string, number>
+  band?: 'crisis' | 'high' | 'moderate' | 'mild' | 'thriving'
+  calculated_at: Date
 }
 
 // EMA (Ecological Momentary Assessment) - Daily pulse check
@@ -78,7 +78,7 @@ const EMA_DEFINITION: AssessmentDefinition = {
   evidence_level: 'clinical_trial',
   validated: true,
   duration_minutes: 1,
-};
+}
 
 // CWBS (Caregiver Well-Being Scale) - Tebb, Berg-Weger & Rubio (1999, 2012)
 
@@ -182,7 +182,7 @@ const CWBS_DEFINITION: AssessmentDefinition = {
   evidence_level: 'clinical_trial',
   validated: true,
   duration_minutes: 3,
-};
+}
 
 // REACH-II (Resources for Enhancing Alzheimer's Caregiver Health)
 
@@ -271,7 +271,7 @@ const REACH_II_DEFINITION: AssessmentDefinition = {
   evidence_level: 'clinical_trial',
   validated: true,
   duration_minutes: 3,
-};
+}
 
 // SDOH (Social Determinants of Health) - GC-SDOH-28
 
@@ -472,7 +472,7 @@ const SDOH_DEFINITION: AssessmentDefinition = {
   evidence_level: 'expert_consensus',
   validated: true,
   duration_minutes: 5,
-};
+}
 
 // REGISTRY - All assessment definitions
 
@@ -481,26 +481,24 @@ const ASSESSMENT_REGISTRY: Record<AssessmentType, AssessmentDefinition> = {
   cwbs: CWBS_DEFINITION,
   reach_ii: REACH_II_DEFINITION,
   sdoh: SDOH_DEFINITION,
-};
+}
 
 // HELPER FUNCTIONS
 // =============================================================================
 
-export function getAssessmentDefinition(
-  type: AssessmentType
-): AssessmentDefinition | null {
-  return ASSESSMENT_REGISTRY[type] || null;
+export function getAssessmentDefinition(type: AssessmentType): AssessmentDefinition | null {
+  return ASSESSMENT_REGISTRY[type] || null
 }
 
 export function getNextQuestion(
   type: AssessmentType,
   questionIndex: number
 ): AssessmentQuestion | null {
-  const definition = getAssessmentDefinition(type);
+  const definition = getAssessmentDefinition(type)
   if (!definition || questionIndex >= definition.questions.length) {
-    return null;
+    return null
   }
-  return definition.questions[questionIndex];
+  return definition.questions[questionIndex]
 }
 
 /**
@@ -512,10 +510,10 @@ export function calculateQuestionScore(
   response: string | number
 ): number | null {
   if (response === undefined || response === 'SKIPPED') {
-    return null;
+    return null
   }
 
-  let score = 0;
+  let score = 0
 
   if (question.type === 'likert') {
     // CRITICAL FIX: Empty string handling
@@ -523,92 +521,92 @@ export function calculateQuestionScore(
     // Example bug: (5+1-0)/(5-1)*100 = 125 for a 1-5 scale
     // Treat empty/whitespace strings the same as SKIPPED
     if (typeof response === 'string' && response.trim() === '') {
-      return null; // Treat empty strings as skipped
+      return null // Treat empty strings as skipped
     }
 
-    const numericValue = Number(response);
+    const numericValue = Number(response)
     if (Number.isNaN(numericValue)) {
-      return null; // Invalid response
+      return null // Invalid response
     }
-    score = numericValue;
+    score = numericValue
     // Reverse score if needed (higher is better)
     if (question.reverse_score && question.scale) {
-      score = question.scale + 1 - score;
+      score = question.scale + 1 - score
     }
     // Normalize to 0-100
     if (question.scale) {
-      score = ((score - 1) / (question.scale - 1)) * 100;
+      score = ((score - 1) / (question.scale - 1)) * 100
     }
   } else if (question.type === 'boolean') {
     // Boolean: true = 100 (issue present), false = 0 (no issue)
-    score = response === 'true' || response === 'yes' || response === '1' ? 100 : 0;
+    score = response === 'true' || response === 'yes' || response === '1' ? 100 : 0
     // Reverse if needed
     if (question.reverse_score) {
-      score = 100 - score;
+      score = 100 - score
     }
   }
 
-  return Math.round(score * 10) / 10; // Round to 1 decimal place
+  return Math.round(score * 10) / 10 // Round to 1 decimal place
 }
 
 export function calculateAssessmentScore(
   type: AssessmentType,
   responses: Record<string, string | number>
 ): AssessmentScore {
-  const definition = getAssessmentDefinition(type);
+  const definition = getAssessmentDefinition(type)
   if (!definition) {
-    throw new Error(`Unknown assessment type: ${type}`);
+    throw new Error(`Unknown assessment type: ${type}`)
   }
 
-  const subscores: Record<string, number> = {};
-  const subscaleCounts: Record<string, number> = {};
+  const subscores: Record<string, number> = {}
+  const subscaleCounts: Record<string, number> = {}
 
   // Calculate subscale scores
   for (const question of definition.questions) {
-    const response = responses[question.id];
-    if (response === undefined || response === 'SKIPPED') continue;
+    const response = responses[question.id]
+    if (response === undefined || response === 'SKIPPED') continue
 
-    let score = 0;
+    let score = 0
 
     if (question.type === 'likert') {
       // Input validation: prevent NaN from invalid responses
-      const numericValue = Number(response);
+      const numericValue = Number(response)
       if (Number.isNaN(numericValue)) {
         // Skip invalid responses (treat as SKIPPED)
-        continue;
+        continue
       }
-      score = numericValue;
+      score = numericValue
       // Reverse score if needed (higher is better)
       if (question.reverse_score && question.scale) {
-        score = question.scale + 1 - score;
+        score = question.scale + 1 - score
       }
       // Normalize to 0-100
       if (question.scale) {
-        score = ((score - 1) / (question.scale - 1)) * 100;
+        score = ((score - 1) / (question.scale - 1)) * 100
       }
     } else if (question.type === 'boolean') {
       // Boolean: true = 100 (issue present), false = 0 (no issue)
-      score = response === 'true' || response === 'yes' || response === '1' ? 100 : 0;
+      score = response === 'true' || response === 'yes' || response === '1' ? 100 : 0
       // Reverse if needed
       if (question.reverse_score) {
-        score = 100 - score;
+        score = 100 - score
       }
     }
 
     // Accumulate by subscale
-    const subscale = question.subscale || 'overall';
-    subscores[subscale] = (subscores[subscale] || 0) + score;
-    subscaleCounts[subscale] = (subscaleCounts[subscale] || 0) + 1;
+    const subscale = question.subscale || 'overall'
+    subscores[subscale] = (subscores[subscale] || 0) + score
+    subscaleCounts[subscale] = (subscaleCounts[subscale] || 0) + 1
   }
 
   // Average each subscale
   for (const subscale in subscores) {
-    subscores[subscale] = subscores[subscale] / (subscaleCounts[subscale] || 1);
+    subscores[subscale] = subscores[subscale] / (subscaleCounts[subscale] || 1)
   }
 
   // Calculate overall score
   // GUARD AGAINST DIVISION BY ZERO: If no valid responses, return null
-  const values = Object.values(subscores);
+  const values = Object.values(subscores)
   if (values.length === 0) {
     // No valid responses - return null score with empty subscores
     return {
@@ -616,30 +614,36 @@ export function calculateAssessmentScore(
       subscores: {},
       band: undefined,
       calculated_at: new Date(),
-    };
+    }
   }
 
-  let overallScore = 0;
+  let overallScore = 0
   if (definition.scoring_method === 'average' || definition.scoring_method === 'subscales') {
-    overallScore = values.reduce((sum, val) => sum + val, 0) / values.length;
+    overallScore = values.reduce((sum, val) => sum + val, 0) / values.length
   }
 
   // Determine band (inverse - lower score = more burnout)
-  let band: AssessmentScore['band'];
-  if (overallScore < 20) band = 'crisis';
-  else if (overallScore < 40) band = 'high';
-  else if (overallScore < 60) band = 'moderate';
-  else if (overallScore < 80) band = 'mild';
-  else band = 'thriving';
+  let band: AssessmentScore['band']
+  if (overallScore < 20) band = 'crisis'
+  else if (overallScore < 40) band = 'high'
+  else if (overallScore < 60) band = 'moderate'
+  else if (overallScore < 80) band = 'mild'
+  else band = 'thriving'
 
   return {
     overall_score: Math.round(overallScore * 10) / 10,
     subscores,
     band,
     calculated_at: new Date(),
-  };
+  }
 }
 
 // EXPORTS
 
-export { ASSESSMENT_REGISTRY, EMA_DEFINITION, CWBS_DEFINITION, REACH_II_DEFINITION, SDOH_DEFINITION };
+export {
+  ASSESSMENT_REGISTRY,
+  EMA_DEFINITION,
+  CWBS_DEFINITION,
+  REACH_II_DEFINITION,
+  SDOH_DEFINITION,
+}

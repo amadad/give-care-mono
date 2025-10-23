@@ -5,9 +5,9 @@
  * WITHOUT asking users explicit "was this helpful?" questions
  */
 
-import { v } from "convex/values";
-import { internalMutation, query } from "./_generated/server";
-import type { Id } from "./_generated/dataModel";
+import { v } from 'convex/values'
+import { internalMutation, query } from './_generated/server'
+import type { Id } from './_generated/dataModel'
 
 /**
  * Record implicit feedback signal
@@ -15,8 +15,8 @@ import type { Id } from "./_generated/dataModel";
  */
 export const recordImplicitFeedback = internalMutation({
   args: {
-    userId: v.id("users"),
-    conversationId: v.optional(v.id("conversations")),
+    userId: v.id('users'),
+    conversationId: v.optional(v.id('conversations')),
     signal: v.string(),
     value: v.number(),
     context: v.object({
@@ -28,16 +28,16 @@ export const recordImplicitFeedback = internalMutation({
     }),
   },
   handler: async (ctx, args) => {
-    await ctx.db.insert("feedback", {
+    await ctx.db.insert('feedback', {
       userId: args.userId,
       conversationId: args.conversationId,
       signal: args.signal,
       value: args.value,
       context: args.context,
       timestamp: Date.now(),
-    });
+    })
   },
-});
+})
 
 /**
  * Mark last agent message as helpful based on positive signal
@@ -45,22 +45,22 @@ export const recordImplicitFeedback = internalMutation({
  */
 export const markLastInteractionHelpful = internalMutation({
   args: {
-    userId: v.id("users"),
+    userId: v.id('users'),
     signal: v.string(), // "gratitude" | "follow_up" | "tool_success"
     userMessage: v.string(),
   },
   handler: async (ctx, args) => {
     // Find last agent message
     const lastAgentMessage = await ctx.db
-      .query("conversations")
-      .withIndex("by_user", (q) => q.eq("userId", args.userId))
-      .order("desc")
-      .filter((q) => q.eq(q.field("role"), "assistant"))
-      .first();
+      .query('conversations')
+      .withIndex('by_user', q => q.eq('userId', args.userId))
+      .order('desc')
+      .filter(q => q.eq(q.field('role'), 'assistant'))
+      .first()
 
-    if (!lastAgentMessage) return;
+    if (!lastAgentMessage) return
 
-    await ctx.db.insert("feedback", {
+    await ctx.db.insert('feedback', {
       userId: args.userId,
       conversationId: lastAgentMessage._id,
       signal: args.signal,
@@ -72,9 +72,9 @@ export const markLastInteractionHelpful = internalMutation({
         sessionLength: await getSessionLength(ctx, args.userId),
       },
       timestamp: Date.now(),
-    });
+    })
   },
-});
+})
 
 /**
  * Mark last agent message as unhelpful based on negative signal
@@ -82,22 +82,22 @@ export const markLastInteractionHelpful = internalMutation({
  */
 export const markLastInteractionUnhelpful = internalMutation({
   args: {
-    userId: v.id("users"),
+    userId: v.id('users'),
     signal: v.string(), // "frustration" | "re_ask" | "confusion"
     userMessage: v.string(),
   },
   handler: async (ctx, args) => {
     // Find last agent message
     const lastAgentMessage = await ctx.db
-      .query("conversations")
-      .withIndex("by_user", (q) => q.eq("userId", args.userId))
-      .order("desc")
-      .filter((q) => q.eq(q.field("role"), "assistant"))
-      .first();
+      .query('conversations')
+      .withIndex('by_user', q => q.eq('userId', args.userId))
+      .order('desc')
+      .filter(q => q.eq(q.field('role'), 'assistant'))
+      .first()
 
-    if (!lastAgentMessage) return;
+    if (!lastAgentMessage) return
 
-    await ctx.db.insert("feedback", {
+    await ctx.db.insert('feedback', {
       userId: args.userId,
       conversationId: lastAgentMessage._id,
       signal: args.signal,
@@ -109,9 +109,9 @@ export const markLastInteractionUnhelpful = internalMutation({
         sessionLength: await getSessionLength(ctx, args.userId),
       },
       timestamp: Date.now(),
-    });
+    })
   },
-});
+})
 
 /**
  * Export training data for DSPy or fine-tuning
@@ -123,21 +123,21 @@ export const exportTrainingData = query({
     limit: v.optional(v.number()), // Max examples (default: 1000)
   },
   handler: async (ctx, args) => {
-    const minScore = args.minScore ?? 0.8;
-    const limit = args.limit ?? 1000;
+    const minScore = args.minScore ?? 0.8
+    const limit = args.limit ?? 1000
 
     const feedback = await ctx.db
-      .query("feedback")
-      .withIndex("by_value")
-      .filter((q) => q.gte(q.field("value"), minScore))
-      .order("desc")
-      .take(limit);
+      .query('feedback')
+      .withIndex('by_value')
+      .filter(q => q.gte(q.field('value'), minScore))
+      .order('desc')
+      .take(limit)
 
-    return feedback.map((f) => ({
+    return feedback.map(f => ({
       // OpenAI fine-tuning format
       messages: [
-        { role: "user", content: f.context.userMessage || "" },
-        { role: "assistant", content: f.context.agentResponse || "" },
+        { role: 'user', content: f.context.userMessage || '' },
+        { role: 'assistant', content: f.context.agentResponse || '' },
       ],
 
       // DSPy format
@@ -149,47 +149,50 @@ export const exportTrainingData = query({
       signal: f.signal,
       tool_used: f.context.toolUsed,
       timestamp: f.timestamp,
-    }));
+    }))
   },
-});
+})
 
 /**
  * Get feedback stats for analytics dashboard
  */
 export const getFeedbackStats = query({
   args: {
-    userId: v.optional(v.id("users")),
+    userId: v.optional(v.id('users')),
     days: v.optional(v.number()), // Last N days (default: 7)
   },
   handler: async (ctx, args) => {
-    const days = args.days ?? 7;
-    const cutoff = Date.now() - days * 24 * 60 * 60 * 1000;
+    const days = args.days ?? 7
+    const cutoff = Date.now() - days * 24 * 60 * 60 * 1000
 
-    let query = ctx.db.query("feedback").withIndex("by_timestamp");
+    let allFeedback
 
-    if (args.userId) {
-      query = ctx.db
-        .query("feedback")
-        .withIndex("by_user", (q) => q.eq("userId", args.userId));
+    if (args.userId !== undefined) {
+      allFeedback = await ctx.db
+        .query('feedback')
+        .withIndex('by_user', q => q.eq('userId', args.userId!))
+        .filter(q => q.gte(q.field('timestamp'), cutoff))
+        .collect()
+    } else {
+      allFeedback = await ctx.db
+        .query('feedback')
+        .withIndex('by_timestamp')
+        .filter(q => q.gte(q.field('timestamp'), cutoff))
+        .collect()
     }
 
-    const allFeedback = await query
-      .filter((q) => q.gte(q.field("timestamp"), cutoff))
-      .collect();
-
     // Aggregate by signal type
-    const bySignal: Record<string, number> = {};
-    allFeedback.forEach((f) => {
-      bySignal[f.signal] = (bySignal[f.signal] || 0) + 1;
-    });
+    const bySignal: Record<string, number> = {}
+    allFeedback.forEach(f => {
+      bySignal[f.signal] = (bySignal[f.signal] || 0) + 1
+    })
 
     // Calculate average helpfulness
-    const avgScore =
-      allFeedback.reduce((sum, f) => sum + f.value, 0) / allFeedback.length || 0;
+    const avgScore = allFeedback.reduce((sum, f) => sum + f.value, 0) / allFeedback.length || 0
 
     // Count positive vs negative
-    const positive = allFeedback.filter((f) => f.value >= 0.5).length;
-    const negative = allFeedback.filter((f) => f.value < 0.5).length;
+    const positive = allFeedback.filter(f => f.value >= 0.5).length
+    const negative = allFeedback.filter(f => f.value < 0.5).length
 
     return {
       total: allFeedback.length,
@@ -197,24 +200,21 @@ export const getFeedbackStats = query({
       positive,
       negative,
       bySignal,
-      trainingExamples: allFeedback.filter((f) => f.value >= 0.8).length,
-    };
+      trainingExamples: allFeedback.filter(f => f.value >= 0.8).length,
+    }
   },
-});
+})
 
 /**
  * Helper: Get session length (message count in current session)
  */
-async function getSessionLength(
-  ctx: any,
-  userId: Id<"users">
-): Promise<number> {
+async function getSessionLength(ctx: any, userId: Id<'users'>): Promise<number> {
   const messages = await ctx.db
-    .query("conversations")
-    .withIndex("by_user", (q) => q.eq("userId", userId))
-    .collect();
+    .query('conversations')
+    .withIndex('by_user', (q: any) => q.eq('userId', userId))
+    .collect()
 
   // Simple heuristic: count messages in last 24 hours
-  const oneDayAgo = Date.now() - 24 * 60 * 60 * 1000;
-  return messages.filter((m) => m._creationTime > oneDayAgo).length;
+  const oneDayAgo = Date.now() - 24 * 60 * 60 * 1000
+  return messages.filter((m: any) => m._creationTime > oneDayAgo).length
 }

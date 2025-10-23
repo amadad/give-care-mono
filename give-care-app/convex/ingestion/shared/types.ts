@@ -14,44 +14,44 @@
  */
 export interface IntermediateRecord {
   // Program details (REQUIRED)
-  title: string;
-  description?: string;
+  title: string
+  description?: string
 
   // Provider details (REQUIRED)
-  providerName: string;
+  providerName: string
 
   // Contact (at least one REQUIRED)
-  phones?: string[]; // Raw format; will be normalized to E.164
-  website?: string;
-  email?: string;
+  phones?: string[] // Raw format; will be normalized to E.164
+  website?: string
+  email?: string
 
   // Location (optional but recommended)
-  address?: string;
-  city?: string;
-  state?: string;
-  zip?: string;
-  lat?: number;
-  lng?: number;
+  address?: string
+  city?: string
+  state?: string
+  zip?: string
+  lat?: number
+  lng?: number
 
   // Categorization (at least one REQUIRED)
-  serviceTypes: string[]; // ['respite', 'support_group', 'financial_aid', ...]
-  zones: string[]; // ['emotional_wellbeing', 'time_management', ...]
+  serviceTypes: string[] // ['respite', 'support_group', 'financial_aid', ...]
+  zones: string[] // ['emotional_wellbeing', 'time_management', ...]
 
   // Coverage (REQUIRED)
-  coverage: 'national' | 'state' | 'county' | 'zip' | 'radius';
+  coverage: 'national' | 'state' | 'county' | 'zip' | 'radius'
 
   // Service details
-  hours?: string;
-  eligibility?: string;
-  languages?: string[];
+  hours?: string
+  eligibility?: string
+  languages?: string[]
 
   // Metadata (REQUIRED)
-  sourceUrl?: string; // URL where this was found
-  license?: string;
-  dataSourceType: 'scraped' | 'manual_entry' | 'api';
-  aggregatorSource: 'eldercare' | '211' | 'carelinq' | 'manual' | 'other';
-  fundingSource?: 'federal' | 'state' | 'nonprofit' | 'private';
-  lastVerified?: string; // ISO date string
+  sourceUrl?: string // URL where this was found
+  license?: string
+  dataSourceType: 'scraped' | 'manual_entry' | 'api'
+  aggregatorSource: 'eldercare' | '211' | 'carelinq' | 'manual' | 'other'
+  fundingSource?: 'federal' | 'state' | 'nonprofit' | 'private'
+  lastVerified?: string // ISO date string
 }
 
 /**
@@ -60,50 +60,50 @@ export interface IntermediateRecord {
 export interface NormalizedRecord {
   // Program
   program: {
-    name: string;
-    description: string;
-    resourceCategory: string[];
-    pressureZones: string[];
-    eligibility: string;
-    languageSupport: string[];
-    fundingSource?: string;
-  };
+    name: string
+    description: string
+    resourceCategory: string[]
+    pressureZones: string[]
+    eligibility: string
+    languageSupport: string[]
+    fundingSource?: string
+  }
 
   // Provider
   provider: {
-    name: string;
-    sector: string;
-    operatorUrl?: string;
-    license?: string;
-    notes?: string;
-  };
+    name: string
+    sector: string
+    operatorUrl?: string
+    license?: string
+    notes?: string
+  }
 
   // Facility
   facility: {
-    name: string;
-    phoneE164?: string;
-    email?: string;
-    address?: string;
-    city?: string;
-    state?: string;
-    zip?: string;
-    geo?: { lat: number; lon: number };
-    hours?: string;
-    languages: string[];
-  };
+    name: string
+    phoneE164?: string
+    email?: string
+    address?: string
+    city?: string
+    state?: string
+    zip?: string
+    geo?: { lat: number; lon: number }
+    hours?: string
+    languages: string[]
+  }
 
   // Service Area
   serviceArea: {
-    type: "county" | "city" | "zip_cluster" | "statewide" | "national";
-    geoCodes: string[];
-    jurisdictionLevel: string;
-  };
+    type: 'county' | 'city' | 'zip_cluster' | 'statewide' | 'national'
+    geoCodes: string[]
+    jurisdictionLevel: string
+  }
 
   // Metadata
   metadata: {
-    dataSourceType: string;
-    aggregatorSource: string;
-    externalId?: string;
-    externalUrl?: string;
-  };
+    dataSourceType: string
+    aggregatorSource: string
+    externalId?: string
+    externalUrl?: string
+  }
 }

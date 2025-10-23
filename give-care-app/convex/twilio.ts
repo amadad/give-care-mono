@@ -1,4 +1,4 @@
-"use node";
+'use node'
 
 /**
  * Twilio component integration - incoming message callback with agent system
@@ -10,11 +10,11 @@
  * This file is now a thin wrapper around the MessageHandler service.
  */
 
-import { internalAction } from './_generated/server';
-import { components } from './_generated/api';
-import { v } from 'convex/values';
-import { MessageHandler } from './services/MessageHandler';
-import { logSMS } from './utils/logger';
+import { internalAction } from './_generated/server'
+import { components } from './_generated/api'
+import { v } from 'convex/values'
+import { MessageHandler } from './services/MessageHandler'
+import { logSMS } from './utils/logger'
 
 /**
  * Incoming SMS message handler
@@ -36,18 +36,18 @@ export const onIncomingMessage = internalAction({
     params: v.any(),
   },
   handler: async (ctx, args) => {
-    const handler = new MessageHandler(ctx);
+    const handler = new MessageHandler(ctx)
 
     // HIPAA-compliant logging (redacts PII)
     logSMS('incoming', {
       phone: args.from,
       message: args.body,
       messageSid: args.messageSid,
-    });
+    })
 
-    return handler.handle(args);
+    return handler.handle(args)
   },
-});
+})
 
 /**
  * Send outbound SMS message
@@ -66,18 +66,18 @@ export const sendOutboundSMS = internalAction({
       account_sid: process.env.TWILIO_ACCOUNT_SID!,
       auth_token: process.env.TWILIO_AUTH_TOKEN!,
       status_callback: '', // Optional webhook for delivery status
-    });
+    })
 
     // HIPAA-compliant logging (redacts PII)
     logSMS('outgoing', {
       phone: to,
       message: body,
       messageSid: result.sid,
-    });
+    })
 
-    return result;
+    return result
   },
-});
+})
 
 /**
  * Register this callback with the Twilio component
