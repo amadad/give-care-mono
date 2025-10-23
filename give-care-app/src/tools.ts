@@ -93,6 +93,14 @@ PRD P4: Soft confirm first, then call tool`,
     const context = runContext!.context as GiveCareContext;
     const updatedFields: string[] = [];
 
+    // Field labels for user-facing messages
+    const fieldLabels: Record<string, string> = {
+      name: 'name',
+      relationship: 'relationship',
+      care_recipient: 'care recipient',
+      zip: 'ZIP code',
+    };
+
     // P2/P3 enforcement: Record field attempts for trauma-informed collection
     // Field mapping: input key → context key → display name → attempt tracking key
     const fieldMappings = [
@@ -108,7 +116,10 @@ PRD P4: Soft confirm first, then call tool`,
       if (value !== undefined && value !== null) {
         // Check if we can ask for this field (P3: max 2 attempts)
         if (!contextHelpers.canAskForField(context, attemptKey)) {
-          return `COOLDOWN:${attemptKey}`;
+          // Return trauma-informed message instead of sentinel value
+          // This prevents re-traumatization from repeated asks
+          const fieldName = fieldLabels[display] || display;
+          return `I understand this might be sensitive. You've mentioned ${fieldName} a couple times, so I'll stop asking. Feel free to share whenever you're comfortable.`;
         }
         context[contextKey] = value;
         // Update context with new attempt count (immutable pattern)
@@ -123,13 +134,6 @@ PRD P4: Soft confirm first, then call tool`,
     }
 
     // Build confirmation message (P4: Soft confirmations)
-    const fieldLabels: Record<string, string> = {
-      name: 'name',
-      relationship: 'relationship',
-      care_recipient: 'care recipient',
-      zip: 'ZIP code',
-    };
-
     const updatedLabels = updatedFields.map((f) => fieldLabels[f] || f);
     let message = `Got it: ${updatedLabels.join(', ')} saved.`;
 
@@ -149,7 +153,18 @@ PRD P4: Soft confirm first, then call tool`,
 
     // Check completion
     if (contextHelpers.profileComplete(context)) {
-      message += '\n\nYour profile is complete! Ready to start tracking your wellness?';
+      // 🎉 Celebrate completion and transition to active if onboarding
+      if (context.journeyPhase === 'onboarding') {
+        context.journeyPhase = 'active';
+        message = `✅ Perfect! I have what I need to help:
+• Caring for: ${context.careRecipientName}
+• Your role: ${context.relationship}
+• Location: ${context.zipCode}
+
+Ready for a quick 2-minute check-in to see how you're doing?`;
+      } else {
+        message += '\n\nYour profile is complete! Ready to start tracking your wellness?';
+      }
       return message;
     }
 
@@ -627,7 +642,8 @@ If user hasn't shared their location yet, ask for zip code or city first.`,
 
     // If no lat/lng provided, try to use context (if available from future geocoding)
     // For now, require explicit location
-    if (!latitude || !longitude) {
+    // NOTE: Use explicit null checks - 0 is valid (equator/prime meridian)
+    if (latitude === null || longitude === null) {
       return "I'd love to help find local places! Can you share your zip code or city so I know where to look?";
     }
 

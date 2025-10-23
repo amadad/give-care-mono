@@ -40,11 +40,9 @@ export default defineSchema({
       time_management: v.optional(v.number()),
       social_support: v.optional(v.number()),
     })),
-    onboardingAttempts: v.optional(v.object({
-      count: v.number(),
-      lastAttemptAt: v.number(),
-      failureReasons: v.optional(v.array(v.string())),
-    })),
+    // Map of field names to attempt counts (e.g., { "first_name": 2, "relationship": 1 })
+    // Used for trauma-informed onboarding (P3: max 2 attempts per field)
+    onboardingAttempts: v.optional(v.record(v.string(), v.number())),
     onboardingCooldownUntil: v.optional(v.number()),
     rcsCapable: v.optional(v.boolean()),
     deviceType: v.optional(v.string()),
@@ -646,5 +644,31 @@ export default defineSchema({
     .index('by_qa_status', ['qaStatus'])
     .index('by_quality_score', ['qualityScore'])
     .index('by_validated', ['validatedAt']),
+
+  // FEEDBACK (Poke-style implicit feedback for training data)
+  feedback: defineTable({
+    userId: v.id("users"),
+    conversationId: v.optional(v.id("conversations")), // The agent message being evaluated (references conversations table)
+
+    // Implicit signal type
+    signal: v.string(), // "follow_up" | "gratitude" | "frustration" | "re_ask" | "silence" | "link_click" | "tool_success"
+    value: v.number(), // 0.0 to 1.0 (helpfulness score)
+
+    // Context for training data
+    context: v.object({
+      agentResponse: v.optional(v.string()), // What the agent said
+      userMessage: v.optional(v.string()), // What the user said (that triggered feedback)
+      toolUsed: v.optional(v.string()), // Which tool was called (if any)
+      timeSincePrevious: v.optional(v.number()), // Milliseconds between messages
+      sessionLength: v.optional(v.number()), // Messages in this conversation
+    }),
+
+    timestamp: v.number(),
+  })
+    .index('by_user', ['userId'])
+    .index('by_signal', ['signal'])
+    .index('by_value', ['value'])
+    .index('by_timestamp', ['timestamp'])
+    .index('by_conversation', ['conversationId']),
 
 });

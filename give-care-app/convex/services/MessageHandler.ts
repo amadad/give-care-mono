@@ -23,6 +23,14 @@ import { rateLimiter, RATE_LIMITS, RATE_LIMIT_MESSAGES } from '../rateLimits.con
 import { runAgentTurn } from '../../src/agents';
 import type { GiveCareContext } from '../../src/context';
 import { getAssessmentDefinition, calculateAssessmentScore, calculateQuestionScore } from '../../src/assessmentTools';
+import { logSafe } from '../utils/logger';
+import {
+  containsGratitude,
+  containsFrustration,
+  containsConfusion,
+  isSimilarQuery,
+  calculateEngagementScore,
+} from '../../src/utils/sentiment';
 
 interface IncomingMessage {
   from: string;
@@ -167,7 +175,7 @@ export class MessageHandler {
 
     // Check results and throw appropriate errors
     if (!spamCheck.ok) {
-      console.warn(`[Rate Limit] Spam detected from ${phoneNumber}`);
+      logSafe('RateLimit', 'Spam detected', { phone: phoneNumber });
       throw new Error('Rate limited (spam)');
     }
 
@@ -218,13 +226,18 @@ export class MessageHandler {
       user.subscriptionStatus === 'active' || user.subscriptionStatus === 'trialing';
 
     if (isSubscribed) {
-      console.log(`[Subscription] User ${user.phoneNumber} is subscribed - proceeding`);
+      logSafe('Subscription', 'User is subscribed - proceeding', {
+        userId: user._id,
+        phone: user.phoneNumber,
+      });
       return null;
     }
 
-    console.log(
-      `[Subscription] User ${user.phoneNumber} has status '${user.subscriptionStatus}' - access denied`
-    );
+    logSafe('Subscription', 'User has no active subscription - access denied', {
+      userId: user._id,
+      phone: user.phoneNumber,
+      status: user.subscriptionStatus,
+    });
 
     const signupMessage =
       'Hi! To access GiveCare, please subscribe at:\n\n' +
@@ -319,9 +332,15 @@ export class MessageHandler {
    * Step 6: Execute agent
    */
   private async executeAgent(messageBody: string, context: GiveCareContext) {
-    console.log(`[Agent] Running agent for user ${context.userId}`);
+    logSafe('Agent', 'Running agent', {
+      userId: context.userId,
+      message: messageBody,
+    });
     const result = await runAgentTurn(messageBody, context);
-    console.log(`[Agent] Response: "${result.message}"`);
+    logSafe('Agent', 'Agent execution complete', {
+      userId: context.userId,
+      message: result.message,
+    });
     return result;
   }
 
@@ -348,7 +367,9 @@ export class MessageHandler {
     }
 
     // 7b. Persist assessment responses
-    if (updatedContext.assessmentSessionId && updatedContext.assessmentInProgress) {
+    // NOTE: Don't check assessmentInProgress here! The final answer sets it to false,
+    // but we still need to persist that last answer. Check assessmentSessionId only.
+    if (updatedContext.assessmentSessionId) {
       await this.persistAssessmentResponses(
         originalContext,
         updatedContext,
@@ -375,10 +396,13 @@ export class MessageHandler {
       startTime
     );
 
-    // 7e. Update user context (ASYNC - don't block response)
+    // 7e. Track implicit feedback (ASYNC - Poke-style passive collection)
+    this.trackImplicitFeedbackAsync(user._id, userMessage, agentResult, startTime);
+
+    // 7f. Update user context (ASYNC - don't block response)
     this.updateUserContextAsync(user._id, updatedContext);
 
-    // 7f. Save wellness score if changed (ASYNC - don't block response)
+    // 7g. Save wellness score if changed (ASYNC - don't block response)
     if (
       updatedContext.burnoutScore !== null &&
       updatedContext.burnoutScore !== user.burnoutScore
@@ -386,7 +410,7 @@ export class MessageHandler {
       this.saveWellnessScoreAsync(user._id, updatedContext);
     }
 
-    // 7g. Update last contact (ASYNC - don't block response)
+    // 7h. Update last contact (ASYNC - don't block response)
     this.updateLastContactAsync(user._id);
   }
 
@@ -580,6 +604,87 @@ export class MessageHandler {
   /**
    * Async version - fires and forgets (no await)
    */
+  /**
+   * Track implicit feedback signals (Poke-inspired passive collection)
+   * Runs async to not block SMS response
+   */
+  private async trackImplicitFeedbackAsync(
+    userId: any,
+    userMessage: string,
+    agentResult: any,
+    startTime: number
+  ): Promise<void> {
+    try {
+      // Get last agent message for timing and context
+      const lastAgentMessage = await this.ctx.runQuery(
+        internal.functions.messages.getLastAgentMessage,
+        { userId }
+      );
+
+      if (!lastAgentMessage) return;
+
+      const timeSincePrevious = startTime - lastAgentMessage.timestamp;
+
+      // Detect implicit signals
+      const signals: Array<{ signal: string; value: number }> = [];
+
+      // Positive signals
+      if (containsGratitude(userMessage)) {
+        signals.push({ signal: 'gratitude', value: 1.0 });
+      }
+
+      // Negative signals
+      if (containsFrustration(userMessage)) {
+        signals.push({ signal: 'frustration', value: 0.0 });
+      }
+
+      if (containsConfusion(userMessage)) {
+        signals.push({ signal: 'confusion', value: 0.2 }); // Slightly higher than frustration
+      }
+
+      // Re-ask detection (user asking same question again = previous answer unhelpful)
+      if (lastAgentMessage.userMessage && isSimilarQuery(userMessage, lastAgentMessage.userMessage)) {
+        signals.push({ signal: 're_ask', value: 0.1 });
+      }
+
+      // Engagement signal (quick response = engaged)
+      const fiveMinutes = 5 * 60 * 1000;
+      if (timeSincePrevious < fiveMinutes) {
+        const engagementScore = calculateEngagementScore(userMessage, timeSincePrevious);
+        if (engagementScore > 0.6) {
+          signals.push({ signal: 'follow_up', value: engagementScore });
+        }
+      }
+
+      // Tool success signal (if tool was used and user responded positively)
+      if (agentResult.toolName && containsGratitude(userMessage)) {
+        signals.push({ signal: 'tool_success', value: 1.0 });
+      }
+
+      // Record all detected signals
+      for (const { signal, value } of signals) {
+        await this.ctx.runMutation(internal.feedback.recordImplicitFeedback, {
+          userId,
+          conversationId: lastAgentMessage._id,
+          signal,
+          value,
+          context: {
+            agentResponse: lastAgentMessage.content,
+            userMessage,
+            toolUsed: agentResult.toolName,
+            timeSincePrevious,
+            sessionLength: undefined, // Will be calculated in mutation
+          },
+        });
+      }
+
+      console.log(`[Feedback] Recorded ${signals.length} implicit signals for user ${userId}`);
+    } catch (error) {
+      // Don't throw - this is background work
+      console.error('[Background] Failed to track feedback:', error);
+    }
+  }
+
   private updateLastContactAsync(userId: any): void {
     this.ctx.runMutation(internal.functions.users.updateLastContact, {
       userId,

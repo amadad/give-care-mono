@@ -18,6 +18,7 @@ import { internalAction, internalMutation } from '../_generated/server';
 import { internal } from '../_generated/api';
 import { v } from 'convex/values';
 import type { Id } from '../_generated/dataModel';
+import { logScheduling } from '../utils/logger';
 
 // Constants
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -74,13 +75,13 @@ async function sendProactiveMessage(
   });
 
   // Log conversation
+  // Note: agentName captures the message type (e.g., 'scheduled', 'crisis_daily_checkin')
   await ctx.runMutation(internal.functions.conversations.logMessage, {
     userId,
     role: 'assistant',
     text: message,
     mode: 'sms',
-    agentName: 'scheduled',
-    metadata: { type },
+    agentName: type, // Store message type in agentName field
     timestamp: Date.now(),
   });
 
@@ -90,7 +91,12 @@ async function sendProactiveMessage(
     lastProactiveMessageAt: Date.now(),
   });
 
-  console.log(`[Proactive] Sent ${type} to ${phoneNumber}`);
+  logScheduling('proactive_message_sent', {
+    userId,
+    phone: phoneNumber,
+    messageType: type,
+    sent: true,
+  });
 }
 
 // =============================================================================

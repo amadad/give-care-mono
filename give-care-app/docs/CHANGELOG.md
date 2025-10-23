@@ -6,6 +6,30 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## [0.8.3] - 2025-10-22
+
+### Added - Poke-Inspired Implicit Feedback System
+- **Passive training data collection** - Zero user burden, Poke-style engagement tracking
+  - 6 signal types: gratitude, frustration, confusion, re_ask, follow_up, tool_success
+  - Sentiment detection with pattern matching (gratitude/frustration/confusion)
+  - Query similarity detection for re-ask identification
+  - Engagement scoring based on response timing and message content
+  - Automatic feedback recording after every user response
+  - OpenAI fine-tuning export format ready
+
+**Files Added** (5 new files, ~450 lines):
+- `convex/schema.ts` - Added `feedback` table with 5 indexes
+- `convex/feedback.ts` - 3 internal mutations, 2 public queries (export/stats)
+- `src/utils/sentiment.ts` - 7 detection functions (gratitude, frustration, confusion, similarity, engagement)
+- `convex/functions/messages.ts` - Helper query for last agent message
+- `convex/services/MessageHandler.ts` - Added `trackImplicitFeedbackAsync()` method
+
+**Impact**: Immediate training data collection for DSPy optimization and model fine-tuning
+**Architecture**: Poke-inspired passive collection (no UI changes, zero user friction)
+**Performance**: Async tracking (doesn't block SMS response)
+
+---
+
 ## [0.8.2] - 2025-10-16
 
 ### Fixed - 5 Critical Production Bugs (30min TDD)

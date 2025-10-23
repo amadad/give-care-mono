@@ -1,14 +1,14 @@
 # Active Sprint Tasks
 
-**Version**: 0.8.2 | **Status**: 11 Remaining (45% complete) | **Updated**: 2025-10-22 | **Last Verified**: 2025-10-22
+**Version**: 0.8.3 | **Status**: 10 Remaining (50% complete) | **Updated**: 2025-10-22 | **Last Verified**: 2025-10-22
 
 ---
 
-## 🔥 v0.8.2 Hotfix (2025-10-16) ✅
+## 🔥 v0.8.3 - Implicit Feedback System (2025-10-22) ✅
 
-5 bugs fixed (30min TDD): watchers offline, SMS crashes, test failures
-**Result**: 191→481+ tests passing (exceeds 235+ requirement), all systems operational
-**Verification**: All 9 completed tasks verified in codebase (2025-10-22)
+**Poke-inspired passive training data collection** - Zero user burden, immediate DSPy/fine-tuning readiness
+**Result**: 6 signal types tracking (gratitude, frustration, confusion, re_ask, follow_up, tool_success)
+**Files**: 5 new files (~450 lines), async tracking (no SMS response impact)
 **See**: CHANGELOG.md for details
 
 ---
@@ -25,8 +25,9 @@
 | **Task 10: Working Memory System** | ✅ COMPLETE | 🟡 MEDIUM | <1 day | 26 tests, TDD approach (OpenPoke) |
 | **Task 11: Engagement Watcher** | ✅ COMPLETE | 🟡 MEDIUM | <1 day | 50 tests, TDD approach (OpenPoke) - HOTFIX APPLIED |
 | **Hotfix: Production Bugs** | ✅ COMPLETE | 🔴 P0 | 30 min | 5 critical bugs fixed (2025-10-16) |
-| **Task 3: Admin Dashboard Phase 2** | 🚧 DOING | 🔥 HIGH | 1 week | Phase 1 ✅ (60% Phase 2 complete: search/filter/CSV/conversations/wellness/assessments) |
 | **Task 18: DSPy Agent Optimization** | ✅ COMPLETE | 🔥 HIGH | 3-5 days | TypeScript optimization pipeline implemented with GPT-5 |
+| **Task 21: Implicit Feedback System** | ✅ COMPLETE | 🔥 HIGH | 2 hours | Poke-inspired passive data collection (2025-10-22) |
+| **Task 3: Admin Dashboard Phase 2** | 🚧 DOING | 🔥 HIGH | 1 week | Phase 1 ✅ (60% Phase 2 complete: search/filter/CSV/conversations/wellness/assessments) |
 | **Task 19: DSPy Assessment Questions** | 📋 To Do | 🟡 MEDIUM | 2-3 days | Pre-launch: Optimize question phrasing for clarity/engagement |
 | **Task 20: DSPy Intervention Descriptions** | 📋 To Do | 🟡 MEDIUM | 1-2 days | Pre-launch: Optimize intervention copy for try-rate |
 | **Task 4: User Dashboard** | 📋 To Do | 🟡 MEDIUM | 2 weeks | Auth, profile, wellness tracking |
@@ -39,7 +40,7 @@
 | **Task 16: Intervention Cards (Web)** | 📋 To Do | 🟡 MEDIUM | 10 days | Swipeable intervention UX |
 | **Task 17: Safety Co-Pilot Mode** | 📋 To Do | 🟡 MEDIUM | 15 days | Geo-tailored crisis resources |
 
-**Completion Status**: 9/20 tasks complete (45%)
+**Completion Status**: 10/21 tasks complete (50%)
 
 **Code Verification (2025-10-22)**: ✅ All 9 completed tasks verified with 481+ tests passing
 
@@ -125,6 +126,19 @@
 5 production bugs fixed (watchers offline, SMS crashes, test failures)
 **Result**: 235+ tests passing, all systems operational
 **Details**: See CHANGELOG.md
+
+### Task 21: Implicit Feedback System ✅ (2025-10-22)
+**What**: Poke-inspired passive training data collection - zero user burden
+**Files**:
+- `convex/schema.ts` - Added `feedback` table with 5 indexes
+- `convex/feedback.ts` - 3 internal mutations, 2 public queries (export/stats)
+- `src/utils/sentiment.ts` - 7 detection functions (gratitude, frustration, confusion, similarity, engagement)
+- `convex/functions/messages.ts` - Helper query for last agent message
+- `convex/services/MessageHandler.ts` - Added `trackImplicitFeedbackAsync()` method
+**Signals**: 6 types tracked (gratitude, frustration, confusion, re_ask, follow_up, tool_success)
+**Impact**: Immediate training data collection for DSPy optimization and OpenAI fine-tuning
+**Architecture**: Async tracking (no SMS response latency), OpenAI fine-tuning format ready
+**Time**: 2 hours
 
 ---
 

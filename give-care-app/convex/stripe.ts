@@ -15,6 +15,7 @@ import { v } from "convex/values";
 import { action, internalAction } from "./_generated/server";
 import { internal } from "./_generated/api";
 import Stripe from "stripe";
+import { logStripe, logSMS } from "./utils/logger";
 
 /**
  * Create a Stripe Checkout session for subscription signup
@@ -241,7 +242,10 @@ export const sendWelcomeSMS = internalAction({
       const twilioNumber = process.env.TWILIO_PHONE_NUMBER;
 
       if (!accountSid || !authToken || !twilioNumber) {
-        console.warn(`[Stripe] Twilio not configured - welcome SMS to ${phoneNumber} skipped`);
+        logStripe('twilio_not_configured', {
+          email: phoneNumber, // Use email field for phone (will be redacted)
+          status: 'skipped',
+        });
         console.warn('[Stripe] Set TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, and TWILIO_PHONE_NUMBER');
         return { success: false, error: 'Twilio not configured' };
       }
@@ -255,17 +259,25 @@ export const sendWelcomeSMS = internalAction({
         "Reply anytime with a question or just say hello to get started.\n\n" +
         "You're not alone in this.";
 
-      await twilio.messages.create({
+      const result = await twilio.messages.create({
         body: welcomeMessage,
         from: twilioNumber,
         to: phoneNumber,
       });
 
-      console.log(`✅ Welcome SMS sent to ${phoneNumber} for user ${userId}`);
+      logSMS('outgoing', {
+        phone: phoneNumber,
+        message: welcomeMessage,
+        messageSid: result.sid,
+        userId,
+      });
       return { success: true };
     } catch (error) {
       // Don't fail subscription activation if SMS fails
-      console.error(`[Stripe] Failed to send welcome SMS to ${phoneNumber}:`, error);
+      logStripe('welcome_sms_failed', {
+        email: phoneNumber, // Use email field for phone (will be redacted)
+        status: 'failed',
+      });
       return { success: false, error: String(error) };
     }
   },

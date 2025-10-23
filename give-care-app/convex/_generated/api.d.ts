@@ -11,6 +11,7 @@
 import type * as auth from "../auth.js";
 import type * as crons from "../crons.js";
 import type * as etl from "../etl.js";
+import type * as feedback from "../feedback.js";
 import type * as functions_admin from "../functions/admin.js";
 import type * as functions_analytics from "../functions/analytics.js";
 import type * as functions_assessmentResults from "../functions/assessmentResults.js";
@@ -19,6 +20,7 @@ import type * as functions_cleanup from "../functions/cleanup.js";
 import type * as functions_conversations from "../functions/conversations.js";
 import type * as functions_embeddings from "../functions/embeddings.js";
 import type * as functions_memories from "../functions/memories.js";
+import type * as functions_messages from "../functions/messages.js";
 import type * as functions_newsletter from "../functions/newsletter.js";
 import type * as functions_rateLimitMonitoring from "../functions/rateLimitMonitoring.js";
 import type * as functions_resources from "../functions/resources.js";
@@ -54,6 +56,7 @@ import type * as summarizationActions from "../summarizationActions.js";
 import type * as test from "../test.js";
 import type * as triggers from "../triggers.js";
 import type * as twilio from "../twilio.js";
+import type * as utils_logger from "../utils/logger.js";
 import type * as watchers from "../watchers.js";
 
 import type {
@@ -74,6 +77,7 @@ declare const fullApi: ApiFromModules<{
   auth: typeof auth;
   crons: typeof crons;
   etl: typeof etl;
+  feedback: typeof feedback;
   "functions/admin": typeof functions_admin;
   "functions/analytics": typeof functions_analytics;
   "functions/assessmentResults": typeof functions_assessmentResults;
@@ -82,6 +86,7 @@ declare const fullApi: ApiFromModules<{
   "functions/conversations": typeof functions_conversations;
   "functions/embeddings": typeof functions_embeddings;
   "functions/memories": typeof functions_memories;
+  "functions/messages": typeof functions_messages;
   "functions/newsletter": typeof functions_newsletter;
   "functions/rateLimitMonitoring": typeof functions_rateLimitMonitoring;
   "functions/resources": typeof functions_resources;
@@ -117,6 +122,7 @@ declare const fullApi: ApiFromModules<{
   test: typeof test;
   triggers: typeof triggers;
   twilio: typeof twilio;
+  "utils/logger": typeof utils_logger;
   watchers: typeof watchers;
 }>;
 declare const fullApiWithMounts: typeof fullApi;

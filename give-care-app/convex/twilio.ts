@@ -14,6 +14,7 @@ import { internalAction } from './_generated/server';
 import { components } from './_generated/api';
 import { v } from 'convex/values';
 import { MessageHandler } from './services/MessageHandler';
+import { logSMS } from './utils/logger';
 
 /**
  * Incoming SMS message handler
@@ -37,7 +38,12 @@ export const onIncomingMessage = internalAction({
   handler: async (ctx, args) => {
     const handler = new MessageHandler(ctx);
 
-    console.log(`[SMS] Incoming message from ${args.from}: "${args.body}"`);
+    // HIPAA-compliant logging (redacts PII)
+    logSMS('incoming', {
+      phone: args.from,
+      message: args.body,
+      messageSid: args.messageSid,
+    });
 
     return handler.handle(args);
   },
@@ -62,7 +68,13 @@ export const sendOutboundSMS = internalAction({
       status_callback: '', // Optional webhook for delivery status
     });
 
-    console.log(`[SMS] Sent outbound message to ${to}: "${body}"`);
+    // HIPAA-compliant logging (redacts PII)
+    logSMS('outgoing', {
+      phone: to,
+      message: body,
+      messageSid: result.sid,
+    });
+
     return result;
   },
 });
