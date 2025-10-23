@@ -95,11 +95,24 @@ export class MessageHandler {
         latency: Date.now() - startTime,
       };
     } catch (error) {
-      console.error('[MessageHandler] Error:', error);
+      const errorMessage = String(error);
+      console.error('[MessageHandler] Error:', errorMessage);
+
+      // Check if this is a rate limit error - return the helpful message
+      if (errorMessage.includes('Rate limited') || errorMessage.includes('quite a few messages')) {
+        // Extract the rate limit message (it's in the format "Error: <message>")
+        const rateLimitMessage = errorMessage.replace(/^Error:\s*/, '');
+        return {
+          message: rateLimitMessage,
+          latency: Date.now() - startTime,
+        };
+      }
+
+      // For other errors, return generic message
       return {
         message: "Sorry, I'm having trouble right now. Please try again in a moment.",
         latency: Date.now() - startTime,
-        error: String(error),
+        error: errorMessage,
       };
     }
   }
