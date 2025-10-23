@@ -284,6 +284,23 @@ export class MessageHandler {
     phoneNumber: string,
     assessmentRateLimited: boolean
   ): Promise<GiveCareContext> {
+    // CRITICAL VALIDATION: Ensure user object exists
+    if (!user) {
+      console.error('[BuildContext] FATAL: user is null/undefined', {
+        phoneNumber,
+        assessmentRateLimited,
+      });
+      throw new Error('User object is null - getUser() should have prevented this');
+    }
+
+    if (typeof user !== 'object') {
+      console.error('[BuildContext] FATAL: user is not an object', {
+        userType: typeof user,
+        userValue: String(user),
+      });
+      throw new Error(`User is not an object, got: ${typeof user}`);
+    }
+
     // FIX #1: Hydrate assessment responses from database if assessment in progress
     let assessmentResponses: Record<string, string | number> = {};
 
