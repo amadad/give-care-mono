@@ -18,16 +18,17 @@ import { internalAction, internalMutation } from '../_generated/server'
 import { internal } from '../_generated/api'
 import { v } from 'convex/values'
 import type { Id } from '../_generated/dataModel'
-import { logScheduling } from '../utils/logger'
+import { logScheduling, logSafe } from '../utils/logger'
 
 // Constants
 const DAY_MS = 24 * 60 * 60 * 1000
 const HOUR_MS = 60 * 60 * 1000
 
 /**
- * Helper: Check if user can receive proactive message (deduplication)
+ * Helper: Check if user can receive proactive message (deduplication + subscription)
  *
  * Rules:
+ * - User must have active or trialing subscription
  * - Max 1 proactive message per day
  * - Don't send if user already contacted us today (reactive message)
  *
@@ -36,6 +37,18 @@ const HOUR_MS = 60 * 60 * 1000
 async function canSendProactiveMessage(ctx: any, userId: Id<'users'>): Promise<boolean> {
   const user = await ctx.runQuery(internal.functions.users.getUser, { userId })
   if (!user) return false
+
+  // Check subscription status (CRITICAL: Don't send to non-subscribers)
+  const isSubscribed =
+    user.subscriptionStatus === 'active' || user.subscriptionStatus === 'trialing'
+
+  if (!isSubscribed) {
+    logSafe('Scheduling', 'Skipping proactive message - no active subscription', {
+      userId: String(userId),
+      subscriptionStatus: user.subscriptionStatus,
+    })
+    return false
+  }
 
   const now = Date.now()
   const oneDayAgo = now - DAY_MS

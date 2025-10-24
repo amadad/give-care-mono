@@ -80,6 +80,30 @@ export const processDueTriggers = internalMutation({
           continue
         }
 
+        // Check subscription status before sending
+        const isSubscribed =
+          user.subscriptionStatus === 'active' || user.subscriptionStatus === 'trialing'
+
+        if (!isSubscribed) {
+          logSafe('Triggers', 'Skipping trigger - no active subscription', {
+            triggerId: trigger._id,
+            userId: trigger.userId,
+            status: user.subscriptionStatus,
+          })
+          // Still update next occurrence so we don't keep trying
+          const nextOccurrence = calculateNextOccurrence(
+            trigger.recurrenceRule,
+            trigger.timezone,
+            now
+          )
+          await ctx.db.patch(trigger._id, {
+            nextOccurrence,
+            lastTriggeredAt: now,
+          })
+          skipped++
+          continue
+        }
+
         // Send SMS
         await ctx.scheduler.runAfter(0, internal.twilio.sendOutboundSMS, {
           to: user.phoneNumber,

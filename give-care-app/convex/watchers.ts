@@ -155,6 +155,19 @@ export const watchWellnessTrends = internalAction({
               createdAt: now,
             });
 
+            // Check subscription status before sending SMS
+            const isSubscribed =
+              user.subscriptionStatus === 'active' || user.subscriptionStatus === 'trialing';
+
+            if (!isSubscribed) {
+              logSafe('Watcher', 'Skipping SMS - no active subscription', {
+                userId: user._id,
+                status: user.subscriptionStatus,
+              });
+              wellnessDeclineCount++;
+              continue;
+            }
+
             // Send proactive SMS (only if user has phone number)
             if (!user.phoneNumber) {
               logSafe('Watcher', 'Cannot send SMS - missing phone', { userId: user._id });
