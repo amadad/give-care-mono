@@ -47,6 +47,7 @@ import type * as ingestion_shared_registry from "../ingestion/shared/registry.js
 import type * as ingestion_shared_scoring from "../ingestion/shared/scoring.js";
 import type * as ingestion_shared_types from "../ingestion/shared/types.js";
 import type * as ingestion_shared_validation from "../ingestion/shared/validation.js";
+import type * as lib_auth from "../lib/auth.js";
 import type * as resources_matchResources from "../resources/matchResources.js";
 import type * as services_MessageHandler from "../services/MessageHandler.js";
 import type * as stripe from "../stripe.js";
@@ -113,6 +114,7 @@ declare const fullApi: ApiFromModules<{
   "ingestion/shared/scoring": typeof ingestion_shared_scoring;
   "ingestion/shared/types": typeof ingestion_shared_types;
   "ingestion/shared/validation": typeof ingestion_shared_validation;
+  "lib/auth": typeof lib_auth;
   "resources/matchResources": typeof resources_matchResources;
   "services/MessageHandler": typeof services_MessageHandler;
   stripe: typeof stripe;

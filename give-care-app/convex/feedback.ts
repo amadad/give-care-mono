@@ -207,12 +207,18 @@ export const getFeedbackStats = query({
 
 /**
  * Helper: Get session length (message count in current session)
+ *
+ * Note: Limits query to first 100 messages to prevent unbounded collect().
+ * Session length is approximate when user has >100 total messages.
+ * For accurate session tracking, consider time-based index filtering.
  */
 async function getSessionLength(ctx: any, userId: Id<'users'>): Promise<number> {
+  // Limit messages query to prevent unbounded collect()
+  // Takes first 100 messages (most recent if ordered by creation time)
   const messages = await ctx.db
     .query('conversations')
     .withIndex('by_user', (q: any) => q.eq('userId', userId))
-    .collect()
+    .take(100)
 
   // Simple heuristic: count messages in last 24 hours
   const oneDayAgo = Date.now() - 24 * 60 * 60 * 1000

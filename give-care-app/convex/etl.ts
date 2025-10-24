@@ -408,10 +408,15 @@ export const rejectQARecord = mutation({
 
 /**
  * Get ETL dashboard stats
+ *
+ * Note: Limits queries to first 100 records to prevent unbounded data loading.
+ * Dashboard stats are approximations when total records exceed limit.
  */
 export const getDashboardStats = query({
   handler: async ctx => {
-    const workflows = await ctx.db.query('etlWorkflows').collect()
+    // Limit workflows query to prevent unbounded collect()
+    // Dashboard shows stats for most recent 100 workflows
+    const workflows = await ctx.db.query('etlWorkflows').take(100)
 
     const running = workflows.filter(w => w.status === 'running').length
     const completed = workflows.filter(w => w.status === 'completed').length
@@ -422,15 +427,17 @@ export const getDashboardStats = query({
     const totalValidated = workflows.reduce((sum, w) => sum + w.validatedCount, 0)
     const totalErrors = workflows.reduce((sum, w) => sum + w.errorCount, 0)
 
+    // Limit QA queue queries to first 100 pending/approved records
+    // For accurate counts, consider using .count() API when available
     const qaQueue = await ctx.db
       .query('etlValidatedRecords')
       .withIndex('by_qa_status', q => q.eq('qaStatus', 'pending'))
-      .collect()
+      .take(100)
 
     const qaApproved = await ctx.db
       .query('etlValidatedRecords')
       .withIndex('by_qa_status', q => q.eq('qaStatus', 'approved'))
-      .collect()
+      .take(100)
 
     return {
       workflows: {

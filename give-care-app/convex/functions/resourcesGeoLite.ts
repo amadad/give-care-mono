@@ -253,6 +253,9 @@ export const findResourcesGeoLite = query({
 
 /**
  * Get resources for a specific user (uses their ZIP + pressure zones)
+ *
+ * Security: Validates that authenticated user matches requested userId
+ * to prevent unauthorized access to other users' personalized recommendations
  */
 export const getResourcesForUser = query({
   args: {
@@ -260,6 +263,28 @@ export const getResourcesForUser = query({
     limit: v.optional(v.number()),
   },
   handler: async (ctx, args) => {
+    // SECURITY: Verify user ownership
+    // Get authenticated user identity
+    const identity = await ctx.auth.getUserIdentity()
+
+    // Check 1: User must be authenticated
+    if (!identity) {
+      throw new Error('Unauthenticated: User must be logged in to access resources')
+    }
+
+    // Check 2: Authenticated user must match requested userId
+    // Note: Convex Auth identity has a subject field that contains the user ID
+    const authenticatedUserId = identity.subject
+
+    if (!authenticatedUserId || authenticatedUserId.trim() === '') {
+      throw new Error('Unauthenticated: Invalid user identity')
+    }
+
+    if (authenticatedUserId !== args.userId) {
+      throw new Error('Unauthorized: Cannot access resources for a different user')
+    }
+
+    // Proceed with existing logic - user is authorized
     const user = await ctx.db.get(args.userId)
     if (!user) return []
 

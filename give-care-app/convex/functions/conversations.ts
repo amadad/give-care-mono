@@ -6,6 +6,7 @@
 
 import { internalMutation, query } from '../_generated/server'
 import { v } from 'convex/values'
+import { verifyUserOwnership } from '../lib/auth'
 
 // MUTATIONS
 
@@ -92,6 +93,9 @@ export const getRecentConversations = query({
     limit: v.optional(v.number()),
   },
   handler: async (ctx, args) => {
+    // Verify that the authenticated user owns this userId
+    await verifyUserOwnership(ctx, args.userId)
+
     const limit = args.limit || 50
 
     return await ctx.db
@@ -108,6 +112,9 @@ export const getConversationMetrics = query({
     since: v.optional(v.number()), // timestamp
   },
   handler: async (ctx, args) => {
+    // Verify that the authenticated user owns this userId
+    await verifyUserOwnership(ctx, args.userId)
+
     const since = args.since || Date.now() - 30 * 24 * 60 * 60 * 1000 // 30 days
 
     const messages = await ctx.db

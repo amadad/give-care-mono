@@ -4,15 +4,61 @@
  * Implements burnout score trends and pressure zone tracking
  */
 
-import { mutation, query, internalMutation, internalQuery } from '../_generated/server'
+import { mutation, query, internalMutation, internalQuery, QueryCtx } from '../_generated/server'
 import { v } from 'convex/values'
 import { internal } from '../_generated/api'
+import { Id } from '../_generated/dataModel'
+
+/**
+ * SECURITY HELPER: Verify userId ownership
+ *
+ * Ensures authenticated users can only access their own wellness data.
+ * Prevents unauthorized access where User A could read User B's burnout scores.
+ *
+ * @param ctx - Query context with auth
+ * @param requestedUserId - The userId being accessed
+ * @throws Error if unauthenticated, user not found, or unauthorized
+ */
+async function verifyOwnership(ctx: QueryCtx, requestedUserId: Id<'users'>) {
+  // 1. Check authentication
+  const identity = await ctx.auth.getUserIdentity()
+  if (!identity) {
+    throw new Error('Unauthenticated: Must be logged in to access wellness data')
+  }
+
+  // 2. Look up the requested user
+  const user = await ctx.db.get(requestedUserId)
+  if (!user) {
+    throw new Error('User not found: User does not exist')
+  }
+
+  // 3. Verify ownership - Compare auth identity to user
+  // For Convex Auth users: user._id should match identity.subject (which is the userId)
+  // For users with clerkId (legacy/external auth): check that field
+  const isOwner =
+    user._id === identity.subject || // Direct ID match (Convex auth)
+    (user.clerkId && user.clerkId === identity.subject) // Clerk ID match
+
+  if (!isOwner) {
+    throw new Error('Unauthorized: Cannot access another user\'s wellness data')
+  }
+
+  // 4. Additional check: user must have a valid auth identifier
+  if (!user._id && !user.clerkId) {
+    throw new Error('Unauthorized: User does not have valid authentication')
+  }
+
+  return user
+}
 
 // QUERIES
 
 export const getLatestScore = query({
   args: { userId: v.id('users') },
   handler: async (ctx, args) => {
+    // Verify ownership before accessing data
+    await verifyOwnership(ctx, args.userId)
+
     return await ctx.db
       .query('wellnessScores')
       .withIndex('by_user_recorded', (q: any) => q.eq('userId', args.userId))
@@ -27,6 +73,9 @@ export const getScoreHistory = query({
     limit: v.optional(v.number()),
   },
   handler: async (ctx, args) => {
+    // Verify ownership before accessing data
+    await verifyOwnership(ctx, args.userId)
+
     const limit = args.limit || 30
 
     return await ctx.db
@@ -43,6 +92,9 @@ export const trend = query({
     windowDays: v.number(),
   },
   handler: async (ctx, args) => {
+    // Verify ownership before accessing data
+    await verifyOwnership(ctx, args.userId)
+
     const cutoff = Date.now() - args.windowDays * 24 * 60 * 60 * 1000
     const points = await ctx.db
       .query('wellnessScores')
@@ -72,6 +124,9 @@ export const getPressureZoneTrends = query({
     windowDays: v.number(),
   },
   handler: async (ctx, args) => {
+    // Verify ownership before accessing data
+    await verifyOwnership(ctx, args.userId)
+
     const cutoff = Date.now() - args.windowDays * 24 * 60 * 60 * 1000
     const scores = await ctx.db
       .query('wellnessScores')
