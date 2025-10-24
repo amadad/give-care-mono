@@ -1,18 +1,20 @@
 'use client';
 
-import { motion } from 'framer-motion';
+import { motion, useReducedMotion } from 'framer-motion';
 import Image from 'next/image';
 import Link from 'next/link';
 
 export default function NewHero() {
+  const shouldReduceMotion = useReducedMotion();
+
   return (
     <section className="pt-6 sm:pt-8 md:pt-12 pb-0 bg-base-100">
         <div className="container mx-auto px-4 sm:px-6 max-w-5xl pb-0">
           {/* Minimal Headline */}
           <motion.div
-            initial={{ opacity: 0 }}
+            initial={shouldReduceMotion ? { opacity: 1 } : { opacity: 0 }}
             animate={{ opacity: 1 }}
-            transition={{ duration: 0.6 }}
+            transition={{ duration: shouldReduceMotion ? 0 : 0.6 }}
             className="text-center mb-4 md:mb-6 px-4"
           >
             <h1 className="text-3xl sm:text-4xl md:text-6xl font-serif font-light tracking-tight text-amber-950 leading-[1.2] mb-4 sm:mb-6">
@@ -21,9 +23,9 @@ export default function NewHero() {
 
             {/* Forbes Badge */}
             <motion.div
-              initial={{ opacity: 0 }}
+              initial={shouldReduceMotion ? { opacity: 1 } : { opacity: 0 }}
               animate={{ opacity: 1 }}
-              transition={{ duration: 0.6, delay: 0.1 }}
+              transition={{ duration: shouldReduceMotion ? 0 : 0.6, delay: shouldReduceMotion ? 0 : 0.1 }}
               className="flex items-center justify-center gap-2 mb-6"
             >
               <span className="text-xs uppercase tracking-widest text-amber-700 font-light">As Featured In</span>
@@ -51,9 +53,9 @@ export default function NewHero() {
 
           {/* Dual CTA */}
           <motion.div
-            initial={{ opacity: 0 }}
+            initial={shouldReduceMotion ? { opacity: 1 } : { opacity: 0 }}
             animate={{ opacity: 1 }}
-            transition={{ duration: 0.6, delay: 0.2 }}
+            transition={{ duration: shouldReduceMotion ? 0 : 0.6, delay: shouldReduceMotion ? 0 : 0.2 }}
             className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center items-center mb-0 px-4 w-full sm:w-auto"
           >
             <Link
@@ -72,9 +74,9 @@ export default function NewHero() {
 
           {/* Hero Image */}
           <motion.div
-            initial={{ opacity: 0, y: 20 }}
+            initial={shouldReduceMotion ? { opacity: 1, y: 0 } : { opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, delay: 0.4 }}
+            transition={{ duration: shouldReduceMotion ? 0 : 0.6, delay: shouldReduceMotion ? 0 : 0.4 }}
             className="flex justify-center"
           >
             <div className="relative w-full max-w-3xl md:max-w-4xl">

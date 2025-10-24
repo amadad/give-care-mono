@@ -1,5 +1,3 @@
-'use client';
-
 const features = [
   {
     title: "Understand your capacity",

@@ -1,6 +1,6 @@
 'use client';
 
-import { motion } from 'framer-motion';
+import { motion, useReducedMotion } from 'framer-motion';
 
 const smsFeatures = [
   {
@@ -33,8 +33,10 @@ const smsFeatures = [
 ];
 
 export default function SMSFirstSection() {
+  const shouldReduceMotion = useReducedMotion();
+
   return (
-    <section className="section-standard bg-white">
+    <section className="section-standard bg-base-100">
       <div className="container-editorial">
         {/* Heading */}
         <div className="text-center mb-12 md:mb-16">
@@ -52,10 +54,10 @@ export default function SMSFirstSection() {
           {smsFeatures.map((feature, index) => (
             <motion.div
               key={index}
-              initial={{ opacity: 0, y: 20 }}
+              initial={shouldReduceMotion ? { opacity: 1, y: 0 } : { opacity: 0, y: 20 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
-              transition={{ duration: 0.5, delay: index * 0.1 }}
+              transition={{ duration: shouldReduceMotion ? 0 : 0.5, delay: shouldReduceMotion ? 0 : index * 0.1 }}
               className="text-center"
             >
               {/* Icon */}
@@ -78,10 +80,10 @@ export default function SMSFirstSection() {
 
         {/* Accessibility Note */}
         <motion.div
-          initial={{ opacity: 0 }}
+          initial={shouldReduceMotion ? { opacity: 1 } : { opacity: 0 }}
           whileInView={{ opacity: 1 }}
           viewport={{ once: true }}
-          transition={{ duration: 0.5, delay: 0.4 }}
+          transition={{ duration: shouldReduceMotion ? 0 : 0.5, delay: shouldReduceMotion ? 0 : 0.4 }}
           className="mt-12 text-center"
         >
           <p className="text-sm text-gray-500 max-w-xl mx-auto">

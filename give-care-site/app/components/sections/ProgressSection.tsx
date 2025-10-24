@@ -55,6 +55,8 @@ const milestones = [
 ];
 
 export default function ProgressSection() {
+  const shouldReduceMotion = useReducedMotion();
+
   return (
     <section className="py-20 bg-white">
       <div className="container mx-auto px-4">
@@ -105,9 +107,9 @@ export default function ProgressSection() {
               {milestones.map((milestone, index) => (
                 <motion.div
                   key={index}
-                  initial={{ opacity: 0, y: 16 }}
+                  initial={shouldReduceMotion ? { opacity: 1, y: 0 } : { opacity: 0, y: 16 }}
                   whileInView={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.4, delay: index * 0.05 }}
+                  transition={{ duration: shouldReduceMotion ? 0 : 0.4, delay: shouldReduceMotion ? 0 : index * 0.05 }}
                   className="flex gap-4"
                 >
                   <div className="flex flex-col items-center">
@@ -132,9 +134,9 @@ export default function ProgressSection() {
             {/* CTA */}
             <div className="mt-12 text-center">
               <motion.div
-                initial={{ opacity: 0, y: 16 }}
+                initial={shouldReduceMotion ? { opacity: 1, y: 0 } : { opacity: 0, y: 16 }}
                 whileInView={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.4 }}
+                transition={{ duration: shouldReduceMotion ? 0 : 0.4 }}
               >
                 <p className="mb-4 text-amber-800">
                   Start tracking your caregiving journey today

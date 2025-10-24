@@ -4,6 +4,17 @@ import { format, parseISO } from 'date-fns';
 import { getAllPosts, type Post } from '../lib/mdx';
 import Navbar from '../components/layout/Navbar';
 import Footer from '../components/layout/Footer';
+import type { Metadata } from 'next';
+
+export const metadata: Metadata = {
+  title: 'Words - Caregiving Insights & Stories | GiveCare',
+  description: 'Real stories, research, and resources for family caregivers. Evidence-based guidance on burnout prevention, self-care, and navigating the caregiving journey.',
+  openGraph: {
+    title: 'Caregiving Insights & Stories from GiveCare',
+    description: 'Real stories, research, and resources for family caregivers navigating the challenges of caring for loved ones.',
+    type: 'website',
+  },
+};
 
 export default async function WordsPage() {
   const posts = await getAllPosts();

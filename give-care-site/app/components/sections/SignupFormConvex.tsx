@@ -58,12 +58,15 @@ export function SignupFormConvex() {
         throw new Error(`Missing Stripe price ID for ${plan} plan. Check environment configuration.`)
       }
 
-      console.log('[SignupForm] Creating checkout session...', {
-        fullName: name,
-        email,
-        phoneNumber: phoneE164,
-        priceId,
-      })
+      // Log non-PII data only in development
+      if (process.env.NODE_ENV === 'development') {
+        console.log('[SignupForm] Creating checkout session...', {
+          priceId,
+          hasName: !!name,
+          hasEmail: !!email,
+          hasPhone: !!phoneE164,
+        })
+      }
 
       // Call Convex action to create checkout session
       const checkoutUrl = await createCheckoutSession({
@@ -73,7 +76,10 @@ export function SignupFormConvex() {
         priceId,
       })
 
-      console.log('[SignupForm] Checkout URL received:', checkoutUrl)
+      // Don't log URLs that might contain tokens
+      if (process.env.NODE_ENV === 'development') {
+        console.log('[SignupForm] Checkout session created successfully')
+      }
 
       if (!checkoutUrl) {
         throw new Error('Failed to create checkout session')
@@ -94,176 +100,222 @@ export function SignupFormConvex() {
   }
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-2 min-h-screen lg:min-h-0">
-      {/* Form Section - Left Half */}
-      <div className="bg-base-100 p-6 lg:p-12 flex flex-col justify-center">
-        <div className="max-w-xl mx-auto w-full">
-          <form onSubmit={startCheckout} className="space-y-6">
-            {/* Contact Information Fieldset */}
-            <fieldset className="fieldset border border-base-300 rounded-box p-4 lg:p-6">
-              <legend className="fieldset-legend bg-base-100 px-2">Contact Information</legend>
+    <div className="w-full max-w-lg mx-auto">
+      <form onSubmit={startCheckout} className="space-y-4 sm:space-y-6">
+        {/* Contact Information - Minimal Design */}
+        <div className="space-y-3 sm:space-y-4">
+          <div>
+            <label className="block text-sm font-light text-amber-800 mb-2">
+              Full Name
+            </label>
+            <input
+              type="text"
+              className="w-full px-4 py-3 bg-white border border-amber-200 rounded-lg text-base text-amber-900 placeholder:text-amber-400 focus:outline-none focus:border-amber-400 transition-colors"
+              placeholder="Your name"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              required
+              autoComplete="name"
+            />
+          </div>
 
-              <div className="form-control mb-4">
-                <label className="label">
-                  <span className="label-text">Full Name</span>
-                </label>
-                <input
-                  type="text"
-                  className="input input-bordered w-full bg-white focus:outline-none focus:border-primary"
-                  placeholder="Enter your full name"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  required
-                />
-              </div>
+          <div>
+            <label className="block text-sm font-light text-amber-800 mb-2">
+              Email
+            </label>
+            <input
+              type="email"
+              className="w-full px-4 py-3 bg-white border border-amber-200 rounded-lg text-base text-amber-900 placeholder:text-amber-400 focus:outline-none focus:border-amber-400 transition-colors"
+              placeholder="you@example.com"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              required
+              autoComplete="email"
+              inputMode="email"
+            />
+          </div>
 
-              <div className="form-control mb-4">
-                <label className="label">
-                  <span className="label-text">Email Address</span>
-                </label>
-                <input
-                  type="email"
-                  className="input input-bordered w-full bg-white focus:outline-none focus:border-primary"
-                  placeholder="Enter your email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  required
-                />
-              </div>
-
-              <div className="form-control">
-                <label className="label">
-                  <span className="label-text">Phone Number</span>
-                </label>
-                <input
-                  type="tel"
-                  className="input input-bordered w-full bg-white focus:outline-none focus:border-primary"
-                  placeholder="(555) 123-4567"
-                  value={phone.value}
-                  onChange={(e) => phone.setValue(e.target.value)}
-                  required
-                />
-              </div>
-            </fieldset>
-
-            {/* Plan Selection Fieldset */}
-            <fieldset className="fieldset border border-base-300 rounded-box p-4 lg:p-6">
-              <legend className="fieldset-legend bg-base-100 px-2">Choose Your Plan</legend>
-
-              <div className="flex flex-col sm:flex-row gap-4 mt-4">
-                <div className={`card cursor-pointer transition-colors ${
-                  plan === "monthly" ? "bg-primary text-primary-content" : "bg-base-200 hover:bg-base-300"
-                }`} onClick={() => setPlan("monthly")}>
-                  <div className="card-body py-4">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <h3 className="card-title text-sm">Monthly</h3>
-                        <div className="text-base font-bold">$9.99</div>
-                        <div className="text-sm opacity-70">per month</div>
-                      </div>
-                      <input
-                        type="radio"
-                        className="radio radio-primary"
-                        name="plan"
-                        checked={plan === "monthly"}
-                        onChange={() => setPlan("monthly")}
-                      />
-                    </div>
-                  </div>
-                </div>
-
-                <div className={`card cursor-pointer relative transition-colors ${
-                  plan === "annual" ? "bg-primary text-primary-content" : "bg-base-200 hover:bg-base-300"
-                }`} onClick={() => setPlan("annual")}>
-                  <div className="badge badge-secondary absolute -top-2 -right-2">Save $20</div>
-                  <div className="card-body py-4">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <h3 className="card-title text-sm">Annual</h3>
-                        <div className="text-base font-bold">$99</div>
-                        <div className="text-sm opacity-70">$8.25/month</div>
-                      </div>
-                      <input
-                        type="radio"
-                        className="radio radio-primary"
-                        name="plan"
-                        checked={plan === "annual"}
-                        onChange={() => setPlan("annual")}
-                      />
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </fieldset>
-
-            {/* Terms & Conditions Fieldset */}
-            <fieldset className="fieldset border border-base-300 rounded-box p-4 lg:p-6">
-              <legend className="fieldset-legend bg-base-100 px-2">Terms & Conditions</legend>
-
-              <div className="space-y-4 mt-4">
-                <div className="form-control">
-                  <label className="cursor-pointer flex items-start">
-                    <input
-                      type="checkbox"
-                      className="checkbox checkbox-primary mr-3 mt-1 flex-shrink-0"
-                      checked={consentSms}
-                      onChange={(e) => setConsentSms(e.target.checked)}
-                    />
-                    <span className="label-text flex-1">I agree to receive text messages from GiveCare for caregiving support and updates.</span>
-                  </label>
-                </div>
-
-                <div className="form-control">
-                  <label className="cursor-pointer flex items-start">
-                    <input
-                      type="checkbox"
-                      className="checkbox checkbox-primary mr-3 mt-1 flex-shrink-0"
-                      checked={consentTerms}
-                      onChange={(e) => setConsentTerms(e.target.checked)}
-                    />
-                    <span className="label-text flex-1">I agree to the <a href="/terms" className="link">Terms of Service</a> and <a href="/privacy" className="link">Privacy Policy</a>.</span>
-                  </label>
-                </div>
-              </div>
-            </fieldset>
-
-            {/* Submit Button - Matches form width */}
-            <button
-              className={`btn btn-block btn-lg ${
-                canSubmit ? "btn-primary" : "btn-disabled"
-              }`}
-              disabled={!canSubmit}
-              type="submit"
-            >
-              {loading ? (
-                <>
-                  <span className="loading loading-spinner loading-sm"></span>
-                  Processing...
-                </>
-              ) : (
-                "Continue to Secure Payment →"
-              )}
-            </button>
-            {error && (
-              <div className="alert alert-error mt-4">
-                <span>{error}</span>
-              </div>
-            )}
-          </form>
-        </div>
-      </div>
-
-      {/* Image Section - Right Half */}
-      <div className="bg-gradient-to-br from-primary/20 to-secondary/20 relative overflow-hidden min-h-[300px] lg:min-h-0">
-        <div className="absolute inset-0 bg-gradient-to-br from-amber-400/10 via-orange-400/10 to-emerald-400/10"></div>
-        <div className="absolute inset-0 flex items-center justify-center">
-          <div className="text-center text-primary/20">
-            <div className="text-8xl mb-4">🤗</div>
-            <div className="text-2xl font-bold">Caring Together</div>
+          <div>
+            <label className="block text-sm font-light text-amber-800 mb-2">
+              Phone Number
+            </label>
+            <input
+              type="tel"
+              className="w-full px-4 py-3 bg-white border border-amber-200 rounded-lg text-base text-amber-900 placeholder:text-amber-400 focus:outline-none focus:border-amber-400 transition-colors"
+              placeholder="(555) 123-4567"
+              value={phone.value}
+              onChange={(e) => phone.setValue(e.target.value)}
+              required
+              autoComplete="tel"
+              inputMode="tel"
+            />
           </div>
         </div>
 
-      </div>
+        {/* Plan Selection - Proper Radio Group */}
+        <fieldset className="space-y-2 sm:space-y-3">
+          <legend className="block text-sm font-light text-amber-800 mb-2">
+            Choose Your Plan
+          </legend>
+
+          <div className="grid grid-cols-2 gap-2 sm:gap-3" role="radiogroup" aria-label="Subscription plan">
+            {/* Monthly Plan */}
+            <label
+              className={`w-full p-3 sm:p-4 border rounded-lg text-left transition-all cursor-pointer ${
+                plan === "monthly"
+                  ? "border-amber-950 bg-amber-50"
+                  : "border-amber-200 bg-white hover:border-amber-300"
+              }`}
+            >
+              <input
+                type="radio"
+                name="plan"
+                value="monthly"
+                checked={plan === "monthly"}
+                onChange={(e) => setPlan(e.target.value as PlanType)}
+                className="sr-only"
+                aria-label="Monthly plan, $9.99 per month"
+              />
+              <div className="flex items-center justify-between">
+                <div>
+                  <div className="text-base font-light text-amber-900">Monthly</div>
+                  <div className="text-lg font-serif text-amber-900 mt-1">$9.99<span className="text-sm font-light text-amber-700">/month</span></div>
+                </div>
+                <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${
+                  plan === "monthly" ? "border-amber-950" : "border-amber-300"
+                }`} aria-hidden="true">
+                  {plan === "monthly" && (
+                    <div className="w-3 h-3 rounded-full bg-amber-950" />
+                  )}
+                </div>
+              </div>
+            </label>
+
+            {/* Annual Plan */}
+            <label
+              className={`w-full p-3 sm:p-4 border rounded-lg text-left transition-all cursor-pointer relative ${
+                plan === "annual"
+                  ? "border-amber-950 bg-amber-50"
+                  : "border-amber-200 bg-white hover:border-amber-300"
+              }`}
+            >
+              <input
+                type="radio"
+                name="plan"
+                value="annual"
+                checked={plan === "annual"}
+                onChange={(e) => setPlan(e.target.value as PlanType)}
+                className="sr-only"
+                aria-label="Annual plan, $99 per year, saves $20"
+              />
+              <span className="absolute -top-2 right-3 px-2 py-0.5 bg-amber-950 text-white text-xs rounded-full" aria-hidden="true">
+                Save $20
+              </span>
+              <div className="flex items-center justify-between">
+                <div>
+                  <div className="text-base font-light text-amber-900">Annual</div>
+                  <div className="text-lg font-serif text-amber-900 mt-1">$99<span className="text-sm font-light text-amber-700">/year</span></div>
+                  <div className="text-xs text-amber-700 mt-0.5">$8.25/month</div>
+                </div>
+                <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${
+                  plan === "annual" ? "border-amber-950" : "border-amber-300"
+                }`} aria-hidden="true">
+                  {plan === "annual" && (
+                    <div className="w-3 h-3 rounded-full bg-amber-950" />
+                  )}
+                </div>
+              </div>
+            </label>
+          </div>
+        </fieldset>
+
+        {/* Terms & Conditions - CTIA Compliant */}
+        <div className="space-y-2 sm:space-y-3 pt-1 sm:pt-2">
+          <label htmlFor="consent-sms" className="flex items-start gap-3 cursor-pointer">
+            <input
+              id="consent-sms"
+              type="checkbox"
+              className="mt-1 w-4 h-4 rounded border-amber-300 text-amber-950 focus:ring-amber-400 focus:ring-offset-0"
+              checked={consentSms}
+              onChange={(e) => setConsentSms(e.target.checked)}
+              required
+              aria-describedby="sms-consent-details"
+            />
+            <span className="text-sm font-light text-amber-800 leading-relaxed">
+              <span id="sms-consent-details">
+                I agree to receive text messages from GiveCare for support and updates. Message frequency varies. Message & data rates may apply. Text STOP to opt out, HELP for help.
+              </span>
+            </span>
+          </label>
+
+          <label htmlFor="consent-terms" className="flex items-start gap-3 cursor-pointer">
+            <input
+              id="consent-terms"
+              type="checkbox"
+              className="mt-1 w-4 h-4 rounded border-amber-300 text-amber-950 focus:ring-amber-400 focus:ring-offset-0"
+              checked={consentTerms}
+              onChange={(e) => setConsentTerms(e.target.checked)}
+              required
+            />
+            <span className="text-sm font-light text-amber-800 leading-relaxed">
+              I agree to the <a href="/terms" className="underline hover:text-amber-950 transition-colors">Terms of Service</a> and <a href="/privacy" className="underline hover:text-amber-950 transition-colors">Privacy Policy</a>.
+            </span>
+          </label>
+        </div>
+
+        {/* Submit Button - Accessible */}
+        <div className="pt-3 sm:pt-4">
+          <button
+            type="submit"
+            disabled={!canSubmit}
+            aria-disabled={!canSubmit}
+            className={`w-full px-8 py-3 rounded-lg text-sm tracking-widest transition-all ${
+              canSubmit
+                ? "bg-amber-950 text-white hover:bg-amber-900"
+                : "bg-amber-200 text-amber-400 cursor-not-allowed"
+            }`}
+          >
+            {loading ? (
+              <span className="flex items-center justify-center gap-2">
+                <svg className="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" aria-hidden="true">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                <span>Processing</span>
+              </span>
+            ) : (
+              "Continue to Secure Checkout"
+            )}
+          </button>
+        </div>
+
+        {error && (
+          <div
+            role="alert"
+            aria-live="assertive"
+            className="p-3 bg-red-50 border border-red-200 rounded-lg"
+          >
+            <p className="text-sm text-red-800">{error}</p>
+          </div>
+        )}
+
+        {/* Trust Indicators - Minimal */}
+        <div className="flex items-center justify-center gap-6 pt-4 sm:pt-6 text-xs text-amber-800 font-light">
+          <span className="flex items-center gap-1.5">
+            <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+              <path fillRule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clipRule="evenodd" />
+            </svg>
+            Secure
+          </span>
+          <span className="flex items-center gap-1.5">
+            <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+              <path d="M2.003 5.884L10 9.882l7.997-3.998A2 2 0 0016 4H4a2 2 0 00-1.997 1.884z" />
+              <path d="M18 8.118l-8 4-8-4V14a2 2 0 002 2h12a2 2 0 002-2V8.118z" />
+            </svg>
+            Cancel Anytime
+          </span>
+        </div>
+      </form>
     </div>
   )
 }

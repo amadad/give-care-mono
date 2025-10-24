@@ -2,7 +2,7 @@
 
 import AnimatedChat from "../AnimatedChat";
 import Image from 'next/image';
-import { motion } from 'framer-motion';
+import { motion, useReducedMotion } from 'framer-motion';
 
 const steps = [
   {
@@ -30,6 +30,8 @@ const chatMessages = [
 ];
 
 export default function HowItWorksSection() {
+  const shouldReduceMotion = useReducedMotion();
+
   return (
     <section className="py-20 md:py-24 bg-white">
       <div className="container mx-auto px-6 max-w-4xl">
@@ -64,9 +66,9 @@ export default function HowItWorksSection() {
 
         {/* Phone Demo */}
         <motion.div
-          initial={{ opacity: 0 }}
+          initial={shouldReduceMotion ? { opacity: 1 } : { opacity: 0 }}
           animate={{ opacity: 1 }}
-          transition={{ duration: 0.6, delay: 0.2 }}
+          transition={{ duration: shouldReduceMotion ? 0 : 0.6, delay: shouldReduceMotion ? 0 : 0.2 }}
           className="flex justify-center mt-16 md:mt-20"
         >
           <div className="transform scale-75 md:scale-90">
