@@ -28,7 +28,6 @@
     "@openai/agents": "^0.1.11",
     "convex": "^1.28.0",
     "exa-js": "^1.10.2",
-    "llm-scraper-worker": "^0.0.6",
     "puppeteer-core": "^23.0.0",
     "zod": "^3.22.4"
   },

@@ -31,7 +31,7 @@ async function callFindResources(
     limit?: number
   }
 ) {
-  return await t.query(async (ctx) => {
+  return await t.run(async (ctx) => {
     const mod = await import('../convex/functions/resources.ts')
     // Call the internal function directly
     return await (mod as any).default(ctx, args)
@@ -90,7 +90,7 @@ describe('Resource Search - Functional Tests', () => {
       })
 
       // Query with matching ZIP using the internal function directly
-      const results = await t.query(async (ctx) => {
+      const results = await t.run(async (ctx) => {
         const { findResourcesInternal } = await import('../convex/functions/resources.ts')
         return await findResourcesInternal(ctx, {
           zip: '94110', // Matches '941' prefix
@@ -151,7 +151,7 @@ describe('Resource Search - Functional Tests', () => {
       })
 
       // Query with ZIP starting with '900'
-      const results = await t.query(async (ctx) => {
+      const results = await t.run(async (ctx) => {
         const { findResourcesInternal } = await import('../convex/functions/resources.ts')
         return await findResourcesInternal(ctx, {
           zip: '90001',
@@ -208,7 +208,7 @@ describe('Resource Search - Functional Tests', () => {
       })
 
       // Query with non-matching ZIP
-      const results = await t.query(async (ctx) => {
+      const results = await t.run(async (ctx) => {
         const { findResourcesInternal } = await import('../convex/functions/resources.ts')
         return await findResourcesInternal(ctx, {
           zip: '99999', // No local match
@@ -271,7 +271,7 @@ describe('Resource Search - Functional Tests', () => {
         })
       })
 
-      const results = await t.query(async (ctx) => {
+      const results = await t.run(async (ctx) => {
         const { findResourcesInternal } = await import('../convex/functions/resources.ts')
         return await findResourcesInternal(ctx, {
           zip: '94110',
@@ -330,7 +330,7 @@ describe('Resource Search - Functional Tests', () => {
         })
       })
 
-      const results = await t.query(async (ctx) => {
+      const results = await t.run(async (ctx) => {
         const { findResourcesInternal } = await import('../convex/functions/resources.ts')
         return await findResourcesInternal(ctx, {
           zip: '94110',
@@ -389,7 +389,7 @@ describe('Resource Search - Functional Tests', () => {
       })
 
       // Without crisis band
-      const normalResults = await t.query(async (ctx) => {
+      const normalResults = await t.run(async (ctx) => {
         const { findResourcesInternal } = await import('../convex/functions/resources.ts')
         return await findResourcesInternal(ctx, {
           zip: '94110',
@@ -398,7 +398,7 @@ describe('Resource Search - Functional Tests', () => {
       })
 
       // With crisis band
-      const crisisResults = await t.query(async (ctx) => {
+      const crisisResults = await t.run(async (ctx) => {
         const { findResourcesInternal } = await import('../convex/functions/resources.ts')
         return await findResourcesInternal(ctx, {
           zip: '94110',
@@ -481,7 +481,7 @@ describe('Resource Search - Functional Tests', () => {
         })
       })
 
-      const results = await t.query(async (ctx) => {
+      const results = await t.run(async (ctx) => {
         const { findResourcesInternal } = await import('../convex/functions/resources.ts')
         return await findResourcesInternal(ctx, {
           zip: '94110',
@@ -544,7 +544,7 @@ describe('Resource Search - Functional Tests', () => {
         }
       })
 
-      const results = await t.query(async (ctx) => {
+      const results = await t.run(async (ctx) => {
         const { findResourcesInternal } = await import('../convex/functions/resources.ts')
         return await findResourcesInternal(ctx, {
           zip: '94110',
@@ -602,7 +602,7 @@ describe('Resource Search - Functional Tests', () => {
         }
       })
 
-      const results = await t.query(async (ctx) => {
+      const results = await t.run(async (ctx) => {
         const { findResourcesInternal } = await import('../convex/functions/resources.ts')
         return await findResourcesInternal(ctx, {
           zip: '94110',
@@ -617,7 +617,7 @@ describe('Resource Search - Functional Tests', () => {
     it('should return empty array when no resources exist', async () => {
       const t = convexTest(schema, modules)
 
-      const results = await t.query(async (ctx) => {
+      const results = await t.run(async (ctx) => {
         const { findResourcesInternal } = await import('../convex/functions/resources.ts')
         return await findResourcesInternal(ctx, {
           zip: '94110',
@@ -631,7 +631,7 @@ describe('Resource Search - Functional Tests', () => {
     it('should handle empty ZIP code gracefully', async () => {
       const t = convexTest(schema, modules)
 
-      const results = await t.query(async (ctx) => {
+      const results = await t.run(async (ctx) => {
         const { findResourcesInternal } = await import('../convex/functions/resources.ts')
         return await findResourcesInternal(ctx, {
           zip: '',
@@ -645,7 +645,7 @@ describe('Resource Search - Functional Tests', () => {
     it('should handle short ZIP codes (less than 3 digits)', async () => {
       const t = convexTest(schema, modules)
 
-      const results = await t.query(async (ctx) => {
+      const results = await t.run(async (ctx) => {
         const { findResourcesInternal } = await import('../convex/functions/resources.ts')
         return await findResourcesInternal(ctx, {
           zip: '12',
@@ -691,7 +691,7 @@ describe('Resource Search - Functional Tests', () => {
         })
       })
 
-      const results = await t.query(async (ctx) => {
+      const results = await t.run(async (ctx) => {
         const { findResourcesInternal } = await import('../convex/functions/resources.ts')
         return await findResourcesInternal(ctx, {
           zip: '94110',
@@ -759,7 +759,7 @@ describe('Resource Search - Functional Tests', () => {
         })
       })
 
-      const results = await t.query(async (ctx) => {
+      const results = await t.run(async (ctx) => {
         const { findResourcesInternal } = await import('../convex/functions/resources.ts')
         return await findResourcesInternal(ctx, {
           zip: '94110',
@@ -827,7 +827,7 @@ describe('Resource Search - Performance Tests', () => {
 
       const start = Date.now()
 
-      const results = await t.query(async (ctx) => {
+      const results = await t.run(async (ctx) => {
         const { findResourcesInternal } = await import('../convex/functions/resources.ts')
         return await findResourcesInternal(ctx, {
           zip: '94110',
@@ -901,7 +901,7 @@ describe('Resource Search - Performance Tests', () => {
         })
       })
 
-      const results = await t.query(async (ctx) => {
+      const results = await t.run(async (ctx) => {
         const { findResourcesInternal } = await import('../convex/functions/resources.ts')
         return await findResourcesInternal(ctx, {
           zip: '94110',

@@ -234,6 +234,13 @@ describe('Watchers N+1 Query Refactoring - Performance Tests', () => {
     it('should complete watchWellnessTrends with <10 queries for 100 users', async () => {
       const t = convexTest(schema, modules);
 
+      // Register Twilio component mock
+      t.registerComponent('twilio', {
+        messages: {
+          create: async () => ({ sid: 'TEST_MESSAGE_SID', status: 'sent' }),
+        },
+      });
+
       const now = Date.now();
 
       // Create 100 active users with wellness scores
@@ -243,7 +250,7 @@ describe('Watchers N+1 Query Refactoring - Performance Tests', () => {
             phoneNumber: `+1555552${String(1000 + i).padStart(4, '0')}`,
             firstName: `User${i}`,
             journeyPhase: 'active',
-            subscriptionStatus: 'active',
+            subscriptionStatus: 'active' as const,
           });
         });
 
@@ -283,6 +290,13 @@ describe('Watchers N+1 Query Refactoring - Performance Tests', () => {
     it('should batch-load wellness scores for all users', async () => {
       const t = convexTest(schema, modules);
 
+      // Register Twilio component mock
+      t.registerComponent('twilio', {
+        messages: {
+          create: async () => ({ sid: 'TEST_MESSAGE_SID', status: 'sent' }),
+        },
+      });
+
       const now = Date.now();
 
       // Create 50 users with wellness scores
@@ -292,7 +306,7 @@ describe('Watchers N+1 Query Refactoring - Performance Tests', () => {
             phoneNumber: `+1555553${String(1000 + i).padStart(4, '0')}`,
             firstName: `User${i}`,
             journeyPhase: 'active',
-            subscriptionStatus: 'active',
+            subscriptionStatus: 'active' as const,
           });
         });
 

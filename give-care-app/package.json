@@ -26,7 +26,6 @@
   },
   "dependencies": {
     "@auth/core": "^0.37.0",
-    "@ax-llm/ax": "^14.0.32",
     "@convex-dev/auth": "^0.0.90",
     "@convex-dev/rate-limiter": "^0.2.13",
     "@convex-dev/twilio": "^0.1.7",
@@ -43,6 +42,7 @@
     "zod": "^3.23.8"
   },
   "devDependencies": {
+    "@ax-llm/ax": "^14.0.32",
     "@types/node": "^22.0.0",
     "convex-test": "^0.0.38",
     "eslint": "^9.0.0",

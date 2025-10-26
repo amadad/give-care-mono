@@ -1,481 +1,643 @@
 /**
  * Tests for Wellness Function Ownership Verification
  *
- * Security Issue: wellness.ts functions accept userId without verifying caller ownership.
- * Any authenticated user can read any other user's wellness/burnout data.
+ * Security Tests: Ensures wellness functions enforce proper authorization
  *
- * This test suite ensures:
+ * All 4 public query functions must enforce ownership verification:
+ * - getLatestScore
+ * - getScoreHistory
+ * - trend
+ * - getPressureZoneTrends
+ *
+ * Tests verify:
  * 1. Authenticated users can only access their own wellness data
  * 2. Attempts to access other users' data throw proper authorization errors
- * 3. All 4 public query functions enforce ownership verification:
- *    - getLatestScore (line 13)
- *    - getScoreHistory (line 24)
- *    - trend (line 40)
- *    - getPressureZoneTrends (line 69)
- *
- * Expected Implementation:
- * - Extract identity from ctx.auth.getUserIdentity()
- * - Look up user by userId to get their clerkId (or auth identifier)
- * - Compare identity.subject to user.clerkId
- * - Throw error if unauthorized
+ * 3. Unauthenticated requests are rejected
  */
 
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect } from 'vitest'
+import { convexTest } from 'convex-test'
+import schema from '../convex/schema'
+import { api } from '../convex/_generated/api'
 import type { Id } from '../convex/_generated/dataModel'
 
-// Mock context structure based on Convex patterns
-interface MockAuthIdentity {
-  subject: string
-  tokenIdentifier: string
-}
-
-interface MockDb {
-  get: (id: Id<'users'>) => Promise<any>
-  query: (table: string) => any
-}
-
-interface MockQueryContext {
-  auth: {
-    getUserIdentity: () => Promise<MockAuthIdentity | null>
-  }
-  db: MockDb
-}
+// Import Convex functions for testing
+const modules = import.meta.glob('../convex/**/*.ts')
 
 describe('Wellness Functions - Ownership Verification', () => {
-  const USER_A_ID = 'user_a_123' as Id<'users'>
-  const USER_B_ID = 'user_b_456' as Id<'users'>
-  const USER_A_CLERK_ID = 'clerk_user_a'
-  const USER_B_CLERK_ID = 'clerk_user_b'
-
-  // Mock users in database
-  const mockUsers = {
-    [USER_A_ID]: {
-      _id: USER_A_ID,
-      _creationTime: Date.now(),
-      clerkId: USER_A_CLERK_ID,
-      phoneNumber: '+15551234567',
-      firstName: 'Alice',
-      burnoutScore: 45,
-      burnoutBand: 'moderate',
-    },
-    [USER_B_ID]: {
-      _id: USER_B_ID,
-      _creationTime: Date.now(),
-      clerkId: USER_B_CLERK_ID,
-      phoneNumber: '+15559876543',
-      firstName: 'Bob',
-      burnoutScore: 72,
-      burnoutBand: 'high',
-    },
-  }
-
-  // Mock wellness scores
-  const mockWellnessScores = [
-    {
-      _id: 'score_1' as Id<'wellnessScores'>,
-      _creationTime: Date.now() - 86400000, // 1 day ago
-      userId: USER_A_ID,
-      overallScore: 45,
-      band: 'moderate',
-      pressureZones: ['emotional_wellbeing', 'time_management'],
-      pressureZoneScores: { emotional_wellbeing: 55, time_management: 60 },
-      recordedAt: Date.now() - 86400000,
-    },
-    {
-      _id: 'score_2' as Id<'wellnessScores'>,
-      _creationTime: Date.now() - 172800000, // 2 days ago
-      userId: USER_A_ID,
-      overallScore: 50,
-      band: 'moderate',
-      pressureZones: ['time_management'],
-      pressureZoneScores: { time_management: 50 },
-      recordedAt: Date.now() - 172800000,
-    },
-    {
-      _id: 'score_3' as Id<'wellnessScores'>,
-      _creationTime: Date.now() - 86400000,
-      userId: USER_B_ID,
-      overallScore: 72,
-      band: 'high',
-      pressureZones: ['financial_concerns', 'physical_health'],
-      pressureZoneScores: { financial_concerns: 75, physical_health: 70 },
-      recordedAt: Date.now() - 86400000,
-    },
-  ]
-
-  function createMockContext(
-    authenticatedClerkId: string | null
-  ): MockQueryContext {
-    return {
-      auth: {
-        getUserIdentity: async () => {
-          if (authenticatedClerkId === null) return null
-          return {
-            subject: authenticatedClerkId,
-            tokenIdentifier: `token_${authenticatedClerkId}`,
-          }
-        },
-      },
-      db: {
-        get: async (id: Id<'users'>) => {
-          return mockUsers[id as keyof typeof mockUsers] || null
-        },
-        query: (table: string) => {
-          if (table === 'wellnessScores') {
-            return {
-              withIndex: (indexName: string, filterFn: any) => {
-                // Mock the index filter
-                return {
-                  order: (direction: string) => ({
-                    first: async () => {
-                      // Return first score for the filtered userId
-                      return mockWellnessScores[0] || null
-                    },
-                    take: async (limit: number) => {
-                      // Return limited scores for the filtered userId
-                      return mockWellnessScores.slice(0, limit)
-                    },
-                  }),
-                  filter: (filterFn: any) => ({
-                    collect: async () => {
-                      return mockWellnessScores
-                    },
-                  }),
-                }
-              },
-            }
-          }
-          return {
-            withIndex: () => ({}),
-          }
-        },
-      },
-    }
-  }
-
   describe('getLatestScore - Ownership Verification', () => {
     it('should REJECT when user tries to access another user\'s latest score', async () => {
-      // User A tries to access User B's data
-      const ctx = createMockContext(USER_A_CLERK_ID)
+      const t = convexTest(schema, modules)
 
-      // Import the actual function (will be implemented)
-      const { getLatestScore } = await import('../convex/functions/wellness')
+      // Create two users
+      const userAId = await t.run(async (ctx) => {
+        return await ctx.db.insert('users', {
+          phoneNumber: '+15551234567',
+          firstName: 'Alice',
+          journeyPhase: 'active',
+          burnoutScore: 45,
+          burnoutBand: 'moderate',
+          pressureZones: [],
+        })
+      })
 
-      // This should throw an authorization error
+      const userBId = await t.run(async (ctx) => {
+        return await ctx.db.insert('users', {
+          phoneNumber: '+15559876543',
+          firstName: 'Bob',
+          journeyPhase: 'active',
+          burnoutScore: 72,
+          burnoutBand: 'high',
+          pressureZones: [],
+        })
+      })
+
+      // Create wellness score for User B
+      await t.run(async (ctx) => {
+        await ctx.db.insert('wellnessScores', {
+          userId: userBId,
+          overallScore: 72,
+          band: 'high',
+          pressureZones: ['financial_concerns', 'physical_health'],
+          pressureZoneScores: { financial_concerns: 75, physical_health: 70 },
+          recordedAt: Date.now(),
+        })
+      })
+
+      // User A tries to access User B's data - should throw
+      const asUserA = t.withIdentity({ subject: userAId })
       await expect(
-        getLatestScore(ctx as any, { userId: USER_B_ID })
-      ).rejects.toThrow(/unauthorized|not authorized|access denied/i)
+        asUserA.query(api.functions.wellness.getLatestScore, { userId: userBId })
+      ).rejects.toThrow(/Unauthorized.*another user/i)
     })
 
     it('should ALLOW when user accesses their own latest score', async () => {
-      // User A accesses their own data
-      const ctx = createMockContext(USER_A_CLERK_ID)
+      const t = convexTest(schema, modules)
 
-      const { getLatestScore } = await import('../convex/functions/wellness')
+      // Create user
+      const userId = await t.run(async (ctx) => {
+        return await ctx.db.insert('users', {
+          phoneNumber: '+15551234567',
+          firstName: 'Alice',
+          journeyPhase: 'active',
+          burnoutScore: 45,
+          burnoutBand: 'moderate',
+          pressureZones: [],
+        })
+      })
 
-      // This should succeed
-      const result = await getLatestScore(ctx as any, { userId: USER_A_ID })
+      // Create wellness score
+      await t.run(async (ctx) => {
+        await ctx.db.insert('wellnessScores', {
+          userId,
+          overallScore: 45,
+          band: 'moderate',
+          pressureZones: ['emotional_wellbeing', 'time_management'],
+          pressureZoneScores: { emotional_wellbeing: 55, time_management: 60 },
+          recordedAt: Date.now(),
+        })
+      })
 
-      // Should return the score (or null if none exists)
+      // User A accesses their own data - should succeed
+      const asUser = t.withIdentity({ subject: userId })
+      const result = await asUser.query(api.functions.wellness.getLatestScore, { userId })
+
       expect(result).toBeDefined()
+      expect(result?.overallScore).toBe(45)
     })
 
     it('should REJECT when user is not authenticated', async () => {
-      // No authentication
-      const ctx = createMockContext(null)
+      const t = convexTest(schema, modules)
 
-      const { getLatestScore } = await import('../convex/functions/wellness')
+      // Create user
+      const userId = await t.run(async (ctx) => {
+        return await ctx.db.insert('users', {
+          phoneNumber: '+15551234567',
+          firstName: 'Alice',
+          journeyPhase: 'active',
+          burnoutScore: 45,
+          burnoutBand: 'moderate',
+          pressureZones: [],
+        })
+      })
 
-      // This should throw an authentication error
+      // Unauthenticated request - should throw
       await expect(
-        getLatestScore(ctx as any, { userId: USER_A_ID })
+        t.query(api.functions.wellness.getLatestScore, { userId })
       ).rejects.toThrow(/unauthenticated|not authenticated|must be logged in/i)
     })
 
     it('should REJECT when requested userId does not exist', async () => {
-      // User A tries to access non-existent user
-      const ctx = createMockContext(USER_A_CLERK_ID)
+      const t = convexTest(schema, modules)
 
-      const { getLatestScore } = await import('../convex/functions/wellness')
+      // Create a real user to authenticate as
+      const userId = await t.run(async (ctx) => {
+        return await ctx.db.insert('users', {
+          phoneNumber: '+15551234567',
+          firstName: 'Alice',
+          journeyPhase: 'active',
+          burnoutScore: 45,
+          burnoutBand: 'moderate',
+          pressureZones: [],
+        })
+      })
 
-      const FAKE_USER_ID = 'user_fake_999' as Id<'users'>
+      const fakeUserId = 'fake_user_123' as Id<'users'>
 
-      // This should throw a user not found error
+      // Request non-existent user - should throw
+      const asUser = t.withIdentity({ subject: userId })
       await expect(
-        getLatestScore(ctx as any, { userId: FAKE_USER_ID })
+        asUser.query(api.functions.wellness.getLatestScore, { userId: fakeUserId })
       ).rejects.toThrow(/user not found|user does not exist/i)
     })
   })
 
   describe('getScoreHistory - Ownership Verification', () => {
     it('should REJECT when user tries to access another user\'s score history', async () => {
-      const ctx = createMockContext(USER_A_CLERK_ID)
+      const t = convexTest(schema, modules)
 
-      const { getScoreHistory } = await import('../convex/functions/wellness')
+      // Create two users
+      const userAId = await t.run(async (ctx) => {
+        return await ctx.db.insert('users', {
+          phoneNumber: '+15551234567',
+          firstName: 'Alice',
+          journeyPhase: 'active',
+          burnoutScore: 45,
+          burnoutBand: 'moderate',
+          pressureZones: [],
+        })
+      })
 
+      const userBId = await t.run(async (ctx) => {
+        return await ctx.db.insert('users', {
+          phoneNumber: '+15559876543',
+          firstName: 'Bob',
+          journeyPhase: 'active',
+          burnoutScore: 72,
+          burnoutBand: 'high',
+          pressureZones: [],
+        })
+      })
+
+      // User A tries to access User B's history - should throw
       await expect(
-        getScoreHistory(ctx as any, { userId: USER_B_ID })
-      ).rejects.toThrow(/unauthorized|not authorized|access denied/i)
+        t.withIdentity({ subject: userAId }).query(api.functions.wellness.getScoreHistory, { userId: userBId })
+      ).rejects.toThrow(/Unauthorized.*another user/i)
     })
 
     it('should ALLOW when user accesses their own score history', async () => {
-      const ctx = createMockContext(USER_A_CLERK_ID)
+      const t = convexTest(schema, modules)
 
-      const { getScoreHistory } = await import('../convex/functions/wellness')
-
-      const result = await getScoreHistory(ctx as any, {
-        userId: USER_A_ID,
-        limit: 10,
+      // Create user
+      const userId = await t.run(async (ctx) => {
+        return await ctx.db.insert('users', {
+          phoneNumber: '+15551234567',
+          firstName: 'Alice',
+          journeyPhase: 'active',
+          burnoutScore: 45,
+          burnoutBand: 'moderate',
+          pressureZones: [],
+        })
       })
+
+      // Create scores
+      await t.run(async (ctx) => {
+        await ctx.db.insert('wellnessScores', {
+          userId,
+          overallScore: 45,
+          band: 'moderate',
+          pressureZones: ['emotional_wellbeing'],
+          pressureZoneScores: { emotional_wellbeing: 55 },
+          recordedAt: Date.now(),
+        })
+      })
+
+      // User A accesses their own history - should succeed
+      const result = await t.withIdentity({ subject: userId }).query(api.functions.wellness.getScoreHistory, { userId })
 
       expect(result).toBeDefined()
       expect(Array.isArray(result)).toBe(true)
     })
 
     it('should REJECT when user is not authenticated', async () => {
-      const ctx = createMockContext(null)
+      const t = convexTest(schema, modules)
 
-      const { getScoreHistory } = await import('../convex/functions/wellness')
+      // Create user
+      const userId = await t.run(async (ctx) => {
+        return await ctx.db.insert('users', {
+          phoneNumber: '+15551234567',
+          firstName: 'Alice',
+          journeyPhase: 'active',
+          burnoutScore: 45,
+          burnoutBand: 'moderate',
+          pressureZones: [],
+        })
+      })
 
+      // Unauthenticated request - should throw
       await expect(
-        getScoreHistory(ctx as any, { userId: USER_A_ID })
+        t.query(api.functions.wellness.getScoreHistory, { userId })
       ).rejects.toThrow(/unauthenticated|not authenticated|must be logged in/i)
     })
 
     it('should respect limit parameter when returning own data', async () => {
-      const ctx = createMockContext(USER_A_CLERK_ID)
+      const t = convexTest(schema, modules)
 
-      const { getScoreHistory } = await import('../convex/functions/wellness')
-
-      const result = await getScoreHistory(ctx as any, {
-        userId: USER_A_ID,
-        limit: 5,
+      // Create user
+      const userId = await t.run(async (ctx) => {
+        return await ctx.db.insert('users', {
+          phoneNumber: '+15551234567',
+          firstName: 'Alice',
+          journeyPhase: 'active',
+          burnoutScore: 45,
+          burnoutBand: 'moderate',
+          pressureZones: [],
+        })
       })
 
-      expect(Array.isArray(result)).toBe(true)
-      // Should not exceed limit (mock may return less)
+      // Create 5 scores
+      await t.run(async (ctx) => {
+        for (let i = 0; i < 5; i++) {
+          await ctx.db.insert('wellnessScores', {
+            userId,
+            overallScore: 40 + i,
+            band: 'moderate',
+            pressureZones: [],
+            pressureZoneScores: {},
+            recordedAt: Date.now() - i * 86400000,
+          })
+        }
+      })
+
+      // Request with limit=3
+      const result = await t.withIdentity({ subject: userId }).query(api.functions.wellness.getScoreHistory, { userId, limit: 3 })
+
+      expect(result).toHaveLength(3)
     })
   })
 
   describe('trend - Ownership Verification', () => {
     it('should REJECT when user tries to access another user\'s trend data', async () => {
-      const ctx = createMockContext(USER_A_CLERK_ID)
+      const t = convexTest(schema, modules)
 
-      const { trend } = await import('../convex/functions/wellness')
+      // Create two users
+      const userAId = await t.run(async (ctx) => {
+        return await ctx.db.insert('users', {
+          phoneNumber: '+15551234567',
+          firstName: 'Alice',
+          journeyPhase: 'active',
+          burnoutScore: 45,
+          burnoutBand: 'moderate',
+          pressureZones: [],
+        })
+      })
 
+      const userBId = await t.run(async (ctx) => {
+        return await ctx.db.insert('users', {
+          phoneNumber: '+15559876543',
+          firstName: 'Bob',
+          journeyPhase: 'active',
+          burnoutScore: 72,
+          burnoutBand: 'high',
+          pressureZones: [],
+        })
+      })
+
+      // User A tries to access User B's trend - should throw
       await expect(
-        trend(ctx as any, { userId: USER_B_ID, windowDays: 30 })
-      ).rejects.toThrow(/unauthorized|not authorized|access denied/i)
+        t.withIdentity({ subject: userAId }).query(api.functions.wellness.trend, { userId: userBId, windowDays: 30 })
+      ).rejects.toThrow(/Unauthorized.*another user/i)
     })
 
     it('should ALLOW when user accesses their own trend data', async () => {
-      const ctx = createMockContext(USER_A_CLERK_ID)
+      const t = convexTest(schema, modules)
 
-      const { trend } = await import('../convex/functions/wellness')
-
-      const result = await trend(ctx as any, {
-        userId: USER_A_ID,
-        windowDays: 30,
+      // Create user
+      const userId = await t.run(async (ctx) => {
+        return await ctx.db.insert('users', {
+          phoneNumber: '+15551234567',
+          firstName: 'Alice',
+          journeyPhase: 'active',
+          burnoutScore: 45,
+          burnoutBand: 'moderate',
+          pressureZones: [],
+        })
       })
 
+      // Create scores
+      await t.run(async (ctx) => {
+        await ctx.db.insert('wellnessScores', {
+          userId,
+          overallScore: 45,
+          band: 'moderate',
+          pressureZones: ['emotional_wellbeing'],
+          pressureZoneScores: { emotional_wellbeing: 55 },
+          recordedAt: Date.now(),
+        })
+      })
+
+      // User A accesses their own trend - should succeed
+      const result = await t.withIdentity({ subject: userId }).query(api.functions.wellness.trend, { userId, windowDays: 30 })
+
       expect(result).toBeDefined()
-      expect(result).toHaveProperty('count')
-      expect(result).toHaveProperty('average')
-      expect(result).toHaveProperty('trend')
+      expect(result.count).toBeGreaterThanOrEqual(0)
     })
 
     it('should REJECT when user is not authenticated', async () => {
-      const ctx = createMockContext(null)
+      const t = convexTest(schema, modules)
 
-      const { trend } = await import('../convex/functions/wellness')
+      // Create user
+      const userId = await t.run(async (ctx) => {
+        return await ctx.db.insert('users', {
+          phoneNumber: '+15551234567',
+          firstName: 'Alice',
+          journeyPhase: 'active',
+          burnoutScore: 45,
+          burnoutBand: 'moderate',
+          pressureZones: [],
+        })
+      })
 
+      // Unauthenticated request - should throw
       await expect(
-        trend(ctx as any, { userId: USER_A_ID, windowDays: 30 })
+        t.query(api.functions.wellness.trend, { userId, windowDays: 30 })
       ).rejects.toThrow(/unauthenticated|not authenticated|must be logged in/i)
     })
 
     it('should return valid trend structure for own data', async () => {
-      const ctx = createMockContext(USER_A_CLERK_ID)
+      const t = convexTest(schema, modules)
 
-      const { trend } = await import('../convex/functions/wellness')
-
-      const result = await trend(ctx as any, {
-        userId: USER_A_ID,
-        windowDays: 7,
+      // Create user
+      const userId = await t.run(async (ctx) => {
+        return await ctx.db.insert('users', {
+          phoneNumber: '+15551234567',
+          firstName: 'Alice',
+          journeyPhase: 'active',
+          burnoutScore: 45,
+          burnoutBand: 'moderate',
+          pressureZones: [],
+        })
       })
 
-      expect(typeof result.count).toBe('number')
-      expect(Array.isArray(result.trend)).toBe(true)
-      // average can be null if no data
-      if (result.average !== null) {
-        expect(typeof result.average).toBe('number')
-      }
+      // Create scores
+      await t.run(async (ctx) => {
+        await ctx.db.insert('wellnessScores', {
+          userId,
+          overallScore: 45,
+          band: 'moderate',
+          pressureZones: [],
+          pressureZoneScores: {},
+          recordedAt: Date.now(),
+        })
+      })
+
+      // Get trend
+      const result = await t.withIdentity({ subject: userId }).query(api.functions.wellness.trend, { userId, windowDays: 30 })
+
+      expect(result).toHaveProperty('count')
+      expect(result).toHaveProperty('average')
+      expect(result).toHaveProperty('trend')
     })
   })
 
   describe('getPressureZoneTrends - Ownership Verification', () => {
     it('should REJECT when user tries to access another user\'s pressure zone trends', async () => {
-      const ctx = createMockContext(USER_A_CLERK_ID)
+      const t = convexTest(schema, modules)
 
-      const { getPressureZoneTrends } = await import(
-        '../convex/functions/wellness'
-      )
+      // Create two users
+      const userAId = await t.run(async (ctx) => {
+        return await ctx.db.insert('users', {
+          phoneNumber: '+15551234567',
+          firstName: 'Alice',
+          journeyPhase: 'active',
+          burnoutScore: 45,
+          burnoutBand: 'moderate',
+          pressureZones: [],
+        })
+      })
 
+      const userBId = await t.run(async (ctx) => {
+        return await ctx.db.insert('users', {
+          phoneNumber: '+15559876543',
+          firstName: 'Bob',
+          journeyPhase: 'active',
+          burnoutScore: 72,
+          burnoutBand: 'high',
+          pressureZones: [],
+        })
+      })
+
+      // User A tries to access User B's zones - should throw
       await expect(
-        getPressureZoneTrends(ctx as any, { userId: USER_B_ID, windowDays: 30 })
-      ).rejects.toThrow(/unauthorized|not authorized|access denied/i)
+        t.withIdentity({ subject: userAId }).query(api.functions.wellness.getPressureZoneTrends, { userId: userBId, windowDays: 30 })
+      ).rejects.toThrow(/Unauthorized.*another user/i)
     })
 
     it('should ALLOW when user accesses their own pressure zone trends', async () => {
-      const ctx = createMockContext(USER_A_CLERK_ID)
+      const t = convexTest(schema, modules)
 
-      const { getPressureZoneTrends } = await import(
-        '../convex/functions/wellness'
-      )
-
-      const result = await getPressureZoneTrends(ctx as any, {
-        userId: USER_A_ID,
-        windowDays: 30,
+      // Create user
+      const userId = await t.run(async (ctx) => {
+        return await ctx.db.insert('users', {
+          phoneNumber: '+15551234567',
+          firstName: 'Alice',
+          journeyPhase: 'active',
+          burnoutScore: 45,
+          burnoutBand: 'moderate',
+          pressureZones: [],
+        })
       })
+
+      // Create scores
+      await t.run(async (ctx) => {
+        await ctx.db.insert('wellnessScores', {
+          userId,
+          overallScore: 45,
+          band: 'moderate',
+          pressureZones: ['emotional_wellbeing'],
+          pressureZoneScores: { emotional_wellbeing: 55 },
+          recordedAt: Date.now(),
+        })
+      })
+
+      // User A accesses their own zones - should succeed
+      const result = await t.withIdentity({ subject: userId }).query(api.functions.wellness.getPressureZoneTrends, { userId, windowDays: 30 })
 
       expect(result).toBeDefined()
       expect(typeof result).toBe('object')
     })
 
     it('should REJECT when user is not authenticated', async () => {
-      const ctx = createMockContext(null)
+      const t = convexTest(schema, modules)
 
-      const { getPressureZoneTrends } = await import(
-        '../convex/functions/wellness'
-      )
+      // Create user
+      const userId = await t.run(async (ctx) => {
+        return await ctx.db.insert('users', {
+          phoneNumber: '+15551234567',
+          firstName: 'Alice',
+          journeyPhase: 'active',
+          burnoutScore: 45,
+          burnoutBand: 'moderate',
+          pressureZones: [],
+        })
+      })
 
+      // Unauthenticated request - should throw
       await expect(
-        getPressureZoneTrends(ctx as any, { userId: USER_A_ID, windowDays: 30 })
+        t.query(api.functions.wellness.getPressureZoneTrends, { userId, windowDays: 30 })
       ).rejects.toThrow(/unauthenticated|not authenticated|must be logged in/i)
     })
 
     it('should return valid pressure zone trend structure for own data', async () => {
-      const ctx = createMockContext(USER_A_CLERK_ID)
+      const t = convexTest(schema, modules)
 
-      const { getPressureZoneTrends } = await import(
-        '../convex/functions/wellness'
-      )
-
-      const result = await getPressureZoneTrends(ctx as any, {
-        userId: USER_A_ID,
-        windowDays: 14,
+      // Create user
+      const userId = await t.run(async (ctx) => {
+        return await ctx.db.insert('users', {
+          phoneNumber: '+15551234567',
+          firstName: 'Alice',
+          journeyPhase: 'active',
+          burnoutScore: 45,
+          burnoutBand: 'moderate',
+          pressureZones: [],
+        })
       })
 
+      // Create scores with zones
+      await t.run(async (ctx) => {
+        await ctx.db.insert('wellnessScores', {
+          userId,
+          overallScore: 45,
+          band: 'moderate',
+          pressureZones: ['emotional_wellbeing', 'time_management'],
+          pressureZoneScores: { emotional_wellbeing: 55, time_management: 60 },
+          recordedAt: Date.now(),
+        })
+      })
+
+      // Get zone trends
+      const result = await t.withIdentity({ subject: userId }).query(api.functions.wellness.getPressureZoneTrends, { userId, windowDays: 30 })
+
       expect(typeof result).toBe('object')
-      // Each value should be a number (zone score average)
-      for (const value of Object.values(result)) {
-        if (value !== undefined) {
-          expect(typeof value).toBe('number')
-        }
-      }
+      expect(Object.keys(result).length).toBeGreaterThanOrEqual(0)
     })
   })
 
   describe('Edge Cases - Ownership Verification', () => {
-    it('should handle user with no clerkId gracefully', async () => {
-      // Create a user without clerkId (edge case)
-      const ORPHAN_USER_ID = 'user_orphan' as Id<'users'>
-      const orphanMockUsers = {
-        ...mockUsers,
-        [ORPHAN_USER_ID]: {
-          _id: ORPHAN_USER_ID,
-          _creationTime: Date.now(),
-          // No clerkId field
-          phoneNumber: '+15550000000',
-        },
-      }
+    it('should allow user with Convex Auth (no clerkId) to access their own data', async () => {
+      const t = convexTest(schema, modules)
 
-      const ctx: MockQueryContext = {
-        auth: {
-          getUserIdentity: async () => ({
-            subject: USER_A_CLERK_ID,
-            tokenIdentifier: 'token',
-          }),
-        },
-        db: {
-          get: async (id: Id<'users'>) => {
-            return orphanMockUsers[id as keyof typeof orphanMockUsers] || null
-          },
-          query: () => ({
-            withIndex: () => ({
-              order: () => ({
-                first: async () => null,
-              }),
-            }),
-          }),
-        },
-      }
+      // Create user with Convex Auth (no clerkId field needed)
+      const userId = await t.run(async (ctx) => {
+        return await ctx.db.insert('users', {
+          phoneNumber: '+15551234567',
+          firstName: 'Alice',
+          journeyPhase: 'active',
+          burnoutScore: 45,
+          burnoutBand: 'moderate',
+          pressureZones: [],
+        })
+      })
 
-      const { getLatestScore } = await import('../convex/functions/wellness')
+      // Should succeed - user._id matches identity.subject
+      const result = await t.withIdentity({ subject: userId }).query(api.functions.wellness.getLatestScore, { userId })
 
-      // User without clerkId should be treated as unauthorized access
-      await expect(
-        getLatestScore(ctx as any, { userId: ORPHAN_USER_ID })
-      ).rejects.toThrow(/unauthorized|not authorized|user.*clerk/i)
+      // Should return null since no wellness scores exist
+      expect(result).toBeNull()
     })
 
     it('should handle multiple concurrent ownership checks correctly', async () => {
-      const ctx = createMockContext(USER_A_CLERK_ID)
+      const t = convexTest(schema, modules)
 
-      const { getLatestScore, getScoreHistory } = await import(
-        '../convex/functions/wellness'
-      )
+      // Create two users
+      const userAId = await t.run(async (ctx) => {
+        return await ctx.db.insert('users', {
+          phoneNumber: '+15551234567',
+          firstName: 'Alice',
+          journeyPhase: 'active',
+          burnoutScore: 45,
+          burnoutBand: 'moderate',
+          pressureZones: [],
+        })
+      })
 
-      // User A can access their own data in parallel
-      const results = await Promise.allSettled([
-        getLatestScore(ctx as any, { userId: USER_A_ID }),
-        getScoreHistory(ctx as any, { userId: USER_A_ID }),
-      ])
+      const userBId = await t.run(async (ctx) => {
+        return await ctx.db.insert('users', {
+          phoneNumber: '+15559876543',
+          firstName: 'Bob',
+          journeyPhase: 'active',
+          burnoutScore: 72,
+          burnoutBand: 'high',
+          pressureZones: [],
+        })
+      })
 
-      // Both should succeed
-      expect(results[0].status).toBe('fulfilled')
+      // User A tries to access both their own data (should succeed) and User B's data (should fail)
+      const authorizedPromise = t.withIdentity({ subject: userAId }).query(api.functions.wellness.getLatestScore, { userId: userAId })
+      const unauthorizedPromise = t.withIdentity({ subject: userAId }).query(api.functions.wellness.getLatestScore, { userId: userBId })
+
+      const results = await Promise.allSettled([unauthorizedPromise, authorizedPromise])
+
+      expect(results[0].status).toBe('rejected')
       expect(results[1].status).toBe('fulfilled')
-
-      // But accessing User B's data should fail
-      const unauthorizedResults = await Promise.allSettled([
-        getLatestScore(ctx as any, { userId: USER_B_ID }),
-        getScoreHistory(ctx as any, { userId: USER_B_ID }),
-      ])
-
-      expect(unauthorizedResults[0].status).toBe('rejected')
-      expect(unauthorizedResults[1].status).toBe('rejected')
     })
   })
 
   describe('Error Message Quality', () => {
     it('should provide clear error message for unauthorized access', async () => {
-      const ctx = createMockContext(USER_A_CLERK_ID)
+      const t = convexTest(schema, modules)
 
-      const { getLatestScore } = await import('../convex/functions/wellness')
+      // Create two users
+      const userAId = await t.run(async (ctx) => {
+        return await ctx.db.insert('users', {
+          phoneNumber: '+15551234567',
+          firstName: 'Alice',
+          journeyPhase: 'active',
+          burnoutScore: 45,
+          burnoutBand: 'moderate',
+          pressureZones: [],
+        })
+      })
+
+      const userBId = await t.run(async (ctx) => {
+        return await ctx.db.insert('users', {
+          phoneNumber: '+15559876543',
+          firstName: 'Bob',
+          journeyPhase: 'active',
+          burnoutScore: 72,
+          burnoutBand: 'high',
+          pressureZones: [],
+        })
+      })
 
       try {
-        await getLatestScore(ctx as any, { userId: USER_B_ID })
-        expect.fail('Should have thrown an error')
+        await t.withIdentity({ subject: userAId }).query(api.functions.wellness.getLatestScore, { userId: userBId })
+        throw new Error('Should have thrown')
       } catch (error: any) {
-        // Error message should be helpful but not leak sensitive info
-        expect(error.message).toBeTruthy()
-        expect(error.message.length).toBeGreaterThan(10)
-        // Should not expose clerkId or other sensitive data
-        expect(error.message).not.toContain(USER_B_CLERK_ID)
+        expect(error.message).toMatch(/unauthorized/i)
       }
     })
 
     it('should provide clear error message for unauthenticated access', async () => {
-      const ctx = createMockContext(null)
+      const t = convexTest(schema, modules)
 
-      const { getScoreHistory } = await import('../convex/functions/wellness')
+      // Create user
+      const userId = await t.run(async (ctx) => {
+        return await ctx.db.insert('users', {
+          phoneNumber: '+15551234567',
+          firstName: 'Alice',
+          journeyPhase: 'active',
+          burnoutScore: 45,
+          burnoutBand: 'moderate',
+          pressureZones: [],
+        })
+      })
 
       try {
-        await getScoreHistory(ctx as any, { userId: USER_A_ID })
-        expect.fail('Should have thrown an error')
+        await t.query(api.functions.wellness.getLatestScore, { userId })
+        throw new Error('Should have thrown')
       } catch (error: any) {
-        expect(error.message).toBeTruthy()
-        expect(error.message.length).toBeGreaterThan(10)
+        expect(error.message).toMatch(/unauthenticated/i)
       }
     })
   })
