@@ -17,9 +17,6 @@ importers:
       '@auth/core':
         specifier: ^0.37.0
         version: 0.37.4
-      '@ax-llm/ax':
-        specifier: ^14.0.32
-        version: 14.0.37
       '@convex-dev/auth':
         specifier: ^0.0.90
         version: 0.0.90(@auth/core@0.37.4)(convex@1.28.0(react@19.2.0))(react@19.2.0)
@@ -63,6 +60,9 @@ importers:
         specifier: ^3.23.8
         version: 3.25.76
     devDependencies:
+      '@ax-llm/ax':
+        specifier: ^14.0.32
+        version: 14.0.37
       '@types/node':
         specifier: ^22.0.0
         version: 22.18.12
