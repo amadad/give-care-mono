@@ -10,6 +10,7 @@ import { query } from '../_generated/server'
 import { v } from 'convex/values'
 import type { Doc } from '../_generated/dataModel'
 import { scoreResource, matchesZones, calculateFreshness } from '../ingestion/shared/scoring'
+import type { QueryCtx } from '../_generated/server'
 
 type ResourceRecord = Doc<'resources'>
 type ProgramRecord = Doc<'programs'>
@@ -114,6 +115,136 @@ interface ResourceMatch {
   disclaimer: string
 }
 
+type FindResourcesGeoLiteArgs = {
+  zip?: string
+  zones?: string[]
+  type?: string
+  limit?: number
+}
+
+async function findResourcesGeoLiteImpl(
+  ctx: QueryCtx,
+  args: FindResourcesGeoLiteArgs
+): Promise<ResourceMatch[]> {
+  const limit = args.limit ?? 5
+  const state = resolveStateFromZip(args.zip)
+
+  // STEP 1: Get all service areas
+  const allServiceAreas = (await ctx.db.query('serviceAreas').collect()) as ServiceAreaRecord[]
+
+  // STEP 2: Try ZIP-based match
+  let candidateAreas = allServiceAreas.filter(area => {
+    if (area.type === 'national') return false
+    if (!args.zip) return false
+
+    const zip3 = args.zip.slice(0, 3)
+    return area.geoCodes.includes(args.zip) || area.geoCodes.includes(zip3)
+  })
+
+  // STEP 3: Fallback to state
+  if (candidateAreas.length === 0 && state) {
+    candidateAreas = allServiceAreas.filter(
+      area => area.type === 'statewide' && area.geoCodes.includes(state)
+    )
+  }
+
+  // STEP 4: Fallback to national
+  if (candidateAreas.length === 0) {
+    candidateAreas = allServiceAreas.filter(area => area.type === 'national')
+  }
+
+  // STEP 5: Build resource matches
+  const matches: Array<{
+    resource: ResourceRecord
+    program: ProgramRecord
+    provider: ProviderRecord
+    facility: FacilityRecord | null
+    score: number
+  }> = []
+
+  const programIds = new Set(candidateAreas.map(area => area.programId))
+
+  for (const programId of programIds) {
+    const program = (await ctx.db.get(programId)) as ProgramRecord | null
+    if (!program) continue
+
+    // Filter by type if provided
+    if (args.type && !program.resourceCategory.includes(args.type)) {
+      continue
+    }
+
+    const provider = (await ctx.db.get(program.providerId)) as ProviderRecord | null
+    if (!provider) continue
+
+    const resources = (await ctx.db
+      .query('resources')
+      .withIndex('by_program', (q: any) => q.eq('programId', programId))
+      .collect()) as ResourceRecord[]
+
+    for (const resource of resources) {
+      const facility = resource.facilityId
+        ? ((await ctx.db.get(resource.facilityId)) as FacilityRecord | null)
+        : null
+
+      // Calculate score
+      const zoneMatch = matchesZones(program.pressureZones, args.zones)
+      const freshnessDays = calculateFreshness(resource.lastVerifiedDate)
+      const verified = resource.verificationStatus === 'verified_full'
+
+      const serviceArea = candidateAreas.find(a => a.programId === programId)
+      const coverage =
+        serviceArea?.type === 'national'
+          ? 'national'
+          : serviceArea?.type === 'statewide'
+            ? 'state'
+            : serviceArea?.type === 'county'
+              ? 'county'
+              : 'zip'
+
+      const score = scoreResource({
+        zoneMatch,
+        coverage,
+        freshnessDays,
+        verified,
+      })
+
+      matches.push({
+        resource,
+        program,
+        provider,
+        facility,
+        score,
+      })
+    }
+  }
+
+  // STEP 6: Sort by score (highest first)
+  matches.sort((a, b) => b.score - a.score)
+
+  // STEP 7: Format results with disclosure
+  const results = matches.slice(0, limit).map(m => {
+    const lastVerifiedDate = m.resource.lastVerifiedDate
+      ? new Date(m.resource.lastVerifiedDate).toLocaleDateString()
+      : 'Unknown'
+
+    return {
+      title: m.program.name,
+      provider: m.provider.name,
+      description: m.program.description || '',
+      phone: m.facility?.phoneE164 || null,
+      website: m.resource.primaryUrl || null,
+      location: m.facility?.zip
+        ? `${m.facility.city || ''}, ${m.facility.state || ''} ${m.facility.zip}`.trim()
+        : 'Nationwide',
+      rbiScore: m.score,
+      lastVerified: lastVerifiedDate,
+      disclaimer: 'Availability changes. Please call to confirm.',
+    }
+  })
+
+  return results
+}
+
 /**
  * Find resources with fallback logic
  *
@@ -130,125 +261,7 @@ export const findResourcesGeoLite = query({
     type: v.optional(v.string()),
     limit: v.optional(v.number()),
   },
-  handler: async (ctx, args): Promise<ResourceMatch[]> => {
-    const limit = args.limit ?? 5
-    const state = resolveStateFromZip(args.zip)
-
-    // STEP 1: Get all service areas
-    const allServiceAreas = (await ctx.db.query('serviceAreas').collect()) as ServiceAreaRecord[]
-
-    // STEP 2: Try ZIP-based match
-    let candidateAreas = allServiceAreas.filter(area => {
-      if (area.type === 'national') return false
-      if (!args.zip) return false
-
-      const zip3 = args.zip.slice(0, 3)
-      return area.geoCodes.includes(args.zip) || area.geoCodes.includes(zip3)
-    })
-
-    // STEP 3: Fallback to state
-    if (candidateAreas.length === 0 && state) {
-      candidateAreas = allServiceAreas.filter(
-        area => area.type === 'statewide' && area.geoCodes.includes(state)
-      )
-    }
-
-    // STEP 4: Fallback to national
-    if (candidateAreas.length === 0) {
-      candidateAreas = allServiceAreas.filter(area => area.type === 'national')
-    }
-
-    // STEP 5: Build resource matches
-    const matches: Array<{
-      resource: ResourceRecord
-      program: ProgramRecord
-      provider: ProviderRecord
-      facility: FacilityRecord | null
-      score: number
-    }> = []
-
-    const programIds = new Set(candidateAreas.map(area => area.programId))
-
-    for (const programId of programIds) {
-      const program = (await ctx.db.get(programId)) as ProgramRecord | null
-      if (!program) continue
-
-      // Filter by type if provided
-      if (args.type && !program.resourceCategory.includes(args.type)) {
-        continue
-      }
-
-      const provider = (await ctx.db.get(program.providerId)) as ProviderRecord | null
-      if (!provider) continue
-
-      const resources = (await ctx.db
-        .query('resources')
-        .withIndex('by_program', (q: any) => q.eq('programId', programId))
-        .collect()) as ResourceRecord[]
-
-      for (const resource of resources) {
-        const facility = resource.facilityId
-          ? ((await ctx.db.get(resource.facilityId)) as FacilityRecord | null)
-          : null
-
-        // Calculate score
-        const zoneMatch = matchesZones(program.pressureZones, args.zones)
-        const freshnessDays = calculateFreshness(resource.lastVerifiedDate)
-        const verified = resource.verificationStatus === 'verified_full'
-
-        const serviceArea = candidateAreas.find(a => a.programId === programId)
-        const coverage =
-          serviceArea?.type === 'national'
-            ? 'national'
-            : serviceArea?.type === 'statewide'
-              ? 'state'
-              : serviceArea?.type === 'county'
-                ? 'county'
-                : 'zip'
-
-        const score = scoreResource({
-          zoneMatch,
-          coverage,
-          freshnessDays,
-          verified,
-        })
-
-        matches.push({
-          resource,
-          program,
-          provider,
-          facility,
-          score,
-        })
-      }
-    }
-
-    // STEP 6: Sort by score (highest first)
-    matches.sort((a, b) => b.score - a.score)
-
-    // STEP 7: Format results with disclosure
-    const results = matches.slice(0, limit).map(m => {
-      const lastVerifiedDate = m.resource.lastVerifiedDate
-        ? new Date(m.resource.lastVerifiedDate).toLocaleDateString()
-        : 'Unknown'
-
-      return {
-        title: m.program.name,
-        provider: m.provider.name,
-        description: m.program.description || '',
-        phone: m.facility?.phoneE164 || null,
-        website: m.resource.primaryUrl || null,
-        location: m.facility?.zip
-          ? `${m.facility.city || ''}, ${m.facility.state || ''} ${m.facility.zip}`.trim()
-          : 'Nationwide',
-        rbiScore: m.score,
-        lastVerified: lastVerifiedDate,
-        disclaimer: 'Availability changes. Please call to confirm.',
-      }
-    })
-
-    return results
-  },
+  handler: (ctx, args) => findResourcesGeoLiteImpl(ctx, args),
 })
 
 /**
@@ -295,10 +308,10 @@ export const getResourcesForUser = query({
       .order('desc')
       .first()
 
-    return ctx.runQuery(findResourcesGeoLite, {
+    return findResourcesGeoLiteImpl(ctx, {
       zip: user.zipCode,
       zones: score?.pressureZones || user.pressureZones,
-      limit: args.limit || 3,
+      limit: args.limit ?? 3,
     })
   },
 })

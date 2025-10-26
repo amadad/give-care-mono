@@ -301,6 +301,8 @@ export default defineSchema({
     phoneE164: v.optional(v.string()),
     email: v.optional(v.string()),
     address: v.optional(v.string()),
+    city: v.optional(v.string()),
+    state: v.optional(v.string()),
     zip: v.optional(v.string()),
     geo: v.optional(v.object({ lat: v.number(), lon: v.number() })),
     hours: v.optional(v.string()),

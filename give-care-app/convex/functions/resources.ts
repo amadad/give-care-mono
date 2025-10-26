@@ -5,7 +5,8 @@
 
 import { mutation, query } from '../_generated/server'
 import { v } from 'convex/values'
-import type { Doc, Id } from '../_generated/dataModel'
+import type { FilterBuilder, NamedTableInfo } from 'convex/server'
+import type { DataModel, Doc, Id } from '../_generated/dataModel'
 
 type ServiceAreaRecord = Doc<'serviceAreas'>
 type ProgramRecord = Doc<'programs'>
@@ -246,10 +247,15 @@ export async function findResourcesInternal(
   // OPTIMIZATION 2: Load ALL programs in single query with .filter()
   // Convex allows filtering by ID in a set - this is ONE query, not N
   const candidateProgramIdsArray = Array.from(candidateProgramIds)
-  const allPrograms = await ctx.db
-    .query('programs')
-    .filter(q => candidateProgramIdsArray.some(id => q.eq(q.field('_id'), id)))
-    .collect()
+  const allPrograms =
+    candidateProgramIdsArray.length === 0
+      ? []
+      : await ctx.db
+          .query('programs')
+          .filter((q: FilterBuilder<NamedTableInfo<DataModel, 'programs'>>) =>
+            q.or(...candidateProgramIdsArray.map(id => q.eq(q.field('_id'), id)))
+          )
+          .collect()
 
   const programsMap = new Map<Id<'programs'>, ProgramRecord>()
   const providerIds = new Set<Id<'providers'>>()
@@ -262,10 +268,15 @@ export async function findResourcesInternal(
 
   // OPTIMIZATION 3: Load ALL providers in single query with .filter()
   const providerIdsArray = Array.from(providerIds)
-  const allProviders = await ctx.db
-    .query('providers')
-    .filter(q => providerIdsArray.some(id => q.eq(q.field('_id'), id)))
-    .collect()
+  const allProviders =
+    providerIdsArray.length === 0
+      ? []
+      : await ctx.db
+          .query('providers')
+          .filter((q: FilterBuilder<NamedTableInfo<DataModel, 'providers'>>) =>
+            q.or(...providerIdsArray.map(id => q.eq(q.field('_id'), id)))
+          )
+          .collect()
 
   const providersMap = new Map<Id<'providers'>, ProviderRecord>()
   for (const provider of allProviders) {
@@ -311,10 +322,15 @@ export async function findResourcesInternal(
 
   // OPTIMIZATION 6: Load ALL facilities in single query with .filter()
   const facilityIdsArray = Array.from(facilityIds)
-  const allFacilities = await ctx.db
-    .query('facilities')
-    .filter(q => facilityIdsArray.some(id => q.eq(q.field('_id'), id)))
-    .collect()
+  const allFacilities =
+    facilityIdsArray.length === 0
+      ? []
+      : await ctx.db
+          .query('facilities')
+          .filter((q: FilterBuilder<NamedTableInfo<DataModel, 'facilities'>>) =>
+            q.or(...facilityIdsArray.map(id => q.eq(q.field('_id'), id)))
+          )
+          .collect()
 
   const facilitiesMap = new Map<Id<'facilities'>, FacilityRecord>()
   for (const facility of allFacilities) {
