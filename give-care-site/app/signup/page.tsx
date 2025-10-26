@@ -1,7 +1,6 @@
 import type { Metadata } from 'next'
 import Navbar from '@/app/components/layout/Navbar';
 import Footer from '@/app/components/layout/Footer';
-import { SignupFormConvex } from "@/app/components/sections/SignupFormConvex"
 import SignupHero from './SignupHero';
 
 export const metadata: Metadata = {
