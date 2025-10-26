@@ -1,8 +1,9 @@
 import type { NextConfig } from 'next';
 
-const withBundleAnalyzer = require('@next/bundle-analyzer')({
-  enabled: process.env.ANALYZE === 'true',
-});
+// Only load bundle analyzer when ANALYZE=true (prevents requiring devDependency in production)
+const withBundleAnalyzer = process.env.ANALYZE === 'true'
+  ? require('@next/bundle-analyzer')({ enabled: true })
+  : (config: NextConfig) => config;
 
 const nextConfig: NextConfig = {
   // Enable static HTML export for Cloudflare Pages
