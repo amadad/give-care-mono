@@ -42,7 +42,7 @@ export const generateEmbedding = internalAction({
  * Run once after adding new interventions:
  * `npx convex run functions/embeddings:generateAllEmbeddings`
  */
-export const generateAllEmbeddings = internalAction({
+export const generateAllEmbeddings: any = internalAction({
   handler: async ctx => {
     'use node'
 
