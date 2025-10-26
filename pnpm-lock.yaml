@@ -269,6 +269,12 @@ importers:
       '@stripe/stripe-js':
         specifier: ^7.8.0
         version: 7.9.0
+      '@tailwindcss/postcss':
+        specifier: ^4.1.7
+        version: 4.1.16
+      '@tailwindcss/typography':
+        specifier: ^0.5.16
+        version: 0.5.19(tailwindcss@4.1.16)
       '@types/mdx':
         specifier: ^2.0.13
         version: 2.0.13
@@ -311,6 +317,9 @@ importers:
       stripe:
         specifier: ^18.5.0
         version: 18.5.0(@types/node@20.19.0)
+      tailwindcss:
+        specifier: ^4.1.7
+        version: 4.1.16
       twilio:
         specifier: ^5.10.2
         version: 5.10.3
@@ -330,12 +339,6 @@ importers:
       '@react-email/preview-server':
         specifier: ^4.3.0
         version: 4.3.2(@opentelemetry/api@1.9.0)(@playwright/test@1.56.1)(postcss@8.5.6)
-      '@tailwindcss/postcss':
-        specifier: ^4.1.7
-        version: 4.1.16
-      '@tailwindcss/typography':
-        specifier: ^0.5.16
-        version: 0.5.19(tailwindcss@4.1.16)
       '@testing-library/jest-dom':
         specifier: ^6.6.3
         version: 6.9.1
@@ -378,9 +381,6 @@ importers:
       react-email:
         specifier: ^4.3.0
         version: 4.3.2
-      tailwindcss:
-        specifier: ^4.1.7
-        version: 4.1.16
       typescript:
         specifier: ^5
         version: 5.8.3
