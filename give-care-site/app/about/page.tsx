@@ -1,16 +1,11 @@
 'use client';
 
-import Navbar from '@/app/components/layout/Navbar';
-import Footer from '@/app/components/layout/Footer';
 import CTA from '@/app/components/sections/CTA';
 import { motion } from 'framer-motion';
 
 export default function AboutPage() {
-
   return (
-    <div className="min-h-screen bg-base-100 flex flex-col">
-      <Navbar />
-      <main className="flex-1">
+    <>
         {/* Hero Section - Letter from Founder */}
         <section className="section-hero bg-base-100">
           <div className="container-editorial">
@@ -21,7 +16,7 @@ export default function AboutPage() {
               transition={{ duration: 0.8 }}
               className="text-center max-w-2xl mx-auto mb-12"
             >
-              <h1 className="text-4xl md:text-5xl font-serif font-light text-amber-950 mb-6">
+              <h1 className="heading-hero mb-6">
                 Built by Caregivers,<br />for Caregivers
               </h1>
               <p className="body-large mb-12">
@@ -253,11 +248,8 @@ export default function AboutPage() {
           </div>
         </section>
 
-        {/* Email Signup CTA */}
-        <CTA />
-
-      </main>
-      <Footer />
-    </div>
+      {/* Email Signup CTA */}
+      <CTA />
+    </>
   );
 }

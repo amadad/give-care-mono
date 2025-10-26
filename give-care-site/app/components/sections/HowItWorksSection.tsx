@@ -33,10 +33,10 @@ export default function HowItWorksSection() {
   const shouldReduceMotion = useReducedMotion();
 
   return (
-    <section className="py-20 md:py-24 bg-white">
+    <section className="section-standard bg-white">
       <div className="container mx-auto px-6 max-w-4xl">
         <div className="text-center mb-16 md:mb-20">
-          <h2 className="text-3xl md:text-4xl font-serif font-light text-amber-950">
+          <h2 className="heading-section">
             How it works
           </h2>
         </div>

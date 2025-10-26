@@ -20,7 +20,7 @@ export default function SignupHero() {
           transition={{ duration: shouldReduceMotion ? 0 : 0.6 }}
           className="text-center mb-6 md:mb-10"
         >
-          <h1 className="text-3xl sm:text-4xl md:text-5xl font-serif font-light tracking-tight text-amber-950 leading-[1.2] mb-3 md:mb-4">
+          <h1 className="heading-hero mb-3 md:mb-4">
             Get the support you deserve
           </h1>
           <p className="text-base sm:text-lg md:text-xl font-serif font-light text-amber-700 leading-relaxed max-w-2xl mx-auto">

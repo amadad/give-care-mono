@@ -1,6 +1,4 @@
 import { Metadata } from 'next';
-import Navbar from '@/app/components/layout/Navbar';
-import Footer from '@/app/components/layout/Footer';
 import Hero from './components/Hero';
 import Features from './components/Features';
 import CTASection from './components/CTASection';
@@ -40,10 +38,8 @@ export default function AdvocacyNonprofitPage() {
   ];
 
   return (
-    <div className="min-h-screen bg-base-100 flex flex-col">
-      <Navbar />
-      <main className="flex-1">
-        <div className="relative">
+    <>
+      <div className="relative">
           <Hero />
           <div className="w-full -mt-4">
             <LogoMarquee />
@@ -60,7 +56,7 @@ export default function AdvocacyNonprofitPage() {
         <section className="w-full py-16 bg-base-100">
           <div className="container mx-auto px-4">
             <div className="text-center mb-12">
-              <h2 className="text-3xl font-bold mb-4">Benefits for Advocacy Organizations</h2>
+              <h2 className="heading-section mb-4">Benefits for Advocacy Organizations</h2>
               <p className="text-lg text-amber-800/80 max-w-2xl mx-auto">
                 Why your leadership, funders, and volunteers will care.
               </p>
@@ -72,7 +68,7 @@ export default function AdvocacyNonprofitPage() {
                   <div className="bg-amber-100 p-3 rounded-full mb-4 text-amber-700">
                     {benefit.icon}
                   </div>
-                  <h3 className="text-xl font-semibold mb-2">{benefit.title}</h3>
+                  <h3 className="text-xl font-light mb-2">{benefit.title}</h3>
                   <p className="text-amber-800/90">{benefit.description}</p>
                 </div>
               ))}
@@ -80,10 +76,8 @@ export default function AdvocacyNonprofitPage() {
           </div>
         </section>
 
-        {/* CTA Section */}
-        <CTASection />
-      </main>
-      <Footer />
-    </div>
+      {/* CTA Section */}
+      <CTASection />
+    </>
   );
 }

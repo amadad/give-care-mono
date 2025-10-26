@@ -1,7 +1,5 @@
 'use client';
 
-import Navbar from '@/app/components/layout/Navbar';
-import Footer from '@/app/components/layout/Footer';
 import { motion } from 'framer-motion';
 import { ScrollAnimationWrapper } from '@/app/hooks/useScrollAnimation';
 import AnimatedChat from '@/app/components/AnimatedChat';
@@ -96,11 +94,9 @@ export default function HowItWorksPage() {
   const [activeScenario, setActiveScenario] = useState<keyof typeof scenarios>('onboarding');
 
   return (
-    <div className="min-h-screen bg-base-100 flex flex-col">
-      <Navbar />
-      <main className="flex-1">
+    <>
         {/* Hero Section */}
-        <section className="section-hero bg-gradient-to-b from-base-100 to-amber-50/20 pb-24">
+        <section className="section-hero bg-gradient-to-b from-base-100 to-base-100 pb-24">
           <div className="container-editorial">
             <motion.div
               initial={{ opacity: 0, y: 20 }}
@@ -108,7 +104,7 @@ export default function HowItWorksPage() {
               transition={{ duration: 0.8 }}
               className="text-center max-w-3xl mx-auto mb-12"
             >
-              <h1 className="text-4xl md:text-5xl font-serif font-light text-amber-950 mb-6">
+              <h1 className="heading-hero mb-6">
                 Finally, support that gets it
               </h1>
               <p className="body-large mb-8">
@@ -273,7 +269,7 @@ export default function HowItWorksPage() {
         </section>
 
         {/* Open Source */}
-        <section className="section-standard bg-amber-50/30">
+        <section className="section-standard bg-base-100">
           <div className="container-editorial">
             <ScrollAnimationWrapper variant="fadeInUp">
               <div className="max-w-3xl mx-auto">
@@ -316,7 +312,7 @@ export default function HowItWorksPage() {
         </section>
 
         {/* What You Get */}
-        <section className="section-standard bg-gradient-to-b from-base-100 to-amber-50/20">
+        <section className="section-standard bg-gradient-to-b from-base-100 to-base-100">
           <div className="container-editorial">
             <ScrollAnimationWrapper variant="fadeInUp">
               <div className="text-center mb-12">
@@ -371,8 +367,6 @@ export default function HowItWorksPage() {
             </ScrollAnimationWrapper>
           </div>
         </section>
-      </main>
-      <Footer />
-    </div>
+    </>
   );
 }

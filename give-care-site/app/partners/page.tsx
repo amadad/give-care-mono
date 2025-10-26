@@ -1,7 +1,5 @@
 'use client';
 
-import Navbar from '@/app/components/layout/Navbar';
-import Footer from '@/app/components/layout/Footer';
 import LogoMarquee from '@/app/components/LogoMarquee';
 import { motion } from 'framer-motion';
 import { HeartIcon, BriefcaseIcon, UsersIcon, HomeModernIcon, BuildingOfficeIcon } from '@heroicons/react/24/outline';
@@ -54,11 +52,9 @@ const partners = [
 
 export default function PartnersPage() {
   return (
-    <div className="min-h-screen bg-base-100 flex flex-col">
-      <Navbar />
-      <main className="flex-1">
-        {/* Hero Section */}
-        <section className="section-hero bg-base-100">
+    <>
+      {/* Hero Section */}
+      <section className="section-hero bg-base-100">
           <div className="container-editorial">
             <motion.div
               initial={{ opacity: 0, y: 20 }}
@@ -141,8 +137,6 @@ export default function PartnersPage() {
             </motion.div>
           </div>
         </section>
-      </main>
-      <Footer />
-    </div>
+    </>
   );
 }

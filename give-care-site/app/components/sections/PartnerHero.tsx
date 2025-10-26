@@ -28,7 +28,7 @@ export default function PartnerHero({
             <span>{badge}</span>
           </div>
           
-          <h1 className="text-4xl md:text-5xl lg:text-6xl font-serif font-bold text-amber-900 leading-tight">
+          <h1 className="heading-hero">
             {title}
           </h1>
           
@@ -37,18 +37,18 @@ export default function PartnerHero({
           </p>
           
           <div className="flex flex-col sm:flex-row gap-4 pt-4 justify-center">
-            <a 
+            <a
               href={calendarLink}
-              target="_blank" 
-              rel="noopener noreferrer" 
-              className="btn btn-primary btn-lg px-8 text-lg font-semibold shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 transition-all duration-200"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="btn-editorial-primary"
             >
               {primaryButtonText}
               <FaArrowRight className="ml-2 h-4 w-4" />
             </a>
-            <a 
+            <a
               href={secondaryButtonLink}
-              className="btn btn-outline btn-lg text-amber-800 border-amber-800 hover:bg-amber-50 hover:border-amber-700 hover:text-amber-900 font-medium"
+              className="btn-editorial-secondary"
             >
               {secondaryButtonText}
             </a>

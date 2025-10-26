@@ -1,12 +1,9 @@
 import Link from 'next/link'
-import Navbar from './components/layout/Navbar'
-import Footer from './components/layout/Footer'
 
 export default function NotFound() {
   return (
-    <div className="min-h-screen bg-white flex flex-col">
-      <Navbar />
-      <main id="main-content" className="flex-1 bg-base-100 flex items-center justify-center px-4 py-12">
+    <>
+      <section id="main-content" className="bg-base-100 flex items-center justify-center px-4 py-12 min-h-[calc(100vh-10rem)]">
         <div className="text-center max-w-3xl">
           {/* Large 404 */}
           <h1 className="text-7xl sm:text-9xl font-serif font-light text-amber-950 mb-6 leading-none">
@@ -72,8 +69,7 @@ export default function NotFound() {
             </div>
           </div>
         </div>
-      </main>
-      <Footer />
-    </div>
+      </section>
+    </>
   )
 }

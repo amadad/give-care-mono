@@ -33,11 +33,11 @@ export default function Features() {
   ];
 
   return (
-    <div className="w-full py-16 bg-base-100">
+    <div className="w-full section-standard bg-base-100">
       <div className="container mx-auto px-4">
         <ScrollAnimationWrapper variant="fadeInUp">
           <div className="text-center mb-12">
-            <h2 className="text-3xl font-bold mb-4">How GiveCare Helps</h2>
+            <h2 className="heading-section mb-4">How GiveCare Helps</h2>
             <p className="text-lg text-base-content/80 max-w-2xl mx-auto">
               We provide comprehensive support to make your caregiving journey smoother and more manageable.
             </p>

@@ -83,11 +83,11 @@ export default function CompanyValues() {
   const [expandedValue, setExpandedValue] = useState<string | null>(null);
 
   return (
-    <section className="py-16 bg-base-100">
+    <section className="section-standard bg-base-100">
       <div className="container mx-auto px-4">
         <ScrollAnimationWrapper variant="fadeInUp">
           <div className="text-center mb-12">
-            <h2 className="text-3xl md:text-4xl font-serif text-amber-950 mb-4">Our Core Values</h2>
+            <h2 className="heading-section mb-4">Our Core Values</h2>
             <p className="text-lg text-accessible-body max-w-2xl mx-auto">
               The principles that guide every decision, feature, and interaction at GiveCare
             </p>

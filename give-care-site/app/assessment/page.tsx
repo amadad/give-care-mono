@@ -1,7 +1,5 @@
 import Link from 'next/link';
 import { Metadata } from 'next';
-import Navbar from '@/app/components/layout/Navbar';
-import Footer from '@/app/components/layout/Footer';
 
 export const metadata: Metadata = {
   title: 'Free Caregiver Burden Assessment | GiveCare',
@@ -10,16 +8,15 @@ export const metadata: Metadata = {
 
 export default function AssessmentIntro() {
   return (
-    <div className="min-h-screen bg-base-100 flex flex-col">
-      <Navbar />
-      <main className="flex-1 section-tight">
+    <>
+      <section className="section-tight">
         <div className="container-editorial-narrow">
           {/* Header */}
           <div className="text-center mb-12">
             <div className="inline-block mb-4">
               <div className="h-1 w-24 bg-gradient-to-r from-transparent via-amber-500 to-transparent mx-auto" />
             </div>
-            <h1 className="text-4xl md:text-5xl font-serif font-light text-amber-950 mb-4">
+            <h1 className="heading-hero mb-4">
               Find out how much you're carrying
             </h1>
             <p className="text-xl text-amber-700 font-light">
@@ -100,8 +97,7 @@ export default function AssessmentIntro() {
             <p>© 2002–2014 Erlangen University Hospital</p>
           </div>
         </div>
-      </main>
-      <Footer />
-    </div>
+      </section>
+    </>
   );
 }

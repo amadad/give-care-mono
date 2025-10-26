@@ -8,7 +8,7 @@ export default function CTASection() {
         <div className="max-w-6xl mx-auto bg-base-100 rounded-2xl shadow-xl overflow-hidden">
           <div className="md:flex">
             <div className="md:w-2/3 p-8 md:p-12">
-              <h2 className="text-3xl md:text-4xl font-serif font-bold text-amber-900 mb-6">
+              <h2 className="text-3xl md:text-4xl font-serif font-light text-amber-900 mb-6">
                 Ready to Reduce Burnout and After-Hours Calls?
               </h2>
               <p className="text-lg text-amber-800/90 mb-8 max-w-2xl">
@@ -23,7 +23,7 @@ export default function CTASection() {
                     </svg>
                   </div>
                   <p className="ml-3 text-amber-800/90">
-                    <span className="font-medium">Limited pilot cohort</span> opens July 2025
+                    <span className="font-light">Limited pilot cohort</span> opens July 2025
                   </p>
                 </div>
                 <div className="flex items-start">
@@ -33,7 +33,7 @@ export default function CTASection() {
                     </svg>
                   </div>
                   <p className="ml-3 text-amber-800/90">
-                    <span className="font-medium">Pilot-only pricing</span> for first 10 facilities
+                    <span className="font-light">Pilot-only pricing</span> for first 10 facilities
                   </p>
                 </div>
                 <div className="flex items-start">
@@ -43,7 +43,7 @@ export default function CTASection() {
                     </svg>
                   </div>
                   <p className="ml-3 text-amber-800/90">
-                    <span className="font-medium">Hands-on onboarding</span> and weekly check-ins
+                    <span className="font-light">Hands-on onboarding</span> and weekly check-ins
                   </p>
                 </div>
               </div>
@@ -53,14 +53,14 @@ export default function CTASection() {
                   href="https://cal.com/amadad/givecare?overlayCalendar=true"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="btn btn-primary btn-lg flex-1 justify-center"
+                  className="btn-editorial-primary flex-1 justify-center"
                 >
                   <FaCalendarAlt className="mr-2" />
                   Book a 15-Min Demo
                 </a>
                 <a
                   href="mailto:hello@givecare.com?subject=Pilot Program Inquiry"
-                  className="btn btn-outline btn-lg flex-1 justify-center"
+                  className="btn-editorial-secondary flex-1 justify-center"
                 >
                   <FaEnvelope className="mr-2" />
                   Ask a Question
@@ -77,7 +77,7 @@ export default function CTASection() {
               }}></div>
               <div className="absolute inset-0 flex items-center justify-center p-8 text-white text-center">
                 <div>
-                  <div className="text-4xl font-serif font-bold mb-2">Limited Time</div>
+                  <div className="text-4xl font-serif font-light mb-2">Limited Time</div>
                   <p className="text-amber-100 mb-6">Pilot program spots are filling fast</p>
                   <div className="h-1 bg-amber-400/30 rounded-full overflow-hidden mb-4">
                     <div className="h-full bg-amber-300 rounded-full" style={{width: '75%'}}></div>

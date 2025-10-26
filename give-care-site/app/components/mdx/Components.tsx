@@ -42,22 +42,22 @@ const CustomLink = ({ href, children, ...props }: CustomLinkProps) => {
 export const mdxComponents: MDXComponents = {
   // Headings with editorial styling
   h1: ({ children }) => (
-    <h1 className="text-4xl md:text-5xl font-serif font-bold text-amber-950 my-8 leading-tight">
+    <h1 className="text-4xl md:text-5xl font-serif font-light text-amber-950 my-8 leading-tight">
       {children}
     </h1>
   ),
   h2: ({ children }) => (
-    <h2 className="text-3xl md:text-4xl font-serif font-bold text-amber-950 my-7 leading-tight">
+    <h2 className="text-3xl md:text-4xl font-serif font-light text-amber-950 my-7 leading-tight">
       {children}
     </h2>
   ),
   h3: ({ children }) => (
-    <h3 className="text-2xl md:text-3xl font-serif font-semibold text-amber-900 my-6 leading-tight">
+    <h3 className="text-2xl md:text-3xl font-serif font-light text-amber-900 my-6 leading-tight">
       {children}
     </h3>
   ),
   h4: ({ children }) => (
-    <h4 className="text-xl md:text-2xl font-serif font-semibold text-amber-900 my-5 leading-tight">
+    <h4 className="text-xl md:text-2xl font-serif font-light text-amber-900 my-5 leading-tight">
       {children}
     </h4>
   ),

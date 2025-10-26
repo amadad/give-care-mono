@@ -69,7 +69,7 @@ export default function Features() {
           <span className="inline-block px-4 py-1.5 text-sm font-medium bg-amber-100 text-amber-800 rounded-full mb-4">
             What Your Team Gains
           </span>
-          <h2 className="text-4xl font-serif font-bold text-amber-900 mb-4">
+          <h2 className="heading-hero mb-4">
             Solve Your Biggest Challenges Without Adding to Your Workload
           </h2>
           <p className="text-lg text-amber-800/90">
@@ -88,7 +88,7 @@ export default function Features() {
                 <div className={`w-12 h-12 rounded-lg bg-${feature.color}/10 flex items-center justify-center mb-4 text-${feature.color} group-hover:scale-110 transition-transform duration-300`}>
                   {feature.icon}
                 </div>
-                <h3 className="text-xl font-semibold text-amber-900 mb-2">
+                <h3 className="text-xl font-light text-amber-900 mb-2">
                   {feature.title}
                 </h3>
                 <p className="text-amber-800/80 mb-4">

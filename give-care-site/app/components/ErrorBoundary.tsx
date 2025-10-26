@@ -44,19 +44,19 @@ class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundarySta
         <div className="min-h-[400px] flex items-center justify-center p-8">
           <div className="text-center max-w-md">
             <div className="text-6xl mb-4">⚠️</div>
-            <h2 className="text-2xl font-bold text-base-content mb-4">Something went wrong</h2>
+            <h2 className="text-2xl font-light text-base-content mb-4">Something went wrong</h2>
             <p className="text-base-content/70 mb-6">
               We encountered an unexpected error. Please try refreshing the page.
             </p>
-            <button 
+            <button
               onClick={this.resetError}
-              className="btn btn-primary mr-4"
+              className="btn-editorial-primary mr-4"
             >
               Try Again
             </button>
-            <button 
+            <button
               onClick={() => window.location.reload()}
-              className="btn btn-outline"
+              className="btn-editorial-secondary"
             >
               Refresh Page
             </button>

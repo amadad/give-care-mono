@@ -23,7 +23,7 @@ export default function Features() {
     <section className="w-full py-16 bg-base-100">
       <div className="container mx-auto px-4">
         <div className="text-center mb-12">
-          <h2 className="text-3xl font-bold mb-4">How It Works</h2>
+          <h2 className="heading-section mb-4">How It Works</h2>
           <p className="text-lg text-amber-800/80 max-w-2xl mx-auto">
             What actually happens once you partner with GiveCare.
           </p>

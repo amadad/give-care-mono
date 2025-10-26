@@ -1,7 +1,5 @@
 import { Metadata } from "next";
-import Navbar from "@/app/components/layout/Navbar";
 import SimpleHero from "@/app/components/sections/SimpleHero";
-import Footer from "@/app/components/layout/Footer";
 
 export const metadata: Metadata = {
   title: "Thank You for Subscribing | GiveCare",
@@ -10,9 +8,8 @@ export const metadata: Metadata = {
 
 export default function NewsletterSuccessPage() {
   return (
-    <div className="min-h-screen flex flex-col">
-      <Navbar />
-      <main className="flex-1 flex flex-col items-center w-full">
+    <>
+      <div className="flex flex-col items-center w-full">
         <SimpleHero
           title="Welcome to the GiveCare Community!"
           description="Thank you for subscribing to our newsletter. You'll receive our latest updates, caregiving tips, and exclusive insights directly in your inbox."
@@ -23,7 +20,7 @@ export default function NewsletterSuccessPage() {
         />
         <div className="container mx-auto px-4 py-16 max-w-3xl text-center">
           <div className="bg-success/10 border border-success/20 rounded-lg p-8 mb-8">
-            <h2 className="text-2xl font-semibold text-success mb-4">What's Next?</h2>
+            <h2 className="text-2xl font-light text-success mb-4">What's Next?</h2>
             <ul className="text-left space-y-3 text-base-content/80">
               <li className="flex items-start">
                 <span className="text-success mr-2">✓</span>
@@ -46,8 +43,7 @@ export default function NewsletterSuccessPage() {
             </a>
           </p>
         </div>
-      </main>
-      <Footer />
-    </div>
+      </div>
+    </>
   );
 }

@@ -1,6 +1,4 @@
 import type { Metadata } from 'next'
-import Navbar from '@/app/components/layout/Navbar';
-import Footer from '@/app/components/layout/Footer';
 import SignupHero from './SignupHero';
 
 export const metadata: Metadata = {
@@ -15,13 +13,11 @@ export const metadata: Metadata = {
 
 export default function SignupPage() {
   return (
-    <div className="min-h-screen bg-white flex flex-col">
-      <Navbar />
-      <main id="main-content" className="flex-1 bg-base-100">
+    <>
+      <section id="main-content" className="bg-base-100">
         <SignupHero />
-      </main>
-      <Footer />
-    </div>
+      </section>
+    </>
   )
 }
 

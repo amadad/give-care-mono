@@ -44,14 +44,14 @@ const trustPoints = [
 
 export default function TrustSection() {
   return (
-    <section className="py-16 bg-gradient-to-b from-base-100 to-amber-50/20">
+    <section className="section-standard bg-gradient-to-b from-base-100 to-amber-50/20">
       <div className="container mx-auto px-4">
         <ScrollAnimationWrapper variant="fadeInUp">
           <div className="text-center mb-12">
             <div className="inline-block mb-4">
               <div className="h-1 w-24 bg-gradient-to-r from-transparent via-amber-500 to-transparent mx-auto" />
             </div>
-            <h2 className="text-3xl md:text-4xl font-serif text-amber-950 mb-4">
+            <h2 className="heading-section mb-4">
               Built different
             </h2>
             <p className="text-lg text-accessible-body max-w-2xl mx-auto">

@@ -46,7 +46,7 @@ export default function Navbar() {
       </div>
       <div className="flex-1"></div>
       <div className="flex-none">
-        <div className="dropdown dropdown-end" ref={dropdownRef}>
+        <div className="relative" ref={dropdownRef}>
           <button
             type="button"
             onClick={() => setIsMenuOpen(!isMenuOpen)}
@@ -61,12 +61,44 @@ export default function Navbar() {
             </svg>
           </button>
           {isMenuOpen && (
-            <div className="dropdown-content mt-3 z-[1] p-3 shadow-lg bg-white rounded-lg w-56 border border-amber-200">
-              <ul className="menu menu-sm">
-                <li><Link href="/about" onClick={handleLinkClick} className="hover:bg-amber-50 rounded-lg text-amber-900">About</Link></li>
-                <li><Link href="/how-it-works" onClick={handleLinkClick} className="hover:bg-amber-50 rounded-lg text-amber-900">How It Works</Link></li>
-                <li><Link href="/words" onClick={handleLinkClick} className="hover:bg-amber-50 rounded-lg text-amber-900">Words</Link></li>
-                <li><Link href="/partners" onClick={handleLinkClick} className="hover:bg-amber-50 rounded-lg text-amber-900">Partners</Link></li>
+            <div className="absolute right-0 mt-3 z-50 p-3 shadow-lg bg-white rounded-lg w-56 border border-amber-200">
+              <ul className="space-y-1">
+                <li>
+                  <Link
+                    href="/about"
+                    onClick={handleLinkClick}
+                    className="block px-4 py-2 hover:bg-amber-50 rounded-lg text-amber-900 transition-colors"
+                  >
+                    About
+                  </Link>
+                </li>
+                <li>
+                  <Link
+                    href="/how-it-works"
+                    onClick={handleLinkClick}
+                    className="block px-4 py-2 hover:bg-amber-50 rounded-lg text-amber-900 transition-colors"
+                  >
+                    How It Works
+                  </Link>
+                </li>
+                <li>
+                  <Link
+                    href="/words"
+                    onClick={handleLinkClick}
+                    className="block px-4 py-2 hover:bg-amber-50 rounded-lg text-amber-900 transition-colors"
+                  >
+                    Words
+                  </Link>
+                </li>
+                <li>
+                  <Link
+                    href="/partners"
+                    onClick={handleLinkClick}
+                    className="block px-4 py-2 hover:bg-amber-50 rounded-lg text-amber-900 transition-colors"
+                  >
+                    Partners
+                  </Link>
+                </li>
               </ul>
               <div className="mt-3 pt-3 border-t border-amber-200">
                 <Link

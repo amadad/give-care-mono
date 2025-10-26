@@ -22,7 +22,7 @@ interface LogoMarqueeProps {
 export default function LogoMarquee({ tagline = "Trusted by Leaders in Technology & Healthcare" }: LogoMarqueeProps) {
   return (
     <div className="w-full bg-base-100">
-      <div className="container mx-auto px-4 py-8">
+      <div className="container mx-auto px-4 py-12 sm:py-16">
         <p className="mb-8 text-center text-sm font-medium text-base-content/70">
           {tagline}
         </p>

@@ -1,5 +1,3 @@
-import Navbar from "../components/layout/Navbar";
-import Footer from "../components/layout/Footer";
 
 const assessments = [
   {
@@ -62,11 +60,9 @@ const assessments = [
 
 export default function AssessmentsPage() {
   return (
-    <div className="min-h-screen flex flex-col bg-white">
-      <Navbar />
-      <main className="flex-1">
-        {/* Hero */}
-        <section className="section-standard bg-amber-50">
+    <>
+      {/* Hero */}
+      <section className="section-standard bg-base-100">
           <div className="container-editorial text-center">
             <h1 className="heading-hero mb-6">
               4 Validated Clinical Assessments
@@ -86,10 +82,10 @@ export default function AssessmentsPage() {
                 <div key={index} className="border-l-4 border-amber-500 pl-6 md:pl-8">
                   {/* Header */}
                   <div className="flex flex-wrap items-baseline gap-2 mb-4">
-                    <h2 className="text-2xl md:text-3xl font-normal text-gray-900">
+                    <h2 className="text-2xl md:text-3xl font-light text-amber-950">
                       {assessment.name}
                     </h2>
-                    <span className="text-sm text-amber-700 bg-amber-100 px-3 py-1 rounded-full">
+                    <span className="text-sm text-amber-950 bg-amber-100 px-3 py-1 rounded-full">
                       {assessment.frequency}
                     </span>
                   </div>
@@ -136,7 +132,7 @@ export default function AssessmentsPage() {
                       {assessment.subscales.map((subscale, sIndex) => (
                         <span
                           key={sIndex}
-                          className="text-xs text-gray-600 bg-gray-100 px-3 py-1 rounded-full"
+                          className="text-xs text-amber-800 bg-amber-100 px-3 py-1 rounded-full"
                         >
                           {subscale}
                         </span>
@@ -212,14 +208,12 @@ export default function AssessmentsPage() {
             </p>
             <a
               href="/assessment"
-              className="inline-block px-8 py-4 bg-amber-600 text-white font-medium rounded-lg hover:bg-amber-700 transition-colors"
+              className="btn-editorial-primary"
             >
               Start Free Assessment
             </a>
           </div>
         </section>
-      </main>
-      <Footer />
-    </div>
+    </>
   );
 }

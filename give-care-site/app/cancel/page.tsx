@@ -1,8 +1,6 @@
 'use client';
 
 import AnimatedChat from "../components/AnimatedChat";
-import Navbar from "../components/layout/Navbar";
-import Footer from "../components/layout/Footer";
 import Image from "next/image";
 import Link from "next/link";
 
@@ -23,9 +21,7 @@ const cancelChatScenario = {
 
 export default function CancelPage() {
   return (
-    <div className="min-h-screen bg-base-100">
-      <Navbar />
-      
+    <>
       <div className="w-full bg-gradient-to-b from-base-100 to-base-200 pt-16 pb-12">
         <div className="container mx-auto px-4">
           <div className="flex flex-col lg:flex-row items-center justify-between gap-8">
@@ -38,30 +34,30 @@ export default function CancelPage() {
                 Subscription Cancelled
               </div>
               
-              <h1 className="text-4xl lg:text-5xl font-bold text-base-content mb-4">
+              <h1 className="text-4xl lg:text-5xl font-light text-amber-950 mb-4">
                 No worries at all
               </h1>
-              
-              <p className="text-lg text-base-content/70 leading-relaxed">
+
+              <p className="text-lg text-amber-950/70 leading-relaxed">
                 We understand that timing isn't always right. You haven't been charged, and you can come back anytime when you're ready to experience AI-powered caregiving support.
               </p>
-              
+
               <div className="space-y-4">
                 <div className="flex flex-col sm:flex-row gap-3">
-                  <Link href="/" className="btn btn-primary">
+                  <Link href="/" className="btn-editorial-primary">
                     Return to Homepage
                   </Link>
-                  <Link href="/how-it-works" className="btn btn-outline">
+                  <Link href="/how-it-works" className="btn-editorial-secondary">
                     Learn More
                   </Link>
                 </div>
               </div>
-              
+
               <div className="pt-6 space-y-4">
-                <p className="text-base-content/60 font-medium">
+                <p className="text-amber-950/60 font-light">
                   In the meantime, you can:
                 </p>
-                <div className="space-y-2 text-base-content/60">
+                <div className="space-y-2 text-amber-950/60">
                   <div className="flex items-center">
                     <svg className="w-5 h-5 text-primary mr-3 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
                       <path d="M2 6a2 2 0 012-2h6a2 2 0 012 2v6a2 2 0 01-2 2H4a2 2 0 01-2-2V6zM14.553 7.106A1 1 0 0014 8v4a1 1 0 00.553.894l2 1A1 1 0 0018 13V7a1 1 0 00-1.447-.894l-2 1z" />
@@ -116,8 +112,6 @@ export default function CancelPage() {
           </div>
         </div>
       </div>
-      
-      <Footer />
-    </div>
+    </>
   );
 }

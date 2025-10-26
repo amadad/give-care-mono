@@ -47,11 +47,11 @@ export default function TeamGrid() {
   const [hoveredMember, setHoveredMember] = useState<number | null>(null);
 
   return (
-    <section className="py-16 bg-gradient-to-b from-base-100 to-amber-50/30">
+    <section className="section-standard bg-gradient-to-b from-base-100 to-amber-50/30">
       <div className="container mx-auto px-4">
         <ScrollAnimationWrapper variant="fadeInUp">
           <div className="text-center mb-12">
-            <h2 className="text-3xl md:text-4xl font-serif text-amber-950 mb-4">Meet Our Team</h2>
+            <h2 className="heading-section mb-4">Meet Our Team</h2>
             <p className="text-lg text-accessible-body max-w-2xl mx-auto">
               United by personal experience and professional expertise in caregiving, technology, and healthcare.
             </p>

@@ -5,7 +5,6 @@ import { useRouter } from 'next/navigation';
 import { useAction } from 'convex/react';
 import { api } from 'give-care-app/convex/_generated/api';
 import { BSFC_SHORT_QUESTIONS, SCALE_OPTIONS } from '@/lib/bsfc';
-import Navbar from '@/app/components/layout/Navbar';
 
 export default function AssessmentQuestions() {
   const router = useRouter();
@@ -60,13 +59,12 @@ export default function AssessmentQuestions() {
   };
 
   return (
-    <div className="min-h-screen bg-base-100 flex flex-col">
-      <Navbar />
-      <main className="flex-1 py-8">
+    <>
+      <div className="py-8">
         <div className="container mx-auto px-4 max-w-2xl">
         {/* Progress Bar */}
         <div className="mb-8">
-          <div className="flex justify-between text-sm text-amber-700 mb-2">
+          <div className="flex justify-between text-sm text-amber-950 mb-2">
             <span>
               {showEmailCapture
                 ? 'Assessment Complete'
@@ -89,7 +87,7 @@ export default function AssessmentQuestions() {
               <h2 className="text-3xl font-serif text-amber-950 mb-4">
                 {currentQuestion.text}
               </h2>
-              <p className="text-sm text-amber-600">
+              <p className="text-sm text-amber-700">
                 How much do you agree with this statement?
               </p>
             </div>
@@ -104,7 +102,7 @@ export default function AssessmentQuestions() {
                   className="w-full btn btn-lg bg-white hover:bg-amber-50 border-2 border-amber-200 hover:border-amber-400 text-amber-950 text-left justify-start normal-case font-normal transition-all"
                 >
                   <span className="flex items-center gap-3">
-                    <span className="flex-shrink-0 w-8 h-8 rounded-full bg-amber-100 flex items-center justify-center text-sm font-medium text-amber-800">
+                    <span className="flex-shrink-0 w-8 h-8 rounded-full bg-amber-100 flex items-center justify-center text-sm font-medium text-amber-950">
                       {option.value}
                     </span>
                     <span>{option.label}</span>
@@ -124,10 +122,10 @@ export default function AssessmentQuestions() {
               <h2 className="text-3xl font-serif text-amber-950 mb-4">
                 Assessment Complete!
               </h2>
-              <p className="text-lg text-amber-800 mb-2">
+              <p className="text-lg text-amber-950 mb-2">
                 Enter your email to receive your complete results
               </p>
-              <p className="text-sm text-amber-600">
+              <p className="text-sm text-amber-700">
                 We'll send you your burden score, interpretation, top pressure zones, and personalized strategies.
               </p>
             </div>
@@ -148,7 +146,7 @@ export default function AssessmentQuestions() {
               <button
                 type="submit"
                 disabled={isSubmitting}
-                className="btn btn-lg w-full bg-amber-900 text-white hover:bg-amber-800 border-none"
+                className="btn btn-lg w-full bg-amber-950 text-white hover:bg-amber-900 border-none"
               >
                 {isSubmitting ? (
                   <>
@@ -161,7 +159,7 @@ export default function AssessmentQuestions() {
               </button>
             </form>
 
-            <p className="text-xs text-amber-600 text-center mt-4">
+            <p className="text-xs text-amber-700 text-center mt-4">
               🔒 We respect your privacy. Unsubscribe anytime.
             </p>
           </div>
@@ -172,12 +170,12 @@ export default function AssessmentQuestions() {
           <button
             onClick={handleBack}
             disabled={(currentQuestionIndex === 0 && !showEmailCapture) || isSubmitting}
-            className="btn btn-ghost text-amber-900 hover:bg-amber-100 disabled:opacity-30"
+            className="btn btn-ghost text-amber-950 hover:bg-amber-50 disabled:opacity-30"
           >
             ← Back
           </button>
 
-          <div className="text-sm text-amber-600">
+          <div className="text-sm text-amber-700">
             {showEmailCapture ? (
               <span>One last step!</span>
             ) : currentQuestionIndex === BSFC_SHORT_QUESTIONS.length - 1 ? (
@@ -189,11 +187,11 @@ export default function AssessmentQuestions() {
         </div>
 
           {/* Footer Note */}
-          <div className="mt-12 text-center text-xs text-amber-600">
+          <div className="mt-12 text-center text-xs text-amber-700">
             <p>Your responses are confidential and will only be used to calculate your burden score.</p>
           </div>
         </div>
-      </main>
-    </div>
+      </div>
+    </>
   );
 }

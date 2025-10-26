@@ -35,7 +35,7 @@ export function BlogNewsletterSignup() {
   };
 
   return (
-    <div className="my-16 p-10 bg-amber-50/30 border-t border-b border-amber-200/50">
+    <div className="my-16 p-10 bg-base-100 border-t border-b border-amber-200/50">
       <div className="text-center max-w-md mx-auto">
         <div className="w-12 h-12 border border-amber-300 rounded-full flex items-center justify-center mx-auto mb-6">
           <svg className="w-6 h-6 text-amber-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">

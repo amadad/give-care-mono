@@ -2,8 +2,6 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { format, parseISO } from 'date-fns';
 import { getAllPosts, type Post } from '../lib/mdx';
-import Navbar from '../components/layout/Navbar';
-import Footer from '../components/layout/Footer';
 import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
@@ -20,12 +18,9 @@ export default async function WordsPage() {
   const posts = await getAllPosts();
   const featuredPost = posts[0]; // First post as featured
   const regularPosts = posts.slice(1);
-  
+
   return (
-    <div className="min-h-screen bg-base-100 flex flex-col">
-      <Navbar />
-      
-      <main className="flex-1">
+    <>
         {/* Hero Section */}
         <section className="section-hero bg-base-100">
           <div className="container-editorial">
@@ -65,7 +60,7 @@ export default async function WordsPage() {
                     {featuredPost.categories && featuredPost.categories.length > 0 && (
                       <div className="flex gap-2">
                         {featuredPost.categories.slice(0, 3).map((category) => (
-                          <div key={category} className="text-xs text-amber-800 uppercase tracking-widest px-3 py-1 rounded-full border border-amber-300 bg-white">
+                          <div key={category} className="text-xs text-amber-950 uppercase tracking-widest px-3 py-1 rounded-full border border-amber-300 bg-white">
                             {category}
                           </div>
                         ))}
@@ -73,7 +68,7 @@ export default async function WordsPage() {
                     )}
                   </div>
 
-                  <h2 className="text-2xl md:text-3xl font-serif font-light text-amber-950 mb-4 leading-tight">
+                  <h2 className="heading-section mb-4">
                     <Link href={`/words/${featuredPost.slug}`} className="hover:text-amber-700 transition-colors">
                       {featuredPost.title}
                     </Link>
@@ -197,9 +192,6 @@ export default async function WordsPage() {
             </div>
           </section>
         )}
-      </main>
-      
-      <Footer />
-    </div>
+    </>
   );
 }

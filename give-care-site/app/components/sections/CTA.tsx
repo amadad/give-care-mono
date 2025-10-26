@@ -60,9 +60,9 @@ export default function CTA() {
                 required
                 disabled={status === 'loading'}
               />
-              <button 
-                type="submit" 
-                className="btn join-item bg-amber-800 hover:bg-amber-900 text-white border-amber-800 hover:border-amber-900"
+              <button
+                type="submit"
+                className="btn join-item bg-amber-950 hover:bg-amber-900 text-white border-amber-950 hover:border-amber-900"
                 disabled={status === 'loading'}
               >
                 {status === 'loading' ? 'Subscribing...' : 'Subscribe'}

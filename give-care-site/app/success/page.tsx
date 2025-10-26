@@ -1,8 +1,6 @@
 'use client';
 
 import AnimatedChat from "../components/AnimatedChat";
-import Navbar from "../components/layout/Navbar";
-import Footer from "../components/layout/Footer";
 import Image from "next/image";
 import Link from "next/link";
 
@@ -23,9 +21,7 @@ const successChatScenario = {
 
 export default function SuccessPage() {
   return (
-    <div className="min-h-screen bg-base-100">
-      <Navbar />
-      
+    <>
       <div className="w-full bg-gradient-to-b from-base-100 to-base-200 pt-16 pb-12">
         <div className="container mx-auto px-4">
           <div className="flex flex-col lg:flex-row items-center justify-between gap-8">
@@ -38,15 +34,15 @@ export default function SuccessPage() {
                 Subscription Successful
               </div>
               
-              <h1 className="text-4xl lg:text-5xl font-bold text-base-content mb-4">
+              <h1 className="text-4xl lg:text-5xl font-light text-amber-950 mb-4">
                 Success! Check your phone
               </h1>
-              
-              <p className="text-lg text-base-content/70 leading-relaxed">
+
+              <p className="text-lg text-amber-950/70 leading-relaxed">
                 Welcome to GiveCare. We've sent you a text message with instructions to complete your setup and get started with AI-powered caregiving support.
               </p>
-              
-              <div className="space-y-3 text-base-content/60">
+
+              <div className="space-y-3 text-amber-950/60">
                 <div className="flex items-center">
                   <svg className="w-5 h-5 text-success mr-3 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
                     <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
@@ -68,12 +64,12 @@ export default function SuccessPage() {
               </div>
               
               <div className="pt-4">
-                <Link href="/" className="btn btn-primary btn-lg">
+                <Link href="/" className="btn-editorial-primary btn-lg">
                   Return to Homepage
                 </Link>
               </div>
-              
-              <p className="text-sm text-base-content/50">
+
+              <p className="text-sm text-amber-950/50">
                 Need help? Contact us at{' '}
                 <a href="mailto:support@givecare.ai" className="text-primary hover:underline">
                   support@givecare.ai
@@ -112,8 +108,6 @@ export default function SuccessPage() {
           </div>
         </div>
       </div>
-      
-      <Footer />
-    </div>
+    </>
   );
 }

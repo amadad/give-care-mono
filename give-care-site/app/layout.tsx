@@ -10,6 +10,8 @@ import "./globals.css";
 import Script from 'next/script';
 import ErrorBoundary from "./components/ErrorBoundary";
 import { ConvexClientProvider } from "./providers/ConvexClientProvider";
+import Navbar from "./components/layout/Navbar";
+import Footer from "./components/layout/Footer";
 
 const gabarito = Gabarito({
   weight: ['500', '600', '700', '800'],
@@ -167,7 +169,13 @@ export default function RootLayout({
         }} />
         <ConvexClientProvider>
           <ErrorBoundary>
-            {children}
+            <div className="min-h-screen flex flex-col bg-base-100">
+              <Navbar />
+              <main id="main-content" className="flex-1">
+                {children}
+              </main>
+              <Footer />
+            </div>
           </ErrorBoundary>
         </ConvexClientProvider>
       </body>

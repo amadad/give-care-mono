@@ -1,5 +1,3 @@
-import Navbar from '@/app/components/layout/Navbar';
-import Footer from '@/app/components/layout/Footer';
 
 export const metadata = {
   title: 'Terms of Service - GiveCare',
@@ -8,11 +6,10 @@ export const metadata = {
 
 export default function TermsPage() {
   return (
-    <div className="min-h-screen bg-base-100 flex flex-col">
-      <Navbar />
-      <main className="container mx-auto px-4 py-16 flex-1">
-        <div className="prose max-w-3xl mx-auto">
-          <h1 className="text-4xl font-bold mb-6">Terms of Service for GiveCare™</h1>
+    <>
+      <section className="section-standard">
+        <div className="container-editorial-narrow">
+          <h1 className="heading-hero mb-6">Terms of Service for GiveCare™</h1>
           <p className="text-base-content/60 mb-8">Last Updated: September 15, 2024</p>
           <ol className="list-decimal pl-6 space-y-4">
             <li>
@@ -74,8 +71,7 @@ export default function TermsPage() {
             </li>
           </ol>
         </div>
-      </main>
-      <Footer />
-    </div>
+      </section>
+    </>
   );
 } 

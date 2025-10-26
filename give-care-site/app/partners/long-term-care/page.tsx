@@ -1,6 +1,4 @@
 import { Metadata } from 'next';
-import Navbar from '@/app/components/layout/Navbar';
-import Footer from '@/app/components/layout/Footer';
 import Hero from './components/Hero';
 import Features from './components/Features';
 import CTASection from './components/CTASection';
@@ -16,10 +14,8 @@ export const metadata: Metadata = {
 export default function LongTermCarePage() {
 
   return (
-    <div className="min-h-screen bg-base-100 flex flex-col">
-      <Navbar />
-      <main className="flex-1">
-        <div className="relative">
+    <>
+      <div className="relative">
           <Hero />
           <div className="w-full -mt-4">
             <LogoMarquee tagline="Trusted by Care-Delivery Innovators" />
@@ -28,12 +24,9 @@ export default function LongTermCarePage() {
         
         {/* Testimonials Section */}
         <Testimonials />
-        
-        <Features />
-        <CTASection />
 
-      </main>
-      <Footer />
-    </div>
+      <Features />
+      <CTASection />
+    </>
   );
 }

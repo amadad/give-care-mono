@@ -52,7 +52,7 @@ export function RelatedArticles({ articles, currentSlug }: RelatedArticlesProps)
 
               <div className="space-y-3">
                 {article.categories && article.categories.length > 0 && (
-                  <span className="text-xs text-amber-800 uppercase tracking-widest px-3 py-1 rounded-full border border-amber-300 bg-white inline-block">
+                  <span className="text-xs text-amber-950 uppercase tracking-widest px-3 py-1 rounded-full border border-amber-300 bg-white inline-block">
                     {article.categories[0]}
                   </span>
                 )}

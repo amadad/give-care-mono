@@ -113,7 +113,7 @@ function ThankYouContent() {
           </div>
           <a
             href="https://givecareapp.com/signup"
-            className="btn btn-lg bg-amber-900 text-white hover:bg-amber-800 border-none mb-4"
+            className="btn btn-lg bg-amber-950 text-white hover:bg-amber-900 border-none mb-4"
           >
             Start Your Free Trial
           </a>
