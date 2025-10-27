@@ -31,6 +31,11 @@ type RankedIntervention = SearchInterventionResult & {
   combinedScore: number
   zonePriorityScore: number
 }
+type SearchByPressureZonesArgs = {
+  pressureZones: string[]
+  query?: string
+  limit?: number
+}
 type QueryEmbedding = FunctionReturnType<
   typeof internal.functions.embeddings.generateEmbedding
 >
@@ -259,10 +264,13 @@ export const searchByPressureZones = internalAction({
     query: v.optional(v.string()),
     limit: v.optional(v.number()),
   },
-  handler: async (ctx, args) => {
+  handler: async (
+    ctx: ActionCtx,
+    args: SearchByPressureZonesArgs
+  ): Promise<SearchInterventionResult[]> => {
     'use node'
 
-    const limit = args.limit || 5
+    const limit = args.limit ?? 5
 
     // Build query from pressure zones
     const zoneLabels: Record<string, string> = {
@@ -279,14 +287,17 @@ export const searchByPressureZones = internalAction({
     const searchQuery = args.query ? `${args.query} ${queryParts.join(' ')}` : queryParts.join(', ')
 
     // Search across all zones
-    const interventions = await ctx.runAction(internal.functions.vectorSearch.searchInterventions, {
-      query: searchQuery,
-      limit: limit * 2,
-    })
+    const interventions: SearchInterventionResult[] = await ctx.runAction(
+      internal.functions.vectorSearch.searchInterventions,
+      {
+        query: searchQuery,
+        limit: limit * 2,
+      }
+    )
 
     // Filter to only include interventions matching at least one pressure zone
-    const filtered = interventions.filter((int: any) =>
-      int.pressureZones.some((zone: string) => args.pressureZones.includes(zone))
+    const filtered = interventions.filter(int =>
+      int.pressureZones.some(zone => args.pressureZones.includes(zone))
     )
 
     return filtered.slice(0, limit)
