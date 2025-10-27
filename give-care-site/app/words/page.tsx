@@ -25,7 +25,7 @@ export default async function WordsPage() {
         <section className="section-hero bg-base-100">
           <div className="container-editorial">
             <div className="text-center">
-              <h1 className="heading-hero mb-6">
+              <h1 className="heading-hero mb-1">
                 Stories That See You
               </h1>
               <p className="body-large max-w-2xl mx-auto">

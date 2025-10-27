@@ -105,12 +105,12 @@ export function SignupFormConvex() {
         {/* Contact Information - Minimal Design */}
         <div className="space-y-3 sm:space-y-4">
           <div>
-            <label className="block text-sm font-light text-amber-800 mb-2">
+            <label className="block text-sm font-light text-amber-950 mb-2">
               Full Name
             </label>
             <input
               type="text"
-              className="w-full px-4 py-3 bg-white border border-amber-200 rounded-lg text-base text-amber-900 placeholder:text-amber-400 focus:outline-none focus:border-amber-400 transition-colors"
+              className="w-full px-4 py-3 bg-white border border-amber-200 rounded-lg text-base text-amber-950 placeholder:text-amber-500 focus:outline-none focus:border-amber-700 transition-colors"
               placeholder="Your name"
               value={name}
               onChange={(e) => setName(e.target.value)}
@@ -120,12 +120,12 @@ export function SignupFormConvex() {
           </div>
 
           <div>
-            <label className="block text-sm font-light text-amber-800 mb-2">
+            <label className="block text-sm font-light text-amber-950 mb-2">
               Email
             </label>
             <input
               type="email"
-              className="w-full px-4 py-3 bg-white border border-amber-200 rounded-lg text-base text-amber-900 placeholder:text-amber-400 focus:outline-none focus:border-amber-400 transition-colors"
+              className="w-full px-4 py-3 bg-white border border-amber-200 rounded-lg text-base text-amber-950 placeholder:text-amber-500 focus:outline-none focus:border-amber-700 transition-colors"
               placeholder="you@example.com"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
@@ -136,12 +136,12 @@ export function SignupFormConvex() {
           </div>
 
           <div>
-            <label className="block text-sm font-light text-amber-800 mb-2">
+            <label className="block text-sm font-light text-amber-950 mb-2">
               Phone Number
             </label>
             <input
               type="tel"
-              className="w-full px-4 py-3 bg-white border border-amber-200 rounded-lg text-base text-amber-900 placeholder:text-amber-400 focus:outline-none focus:border-amber-400 transition-colors"
+              className="w-full px-4 py-3 bg-white border border-amber-200 rounded-lg text-base text-amber-950 placeholder:text-amber-500 focus:outline-none focus:border-amber-700 transition-colors"
               placeholder="(555) 123-4567"
               value={phone.value}
               onChange={(e) => phone.setValue(e.target.value)}
@@ -154,7 +154,7 @@ export function SignupFormConvex() {
 
         {/* Plan Selection - Proper Radio Group */}
         <fieldset className="space-y-2 sm:space-y-3">
-          <legend className="block text-sm font-light text-amber-800 mb-2">
+          <legend className="block text-sm font-light text-amber-950 mb-2">
             Choose Your Plan
           </legend>
 
@@ -235,13 +235,13 @@ export function SignupFormConvex() {
             <input
               id="consent-sms"
               type="checkbox"
-              className="mt-1 w-4 h-4 rounded border-amber-300 text-amber-950 focus:ring-amber-400 focus:ring-offset-0"
+              className="mt-1 w-5 h-5 rounded border-2 border-amber-300 text-amber-950 focus:ring-2 focus:ring-amber-700 focus:ring-offset-0 accent-amber-950"
               checked={consentSms}
               onChange={(e) => setConsentSms(e.target.checked)}
               required
               aria-describedby="sms-consent-details"
             />
-            <span className="text-sm font-light text-amber-800 leading-relaxed">
+            <span className="text-sm font-light text-amber-900 leading-relaxed">
               <span id="sms-consent-details">
                 I agree to receive text messages from GiveCare for support and updates. Message frequency varies. Message & data rates may apply. Text STOP to opt out, HELP for help.
               </span>
@@ -252,13 +252,13 @@ export function SignupFormConvex() {
             <input
               id="consent-terms"
               type="checkbox"
-              className="mt-1 w-4 h-4 rounded border-amber-300 text-amber-950 focus:ring-amber-400 focus:ring-offset-0"
+              className="mt-1 w-5 h-5 rounded border-2 border-amber-300 text-amber-950 focus:ring-2 focus:ring-amber-700 focus:ring-offset-0 accent-amber-950"
               checked={consentTerms}
               onChange={(e) => setConsentTerms(e.target.checked)}
               required
             />
-            <span className="text-sm font-light text-amber-800 leading-relaxed">
-              I agree to the <a href="/terms" className="underline hover:text-amber-950 transition-colors">Terms of Service</a> and <a href="/privacy" className="underline hover:text-amber-950 transition-colors">Privacy Policy</a>.
+            <span className="text-sm font-light text-amber-900 leading-relaxed">
+              I agree to the <a href="/terms" onClick={(e) => e.stopPropagation()} className="underline hover:text-amber-950 transition-colors">Terms of Service</a> and <a href="/privacy" onClick={(e) => e.stopPropagation()} className="underline hover:text-amber-950 transition-colors">Privacy Policy</a>.
             </span>
           </label>
         </div>
@@ -272,7 +272,7 @@ export function SignupFormConvex() {
             className={`w-full px-8 py-3 rounded-lg text-sm tracking-widest transition-all ${
               canSubmit
                 ? "bg-amber-950 text-white hover:bg-amber-900"
-                : "bg-amber-200 text-amber-400 cursor-not-allowed"
+                : "bg-amber-300 text-amber-700 cursor-not-allowed"
             }`}
           >
             {loading ? (
@@ -300,7 +300,7 @@ export function SignupFormConvex() {
         )}
 
         {/* Trust Indicators - Minimal */}
-        <div className="flex items-center justify-center gap-6 pt-4 sm:pt-6 text-xs text-amber-800 font-light">
+        <div className="flex items-center justify-center gap-6 pt-4 sm:pt-6 text-xs text-amber-900 font-light">
           <span className="flex items-center gap-1.5">
             <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
               <path fillRule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clipRule="evenodd" />
