@@ -30,10 +30,6 @@ const nextConfig: NextConfig = {
     ],
   },
 
-  turbopack: {
-    root: '/Users/amadad/Projects/givecare',
-  },
-
   // Disable image optimization for static export
   images: {
     unoptimized: true,

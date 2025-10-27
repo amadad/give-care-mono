@@ -69,4 +69,6 @@ give-care-story/.mcp.json
 # Temporary
 _drafts/
 *.backup
-.DS_Store
+
+# Design iterations
+.superdesign/
