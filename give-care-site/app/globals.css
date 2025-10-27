@@ -11,6 +11,25 @@ html {
   forced-color-adjust: none !important;
 }
 
+/* View Transitions API (Next.js 16 + React 19.2) */
+@view-transition {
+  navigation: auto;
+}
+
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation-duration: 0.2s;
+  animation-timing-function: ease-out;
+}
+
+/* Reduce motion for accessibility */
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-old(root),
+  ::view-transition-new(root) {
+    animation: none;
+  }
+}
+
 
 /* Logo grid container */
 .logo-grid {

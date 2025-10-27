@@ -204,8 +204,17 @@ export async function constructWebhookEvent(
     .map(b => b.toString(16).padStart(2, '0'))
     .join('');
 
-  // Compare signatures
-  if (expectedSignature !== v1Signature) {
+  // Constant-time compare signatures
+  const timingSafeEqual = (a: string, b: string): boolean => {
+    if (a.length !== b.length) return false;
+    let result = 0;
+    for (let i = 0; i < a.length; i++) {
+      result |= a.charCodeAt(i) ^ b.charCodeAt(i);
+    }
+    return result === 0;
+  };
+
+  if (!timingSafeEqual(expectedSignature, v1Signature)) {
     throw new Error('Webhook signature verification failed');
   }
 

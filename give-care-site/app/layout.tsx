@@ -95,7 +95,7 @@ export default function RootLayout({
   children: React.ReactNode
 }>) {
   return (
-    <html lang="en" className="overflow-y-scroll" data-theme="givecare">
+    <html lang="en" className="overflow-y-scroll" data-theme="givecare" data-scroll-behavior="smooth">
       <head>
         <meta name="google-site-verification" content="Pf2VKTccBz7pVbaO23c0-6V0u5hil_kSzNPS1lJHz3g" />
         <link rel="preconnect" href="https://fonts.googleapis.com" />

@@ -9,20 +9,29 @@ const nextConfig: NextConfig = {
   // Enable static HTML export for Cloudflare Pages
   output: 'export',
 
-  // TypeScript: Skip type checking in build (Next.js checks entire monorepo including give-care-app)
+  // TypeScript: enforce type checks in CI/build
   typescript: {
-    ignoreBuildErrors: true,
+    ignoreBuildErrors: false,
   },
+
+  // React Compiler: automatic memoization for client components
+  reactCompiler: true,
 
   pageExtensions: ['ts', 'tsx', 'mdx'],
   experimental: {
     mdxRs: true,
+    // Turbopack filesystem cache in dev for faster restarts
+    turbopackFileSystemCacheForDev: true,
     optimizePackageImports: [
       'framer-motion',
       '@heroicons/react',
       'react-icons',
       'date-fns',
     ],
+  },
+
+  turbopack: {
+    root: '/Users/amadad/Projects/givecare',
   },
 
   // Disable image optimization for static export
@@ -48,10 +57,7 @@ const nextConfig: NextConfig = {
             key: 'Referrer-Policy',
             value: 'strict-origin-when-cross-origin'
           },
-          {
-            key: 'X-XSS-Protection',
-            value: '1; mode=block'
-          },
+          // Drop deprecated X-XSS-Protection header
           {
             key: 'Permissions-Policy',
             value: 'camera=(), microphone=(), geolocation=()'
@@ -71,7 +77,8 @@ const nextConfig: NextConfig = {
               key: 'Content-Security-Policy',
               value: [
                 "default-src 'self'",
-                "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://www.googletagmanager.com https://www.google-analytics.com https://static.hotjar.com",
+                // Remove 'unsafe-eval'; keep 'unsafe-inline' temporarily for analytics snippets
+                "script-src 'self' 'unsafe-inline' https://www.googletagmanager.com https://www.google-analytics.com https://static.hotjar.com",
                 "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
                 "font-src 'self' https://fonts.gstatic.com",
                 "img-src 'self' data: https: blob:",
@@ -104,4 +111,4 @@ const nextConfig: NextConfig = {
 };
 
 // Export the configuration directly since MDX is handled by next-mdx-remote/rsc
-module.exports = withBundleAnalyzer(nextConfig);
+export default withBundleAnalyzer(nextConfig);
