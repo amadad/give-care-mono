@@ -55,13 +55,19 @@ async function canSendProactiveMessage(ctx: any, userId: Id<'users'>): Promise<b
 
   // Check if we already sent a proactive message today
   if (user.lastProactiveMessageAt && user.lastProactiveMessageAt > oneDayAgo) {
-    logScheduling('dedup_skip_proactive', { userId, reason: 'already_sent_today' })
+    logSafe('Scheduling', 'dedup_skip_proactive', {
+      userId: String(userId),
+      reason: 'already_sent_today',
+    })
     return false
   }
 
   // Check if user contacted us today (reactive message)
   if (user.lastContactAt && user.lastContactAt > oneDayAgo) {
-    logScheduling('dedup_skip_active', { userId, reason: 'user_active_today' })
+    logSafe('Scheduling', 'dedup_skip_active', {
+      userId: String(userId),
+      reason: 'user_active_today',
+    })
     return false
   }
 
@@ -102,7 +108,7 @@ async function sendProactiveMessage(
   })
 
   logScheduling('proactive_message_sent', {
-    userId,
+    userId: String(userId),
     phone: phoneNumber,
     messageType: type,
     sent: true,
@@ -127,7 +133,7 @@ async function sendProactiveMessage(
  */
 export const sendTieredWellnessCheckins = internalAction({
   handler: async ctx => {
-    logScheduling('cron_start', { job: 'sendTieredWellnessCheckins' })
+    logSafe('Scheduling', 'cron_start', { job: 'sendTieredWellnessCheckins' })
 
     const now = Date.now()
     let sentCount = 0
@@ -196,7 +202,10 @@ export const sendTieredWellnessCheckins = internalAction({
       sentCount++
     }
 
-    logScheduling('cron_complete', { job: 'sendTieredWellnessCheckins', sent: sentCount })
+    logSafe('Scheduling', 'cron_complete', {
+      job: 'sendTieredWellnessCheckins',
+      sent: sentCount,
+    })
     return { sent: sentCount }
   },
 })
@@ -218,7 +227,7 @@ export const sendTieredWellnessCheckins = internalAction({
  */
 export const reactivateDormantUsers = internalAction({
   handler: async ctx => {
-    logScheduling('cron_start', { job: 'reactivateDormantUsers' })
+    logSafe('Scheduling', 'cron_start', { job: 'reactivateDormantUsers' })
 
     const now = Date.now()
     let sentCount = 0
@@ -295,12 +304,19 @@ export const reactivateDormantUsers = internalAction({
           journeyPhase: 'churned',
         })
 
-        logScheduling('user_churned', { userId: user._id, daysInactive: Math.floor(daysSinceContact) })
+        logSafe('Scheduling', 'user_churned', {
+          userId: String(user._id),
+          daysInactive: Math.floor(daysSinceContact),
+        })
         churnedCount++
       }
     }
 
-    logScheduling('cron_complete', { job: 'reactivateDormantUsers', sent: sentCount, churned: churnedCount })
+    logSafe('Scheduling', 'cron_complete', {
+      job: 'reactivateDormantUsers',
+      sent: sentCount,
+      churned: churnedCount,
+    })
     return { sent: sentCount, churned: churnedCount }
   },
 })
@@ -318,7 +334,7 @@ export const reactivateDormantUsers = internalAction({
  */
 export const generateWeeklyReport = internalAction({
   handler: async ctx => {
-    logScheduling('cron_start', { job: 'generateWeeklyReport' })
+    logSafe('Scheduling', 'cron_start', { job: 'generateWeeklyReport' })
 
     // Get weekly stats (placeholder - implement in analytics module)
     const stats = {
@@ -334,13 +350,13 @@ export const generateWeeklyReport = internalAction({
       churnedUsers: 0,
     }
 
-    logScheduling('weekly_report', stats)
+    logSafe('Scheduling', 'weekly_report', stats)
 
     // TODO: Send email or post to Slack
     // await sendAdminEmail(stats);
     // await postToSlack(stats);
 
-    logScheduling('cron_complete', { job: 'generateWeeklyReport' })
+    logSafe('Scheduling', 'cron_complete', { job: 'generateWeeklyReport' })
     return stats
   },
 })
@@ -371,7 +387,11 @@ export const scheduleMessage = internalMutation({
       type: args.type,
     })
 
-    logScheduling('message_queued', { userId: args.userId, type: args.type, delayMs: args.delayMs })
+    logSafe('Scheduling', 'message_queued', {
+      userId: String(args.userId),
+      type: args.type,
+      delayMs: args.delayMs,
+    })
 
     return {
       success: true,
@@ -392,18 +412,28 @@ export const sendScheduledMessage = internalAction({
     type: v.string(),
   },
   handler: async (ctx, args) => {
-    logScheduling('message_executing', { userId: args.userId, type: args.type })
+    logSafe('Scheduling', 'message_executing', {
+      userId: String(args.userId),
+      type: args.type,
+    })
 
     // Get user
     const user = await ctx.runQuery(internal.functions.users.getUser, { userId: args.userId })
     if (!user) {
-      logScheduling('message_error', { userId: args.userId, error: 'user_not_found' })
+      logSafe('Scheduling', 'message_error', {
+        userId: String(args.userId),
+        error: 'user_not_found',
+      })
       return { success: false, error: 'User not found' }
     }
 
     // Check deduplication (don't send if already sent a proactive message today)
     if (!(await canSendProactiveMessage(ctx, args.userId))) {
-      logScheduling('message_skipped', { userId: args.userId, type: args.type, reason: 'deduplication' })
+      logSafe('Scheduling', 'message_skipped', {
+        userId: String(args.userId),
+        type: args.type,
+        reason: 'deduplication',
+      })
       return { success: false, error: 'Deduplication blocked' }
     }
 
@@ -511,7 +541,10 @@ export const scheduleCrisisFollowups = internalMutation({
       crisisFollowupCount: 0, // Reset counter
     })
 
-    logScheduling('crisis_followup_scheduled', { userId, stages: 7 })
+    logSafe('Scheduling', 'crisis_followup_scheduled', {
+      userId: String(userId),
+      stages: 7,
+    })
 
     return { success: true, stagesScheduled: 7 }
   },
@@ -542,7 +575,11 @@ export const checkOnboardingAndNudge = internalAction({
     const isComplete = user.firstName && user.relationship && user.careRecipientName && user.zipCode
 
     if (isComplete) {
-      logScheduling('onboarding_skip', { userId, nudgeStage, reason: 'profile_complete' })
+      logSafe('Scheduling', 'onboarding_skip', {
+        userId: String(userId),
+        nudgeStage,
+        reason: 'profile_complete',
+      })
       return { success: false, reason: 'Profile already complete' }
     }
 

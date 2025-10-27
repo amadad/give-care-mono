@@ -10,6 +10,31 @@
 import { internalAction, internalQuery } from '../_generated/server'
 import { internal } from '../_generated/api'
 import { v } from 'convex/values'
+import type { ActionCtx, QueryCtx } from '../_generated/server'
+import type { Doc, Id } from '../_generated/dataModel'
+import type { FunctionReturnType } from 'convex/server'
+
+type KnowledgeBaseDoc = Doc<'knowledgeBase'>
+type KnowledgeBaseId = Id<'knowledgeBase'>
+type SearchInterventionsArgs = {
+  query: string
+  limit?: number
+  pressureZone?: string
+}
+type SearchByBurnoutLevelArgs = {
+  burnoutBand: string
+  query?: string
+  limit?: number
+}
+type SearchInterventionResult = KnowledgeBaseDoc & { score: number }
+type RankedIntervention = SearchInterventionResult & {
+  combinedScore: number
+  zonePriorityScore: number
+}
+type QueryEmbedding = FunctionReturnType<
+  typeof internal.functions.embeddings.generateEmbedding
+>
+type VectorSearchResult = Array<{ _id: KnowledgeBaseId; _score: number }>
 
 /**
  * Semantic search for interventions using vector similarity
@@ -25,32 +50,45 @@ export const searchInterventions = internalAction({
     limit: v.optional(v.number()),
     pressureZone: v.optional(v.string()), // Optional filter
   },
-  handler: async (ctx, args) => {
+  handler: async (
+    ctx: ActionCtx,
+    args: SearchInterventionsArgs
+  ): Promise<SearchInterventionResult[]> => {
     'use node'
 
-    const limit = args.limit || 5
+    const limit = args.limit ?? 5
 
     // Generate embedding for user query
-    const queryEmbedding = await ctx.runAction(internal.functions.embeddings.generateEmbedding, {
-      text: args.query,
-    })
+    const queryEmbedding: QueryEmbedding = await ctx.runAction(
+      internal.functions.embeddings.generateEmbedding,
+      {
+        text: args.query,
+      }
+    )
 
     // Vector search with filters
     // Vector search with status filter (only 'active' interventions)
     // Note: Vector filter only supports q.eq and q.or, not q.and
     // So we filter by status here and post-filter by language
-    const results = await ctx.vectorSearch('knowledgeBase', 'by_embedding', {
-      vector: queryEmbedding,
-      limit: limit * 2, // Get more candidates for post-filtering
-      filter: q => q.eq('status', 'active'),
-    })
+    const results: VectorSearchResult = await ctx.vectorSearch(
+      'knowledgeBase',
+      'by_embedding',
+      {
+        vector: queryEmbedding,
+        limit: limit * 2, // Get more candidates for post-filtering
+        filter: q => q.eq('status', 'active'),
+      }
+    )
 
     // Fetch full documents with similarity scores
-    const interventions = []
+    const interventions: SearchInterventionResult[] = []
     for (const result of results) {
-      const doc = await ctx.runQuery(internal.functions.vectorSearch.getKnowledgeBaseById, {
-        id: result._id,
-      })
+      const doc: KnowledgeBaseDoc | null = await ctx.runQuery(
+        internal.functions.vectorSearch.getKnowledgeBaseById,
+        {
+          id: result._id,
+        }
+      )
 
       if (!doc) continue
 
@@ -89,10 +127,13 @@ export const searchByBurnoutLevel = internalAction({
     query: v.optional(v.string()),
     limit: v.optional(v.number()),
   },
-  handler: async (ctx, args) => {
+  handler: async (
+    ctx: ActionCtx,
+    args: SearchByBurnoutLevelArgs
+  ): Promise<RankedIntervention[]> => {
     'use node'
 
-    const limit = args.limit || 5
+    const limit = args.limit ?? 5
 
     // Map burnout band to pressure zones priority
     const zonePriority: Record<string, string[]> = {
@@ -160,13 +201,16 @@ export const searchByBurnoutLevel = internalAction({
       args.query || burnoutQueries[args.burnoutBand] || 'general caregiver support'
 
     // Search with priority on top zones
-    const interventions = await ctx.runAction(internal.functions.vectorSearch.searchInterventions, {
-      query: searchQuery,
-      limit: limit * 2, // Get more candidates
-    })
+    const interventions: SearchInterventionResult[] = await ctx.runAction(
+      internal.functions.vectorSearch.searchInterventions,
+      {
+        query: searchQuery,
+        limit: limit * 2, // Get more candidates
+      }
+    )
 
     // Re-rank by zone priority + similarity score
-    const ranked = interventions.map((int: any) => {
+    const ranked: RankedIntervention[] = interventions.map(int => {
       // Find highest priority zone that matches
       const zonePriorityScore = Math.max(
         ...int.pressureZones.map((zone: string) => {
@@ -183,7 +227,9 @@ export const searchByBurnoutLevel = internalAction({
     })
 
     // Sort by combined score and return top results
-    return ranked.sort((a: any, b: any) => b.combinedScore - a.combinedScore).slice(0, limit)
+    return ranked
+      .sort((a, b) => b.combinedScore - a.combinedScore)
+      .slice(0, limit)
   },
 })
 
@@ -192,7 +238,10 @@ export const searchByBurnoutLevel = internalAction({
  */
 export const getKnowledgeBaseById = internalQuery({
   args: { id: v.id('knowledgeBase') },
-  handler: async (ctx, args) => {
+  handler: async (
+    ctx: QueryCtx,
+    args: { id: KnowledgeBaseId }
+  ): Promise<KnowledgeBaseDoc | null> => {
     return await ctx.db.get(args.id)
   },
 })
