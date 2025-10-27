@@ -422,7 +422,7 @@ export const findInterventions = tool({
     if (convexClient && context.burnoutBand) {
       try {
         const interventions = await convexClient.action(
-          api.functions.vectorSearch.searchByBurnoutLevel,
+          (api as any)['functions/vectorSearch'].searchByBurnoutLevel,
           {
             burnoutBand: context.burnoutBand,
             query: input.context || undefined,
@@ -631,7 +631,7 @@ Importance rating (1-10):
     }
 
     try {
-      await convexClient.mutation(api.functions.memories.saveMemory, {
+      await convexClient.mutation((api as any)['functions/memories'].saveMemory, {
         userId: context.userId,
         content: content,
         category: category,

@@ -174,7 +174,7 @@ export const summarizeAllUsers: any = internalAction({
 
       // Only process if >30 messages
       if (messageCount > 30) {
-        await ctx.runAction(internal.summarizationActions.updateCaregiverProfile as any, {
+        await ctx.runAction((internal as any).summarizationActions.updateCaregiverProfile, {
           userId: user._id,
         })
         processedCount++

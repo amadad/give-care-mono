@@ -9,7 +9,7 @@
 
 import { DurableObject } from "cloudflare:workers";
 import { createLogger } from "../utils/logger";
-import { Agent, run, type RunState } from "@openai/agents";
+import { Agent, run, RunState } from "@openai/agents";
 import { ETLConvexClient } from "../utils/convex";
 import { createDiscoveryTools } from "./tools/discoveryTools";
 import { extractionTools } from "./tools/extractionTools";
@@ -455,7 +455,7 @@ After extracting data, ALWAYS:
       }
 
       // Continue agent execution with human feedback
-      const result = await run(this.agent, runState, continueMessage);
+      const result = await run(this.agent, runState);
 
       // Save updated RunState
       const newRunStateString = await result.state?.toString();

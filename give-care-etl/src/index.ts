@@ -142,7 +142,7 @@ export default {
  * preserving memory and state.
  */
 function routeToAgent(
-  namespace: DurableObjectNamespace,
+  namespace: any,
   agentName: string,
   request: Request,
   corsHeaders: Record<string, string>
@@ -152,7 +152,7 @@ function routeToAgent(
   const id = namespace.idFromName(agentName);
 
   // Get the Durable Object stub
-  const stub = namespace.get(id);
+  const stub: any = namespace.get(id);
 
   // Forward request to the agent
   // The agent's fetch() method will handle it
