@@ -17,8 +17,24 @@
  */
 
 import { internalMutation, internalQuery, internalAction } from './_generated/server'
+import type { ActionCtx, QueryCtx } from './_generated/server'
 import { internal } from './_generated/api'
 import { v } from 'convex/values'
+import type { Doc, Id } from './_generated/dataModel'
+
+type ConversationMessage = {
+  role: string
+  content: string
+  timestamp: number
+}
+
+type TokenSavingsResult = {
+  fullConversationTokens: number
+  withSummarizationTokens: number
+  savingsPercent: number
+}
+
+type UserDoc = Doc<'users'>
 
 /**
  * Split conversation history into recent (< 7 days) and historical (>= 7 days)
@@ -136,38 +152,48 @@ export const _getUser = internalQuery({
   args: {
     userId: v.id('users'),
   },
-  handler: async (ctx, args) => {
-    return await ctx.db.get(args.userId)
+  handler: async (ctx: QueryCtx, args: { userId: Id<'users'> }): Promise<UserDoc | null> => {
+    const user = await ctx.db.get(args.userId)
+    return (user as UserDoc | null) ?? null
   },
 })
 
 /**
  * Calculate token savings from summarization
  */
-export const calculateTokenSavings: any = internalAction({
+export const calculateTokenSavings = internalAction({
   args: {
     userId: v.id('users'),
   },
-  handler: async (ctx, args) => {
-    const { recentMessages, historicalMessages } = await ctx.runMutation(
+  handler: async (ctx: ActionCtx, args): Promise<TokenSavingsResult> => {
+    const { recentMessages, historicalMessages } = (await ctx.runMutation(
       internal.summarization.splitMessagesByRecency,
       { userId: args.userId }
-    )
+    )) as {
+      recentMessages: ConversationMessage[]
+      historicalMessages: ConversationMessage[]
+    }
 
-    const user = await ctx.runQuery(internal.summarization._getUser, { userId: args.userId })
+    const user = (await ctx.runQuery(internal.summarization._getUser, { userId: args.userId })) as
+      | UserDoc
+      | null
 
     // Rough token estimation: 1 token ≈ 4 characters
     const estimateTokens = (text: string) => Math.ceil(text.length / 4)
 
     // Full conversation tokens
-    const fullConversationTokens = [...historicalMessages, ...recentMessages].reduce(
-      (sum, msg) => sum + estimateTokens(msg.content),
+    const allMessages: ConversationMessage[] = [...historicalMessages, ...recentMessages]
+    const fullConversationTokens = allMessages.reduce<number>(
+      (sum, message) => sum + estimateTokens(message.content),
       0
     )
 
     // With summarization: summary (max 500 tokens) + recent messages
     const summaryTokens = user?.historicalSummary ? estimateTokens(user.historicalSummary) : 0
-    const recentTokens = recentMessages.reduce((sum, msg) => sum + estimateTokens(msg.content), 0)
+    const recentTokens = recentMessages.reduce<number>(
+      (sum, message) => sum + estimateTokens(message.content),
+      0
+    )
     const withSummarizationTokens = summaryTokens + recentTokens
 
     const savingsPercent =

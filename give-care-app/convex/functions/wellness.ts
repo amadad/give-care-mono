@@ -35,16 +35,17 @@ async function verifyOwnership(ctx: QueryCtx, requestedUserId: Id<'users'>) {
   // 3. Verify ownership - Compare auth identity to user
   // For Convex Auth users: user._id should match identity.subject (which is the userId)
   // For users with clerkId (legacy/external auth): check that field
+  const { clerkId } = user as typeof user & { clerkId?: string | null }
   const isOwner =
     user._id === identity.subject || // Direct ID match (Convex auth)
-    (user.clerkId && user.clerkId === identity.subject) // Clerk ID match
+    (clerkId && clerkId === identity.subject) // Clerk ID match
 
   if (!isOwner) {
     throw new Error('Unauthorized: Cannot access another user\'s wellness data')
   }
 
   // 4. Additional check: user must have a valid auth identifier
-  if (!user._id && !user.clerkId) {
+  if (!user._id && !clerkId) {
     throw new Error('Unauthorized: User does not have valid authentication')
   }
 

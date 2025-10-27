@@ -14,10 +14,36 @@
  * - Wellness trend watcher: Weekly (Monday 9am PT / 16:00 UTC)
  */
 
-import { internalAction } from './_generated/server';
+import { internalAction, internalQuery, internalMutation } from './_generated/server';
+import type { ActionCtx, QueryCtx, MutationCtx } from './_generated/server';
 import { internal } from './_generated/api';
 import { logSafe } from './utils/logger';
-import type { Id } from './_generated/dataModel';
+import type { Doc, Id } from './_generated/dataModel';
+import { v } from 'convex/values';
+
+type ActiveUser = Doc<'users'>;
+type AlertDoc = Doc<'alerts'>;
+type WellnessScoreDoc = Doc<'wellnessScores'>;
+type RecentMessage = NonNullable<ActiveUser['recentMessages']>[number];
+
+type EngagementWatcherResult = {
+  suddenDrops: number;
+  crisisBursts: number;
+  usersMonitored: number;
+};
+
+type WellnessWatcherResult = {
+  wellnessDeclines: number;
+  usersMonitored: number;
+};
+
+type PendingAlert = {
+  userId: Id<'users'>;
+  type: string;
+  pattern: string;
+  severity: string;
+  createdAt: number;
+};
 
 /**
  * Engagement Watcher
@@ -28,7 +54,7 @@ import type { Id } from './_generated/dataModel';
  * OPTIMIZED: Batch queries to eliminate N+1 pattern
  */
 export const watchCaregiverEngagement = internalAction({
-  handler: async (ctx) => {
+  handler: async (ctx: ActionCtx): Promise<EngagementWatcherResult> => {
     logSafe('Watcher', 'Starting engagement monitoring');
 
     const now = Date.now();
@@ -36,7 +62,7 @@ export const watchCaregiverEngagement = internalAction({
     const oneDayAgo = now - 24 * 60 * 60 * 1000;
 
     // Query 1: Get all active users
-    const users = await ctx.runQuery(internal.watchers._getActiveUsers);
+    const users = (await ctx.runQuery(internal.watchers._getActiveUsers)) as ActiveUser[];
     logSafe('Watcher', 'Monitoring active users', { count: users.length });
 
     if (users.length === 0) {
@@ -49,10 +75,10 @@ export const watchCaregiverEngagement = internalAction({
     }
 
     // Query 2: Get all unresolved alerts for all active users in one batch query
-    const userIds = users.map((u) => u._id);
-    const existingAlerts = await ctx.runQuery(internal.watchers._getAllUnresolvedAlerts, {
+    const userIds = users.map((user) => user._id);
+    const existingAlerts = (await ctx.runQuery(internal.watchers._getAllUnresolvedAlerts, {
       userIds,
-    });
+    })) as AlertDoc[];
 
     // Build lookup map: userId -> Set<type:pattern>
     const alertLookup = new Map<string, Set<string>>();
@@ -65,13 +91,7 @@ export const watchCaregiverEngagement = internalAction({
     }
 
     // Collect alerts to create (batch mutations at the end)
-    const alertsToCreate: Array<{
-      userId: Id<'users'>;
-      type: string;
-      pattern: string;
-      severity: string;
-      createdAt: number;
-    }> = [];
+    const alertsToCreate: PendingAlert[] = [];
 
     let suddenDropCount = 0;
     let crisisBurstCount = 0;
@@ -80,11 +100,12 @@ export const watchCaregiverEngagement = internalAction({
     for (const user of users) {
       try {
         const userId = user._id;
-        const userAlerts = alertLookup.get(userId) || new Set();
+        const userKey = `${userId}`;
+        const userAlerts = alertLookup.get(userKey) ?? new Set<string>();
 
         // Pattern 1: Sudden Drop Detection
         const averageMessagesPerDay = calculateAverageMessagesPerDay(user);
-        const recentMessageCount = countRecentMessages(user.recentMessages || [], oneDayAgo);
+        const recentMessageCount = countRecentMessages(user.recentMessages ?? [], oneDayAgo);
 
         if (averageMessagesPerDay > 3 && recentMessageCount === 0) {
           // Check if alert already exists (in-memory lookup)
@@ -148,13 +169,13 @@ export const watchCaregiverEngagement = internalAction({
  * OPTIMIZED: Batch queries to eliminate N+1 pattern
  */
 export const watchWellnessTrends = internalAction({
-  handler: async (ctx) => {
+  handler: async (ctx: ActionCtx): Promise<WellnessWatcherResult> => {
     logSafe('Watcher', 'Starting wellness trend monitoring');
 
     const now = Date.now();
 
     // Query 1: Get all active users
-    const users = await ctx.runQuery(internal.watchers._getActiveUsers);
+    const users = (await ctx.runQuery(internal.watchers._getActiveUsers)) as ActiveUser[];
     logSafe('Watcher', 'Monitoring wellness trends', { count: users.length });
 
     if (users.length === 0) {
@@ -166,10 +187,10 @@ export const watchWellnessTrends = internalAction({
     }
 
     // Query 2: Get all unresolved alerts for all active users
-    const userIds = users.map((u) => u._id);
-    const existingAlerts = await ctx.runQuery(internal.watchers._getAllUnresolvedAlerts, {
+    const userIds = users.map((user) => user._id);
+    const existingAlerts = (await ctx.runQuery(internal.watchers._getAllUnresolvedAlerts, {
       userIds,
-    });
+    })) as AlertDoc[];
 
     // Build lookup map: userId -> Set<type:pattern>
     const alertLookup = new Map<string, Set<string>>();
@@ -182,13 +203,13 @@ export const watchWellnessTrends = internalAction({
     }
 
     // Query 3: Batch-load wellness scores for all users
-    const allWellnessScores = await ctx.runQuery(internal.watchers._getBatchWellnessScores, {
+    const allWellnessScores = (await ctx.runQuery(internal.watchers._getBatchWellnessScores, {
       userIds,
       limit: 4,
-    });
+    })) as WellnessScoreDoc[];
 
     // Build lookup map: userId -> scores[]
-    const scoresLookup = new Map<string, any[]>();
+    const scoresLookup = new Map<string, WellnessScoreDoc[]>();
     for (const score of allWellnessScores) {
       const key = `${score.userId}`;
       if (!scoresLookup.has(key)) {
@@ -210,7 +231,8 @@ export const watchWellnessTrends = internalAction({
     for (const user of users) {
       try {
         const userId = user._id;
-        const scores = scoresLookup.get(userId) || [];
+        const userKey = `${userId}`;
+        const scores = scoresLookup.get(userKey) ?? [];
 
         // Require at least 4 scores for trend analysis
         if (scores.length < 4) {
@@ -222,7 +244,7 @@ export const watchWellnessTrends = internalAction({
 
         if (isWorsening) {
           // Check if alert already exists (in-memory lookup)
-          const userAlerts = alertLookup.get(userId) || new Set();
+          const userAlerts = alertLookup.get(userKey) ?? new Set<string>();
           if (!userAlerts.has('wellness_decline:worsening_scores')) {
             // Create alert
             await ctx.runMutation(internal.watchers.createAlert, {
@@ -290,7 +312,7 @@ export const watchWellnessTrends = internalAction({
 /**
  * Helper: Calculate average messages per day
  */
-function calculateAverageMessagesPerDay(user: any): number {
+function calculateAverageMessagesPerDay(user: ActiveUser): number {
   const totalMessages = user.totalInteractionCount || 0;
   const conversationStart = user.conversationStartDate || Date.now();
   const daysElapsed = (Date.now() - conversationStart) / (24 * 60 * 60 * 1000);
@@ -305,14 +327,14 @@ function calculateAverageMessagesPerDay(user: any): number {
 /**
  * Helper: Count recent messages (within time window)
  */
-function countRecentMessages(messages: any[], sinceTimestamp: number): number {
-  return messages.filter((m) => m.timestamp >= sinceTimestamp).length;
+function countRecentMessages(messages: RecentMessage[], sinceTimestamp: number): number {
+  return messages.filter((message) => message.timestamp >= sinceTimestamp).length;
 }
 
 /**
  * Helper: Count crisis keywords in recent messages
  */
-function countCrisisKeywords(messages: any[], sinceTimestamp: number): number {
+function countCrisisKeywords(messages: RecentMessage[], sinceTimestamp: number): number {
   const crisisRegex = /help|overwhelm|can't do this|give up/i;
   const recentMessages = messages.filter((m) => m.timestamp >= sinceTimestamp);
 
@@ -323,7 +345,7 @@ function countCrisisKeywords(messages: any[], sinceTimestamp: number): number {
  * Helper: Check if wellness scores show worsening trend
  * Scores are ordered DESC by recordedAt (most recent first)
  */
-function isWorseningTrend(scores: any[]): boolean {
+function isWorseningTrend(scores: WellnessScoreDoc[]): boolean {
   // Need to reverse to get chronological order
   const chronologicalScores = [...scores].reverse();
 
@@ -341,12 +363,11 @@ function isWorseningTrend(scores: any[]): boolean {
  * Query: Get all active users
  */
 export const getActiveUsers = internalAction({
-  handler: async (ctx) => {
-    return await ctx.runQuery(internal.watchers._getActiveUsers);
+  handler: async (ctx: ActionCtx): Promise<ActiveUser[]> => {
+    const users = await ctx.runQuery(internal.watchers._getActiveUsers);
+    return users as ActiveUser[];
   },
 });
-
-import { internalQuery } from './_generated/server';
 
 /**
  * Internal query: Get active users (limited to prevent unbounded queries)
@@ -355,7 +376,7 @@ import { internalQuery } from './_generated/server';
  * cursor-based pagination or batch processing with multiple calls.
  */
 export const _getActiveUsers = internalQuery({
-  handler: async (ctx) => {
+  handler: async (ctx: QueryCtx): Promise<ActiveUser[]> => {
     // Limit query to first 100 active users to prevent unbounded collect()
     // Watchers processing large user bases should implement batching
     const users = await ctx.db
@@ -363,7 +384,7 @@ export const _getActiveUsers = internalQuery({
       .withIndex('by_journey', (q) => q.eq('journeyPhase', 'active'))
       .take(100);
 
-    return users;
+    return users as ActiveUser[];
   },
 });
 
@@ -375,14 +396,17 @@ export const getLatestWellnessScores = internalQuery({
     userId: v.id('users'),
     limit: v.number(),
   },
-  handler: async (ctx, args) => {
+  handler: async (
+    ctx: QueryCtx,
+    args: { userId: Id<'users'>; limit: number }
+  ): Promise<WellnessScoreDoc[]> => {
     const scores = await ctx.db
       .query('wellnessScores')
       .withIndex('by_user_recorded', (q) => q.eq('userId', args.userId))
       .order('desc') // Most recent first
       .take(args.limit);
 
-    return scores;
+    return scores as WellnessScoreDoc[];
   },
 });
 
@@ -395,7 +419,10 @@ export const findExistingAlert = internalQuery({
     type: v.string(),
     pattern: v.string(),
   },
-  handler: async (ctx, args) => {
+  handler: async (
+    ctx: QueryCtx,
+    args: { userId: Id<'users'>; type: string; pattern: string }
+  ): Promise<AlertDoc | null> => {
     const alerts = await ctx.db
       .query('alerts')
       .withIndex('by_user', (q) => q.eq('userId', args.userId))
@@ -408,15 +435,9 @@ export const findExistingAlert = internalQuery({
       )
       .first();
 
-    return alerts;
+    return (alerts as AlertDoc | null) ?? null;
   },
 });
-
-/**
- * Mutation: Create alert
- */
-import { internalMutation } from './_generated/server';
-import { v } from 'convex/values';
 
 export const createAlert = internalMutation({
   args: {
@@ -426,7 +447,10 @@ export const createAlert = internalMutation({
     severity: v.string(),
     createdAt: v.number(),
   },
-  handler: async (ctx, args) => {
+  handler: async (
+    ctx: MutationCtx,
+    args: { userId: Id<'users'>; type: string; pattern: string; severity: string; createdAt: number }
+  ): Promise<Id<'alerts'>> => {
     const alertId = await ctx.db.insert('alerts', {
       userId: args.userId,
       type: args.type,
@@ -435,7 +459,7 @@ export const createAlert = internalMutation({
       createdAt: args.createdAt,
     });
 
-    return alertId;
+    return alertId as Id<'alerts'>;
   },
 });
 
@@ -452,14 +476,17 @@ export const _getAllUnresolvedAlerts = internalQuery({
   args: {
     userIds: v.array(v.id('users')),
   },
-  handler: async (ctx, args) => {
+  handler: async (
+    ctx: QueryCtx,
+    args: { userIds: Id<'users'>[] }
+  ): Promise<AlertDoc[]> => {
     if (args.userIds.length === 0) {
       return [];
     }
 
     // FIXED: Use indexed query per user instead of loading entire alerts table
     // This prevents unbounded memory usage while still being more efficient than N+1
-    const unresolvedAlerts = [];
+    const unresolvedAlerts: AlertDoc[] = [];
 
     for (const userId of args.userIds) {
       const userAlerts = await ctx.db
@@ -468,7 +495,7 @@ export const _getAllUnresolvedAlerts = internalQuery({
         .filter((q) => q.eq(q.field('resolvedAt'), undefined))
         .take(10); // Limit alerts per user
 
-      unresolvedAlerts.push(...userAlerts);
+      unresolvedAlerts.push(...(userAlerts as AlertDoc[]));
     }
 
     return unresolvedAlerts;
@@ -484,14 +511,17 @@ export const _getBatchWellnessScores = internalQuery({
     userIds: v.array(v.id('users')),
     limit: v.number(),
   },
-  handler: async (ctx, args) => {
+  handler: async (
+    ctx: QueryCtx,
+    args: { userIds: Id<'users'>[]; limit: number }
+  ): Promise<WellnessScoreDoc[]> => {
     if (args.userIds.length === 0) {
       return [];
     }
 
     // FIXED: Use indexed query per user instead of loading entire wellnessScores table
     // This prevents unbounded memory usage
-    const userScores = [];
+    const userScores: WellnessScoreDoc[] = [];
 
     for (const userId of args.userIds) {
       const scores = await ctx.db
@@ -500,7 +530,7 @@ export const _getBatchWellnessScores = internalQuery({
         .order('desc')
         .take(args.limit); // Limit scores per user (typically 4 for trend detection)
 
-      userScores.push(...scores);
+      userScores.push(...(scores as WellnessScoreDoc[]));
     }
 
     return userScores;
@@ -523,7 +553,10 @@ export const _createAlertsBatch = internalMutation({
       })
     ),
   },
-  handler: async (ctx, args) => {
+  handler: async (
+    ctx: MutationCtx,
+    args: { alerts: PendingAlert[] }
+  ): Promise<Id<'alerts'>[]> => {
     const alertIds: Id<'alerts'>[] = [];
 
     for (const alert of args.alerts) {
@@ -534,7 +567,7 @@ export const _createAlertsBatch = internalMutation({
         severity: alert.severity,
         createdAt: alert.createdAt,
       });
-      alertIds.push(alertId);
+      alertIds.push(alertId as Id<'alerts'>);
     }
 
     return alertIds;

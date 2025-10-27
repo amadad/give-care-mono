@@ -32,6 +32,7 @@
     "@google/genai": "^1.25.0",
     "@openai/agents": "^0.1.9",
     "@openai/agents-extensions": "^0.1.5",
+    "@react-email/components": "^0.5.7",
     "convex": "^1.28.0",
     "dotenv": "^17.2.3",
     "event-target-polyfill": "^0.0.4",
@@ -49,8 +50,8 @@
     "eslint": "^9.0.0",
     "prettier": "^3.0.0",
     "tsx": "^4.20.6",
-    "typescript-eslint": "^8.0.0",
     "typescript": "^5.4.0",
+    "typescript-eslint": "^8.0.0",
     "vitest": "^2.0.0"
   }
 }
