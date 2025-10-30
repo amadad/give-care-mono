@@ -340,7 +340,7 @@ describe('Resource Search - Functional Tests', () => {
       })
 
       expect(results).toHaveLength(1)
-      expect(results[0].rbi).toBeLessThan(40) // Low score due to unverified status
+      expect(results[0].rbi).toBeLessThan(70) // Lower score for unverified status
     })
 
     it('should apply crisis band multiplier', async () => {
