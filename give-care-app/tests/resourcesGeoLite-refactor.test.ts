@@ -28,7 +28,7 @@ const modules = import.meta.glob('../convex/**/*.ts')
 describe('Scoring Utilities', () => {
   describe('scoreResource', () => {
     it('should calculate correct score for zone match with local coverage', async () => {
-      const { scoreResource } = await import('../convex/ingestion/shared/scoring')
+      const { scoreResource } = await import('../convex/lib/scoring')
 
       const score = scoreResource({
         zoneMatch: true,
@@ -44,7 +44,7 @@ describe('Scoring Utilities', () => {
     })
 
     it('should calculate correct score for zone match with state coverage', async () => {
-      const { scoreResource } = await import('../convex/ingestion/shared/scoring')
+      const { scoreResource } = await import('../convex/lib/scoring')
 
       const score = scoreResource({
         zoneMatch: true,
@@ -59,7 +59,7 @@ describe('Scoring Utilities', () => {
     })
 
     it('should calculate correct score for no zone match with national coverage', async () => {
-      const { scoreResource } = await import('../convex/ingestion/shared/scoring')
+      const { scoreResource } = await import('../convex/lib/scoring')
 
       const score = scoreResource({
         zoneMatch: false,
@@ -75,7 +75,7 @@ describe('Scoring Utilities', () => {
     })
 
     it('should handle stale resources with low freshness score', async () => {
-      const { scoreResource } = await import('../convex/ingestion/shared/scoring')
+      const { scoreResource } = await import('../convex/lib/scoring')
 
       const score = scoreResource({
         zoneMatch: true,
@@ -90,7 +90,7 @@ describe('Scoring Utilities', () => {
     })
 
     it('should cap score at 100', async () => {
-      const { scoreResource } = await import('../convex/ingestion/shared/scoring')
+      const { scoreResource } = await import('../convex/lib/scoring')
 
       const score = scoreResource({
         zoneMatch: true,
@@ -103,7 +103,7 @@ describe('Scoring Utilities', () => {
     })
 
     it('should handle radius coverage same as zip', async () => {
-      const { scoreResource } = await import('../convex/ingestion/shared/scoring')
+      const { scoreResource } = await import('../convex/lib/scoring')
 
       const scoreRadius = scoreResource({
         zoneMatch: true,
@@ -125,7 +125,7 @@ describe('Scoring Utilities', () => {
 
   describe('matchesZones', () => {
     it('should return true when zones overlap', async () => {
-      const { matchesZones } = await import('../convex/ingestion/shared/scoring')
+      const { matchesZones } = await import('../convex/lib/scoring')
 
       const result = matchesZones(
         ['emotional_wellbeing', 'time_management'],
@@ -136,7 +136,7 @@ describe('Scoring Utilities', () => {
     })
 
     it('should return false when zones do not overlap', async () => {
-      const { matchesZones } = await import('../convex/ingestion/shared/scoring')
+      const { matchesZones } = await import('../convex/lib/scoring')
 
       const result = matchesZones(
         ['emotional_wellbeing', 'social_support'],
@@ -147,7 +147,7 @@ describe('Scoring Utilities', () => {
     })
 
     it('should return false when user zones are empty', async () => {
-      const { matchesZones } = await import('../convex/ingestion/shared/scoring')
+      const { matchesZones } = await import('../convex/lib/scoring')
 
       const result = matchesZones(['emotional_wellbeing'], [])
 
@@ -155,7 +155,7 @@ describe('Scoring Utilities', () => {
     })
 
     it('should return false when user zones are undefined', async () => {
-      const { matchesZones } = await import('../convex/ingestion/shared/scoring')
+      const { matchesZones } = await import('../convex/lib/scoring')
 
       const result = matchesZones(['emotional_wellbeing'], undefined)
 
@@ -163,7 +163,7 @@ describe('Scoring Utilities', () => {
     })
 
     it('should handle multiple matching zones', async () => {
-      const { matchesZones } = await import('../convex/ingestion/shared/scoring')
+      const { matchesZones } = await import('../convex/lib/scoring')
 
       const result = matchesZones(
         ['emotional_wellbeing', 'time_management', 'financial_concerns'],
@@ -176,7 +176,7 @@ describe('Scoring Utilities', () => {
 
   describe('calculateFreshness', () => {
     it('should return 0 days for today', async () => {
-      const { calculateFreshness } = await import('../convex/ingestion/shared/scoring')
+      const { calculateFreshness } = await import('../convex/lib/scoring')
 
       const today = new Date().toISOString()
       const days = calculateFreshness(today)
@@ -185,7 +185,7 @@ describe('Scoring Utilities', () => {
     })
 
     it('should return 30 days for 30 days ago', async () => {
-      const { calculateFreshness } = await import('../convex/ingestion/shared/scoring')
+      const { calculateFreshness } = await import('../convex/lib/scoring')
 
       const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString()
       const days = calculateFreshness(thirtyDaysAgo)
@@ -194,7 +194,7 @@ describe('Scoring Utilities', () => {
     })
 
     it('should return 365 days for undefined lastVerified', async () => {
-      const { calculateFreshness } = await import('../convex/ingestion/shared/scoring')
+      const { calculateFreshness } = await import('../convex/lib/scoring')
 
       const days = calculateFreshness(undefined)
 
@@ -202,7 +202,7 @@ describe('Scoring Utilities', () => {
     })
 
     it('should handle timestamp numbers', async () => {
-      const { calculateFreshness } = await import('../convex/ingestion/shared/scoring')
+      const { calculateFreshness } = await import('../convex/lib/scoring')
 
       const timestamp = Date.now() - 60 * 24 * 60 * 60 * 1000 // 60 days ago
       const days = calculateFreshness(timestamp)
@@ -211,7 +211,7 @@ describe('Scoring Utilities', () => {
     })
 
     it('should not return negative days', async () => {
-      const { calculateFreshness } = await import('../convex/ingestion/shared/scoring')
+      const { calculateFreshness } = await import('../convex/lib/scoring')
 
       const tomorrow = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString()
       const days = calculateFreshness(tomorrow)
