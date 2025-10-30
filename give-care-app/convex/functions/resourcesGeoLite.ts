@@ -9,7 +9,7 @@
 import { query } from '../_generated/server'
 import { v } from 'convex/values'
 import type { Doc } from '../_generated/dataModel'
-import { scoreResource, matchesZones, calculateFreshness } from '../ingestion/shared/scoring'
+import { scoreResource, matchesZones, calculateFreshness } from '../lib/scoring'
 import type { QueryCtx } from '../_generated/server'
 
 type ResourceRecord = Doc<'resources'>
