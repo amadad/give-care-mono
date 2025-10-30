@@ -1,6 +1,31 @@
 # Changelog - GiveCare App Security & Performance Fixes
 
-## [Unreleased] - 2025-10-24
+## [Unreleased] - 2025-10-30
+
+### 🧹 Code Refactoring
+
+#### Convex Directory Reorganization
+**Impact:** Reduced codebase size by ~3,200 LOC (23% of convex/)
+
+**Changes:**
+1. Moved `convex/ingestion/shared/scoring.ts` → `convex/lib/scoring.ts`
+   - Runtime scoring utilities belong in lib/, not under ingestion/
+   - Updated imports in `convex/functions/resourcesGeoLite.ts`
+   - All tests passing (27/27 in `tests/resourcesGeoLite-refactor.test.ts`)
+
+2. Archived deprecated ingestion pipeline → `convex/archive/ingestion-20251030/`
+   - Moved: eldercare_scraper.ts, adapters/, federalPrograms*, nys_oaa_parser*
+   - Reason: Production now uses give-care-etl for resource ingestion
+   - Archived: normalize.ts, load.ts, validation.ts, registry.ts, types.ts
+
+**Commits:**
+- `6ae21b5` - refactor(convex): move scoring utilities to lib/
+- `2c5320e` - refactor(convex): archive unused ingestion directory
+- `655a9b2` - fix(tests): update imports after scoring.ts refactor
+
+---
+
+## [2025-10-24]
 
 ### 🔒 Security Fixes
 
