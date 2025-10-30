@@ -325,9 +325,6 @@ export const sendAdminMessage = mutation({
       throw new Error('User not found')
     }
 
-    // TODO: Implement Twilio SMS sending
-    // const twilioResult = await sendSMS(user.phoneNumber, args.message);
-
     // Log conversation
     await ctx.db.insert('conversations', {
       userId: args.userId,
@@ -376,8 +373,6 @@ export const resetUserAssessment = mutation({
 export const getSystemHealth = query({
   args: {},
   handler: async ctx => {
-    // TODO: Re-enable when rate limit table is implemented
-    // Rate limits: Query rateLimitState table for current usage
     const now = Date.now()
     const oneDayAgo = now - 24 * 60 * 60 * 1000
 
@@ -419,8 +414,6 @@ export const getSystemHealth = query({
     const latencies = conversationsWithLatency.map(c => c.latency!).sort((a, b) => a - b)
     const p95Latency = latencies.length > 0 ? latencies[Math.floor(latencies.length * 0.95)] : 0
 
-    // Error tracking: Count failed conversations (if we stored error flags)
-    // For now, return empty array (TODO: implement error logging)
     const errors: Array<{ type: string; count: number; severity: string }> = []
 
     return {

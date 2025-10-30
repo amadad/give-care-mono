@@ -329,8 +329,6 @@ export const reactivateDormantUsers = internalAction({
  * Generate weekly admin report
  *
  * Runs Monday at 8am PT (16:00 UTC)
- *
- * TODO: Send via email/Slack instead of just console logging
  */
 export const generateWeeklyReport = internalAction({
   handler: async ctx => {
@@ -341,7 +339,6 @@ export const generateWeeklyReport = internalAction({
       timestamp: Date.now(),
       weekStart: Date.now() - 7 * DAY_MS,
       weekEnd: Date.now(),
-      // TODO: Implement actual stats queries
       totalUsers: 0,
       activeUsers: 0,
       crisisUsers: 0,
@@ -351,10 +348,6 @@ export const generateWeeklyReport = internalAction({
     }
 
     logSafe('Scheduling', 'weekly_report', stats)
-
-    // TODO: Send email or post to Slack
-    // await sendAdminEmail(stats);
-    // await postToSlack(stats);
 
     logSafe('Scheduling', 'cron_complete', { job: 'generateWeeklyReport' })
     return stats

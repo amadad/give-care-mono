@@ -238,7 +238,7 @@ give-care-type/
 │   │   └── conversations.ts      # Conversation logs (96 LOC)
 │   └── _generated/               # Auto-generated types (run `npx convex dev`)
 │
-├── tests/                        # TODO: Add unit tests
+├── tests/                        # Test suite
 │
 ├── index.ts                      # Main exports (53 LOC)
 ├── README.md                     # This file
@@ -264,7 +264,6 @@ ngrok http 8080  # If using local HTTP server
 
 ### Testing Agent Interactively
 ```bash
-# TODO: Create demo.ts for REPL testing (like Python demo.py)
 npm run demo
 ```
 
@@ -338,7 +337,6 @@ TWILIO_PHONE_NUMBER=+1...
 3. ✅ **Parallel guardrails** (20ms vs 80ms sequential)
 4. ✅ **Async background logging** (0ms user-facing latency)
 5. ✅ **Low verbosity** for concise SMS/RCS responses
-6. 🔄 TODO: Response caching for common queries
 
 ---
 

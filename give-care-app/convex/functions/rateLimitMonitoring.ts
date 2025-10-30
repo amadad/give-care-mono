@@ -34,14 +34,6 @@ export const getRateLimitStats = internalQuery({
     return {
       message: 'Rate limit stats query - implementation depends on @convex-dev/rate-limiter API',
       timestamp: Date.now(),
-      // TODO: Implement using rateLimiter.getUsage() or similar
-      // stats: {
-      //   smsPerUser: await rateLimiter.getUsage(ctx, 'sms-user'),
-      //   smsGlobal: await rateLimiter.getUsage(ctx, 'sms-global'),
-      //   assessmentPerUser: await rateLimiter.getUsage(ctx, 'assessment'),
-      //   openaiCalls: await rateLimiter.getUsage(ctx, 'openai'),
-      //   spamProtection: await rateLimiter.getUsage(ctx, 'spam'),
-      // },
     }
   },
 })
@@ -68,11 +60,6 @@ export const resetUserRateLimit = internalMutation({
     // Check the package docs for the correct method
 
     console.log(`[Admin] Resetting rate limits for ${args.phoneNumber}`)
-
-    // TODO: Implement using rateLimiter.reset() or similar
-    // await rateLimiter.reset(ctx, 'sms-user', args.phoneNumber);
-    // await rateLimiter.reset(ctx, 'assessment', args.phoneNumber);
-    // await rateLimiter.reset(ctx, 'spam', args.phoneNumber);
 
     return {
       success: true,
@@ -105,8 +92,6 @@ export const getUserRateLimitHistory = internalQuery({
       message:
         'User rate limit history (placeholder - needs @convex-dev/rate-limiter API implementation)',
       timestamp: Date.now(),
-      // TODO: Implement if supported by package
-      // history: await rateLimiter.getHistory(ctx, args.phoneNumber),
     }
   },
 })
@@ -157,15 +142,6 @@ export const getGlobalAlerts = internalQuery({
     // @convex-dev/rate-limiter API
 
     const alerts: Array<{ type: string; message: string; severity: string }> = []
-
-    // TODO: Implement threshold checks
-    // if (smsGlobal.current > smsGlobal.max * 0.8) {
-    //   alerts.push({
-    //     type: 'sms-global',
-    //     message: 'Global SMS usage at 80% capacity',
-    //     severity: 'warning',
-    //   });
-    // }
 
     return {
       alerts,

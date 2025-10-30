@@ -30,8 +30,7 @@ export const fetchPage = tool({
       logger.info('Fetching page', { url, useJavaScript });
 
       if (useJavaScript) {
-        // TODO: Use Cloudflare Browser Rendering API for JS-heavy pages
-        // This requires Cloudflare Workers environment bindings
+        // Browser rendering requires Cloudflare Workers runtime (not available in this context)
         throw new Error('Browser rendering not yet implemented - requires Cloudflare Workers runtime');
       }
 
@@ -91,10 +90,7 @@ export const extractStructured = tool({
         ? html.substring(0, 50000) + '... [truncated]'
         : html;
 
-      // Use OpenAI to extract structured data
-      // NOTE: In production, this would call GPT-4o-mini with llm-scraper-worker
-      // For now, return a placeholder structure
-
+      // Placeholder implementation (awaits LLM integration)
       const extracted: Partial<IntermediateRecord> = {
         title: extractField(truncatedHtml, 'title', 'h1, .title, .program-name'),
         providerName: extractField(truncatedHtml, 'provider', '.provider, .organization'),
@@ -183,9 +179,8 @@ export const parsePagination = tool({
   },
 });
 
-// Helper functions for basic extraction (placeholder until LLM integration)
 function extractField(html: string, fieldName: string, selectors: string): string {
-  // Simple regex-based extraction (replace with proper HTML parsing in production)
+  // Basic regex extraction (replace with HTML parser in production)
   const pattern = new RegExp(`<[^>]+class=["']${selectors.split(',')[0].replace('.', '')}["'][^>]*>([^<]+)<`, 'i');
   const match = html.match(pattern);
   return match ? match[1].trim() : '';

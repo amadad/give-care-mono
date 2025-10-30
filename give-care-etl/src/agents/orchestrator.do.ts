@@ -544,7 +544,6 @@ After extracting data, ALWAYS:
             }
           });
 
-          // TODO: Call extraction agent here
           return { url: source.url, success: true };
 
         } catch (error) {

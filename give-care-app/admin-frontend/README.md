@@ -115,11 +115,11 @@ admin-frontend/
 │   │   ├── __root.tsx                # ✅ Layout wrapper
 │   │   ├── index.tsx                 # ✅ Dashboard home
 │   │   ├── users/
-│   │   │   ├── index.tsx             # TODO: User list
-│   │   │   └── $userId.tsx           # TODO: User detail
-│   │   ├── crisis.tsx                # TODO: Crisis management
-│   │   ├── analytics.tsx             # TODO: Analytics (3 tabs)
-│   │   └── system.tsx                # TODO: System health
+│   │   │   ├── index.tsx             # User list
+│   │   │   └── $userId.tsx           # User detail
+│   │   ├── crisis.tsx                # Crisis management
+│   │   ├── analytics.tsx             # Analytics (3 tabs)
+│   │   └── system.tsx                # System health
 │   ├── components/
 │   │   ├── ui/                       # shadcn/ui (auto-generated)
 │   │   ├── layout/
