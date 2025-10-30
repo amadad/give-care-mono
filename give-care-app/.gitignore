@@ -20,6 +20,7 @@ coverage/
 # Logs
 *.log
 npm-debug.log*
+convex-build.log
 
 # OS
 .DS_Store

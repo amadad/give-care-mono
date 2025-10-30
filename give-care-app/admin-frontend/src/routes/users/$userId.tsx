@@ -10,8 +10,14 @@ import { ArrowLeft, MessageSquare, RotateCcw } from 'lucide-react'
 import { formatPhoneNumber, getRelativeTime, getBurnoutVariant, cn } from '@/lib/utils'
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
 
+import { ErrorBoundary } from '@/components/ErrorBoundary'
+
 export const Route = createFileRoute('/users/$userId')({
-  component: UserDetailPage,
+  component: () => (
+    <ErrorBoundary>
+      <UserDetailPage />
+    </ErrorBoundary>
+  ),
 })
 
 function UserDetailPage() {

@@ -8,8 +8,14 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Activity, Database, Zap, AlertCircle } from 'lucide-react'
 
+import { ErrorBoundary } from '@/components/ErrorBoundary'
+
 export const Route = createFileRoute('/system')({
-  component: SystemHealthPage,
+  component: () => (
+    <ErrorBoundary>
+      <SystemHealthPage />
+    </ErrorBoundary>
+  ),
 })
 
 function SystemHealthPage() {

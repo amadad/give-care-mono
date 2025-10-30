@@ -9,8 +9,14 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { AlertTriangle, MessageSquare, Eye, Clock } from 'lucide-react'
 import { formatPhoneNumber } from '@/lib/utils'
 
+import { ErrorBoundary } from '@/components/ErrorBoundary'
+
 export const Route = createFileRoute('/crisis')({
-  component: CrisisPage,
+  component: () => (
+    <ErrorBoundary>
+      <CrisisPage />
+    </ErrorBoundary>
+  ),
 })
 
 function CrisisPage() {

@@ -10,8 +10,14 @@ import { QualityMetrics } from '@/components/dashboard/QualityMetrics'
 import { AgentPerformance } from '@/components/dashboard/AgentPerformance'
 import { SummaryPerformance } from '@/components/dashboard/SummaryPerformance'
 
+import { ErrorBoundary } from '@/components/ErrorBoundary'
+
 export const Route = createFileRoute('/analytics')({
-  component: AnalyticsPage,
+  component: () => (
+    <ErrorBoundary>
+      <AnalyticsPage />
+    </ErrorBoundary>
+  ),
 })
 
 function AnalyticsPage() {
