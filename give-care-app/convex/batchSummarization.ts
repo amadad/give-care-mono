@@ -163,9 +163,9 @@ export const processBatchJobs: any = internalAction({
         batchId: batchJob.batchId,
         status: batch.status,
         requestCounts: {
-          total: batch.request_counts.total,
-          completed: batch.request_counts.completed,
-          failed: batch.request_counts.failed,
+          total: batch.request_counts?.total || 0,
+          completed: batch.request_counts?.completed || 0,
+          failed: batch.request_counts?.failed || 0,
         },
         outputFileId: batch.output_file_id || undefined,
         errorFileId: batch.error_file_id || undefined,
