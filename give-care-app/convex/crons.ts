@@ -86,28 +86,47 @@ crons.weekly(
 crons.interval('process-rrule-triggers', { minutes: 15 }, internal.triggers.processDueTriggers)
 
 /**
- * CONVERSATION SUMMARIZATION (Task 9)
- * Runs daily at 3am PT (11:00 UTC during standard time)
+ * BATCH SUMMARIZATION - CREATE (Task 9)
+ * Runs weekly on Sunday at 3am PT (11:00 UTC during standard time)
  *
- * Automatically summarizes historical conversation messages to:
- * - Preserve context beyond OpenAI's 30-day session limit
- * - Reduce token costs by 60-80% for long-term users
- * - Enable infinite context retention
+ * Creates OpenAI Batch API job for conversation summarization:
+ * - 50% cost savings vs sync API (gpt-5-nano batch pricing)
+ * - 24-hour turnaround time (non-urgent weekly job)
+ * - Processes active users with >30 messages
  *
- * Processes active users with >30 messages:
- * - Recent messages (< 7 days): Full detail preserved
+ * Batch API:
+ * - Input: gpt-5-nano $0.025/1M tokens (vs $0.05 sync)
+ * - Output: gpt-5-nano $0.20/1M tokens (vs $0.40 sync)
  * - Historical messages (>= 7 days, >20 messages): Compressed to 500 tokens
- * - Critical facts: Never summarized (care recipient name, crisis history)
+ *
+ * See batchSummarization.ts for implementation details.
  */
-// TEMPORARILY DISABLED: CI type issue
-// crons.daily(
-//   'conversation-summarization',
-//   {
-//     hourUTC: 11,
-//     minuteUTC: 0,
-//   },
-//   internal.summarizationActions.summarizeAllUsers
-// )
+crons.weekly(
+  'batch-summarization-create',
+  {
+    hourUTC: 11,
+    minuteUTC: 0,
+    dayOfWeek: 'sunday',
+  },
+  internal.batchSummarization.createWeeklySummarizationBatch
+)
+
+/**
+ * BATCH SUMMARIZATION - PROCESS (Task 9)
+ * Runs every hour
+ *
+ * Checks status of pending OpenAI Batch API jobs:
+ * - Retrieves batch status from OpenAI
+ * - Downloads completed batch results
+ * - Applies summaries to user profiles
+ * - Updates batchJobs table
+ *
+ * Typical flow:
+ * 1. Sunday 3am: Create batch (status: validating → in_progress)
+ * 2. Monday 3am: Check status (status: completed)
+ * 3. Monday 3am: Download results and apply summaries
+ */
+crons.interval('batch-summarization-process', { hours: 1 }, internal.batchSummarization.processBatchJobs)
 
 /**
  * ENGAGEMENT WATCHER (Task 11)
@@ -119,8 +138,7 @@ crons.interval('process-rrule-triggers', { minutes: 15 }, internal.triggers.proc
  *
  * Creates alerts for admin dashboard intervention
  */
-// TEMPORARILY DISABLED: CI type issue
-// crons.interval('engagement-watcher', { hours: 6 }, internal.watchers.watchCaregiverEngagement)
+crons.interval('engagement-watcher', { hours: 6 }, internal.watchers.watchCaregiverEngagement)
 
 /**
  * WELLNESS TREND WATCHER (Task 11)
@@ -133,15 +151,67 @@ crons.interval('process-rrule-triggers', { minutes: 15 }, internal.triggers.proc
  *
  * Expected impact: 20-30% churn reduction through early intervention
  */
-// TEMPORARILY DISABLED: CI type issue
-// crons.weekly(
-//   'wellness-trend-watcher',
-//   {
-//     hourUTC: 16,
-//     minuteUTC: 0,
-//     dayOfWeek: 'monday',
-//   },
-//   internal.watchers.watchWellnessTrends
-// )
+crons.weekly(
+  'wellness-trend-watcher',
+  {
+    hourUTC: 16,
+    minuteUTC: 0,
+    dayOfWeek: 'monday',
+  },
+  internal.watchers.watchWellnessTrends
+)
+
+/**
+ * EMAIL: ASSESSMENT DAY 3 FOLLOW-UP
+ * Runs daily at 9am EST (14:00 UTC)
+ *
+ * Sends Day 3 assessment follow-up emails to contacts who completed
+ * their assessment 2.5-3.5 days ago and opted into follow-ups.
+ */
+crons.daily(
+  'assessment-day3-followup',
+  { hourUTC: 14, minuteUTC: 0 },
+  internal.email.sequences.sendDay3Followup
+)
+
+/**
+ * EMAIL: ASSESSMENT DAY 7 FOLLOW-UP
+ * Runs daily at 9am EST (14:00 UTC)
+ *
+ * Sends Day 7 assessment follow-up emails to contacts who completed
+ * their assessment 6.5-7.5 days ago and opted into follow-ups.
+ */
+crons.daily(
+  'assessment-day7-followup',
+  { hourUTC: 14, minuteUTC: 0 },
+  internal.email.sequences.sendDay7Followup
+)
+
+/**
+ * EMAIL: ASSESSMENT DAY 14 FOLLOW-UP
+ * Runs daily at 9am EST (14:00 UTC)
+ *
+ * Sends Day 14 assessment follow-up emails to contacts who completed
+ * their assessment 13.5-14.5 days ago and opted into follow-ups.
+ */
+crons.daily(
+  'assessment-day14-followup',
+  { hourUTC: 14, minuteUTC: 0 },
+  internal.email.sequences.sendDay14Followup
+)
+
+/**
+ * EMAIL: WEEKLY WELLNESS SUMMARY
+ * Runs Sundays at 10am EST (15:00 UTC)
+ *
+ * Sends weekly wellness summary to all active newsletter subscribers.
+ * Uses LLM-composable email system to personalize content based on
+ * assessment data and pressure zones.
+ */
+crons.weekly(
+  'weekly-wellness-summary',
+  { hourUTC: 15, minuteUTC: 0, dayOfWeek: 'sunday' },
+  internal.email.campaigns.sendWeeklySummary
+)
 
 export default crons

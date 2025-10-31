@@ -1,10 +1,10 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useMemo, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAction } from 'convex/react';
 import { api } from 'give-care-app/convex/_generated/api';
-import { BSFC_SHORT_QUESTIONS, SCALE_OPTIONS } from '@/lib/bsfc';
+import { BSFC_SHORT_QUESTIONS, SCALE_OPTIONS, identifyPressureZones } from '@/lib/bsfc';
 
 export default function AssessmentQuestions() {
   const router = useRouter();
@@ -14,15 +14,19 @@ export default function AssessmentQuestions() {
   const [showEmailCapture, setShowEmailCapture] = useState(false);
   const [email, setEmail] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const currentQuestion = BSFC_SHORT_QUESTIONS[currentQuestionIndex];
-  const progress = showEmailCapture
-    ? 100
-    : ((currentQuestionIndex + 1) / BSFC_SHORT_QUESTIONS.length) * 100;
+  const progress = useMemo(() => {
+    return showEmailCapture
+      ? 100
+      : ((currentQuestionIndex + 1) / BSFC_SHORT_QUESTIONS.length) * 100;
+  }, [currentQuestionIndex, showEmailCapture]);
 
-  const handleAnswer = (value: number) => {
+  const handleAnswer = useCallback((value: number) => {
     const newResponses = [...responses, value];
     setResponses(newResponses);
+    setError(null);
 
     if (currentQuestionIndex < BSFC_SHORT_QUESTIONS.length - 1) {
       // Move to next question
@@ -31,9 +35,10 @@ export default function AssessmentQuestions() {
       // All questions answered, show email capture
       setShowEmailCapture(true);
     }
-  };
+  }, [responses, currentQuestionIndex]);
 
-  const handleBack = () => {
+  const handleBack = useCallback(() => {
+    setError(null);
     if (showEmailCapture) {
       // Go back from email capture to last question
       setShowEmailCapture(false);
@@ -41,22 +46,48 @@ export default function AssessmentQuestions() {
       setCurrentQuestionIndex(currentQuestionIndex - 1);
       setResponses(responses.slice(0, -1));
     }
-  };
+  }, [showEmailCapture, currentQuestionIndex, responses]);
 
-  const handleEmailSubmit = async (e: React.FormEvent) => {
+  const handleEmailSubmit = useCallback(async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
+    setError(null);
 
     try {
-      await submitAssessment({ email, responses });
+      // Calculate pressure zones before submission
+      const pressureZones = identifyPressureZones(responses);
+
+      // Store in Convex database
+      await submitAssessment({
+        email,
+        responses,
+        pressureZones
+      });
+
+      // Send email with results
+      const emailResponse = await fetch('/api/assessment/email', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email,
+          responses,
+          pressureZones
+        })
+      });
+
+      if (!emailResponse.ok) {
+        const errorData = await emailResponse.json();
+        throw new Error(errorData.error || 'Failed to send email');
+      }
+
       // Redirect to thank you page
       router.push(`/assessment/results?email=${encodeURIComponent(email)}`);
-    } catch (error) {
-      console.error('Error submitting assessment:', error);
-      alert('There was an error submitting your assessment. Please try again.');
+    } catch (err) {
+      console.error('Error submitting assessment:', err);
+      setError(err instanceof Error ? err.message : 'There was an error submitting your assessment. Please try again.');
       setIsSubmitting(false);
     }
-  };
+  }, [email, responses, submitAssessment, router]);
 
   return (
     <>
@@ -132,6 +163,21 @@ export default function AssessmentQuestions() {
 
             {/* Email Form */}
             <form onSubmit={handleEmailSubmit}>
+              {error && (
+                <div className="alert alert-error bg-red-50 border-2 border-red-200 mb-4">
+                  <svg xmlns="http://www.w3.org/2000/svg" className="stroke-red-600 shrink-0 h-6 w-6" fill="none" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  <span className="text-red-900">{error}</span>
+                  <button
+                    type="button"
+                    onClick={() => setError(null)}
+                    className="btn btn-sm btn-ghost text-red-900"
+                  >
+                    Dismiss
+                  </button>
+                </div>
+              )}
               <div className="mb-4">
                 <input
                   type="email"

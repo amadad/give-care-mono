@@ -10,12 +10,11 @@ import { internal } from '../_generated/api'
 // Handler function extracted to avoid circular reference
 async function submitAssessmentHandler(
   ctx: any,
-  { email, responses }: { email: string; responses: number[] }
+  { email, responses, pressureZones }: { email: string; responses: number[]; pressureZones?: any[] }
 ): Promise<{
   success: boolean
   resultId: any
   totalScore: number
-  averageScore: number
   band: string
   message: string
 }> {
@@ -25,24 +24,31 @@ async function submitAssessmentHandler(
     throw new Error('Invalid email format')
   }
 
+  // Validate responses
+  if (responses.length !== 10) {
+    throw new Error('BSFC-s requires exactly 10 responses')
+  }
+
   // Normalize email
   const normalizedEmail = email.toLowerCase().trim()
 
-  // Calculate score (sum of responses)
-  const totalScore = responses.reduce((sum, val) => sum + val, 0)
-  const averageScore = totalScore / responses.length
+  // Calculate total score (0-30) using BSFC-s methodology
+  const totalScore = responses.reduce((sum, val) => {
+    if (val < 0 || val > 3) {
+      throw new Error('Each response must be between 0 and 3')
+    }
+    return sum + val
+  }, 0)
 
-  // Determine burnout band based on BSFC scoring
-  // BSFC uses 1-5 scale, where higher = more burnout
+  // Determine burden band based on BSFC-s validated thresholds
+  // Thresholds: 0-14 (Mild), 15-19 (Moderate), 20-30 (Severe)
   let band: string
-  if (averageScore >= 4) {
-    band = 'high'
-  } else if (averageScore >= 3) {
-    band = 'moderate'
-  } else if (averageScore >= 2) {
-    band = 'mild'
+  if (totalScore <= 14) {
+    band = 'Mild'
+  } else if (totalScore <= 19) {
+    band = 'Moderate'
   } else {
-    band = 'thriving'
+    band = 'Severe'
   }
 
   // Store in database (use internal mutation to avoid circular ref)
@@ -50,15 +56,14 @@ async function submitAssessmentHandler(
     email: normalizedEmail,
     responses,
     totalScore,
-    averageScore,
     band,
+    pressureZones,
   })
 
   return {
     success: true,
     resultId,
     totalScore,
-    averageScore,
     band,
     message: 'Assessment submitted successfully',
   }
@@ -72,6 +77,7 @@ export const submit = action({
   args: {
     email: v.string(),
     responses: v.array(v.number()),
+    pressureZones: v.optional(v.any()),
   },
   handler: submitAssessmentHandler,
 })
@@ -82,8 +88,8 @@ export const createInternal = internalMutation({
     email: v.string(),
     responses: v.array(v.number()),
     totalScore: v.number(),
-    averageScore: v.number(),
     band: v.string(),
+    pressureZones: v.optional(v.any()),
   },
   handler: async (ctx, args) => {
     const now = Date.now()
@@ -92,8 +98,8 @@ export const createInternal = internalMutation({
       email: args.email,
       responses: args.responses,
       totalScore: args.totalScore,
-      averageScore: args.averageScore,
       band: args.band,
+      pressureZones: args.pressureZones,
       submittedAt: now,
     })
 

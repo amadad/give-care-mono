@@ -146,6 +146,28 @@ export const countUserMessages = internalQuery({
 })
 
 /**
+ * Get all messages for a user (for batch processing)
+ */
+export const getUserMessages = internalQuery({
+  args: {
+    userId: v.id('users'),
+  },
+  handler: async (ctx, args) => {
+    const conversations = await ctx.db
+      .query('conversations')
+      .withIndex('by_user_time', q => q.eq('userId', args.userId))
+      .order('asc')
+      .collect()
+
+    return conversations.map(convo => ({
+      role: convo.role,
+      content: convo.text,
+      timestamp: convo.timestamp,
+    }))
+  },
+})
+
+/**
  * Helper: Get user by ID (for actions)
  */
 export const _getUser = internalQuery({

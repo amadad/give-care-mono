@@ -1,8 +1,11 @@
 import { NextResponse } from 'next/server';
 import { Resend } from 'resend';
 import { z } from 'zod';
+import { ConvexHttpClient } from 'convex/browser';
+import { api } from 'give-care-app/convex/_generated/api';
 
 const resend = new Resend(process.env.RESEND_API_KEY);
+const convex = new ConvexHttpClient(process.env.NEXT_PUBLIC_CONVEX_URL!);
 
 // Simple in-memory rate limiter per IP (sliding window)
 // Limits: 5 requests per 10 minutes per IP
@@ -54,27 +57,34 @@ export async function POST(request: Request) {
     }
     const { email } = parsed.data;
 
-    // Basic domain allowlist example (optional):
-    // if (!/^[^@]+@[^@]+\.[^@]+$/.test(email)) { ... }
-
-    // Check if Resend is configured
-    if (!process.env.RESEND_API_KEY || !process.env.RESEND_AUDIENCE_ID) {
-      console.error('Resend API key or audience ID not configured');
-      return NextResponse.json(
-        { error: 'Newsletter service not configured' },
-        { status: 500 }
-      );
-    }
-
-    // Add contact to Resend audience
-    await resend.contacts.create({
+    // Upsert to unified contact system
+    const result = await convex.mutation(api.functions.emailContacts.upsert, {
       email,
-      audienceId: process.env.RESEND_AUDIENCE_ID as string,
+      tags: ['newsletter'],
+      preferences: {
+        newsletter: true,
+        assessmentFollowup: false,
+        productUpdates: true,
+      },
     });
+
+    // Optionally sync to Resend audience (if configured)
+    if (process.env.RESEND_API_KEY && process.env.RESEND_AUDIENCE_ID) {
+      try {
+        await resend.contacts.create({
+          email,
+          audienceId: process.env.RESEND_AUDIENCE_ID as string,
+        });
+      } catch (err) {
+        // Ignore if already exists in Resend
+        console.log('Resend sync skipped (may already exist):', email);
+      }
+    }
 
     return NextResponse.json({
       success: true,
-      message: 'Successfully subscribed to newsletter'
+      message: 'Successfully subscribed to newsletter',
+      isNew: result.isNew,
     });
   } catch (error) {
     console.error('Newsletter subscription error:', error);

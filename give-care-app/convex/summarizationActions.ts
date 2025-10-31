@@ -13,8 +13,8 @@ import { v } from 'convex/values'
 import OpenAI from 'openai'
 
 const SUMMARY_VERSION = process.env.SUMMARY_VERSION || 'baseline-v1'
-const INPUT_COST_PER_MILLION = 0.15 // gpt-4o-mini input pricing ($/1M tokens)
-const OUTPUT_COST_PER_MILLION = 0.6 // gpt-4o-mini output pricing ($/1M tokens)
+const INPUT_COST_PER_MILLION = 0.05 // gpt-5-nano input pricing ($/1M tokens)
+const OUTPUT_COST_PER_MILLION = 0.40 // gpt-5-nano output pricing ($/1M tokens)
 
 type SummaryUsage = {
   promptTokens: number
@@ -55,7 +55,7 @@ Keep the summary concise but preserve critical details about the caregiver's jou
 Maximum length: ${options.maxTokens} tokens.`
 
   const response = await openai.chat.completions.create({
-    model: 'gpt-4o-mini', // Cost-efficient model
+    model: 'gpt-5-nano', // Cost-efficient model (3x cheaper than gpt-4o-mini)
     messages: [
       { role: 'system', content: systemPrompt },
       { role: 'user', content: conversationText },

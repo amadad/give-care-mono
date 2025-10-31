@@ -204,8 +204,17 @@ export default defineSchema({
     effectivenessPct: v.optional(v.number()), // 0-100
 
     // Delivery
-    deliveryFormat: v.optional(v.string()), // sms_text | rcs_card | url | phone_number | interactive
+    deliveryFormat: v.optional(v.string()), // sms_text | rcs_card | url | phone_number | interactive | email
     deliveryData: v.any(), // jsonb (flexible object)
+
+    // Email-specific metadata (for LLM-composable email system)
+    emailBlockType: v.optional(v.string()), // validation | tip | intervention | resource
+    tone: v.optional(v.string()), // compassionate | encouraging | urgent | neutral
+    length: v.optional(v.string()), // short | medium | long
+    componentHint: v.optional(v.string()), // ValidationBlock | TipCallout | InterventionCard | etc
+    emailSubject: v.optional(v.string()), // Suggested subject line if used as email hero
+    ctaText: v.optional(v.string()), // Call-to-action button text
+    ctaHref: v.optional(v.string()), // CTA link URL
 
     // Localization
     language: v.string(),
@@ -498,7 +507,54 @@ export default defineSchema({
     .index('by_conversation', ['conversationId'])
     .index('by_source', ['source']),
 
-  // NEWSLETTER SUBSCRIBERS (marketing site)
+  // EMAIL CONTACTS (unified contact management for marketing site)
+  emailContacts: defineTable({
+    email: v.string(),
+
+    // Subscription sources (can have multiple)
+    tags: v.array(v.string()), // ["newsletter", "assessment", "lead_magnet"]
+
+    // Assessment metadata (for segmentation)
+    latestAssessmentScore: v.optional(v.number()), // 0-30
+    latestAssessmentBand: v.optional(v.string()), // Mild | Moderate | Severe
+    latestAssessmentDate: v.optional(v.number()),
+    pressureZones: v.optional(v.array(v.string())), // Top pressure zone names
+
+    // Subscription preferences (granular opt-in/opt-out)
+    preferences: v.object({
+      newsletter: v.boolean(),
+      assessmentFollowup: v.boolean(),
+      productUpdates: v.boolean(),
+    }),
+
+    // Resend sync (optional - for tracking external system state)
+    resendContactId: v.optional(v.string()),
+    resendAudienceId: v.optional(v.string()),
+    lastSyncedToResend: v.optional(v.number()),
+
+    // Engagement tracking
+    emailsSentCount: v.number(),
+    lastEmailSentAt: v.optional(v.number()),
+    lastEmailOpenedAt: v.optional(v.number()),
+    lastEmailClickedAt: v.optional(v.number()),
+
+    // Status
+    status: v.string(), // active | unsubscribed | bounced | complained
+    unsubscribedAt: v.optional(v.number()),
+    unsubscribeReason: v.optional(v.string()),
+
+    // Timestamps
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index('by_email', ['email'])
+    .index('by_status', ['status'])
+    .index('by_tags', ['tags'])
+    .index('by_band', ['latestAssessmentBand'])
+    .index('by_created', ['createdAt']),
+
+  // NEWSLETTER SUBSCRIBERS (DEPRECATED - kept for backward compatibility)
+  // Use emailContacts table for new code
   newsletterSubscribers: defineTable({
     email: v.string(),
     subscribedAt: v.number(),
@@ -510,13 +566,14 @@ export default defineSchema({
     .index('by_subscribed', ['unsubscribed'])
     .index('by_subscribed_at', ['subscribedAt']),
 
-  // ASSESSMENT RESULTS (marketing site BSFC assessments)
+  // ASSESSMENT RESULTS (domain-specific assessment data)
+  // Linked to emailContacts via email field
   assessmentResults: defineTable({
     email: v.string(),
     responses: v.array(v.number()),
     totalScore: v.number(),
-    averageScore: v.number(),
-    band: v.string(), // high | moderate | mild | thriving
+    band: v.string(), // Mild | Moderate | Severe
+    pressureZones: v.optional(v.any()),
     submittedAt: v.number(),
   })
     .index('by_email', ['email'])
@@ -572,6 +629,28 @@ export default defineSchema({
   })
     .index('by_user', ['userId'])
     .index('by_severity', ['severity'])
+    .index('by_created', ['createdAt']),
+
+  // BATCH JOBS (OpenAI Batch API tracking for conversation summarization)
+  batchJobs: defineTable({
+    batchId: v.string(), // OpenAI batch ID (e.g., "batch_abc123")
+    status: v.string(), // validating | in_progress | completed | failed | cancelled | expired
+    endpoint: v.string(), // "/v1/chat/completions"
+    inputFileId: v.optional(v.string()),
+    outputFileId: v.optional(v.string()),
+    errorFileId: v.optional(v.string()),
+    requestCounts: v.object({
+      total: v.number(),
+      completed: v.number(),
+      failed: v.number(),
+    }),
+    userIds: v.array(v.id('users')), // Which users were included in this batch
+    createdAt: v.number(),
+    completedAt: v.optional(v.number()),
+    expiresAt: v.optional(v.number()),
+  })
+    .index('by_batch_id', ['batchId'])
+    .index('by_status', ['status'])
     .index('by_created', ['createdAt']),
 
   // ETL WORKFLOWS (Resource Discovery Pipeline)

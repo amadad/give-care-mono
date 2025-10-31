@@ -22,6 +22,9 @@ coverage/
 npm-debug.log*
 convex-build.log
 
+# Archives
+_archive-convex/
+
 # OS
 .DS_Store
 Thumbs.db
