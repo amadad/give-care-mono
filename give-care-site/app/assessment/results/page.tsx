@@ -115,10 +115,10 @@ function ThankYouContent() {
             href="https://givecareapp.com/signup"
             className="btn btn-lg bg-amber-950 text-white hover:bg-amber-900 border-none mb-4"
           >
-            Start Your Free Trial
+            Get Started with GiveCare
           </a>
           <p className="text-xs text-amber-600">
-            Credit card required · Cancel anytime
+            Start tracking your progress today
           </p>
         </div>
 
