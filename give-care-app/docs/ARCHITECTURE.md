@@ -4,10 +4,16 @@
 **Purpose**: Understand system design, data flows, and implementation details
 **Technical Depth**: High (includes code patterns)
 
-**Version**: 0.3.0
-**Last Updated**: 2025-10-09
+**Version**: 0.8.3
+**Last Updated**: 2025-11-04
 **Architecture**: Multi-Agent Serverless
-**Total Implementation**: 3,105 LOC (971 convex/ + 2,081 src/ + 53 index.ts)
+**Total Implementation**: ~13,000 LOC core (34,726 LOC total including tests & admin)
+- convex/: ~11,000 LOC (database, functions, API)
+- src/: ~2,000 LOC (agents, tools, business logic)
+- tests/: ~11,000 LOC (235+ tests)
+- admin-frontend/: ~6,300 LOC (admin dashboard)
+
+**Recent Streamlining** (2025-11-04): Removed 1,979 LOC of non-functional LLM email system
 
 ---
 
