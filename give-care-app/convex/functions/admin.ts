@@ -378,15 +378,17 @@ export const getEmailFailures = query({
   handler: async (ctx, { limit, retriedOnly }) => {
     const maxLimit = Math.min(limit || 50, 200)
 
-    let query = ctx.db.query('emailFailures')
-
-    if (retriedOnly !== undefined) {
-      query = query.withIndex('by_retried', q => q.eq('retried', retriedOnly))
-    }
-
-    const failures = await query
-      .order('desc')
-      .take(maxLimit)
+    // Build query based on filter
+    const failures = retriedOnly !== undefined
+      ? await ctx.db
+          .query('emailFailures')
+          .withIndex('by_retried', q => q.eq('retried', retriedOnly))
+          .order('desc')
+          .take(maxLimit)
+      : await ctx.db
+          .query('emailFailures')
+          .order('desc')
+          .take(maxLimit)
 
     return failures.map(f => ({
       _id: f._id,
