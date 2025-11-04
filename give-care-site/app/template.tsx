@@ -2,7 +2,7 @@
 
 import { motion } from 'framer-motion';
 import { usePathname } from 'next/navigation';
-import { startTransition } from 'react';
+import { useState, useEffect } from 'react';
 
 /**
  * Next.js 16 View Transitions with Framer Motion fallback
@@ -11,24 +11,23 @@ import { startTransition } from 'react';
  */
 export default function Template({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
+  const [mounted, setMounted] = useState(false);
 
-  // Wrap navigation in startTransition for React 19 View Transitions
-  if (typeof document !== 'undefined' && 'startViewTransition' in document) {
-    return (
-      <div key={pathname}>
-        {children}
-      </div>
-    );
-  }
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
-  // Fallback to Framer Motion for older browsers
+  // Always use Framer Motion for consistent hydration
+  // Check for View Transitions support happens client-side only
+  const hasViewTransitions = mounted && typeof document !== 'undefined' && 'startViewTransition' in document;
+
   return (
     <motion.div
       key={pathname}
-      initial={{ opacity: 0.92 }}
+      initial={{ opacity: hasViewTransitions ? 1 : 0.92 }}
       animate={{ opacity: 1 }}
       transition={{
-        duration: 0.15,
+        duration: hasViewTransitions ? 0 : 0.15,
         ease: 'easeOut',
       }}
     >

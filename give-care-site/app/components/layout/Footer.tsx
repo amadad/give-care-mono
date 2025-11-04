@@ -67,6 +67,7 @@ export default function Footer() {
         <Link href="/about" className="link link-hover">About</Link>
         <Link href="/how-it-works" className="link link-hover">How It Works</Link>
         <Link href="/partners" className="link link-hover">Partners</Link>
+        <Link href="/press" className="link link-hover">Press</Link>
       </nav>
       <nav className="min-w-[120px]">
         <h6 className="footer-title">Resources</h6>
