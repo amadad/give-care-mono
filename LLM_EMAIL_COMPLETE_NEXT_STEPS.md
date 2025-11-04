@@ -1,4 +1,13 @@
-# LLM-Composable Email System - Completion Guide
+# ARCHIVED - LLM Email System Never Implemented
+
+**Date Archived**: 2025-11-04
+**Reason**: Runtime incompatibility discovered, system removed before completion
+
+This plan was never fully implemented. The LLM email generation system conflicted with Convex's Cloudflare Workers runtime (no Node.js support for React Email rendering).
+
+---
+
+# Original Plan (For Historical Reference)
 
 ## What's Been Completed ✅
 

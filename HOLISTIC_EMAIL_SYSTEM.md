@@ -1,6 +1,17 @@
-# Holistic Email System - Implementation Complete
+# DEPRECATED - LLM Email System Removed
 
-## What Was Built
+**Date Removed**: 2025-11-04
+**Reason**: Architectural incompatibility - React Email requires Node.js runtime, Convex uses Cloudflare Workers
+
+This document described an LLM-based email system that was removed after discovering it could never work in production.
+
+**Current Working System**: Simple HTML template emails in `give-care-app/convex/functions/assessmentEmailActions.ts` (113 LOC, fully functional)
+
+---
+
+# Original Documentation (For Historical Reference)
+
+## What Was Built (But Never Worked)
 
 Unified contact management system that consolidates newsletter subscribers and assessment completers into a single, queryable database with rich segmentation capabilities.
 
