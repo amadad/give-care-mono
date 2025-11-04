@@ -97,21 +97,10 @@ export const generateAndSendEmail = action({
 
       const componentTree = JSON.parse(composerResponse.choices[0].message.content || '{}');
 
-      // 5. Render to HTML (call Cloudflare Function)
-      const renderResponse = await fetch(
-        `${process.env.NEXT_PUBLIC_SITE_URL}/api/email/render`,
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(componentTree),
-        }
-      );
-
-      if (!renderResponse.ok) {
-        throw new Error('Failed to render email');
-      }
-
-      const { html, subject } = await renderResponse.json();
+      // 5. Render to HTML
+      // TODO: React Email rendering needs Node.js runtime not available in Cloudflare Workers
+      // Temporary workaround: disable LLM email system until we set up proper rendering service
+      throw new Error('LLM email rendering temporarily disabled - needs Node.js service');
 
       // 6. Send via Resend
       const resend = getResend();
