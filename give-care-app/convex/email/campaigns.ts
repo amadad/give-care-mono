@@ -8,7 +8,7 @@ import { api } from '../_generated/api';
  */
 export const sendWeeklySummary = internalAction({
   args: {},
-  handler: async (ctx) => {
+  handler: async (ctx): Promise<{ sent: number }> => {
     const subscribers = await ctx.runQuery(
       api.functions.emailContacts.getNewsletterSubscribers
     );
