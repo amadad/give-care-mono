@@ -101,31 +101,6 @@ export const generateAndSendEmail = action({
       // TODO: React Email rendering needs Node.js runtime not available in Cloudflare Workers
       // Temporary workaround: disable LLM email system until we set up proper rendering service
       throw new Error('LLM email rendering temporarily disabled - needs Node.js service');
-
-      // 6. Send via Resend
-      const resend = getResend();
-      const { data, error } = await resend.emails.send({
-        from: process.env.RESEND_FROM_EMAIL || 'GiveCare <hello@my.givecareapp.com>',
-        to: [email],
-        subject,
-        html,
-      });
-
-      if (error) {
-        throw new Error(`Resend error: ${error.message}`);
-      }
-
-      // 7. Track in Convex
-      await ctx.runMutation(api.functions.emailContacts.trackEmailSent, { email });
-
-      console.log(`✅ LLM-generated email sent to: ${email} (${trigger.type})`);
-
-      return {
-        success: true,
-        messageId: data?.id,
-        subject,
-        componentsUsed: componentTree.components?.map((c: any) => c.type),
-      };
     } catch (error) {
       console.error('Email generation error:', error);
       throw error;
