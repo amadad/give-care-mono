@@ -10,7 +10,8 @@ export const sendWeeklySummary = internalAction({
   args: {},
   handler: async (ctx): Promise<{ sent: number }> => {
     const subscribers = await ctx.runQuery(
-      api.functions.emailContacts.getNewsletterSubscribers
+      api.functions.emailContacts.getNewsletterSubscribers,
+      {}
     );
 
     console.log(`Weekly summary: ${subscribers.length} subscribers`);

@@ -171,7 +171,7 @@ crons.weekly(
 crons.daily(
   'assessment-day3-followup',
   { hourUTC: 14, minuteUTC: 0 },
-  internal.email.sequences.sendDay3Followup
+  (internal as any)['email/sequences'].sendDay3Followup
 )
 
 /**
@@ -184,7 +184,7 @@ crons.daily(
 crons.daily(
   'assessment-day7-followup',
   { hourUTC: 14, minuteUTC: 0 },
-  internal.email.sequences.sendDay7Followup
+  (internal as any)['email/sequences'].sendDay7Followup
 )
 
 /**
@@ -197,7 +197,7 @@ crons.daily(
 crons.daily(
   'assessment-day14-followup',
   { hourUTC: 14, minuteUTC: 0 },
-  internal.email.sequences.sendDay14Followup
+  (internal as any)['email/sequences'].sendDay14Followup
 )
 
 /**
@@ -211,7 +211,7 @@ crons.daily(
 crons.weekly(
   'weekly-wellness-summary',
   { hourUTC: 15, minuteUTC: 0, dayOfWeek: 'sunday' },
-  internal.email.campaigns.sendWeeklySummary
+  (internal as any)['email/campaigns'].sendWeeklySummary
 )
 
 export default crons

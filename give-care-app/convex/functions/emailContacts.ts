@@ -162,7 +162,7 @@ export const getNewsletterSubscribers = query({
     const contacts = await ctx.db
       .query('emailContacts')
       .withIndex('by_status', (q) => q.eq('status', 'active'))
-      .filter((q) => q.eq(q.field('preferences').newsletter, true))
+      .filter((q) => q.eq(q.field('preferences.newsletter'), true))
       .take(limit || 1000)
 
     return contacts
@@ -182,7 +182,7 @@ export const getAssessmentFollowupSubscribers = query({
       .withIndex('by_status', (q) => q.eq('status', 'active'))
       .filter((q) =>
         q.and(
-          q.eq(q.field('preferences').assessmentFollowup, true),
+          q.eq(q.field('preferences.assessmentFollowup'), true),
           q.neq(q.field('latestAssessmentScore'), undefined)
         )
       )
@@ -264,13 +264,16 @@ export const listAll = query({
     status: v.optional(v.string()),
   },
   handler: async (ctx, { limit, status }) => {
-    let query = ctx.db.query('emailContacts')
-
-    if (status) {
-      query = query.withIndex('by_status', (q) => q.eq('status', status))
-    }
-
-    const contacts = await query.order('desc').take(limit || 100)
+    const contacts = status
+      ? await ctx.db
+          .query('emailContacts')
+          .withIndex('by_status', (q) => q.eq('status', status))
+          .order('desc')
+          .take(limit || 100)
+      : await ctx.db
+          .query('emailContacts')
+          .order('desc')
+          .take(limit || 100)
 
     return contacts
   },

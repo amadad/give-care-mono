@@ -35,7 +35,7 @@ type UserSummaryJob = {
  * Create weekly batch summarization job
  * Runs Sunday 3am PT (11:00 UTC)
  */
-export const createWeeklySummarizationBatch: any = internalAction({
+export const createWeeklySummarizationBatch = internalAction({
   handler: async (ctx): Promise<any> => {
     const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
 
@@ -144,7 +144,7 @@ Maximum length: 500 tokens.`
  * Check batch status and process completed batches
  * Runs every hour
  */
-export const processBatchJobs: any = internalAction({
+export const processBatchJobs = internalAction({
   handler: async (ctx): Promise<any> => {
     const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
 
@@ -191,7 +191,7 @@ export const processBatchJobs: any = internalAction({
 /**
  * Process completed batch results
  */
-export const processCompletedBatch: any = internalAction({
+export const processCompletedBatch = internalAction({
   args: {
     batchId: v.string(),
     outputFileId: v.string(),

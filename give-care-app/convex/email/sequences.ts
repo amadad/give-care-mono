@@ -8,16 +8,17 @@ import { internal, api } from '../_generated/api';
  */
 export const sendDay3Followup = internalAction({
   args: {},
-  handler: async (ctx) => {
+  handler: async (ctx): Promise<{ sent: number }> => {
     const threeDaysAgo = Date.now() - (3 * 24 * 60 * 60 * 1000);
     const oneDayWindow = 2 * 60 * 60 * 1000; // 2 hour window
 
     // Get contacts eligible for Day 3 follow-up
     const allContacts = await ctx.runQuery(
-      api.functions.emailContacts.getAssessmentFollowupSubscribers
+      api.functions.emailContacts.getAssessmentFollowupSubscribers,
+      {}
     );
 
-    const eligible = allContacts.filter((c) => {
+    const eligible = allContacts.filter((c: any) => {
       if (!c.latestAssessmentDate) return false;
       const daysSince = Math.abs(Date.now() - c.latestAssessmentDate) / (24 * 60 * 60 * 1000);
       return daysSince >= 2.5 && daysSince <= 3.5; // 2.5-3.5 days
@@ -46,12 +47,13 @@ export const sendDay3Followup = internalAction({
  */
 export const sendDay7Followup = internalAction({
   args: {},
-  handler: async (ctx) => {
+  handler: async (ctx): Promise<{ sent: number }> => {
     const allContacts = await ctx.runQuery(
-      api.functions.emailContacts.getAssessmentFollowupSubscribers
+      api.functions.emailContacts.getAssessmentFollowupSubscribers,
+      {}
     );
 
-    const eligible = allContacts.filter((c) => {
+    const eligible = allContacts.filter((c: any) => {
       if (!c.latestAssessmentDate) return false;
       const daysSince = Math.abs(Date.now() - c.latestAssessmentDate) / (24 * 60 * 60 * 1000);
       return daysSince >= 6.5 && daysSince <= 7.5;
@@ -79,12 +81,13 @@ export const sendDay7Followup = internalAction({
  */
 export const sendDay14Followup = internalAction({
   args: {},
-  handler: async (ctx) => {
+  handler: async (ctx): Promise<{ sent: number }> => {
     const allContacts = await ctx.runQuery(
-      api.functions.emailContacts.getAssessmentFollowupSubscribers
+      api.functions.emailContacts.getAssessmentFollowupSubscribers,
+      {}
     );
 
-    const eligible = allContacts.filter((c) => {
+    const eligible = allContacts.filter((c: any) => {
       if (!c.latestAssessmentDate) return false;
       const daysSince = Math.abs(Date.now() - c.latestAssessmentDate) / (24 * 60 * 60 * 1000);
       return daysSince >= 13.5 && daysSince <= 14.5;

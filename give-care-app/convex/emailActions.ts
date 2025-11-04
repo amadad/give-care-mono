@@ -24,7 +24,7 @@ export const generateAndSendEmail = action({
   args: {
     email: v.string(),
     trigger: v.object({
-      type: v.string(),
+      type: v.union(v.literal('weekly_summary'), v.literal('assessment_followup'), v.literal('campaign')),
       day: v.optional(v.number()),
       metadata: v.optional(v.any()),
     }),
@@ -127,7 +127,7 @@ export const generateAndSendEmail = action({
       }
 
       // 7. Track in Convex
-      await ctx.runMutation(internal.functions.emailContacts.trackEmailSent, { email });
+      await ctx.runMutation(api.functions.emailContacts.trackEmailSent, { email });
 
       console.log(`✅ LLM-generated email sent to: ${email} (${trigger.type})`);
 
@@ -151,7 +151,7 @@ export const sendBatchEmails = action({
   args: {
     contacts: v.array(v.string()), // Array of email addresses
     trigger: v.object({
-      type: v.string(),
+      type: v.union(v.literal('weekly_summary'), v.literal('assessment_followup'), v.literal('campaign')),
       day: v.optional(v.number()),
       metadata: v.optional(v.any()),
     }),

@@ -25,12 +25,12 @@ export const testGenerateAndSendEmail = action({
   args: {
     email: v.string(),
     trigger: v.object({
-      type: v.string(),
+      type: v.union(v.literal('weekly_summary'), v.literal('assessment_followup'), v.literal('campaign')),
       day: v.optional(v.number()),
       metadata: v.optional(v.any()),
     }),
   },
-  handler: async (ctx, { email, trigger }) => {
+  handler: async (ctx, { email, trigger }): Promise<any> => {
     try {
       // 1. Load subscriber context
       const contact = await ctx.runQuery(api.functions.emailContacts.getByEmail, { email });
@@ -116,7 +116,7 @@ export const testGenerateAndSendEmail = action({
       }
 
       // 7. Track in Convex
-      await ctx.runMutation(internal.functions.emailContacts.trackEmailSent, { email });
+      await ctx.runMutation(api.functions.emailContacts.trackEmailSent, { email });
 
       console.log(`✅ Test email sent to: ${email} (${trigger.type})`);
 
