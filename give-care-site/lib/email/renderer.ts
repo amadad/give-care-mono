@@ -54,16 +54,18 @@ export async function renderEmailFromTree(tree: ComponentTree): Promise<string> 
   }).filter(Boolean);
 
   // Wrap in email shell
+  const containerChildren = [
+    React.createElement(EmailHeader, {}),
+    ...contentElements,
+    React.createElement(EmailFooter, {})
+  ];
+
   const email = React.createElement(
     EmailShell,
-    { previewText: tree.previewText },
-    React.createElement(
+    { previewText: tree.previewText, children: React.createElement(
       EmailContainer,
-      {},
-      React.createElement(EmailHeader, {}),
-      ...contentElements,
-      React.createElement(EmailFooter, {})
-    )
+      { children: containerChildren }
+    ) }
   );
 
   // Render to HTML
