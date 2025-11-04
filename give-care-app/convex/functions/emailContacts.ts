@@ -4,7 +4,7 @@
  */
 
 import { v } from 'convex/values'
-import { mutation, query, internalMutation } from '../_generated/server'
+import { mutation, query } from '../_generated/server'
 
 /**
  * Upsert email contact (create or update)
@@ -232,7 +232,7 @@ export const unsubscribe = mutation({
 /**
  * Track email sent (for engagement metrics)
  */
-export const trackEmailSent = internalMutation({
+export const trackEmailSent = mutation({
   args: {
     email: v.string(),
   },

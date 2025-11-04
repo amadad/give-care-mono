@@ -112,27 +112,31 @@ export async function POST(request: Request) {
 
     console.log(`✅ Assessment results email sent to: ${email} (${band} - ${score}/30)`);
 
-    // Upsert to unified contact system
-    const pressureZoneNames = pressureZones.map((z) => z.name);
-    await convex.mutation(api.functions.emailContacts.upsert, {
-      email,
-      tags: ['assessment'],
-      preferences: {
-        newsletter: false,
-        assessmentFollowup: true,
-        productUpdates: true,
-      },
-      assessmentData: {
-        score,
-        band,
-        pressureZones: pressureZoneNames,
-      },
-    });
+    // Upsert to unified contact system (non-blocking)
+    try {
+      const pressureZoneNames = pressureZones.map((z) => z.name);
+      await convex.mutation(api.functions.emailContacts.upsert, {
+        email,
+        tags: ['assessment'],
+        preferences: {
+          newsletter: false,
+          assessmentFollowup: true,
+          productUpdates: true,
+        },
+        assessmentData: {
+          score,
+          band,
+          pressureZones: pressureZoneNames,
+        },
+      });
 
-    // Track email sent
-    await convex.mutation(api.functions.emailContacts.trackEmailSent, {
-      email,
-    });
+      // Track email sent
+      await convex.mutation(api.functions.emailContacts.trackEmailSent, {
+        email,
+      });
+    } catch (convexError) {
+      console.warn('Convex tracking failed (non-blocking):', convexError);
+    }
 
     // Optionally sync to Resend audience
     if (process.env.RESEND_AUDIENCE_ID) {
