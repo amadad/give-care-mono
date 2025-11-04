@@ -580,6 +580,18 @@ export default defineSchema({
     .index('by_submitted_at', ['submittedAt'])
     .index('by_band', ['band']),
 
+  // Email delivery failure tracking for admin monitoring
+  emailFailures: defineTable({
+    email: v.string(),
+    error: v.string(),
+    context: v.any(),
+    failedAt: v.number(),
+    retried: v.boolean(),
+  })
+    .index('by_email', ['email'])
+    .index('by_failed_at', ['failedAt'])
+    .index('by_retried', ['retried']),
+
   // TRIGGERS (RRULE-based scheduling for personalized wellness check-ins)
   triggers: defineTable({
     userId: v.id('users'),
