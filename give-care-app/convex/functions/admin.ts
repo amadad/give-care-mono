@@ -368,6 +368,53 @@ export const resetUserAssessment = mutation({
 })
 
 /**
+ * Get recent email delivery failures for monitoring
+ */
+export const getEmailFailures = query({
+  args: {
+    limit: v.optional(v.number()),
+    retriedOnly: v.optional(v.boolean()),
+  },
+  handler: async (ctx, { limit, retriedOnly }) => {
+    const maxLimit = Math.min(limit || 50, 200)
+
+    // Build query based on filter
+    const failures = retriedOnly !== undefined
+      ? await ctx.db
+          .query('emailFailures')
+          .withIndex('by_retried', q => q.eq('retried', retriedOnly))
+          .order('desc')
+          .take(maxLimit)
+      : await ctx.db
+          .query('emailFailures')
+          .order('desc')
+          .take(maxLimit)
+
+    return failures.map(f => ({
+      _id: f._id,
+      email: f.email,
+      error: f.error,
+      context: f.context,
+      failedAt: f.failedAt,
+      retried: f.retried,
+    }))
+  },
+})
+
+/**
+ * Mark email failure as retried (after manual intervention)
+ */
+export const markEmailFailureRetried = mutation({
+  args: {
+    failureId: v.id('emailFailures'),
+  },
+  handler: async (ctx, { failureId }) => {
+    await ctx.db.patch(failureId, { retried: true })
+    return { success: true }
+  },
+})
+
+/**
  * Get system health metrics for /system dashboard page
  */
 export const getSystemHealth = query({

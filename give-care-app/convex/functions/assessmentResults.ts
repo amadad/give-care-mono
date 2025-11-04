@@ -60,7 +60,7 @@ async function submitAssessmentHandler(
     pressureZones,
   })
 
-  // Send email with results (non-blocking)
+  // Send email with results (non-blocking but logged)
   try {
     await ctx.runAction(api.functions.assessmentEmailActions.sendAssessmentEmail, {
       email: normalizedEmail,
@@ -68,9 +68,26 @@ async function submitAssessmentHandler(
       band,
       pressureZones,
     })
+    console.log(`✅ Assessment email sent successfully to: ${normalizedEmail}`)
   } catch (emailError) {
-    console.error('Failed to send assessment email:', emailError)
-    // Don't fail the whole operation if email fails
+    // Log detailed error for debugging
+    console.error('❌ CRITICAL: Failed to send assessment email to:', normalizedEmail)
+    console.error('Error details:', emailError)
+    console.error('This likely means RESEND_API_KEY is not configured.')
+    console.error('Fix: Run `npx convex env set RESEND_API_KEY <your-key>`')
+
+    // Store failed email attempt for admin review
+    try {
+      await ctx.runMutation(internal.functions.assessmentResults.logEmailFailure, {
+        email: normalizedEmail,
+        error: String(emailError),
+        context: { totalScore, band },
+      })
+    } catch (logError) {
+      console.error('Failed to log email failure:', logError)
+    }
+
+    // Don't fail the whole operation if email fails (user already got results)
   }
 
   // Track email sent in unified contact system (non-blocking)
@@ -176,5 +193,25 @@ export const listAll = query({
       .take(limit || 100)
 
     return results
+  },
+})
+
+/**
+ * Log email delivery failures for admin review
+ */
+export const logEmailFailure = internalMutation({
+  args: {
+    email: v.string(),
+    error: v.string(),
+    context: v.any(),
+  },
+  handler: async (ctx, { email, error, context }) => {
+    await ctx.db.insert('emailFailures', {
+      email,
+      error,
+      context,
+      failedAt: Date.now(),
+      retried: false,
+    })
   },
 })

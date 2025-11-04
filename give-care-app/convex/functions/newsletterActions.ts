@@ -60,10 +60,14 @@ export const newsletterSignup = action({
           email: normalizedEmail,
           audienceId: process.env.RESEND_AUDIENCE_ID as string,
         })
+        console.log(`✅ Synced newsletter subscriber to Resend: ${normalizedEmail}`)
       } catch (err) {
         // Ignore if already exists in Resend
         console.log('Resend sync skipped (may already exist):', normalizedEmail)
       }
+    } else {
+      console.warn('⚠️ Resend sync disabled: RESEND_API_KEY or RESEND_AUDIENCE_ID not configured')
+      console.warn('Newsletter subscriber saved to Convex only:', normalizedEmail)
     }
 
     return {

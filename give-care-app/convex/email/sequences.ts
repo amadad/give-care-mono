@@ -27,18 +27,22 @@ export const sendDay3Followup = internalAction({
     console.log(`Day 3 follow-up: ${eligible.length} eligible contacts`);
 
     // Send to each
+    let successCount = 0;
     for (const contact of eligible) {
       try {
         await ctx.runAction(api.emailActions.generateAndSendEmail, {
           email: contact.email,
           trigger: { type: 'assessment_followup', day: 3 },
         });
+        successCount++;
       } catch (error) {
-        console.error(`Failed to send Day 3 follow-up to ${contact.email}:`, error);
+        console.error(`❌ Failed to send Day 3 follow-up to ${contact.email}:`, error);
+        console.error('Note: LLM email system currently disabled. Follow-up emails need implementation.');
       }
     }
 
-    return { sent: eligible.length };
+    console.log(`Day 3 follow-up complete: ${successCount}/${eligible.length} sent successfully`);
+    return { sent: successCount };
   },
 });
 
@@ -61,18 +65,22 @@ export const sendDay7Followup = internalAction({
 
     console.log(`Day 7 follow-up: ${eligible.length} eligible contacts`);
 
+    let successCount = 0;
     for (const contact of eligible) {
       try {
         await ctx.runAction(api.emailActions.generateAndSendEmail, {
           email: contact.email,
           trigger: { type: 'assessment_followup', day: 7 },
         });
+        successCount++;
       } catch (error) {
-        console.error(`Failed to send Day 7 follow-up to ${contact.email}:`, error);
+        console.error(`❌ Failed to send Day 7 follow-up to ${contact.email}:`, error);
+        console.error('Note: LLM email system currently disabled. Follow-up emails need implementation.');
       }
     }
 
-    return { sent: eligible.length };
+    console.log(`Day 7 follow-up complete: ${successCount}/${eligible.length} sent successfully`);
+    return { sent: successCount };
   },
 });
 
@@ -95,17 +103,21 @@ export const sendDay14Followup = internalAction({
 
     console.log(`Day 14 follow-up: ${eligible.length} eligible contacts`);
 
+    let successCount = 0;
     for (const contact of eligible) {
       try {
         await ctx.runAction(api.emailActions.generateAndSendEmail, {
           email: contact.email,
           trigger: { type: 'assessment_followup', day: 14 },
         });
+        successCount++;
       } catch (error) {
-        console.error(`Failed to send Day 14 follow-up to ${contact.email}:`, error);
+        console.error(`❌ Failed to send Day 14 follow-up to ${contact.email}:`, error);
+        console.error('Note: LLM email system currently disabled. Follow-up emails need implementation.');
       }
     }
 
-    return { sent: eligible.length };
+    console.log(`Day 14 follow-up complete: ${successCount}/${eligible.length} sent successfully`);
+    return { sent: successCount };
   },
 });

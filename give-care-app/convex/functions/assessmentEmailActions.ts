@@ -92,8 +92,15 @@ export const sendAssessmentEmail = action({
     pressureZones: v.optional(v.any()),
   },
   handler: async (ctx, { email, totalScore, band, pressureZones }) => {
+    // Validate required environment variables
+    if (!process.env.RESEND_API_KEY) {
+      const error = 'RESEND_API_KEY not configured in Convex environment. Run: npx convex env set RESEND_API_KEY <key>'
+      console.error('❌ Email configuration error:', error)
+      throw new Error(error)
+    }
+
     try {
-      const resend = new Resend(process.env.RESEND_API_KEY!)
+      const resend = new Resend(process.env.RESEND_API_KEY)
       const emailHtml = generateAssessmentEmail(totalScore, band, pressureZones)
 
       await resend.emails.send({
