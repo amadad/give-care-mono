@@ -7,7 +7,7 @@ import { api } from 'give-care-app/convex/_generated/api';
 
 export default function CTA() {
   const shouldReduceMotion = useReducedMotion();
-  const newsletterSignup = useAction(api.functions.emailContacts.newsletterSignup);
+  const newsletterSignup = useAction(api.functions.newsletterActions.newsletterSignup);
   const [status, setStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
   const [message, setMessage] = useState('');
 
