@@ -71,7 +71,7 @@ export default function LaunchPressRelease() {
               </p>
 
               <p>
-                Free caregiver stress and SDOH assessments are now available at{' '}
+                Caregiver stress and SDOH assessments are now available at{' '}
                 <a
                   href="https://givecareapp.com/assessment"
                   className="text-amber-700 hover:text-amber-900 underline decoration-amber-300 hover:decoration-amber-500 transition-colors"
