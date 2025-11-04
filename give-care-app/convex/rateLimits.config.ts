@@ -120,6 +120,24 @@ export const RATE_LIMITS = {
     capacity: 25, // rate + burst capacity (20 + 5)
     maxReserved: 50,
   },
+
+  /**
+   * NEWSLETTER SIGNUP (5/10 minutes per email)
+   *
+   * Prevents newsletter signup abuse and duplicate submissions
+   * Keyed by email address to prevent same email submitting multiple times
+   *
+   * Example: User accidentally clicks submit multiple times
+   * - First 5: Allowed
+   * - 6th attempt: Rate limited
+   */
+  newsletterSignup: {
+    kind: 'token bucket' as const,
+    rate: 5,
+    period: 10 * 60 * 1000, // 10 minutes in milliseconds
+    capacity: 5,
+    maxReserved: 100,
+  },
 }
 
 /**
@@ -134,4 +152,5 @@ export const RATE_LIMIT_MESSAGES = {
     "You've completed your check-ins for today. Taking breaks helps get a clearer picture. Let's try again tomorrow 💙",
   openaiCalls: "I'm with a lot of caregivers right now. Can you give me a moment and try again? 💙",
   spam: '', // No message - silently drop
+  newsletterSignup: 'Too many requests. Please try again later.',
 }

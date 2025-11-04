@@ -2,9 +2,12 @@
 
 import { useState } from 'react';
 import { motion, useReducedMotion } from 'framer-motion';
+import { useAction } from 'convex/react';
+import { api } from 'give-care-app/convex/_generated/api';
 
 export default function CTA() {
   const shouldReduceMotion = useReducedMotion();
+  const newsletterSignup = useAction(api.functions.emailContacts.newsletterSignup);
   const [status, setStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
   const [message, setMessage] = useState('');
 
@@ -15,23 +18,13 @@ export default function CTA() {
     setStatus('loading');
     setMessage('');
     try {
-      const res = await fetch('/api/newsletter', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email }),
-      });
-      if (res.ok) {
-        setStatus('success');
-        setMessage('Thank you for subscribing!');
-        form.reset();
-      } else {
-        const data = await res.json();
-        setStatus('error');
-        setMessage(data.error || 'Something went wrong.');
-      }
-    } catch {
+      await newsletterSignup({ email });
+      setStatus('success');
+      setMessage('Thank you for subscribing!');
+      form.reset();
+    } catch (err) {
       setStatus('error');
-      setMessage('Something went wrong.');
+      setMessage(err instanceof Error ? err.message : 'Something went wrong.');
     }
   };
 

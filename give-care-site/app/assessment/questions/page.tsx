@@ -57,28 +57,12 @@ export default function AssessmentQuestions() {
       // Calculate pressure zones before submission
       const pressureZones = identifyPressureZones(responses);
 
-      // Store in Convex database
+      // Submit to Convex (stores in DB and sends email)
       await submitAssessment({
         email,
         responses,
         pressureZones
       });
-
-      // Send email with results
-      const emailResponse = await fetch('/api/assessment/email', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          email,
-          responses,
-          pressureZones
-        })
-      });
-
-      if (!emailResponse.ok) {
-        const errorData = await emailResponse.json();
-        throw new Error(errorData.error || 'Failed to send email');
-      }
 
       // Redirect to thank you page
       router.push(`/assessment/results?email=${encodeURIComponent(email)}`);

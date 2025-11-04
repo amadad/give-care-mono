@@ -1,1 +1,1 @@
-export { default as AssessmentResults } from './AssessmentResults';
+// AssessmentResults moved to Convex backend

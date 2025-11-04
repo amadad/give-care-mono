@@ -36,6 +36,7 @@
     "dotenv": "^17.2.3",
     "event-target-polyfill": "^0.0.4",
     "openai": "^5.23.2",
+    "resend": "^6.2.2",
     "rrule": "^2.8.1",
     "stripe": "^19.1.0",
     "twilio": "^5.0.0",

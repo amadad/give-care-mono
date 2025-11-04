@@ -1,8 +1,11 @@
 'use client';
 
 import { useState } from 'react';
+import { useAction } from 'convex/react';
+import { api } from 'give-care-app/convex/_generated/api';
 
 export function BlogNewsletterSignup() {
+  const newsletterSignup = useAction(api.functions.emailContacts.newsletterSignup);
   const [email, setEmail] = useState('');
   const [status, setStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
   const [message, setMessage] = useState('');
@@ -12,25 +15,13 @@ export function BlogNewsletterSignup() {
     setStatus('loading');
 
     try {
-      const response = await fetch('/api/newsletter', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ email }),
-      });
-
-      if (response.ok) {
-        setStatus('success');
-        setMessage('Thank you for subscribing! You\'ll receive our latest stories and insights.');
-        setEmail('');
-      } else {
-        setStatus('error');
-        setMessage('Something went wrong. Please try again.');
-      }
-    } catch {
+      await newsletterSignup({ email });
+      setStatus('success');
+      setMessage('Thank you for subscribing! You\'ll receive our latest stories and insights.');
+      setEmail('');
+    } catch (err) {
       setStatus('error');
-      setMessage('Something went wrong. Please try again.');
+      setMessage(err instanceof Error ? err.message : 'Something went wrong. Please try again.');
     }
   };
 

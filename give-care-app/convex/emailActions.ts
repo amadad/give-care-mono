@@ -97,7 +97,7 @@ export const generateAndSendEmail = action({
 
       const componentTree = JSON.parse(composerResponse.choices[0].message.content || '{}');
 
-      // 5. Render to HTML (call Next.js API)
+      // 5. Render to HTML (call Cloudflare Function)
       const renderResponse = await fetch(
         `${process.env.NEXT_PUBLIC_SITE_URL}/api/email/render`,
         {
