@@ -20,179 +20,36 @@ import type { AssessmentScore } from '../src/assessmentTools';
 
 describe('Burnout Band Calculation (Bug Fix)', () => {
   describe('Band Threshold Validation', () => {
-    /**
-     * Test: Crisis band (score < 20)
-     * A caregiver scoring 10 is highly distressed → should be 'crisis'
-     */
-    it('should classify score 10 as CRISIS (not thriving)', () => {
-      const mockScore: AssessmentScore = {
-        overall_score: 10,
-        subscores: {},
-        band: 'crisis',
-        calculated_at: new Date(),
-      };
+    // Test data: [score, expected_band, description]
+    const bandTestCases: Array<[number, string, string]> = [
+      [10, 'crisis', 'highly distressed'],
+      [15, 'crisis', 'crisis boundary'],
+      [20, 'high', 'high boundary'],
+      [30, 'high', 'significant burnout'],
+      [40, 'moderate', 'moderate boundary'],
+      [50, 'moderate', 'mid-range burnout'],
+      [60, 'mild', 'mild boundary'],
+      [70, 'mild', 'managing well'],
+      [80, 'thriving', 'thriving boundary'],
+      [90, 'thriving', 'doing well'],
+      [100, 'thriving', 'perfect score']
+    ]
 
-      const result = calculateCompositeScore({ ema: mockScore }, []);
+    bandTestCases.forEach(([score, band, description]) => {
+      it(`should classify score ${score} as ${band.toUpperCase()} (${description})`, () => {
+        const mockScore: AssessmentScore = {
+          overall_score: score,
+          subscores: {},
+          band: band as any,
+          calculated_at: new Date(),
+        }
 
-      expect(result.overall_score).toBe(10);
-      expect(result.band).toBe('crisis');
-    });
+        const result = calculateCompositeScore({ ema: mockScore }, [])
 
-    it('should classify score 15 as CRISIS', () => {
-      const mockScore: AssessmentScore = {
-        overall_score: 15,
-        subscores: {},
-        band: 'crisis',
-        calculated_at: new Date(),
-      };
-
-      const result = calculateCompositeScore({ ema: mockScore }, []);
-
-      expect(result.overall_score).toBe(15);
-      expect(result.band).toBe('crisis');
-    });
-
-    /**
-     * Test: High band (20 <= score < 40)
-     * Significant burnout but not crisis level
-     */
-    it('should classify score 20 as HIGH (boundary)', () => {
-      const mockScore: AssessmentScore = {
-        overall_score: 20,
-        subscores: {},
-        band: 'high',
-        calculated_at: new Date(),
-      };
-
-      const result = calculateCompositeScore({ ema: mockScore }, []);
-
-      expect(result.overall_score).toBe(20);
-      expect(result.band).toBe('high');
-    });
-
-    it('should classify score 30 as HIGH', () => {
-      const mockScore: AssessmentScore = {
-        overall_score: 30,
-        subscores: {},
-        band: 'high',
-        calculated_at: new Date(),
-      };
-
-      const result = calculateCompositeScore({ ema: mockScore }, []);
-
-      expect(result.overall_score).toBe(30);
-      expect(result.band).toBe('high');
-    });
-
-    /**
-     * Test: Moderate band (40 <= score < 60)
-     * Mid-range burnout - common for caregivers
-     */
-    it('should classify score 40 as MODERATE (boundary)', () => {
-      const mockScore: AssessmentScore = {
-        overall_score: 40,
-        subscores: {},
-        band: 'moderate',
-        calculated_at: new Date(),
-      };
-
-      const result = calculateCompositeScore({ ema: mockScore }, []);
-
-      expect(result.overall_score).toBe(40);
-      expect(result.band).toBe('moderate');
-    });
-
-    it('should classify score 50 as MODERATE', () => {
-      const mockScore: AssessmentScore = {
-        overall_score: 50,
-        subscores: {},
-        band: 'moderate',
-        calculated_at: new Date(),
-      };
-
-      const result = calculateCompositeScore({ ema: mockScore }, []);
-
-      expect(result.overall_score).toBe(50);
-      expect(result.band).toBe('moderate');
-    });
-
-    /**
-     * Test: Mild band (60 <= score < 80)
-     * Low burnout - managing well
-     */
-    it('should classify score 60 as MILD (boundary)', () => {
-      const mockScore: AssessmentScore = {
-        overall_score: 60,
-        subscores: {},
-        band: 'mild',
-        calculated_at: new Date(),
-      };
-
-      const result = calculateCompositeScore({ ema: mockScore }, []);
-
-      expect(result.overall_score).toBe(60);
-      expect(result.band).toBe('mild');
-    });
-
-    it('should classify score 70 as MILD', () => {
-      const mockScore: AssessmentScore = {
-        overall_score: 70,
-        subscores: {},
-        band: 'mild',
-        calculated_at: new Date(),
-      };
-
-      const result = calculateCompositeScore({ ema: mockScore }, []);
-
-      expect(result.overall_score).toBe(70);
-      expect(result.band).toBe('mild');
-    });
-
-    /**
-     * Test: Thriving band (score >= 80)
-     * A caregiver scoring 90 is doing well → should be 'thriving'
-     */
-    it('should classify score 80 as THRIVING (boundary, not crisis)', () => {
-      const mockScore: AssessmentScore = {
-        overall_score: 80,
-        subscores: {},
-        band: 'thriving',
-        calculated_at: new Date(),
-      };
-
-      const result = calculateCompositeScore({ ema: mockScore }, []);
-
-      expect(result.overall_score).toBe(80);
-      expect(result.band).toBe('thriving');
-    });
-
-    it('should classify score 90 as THRIVING (not crisis)', () => {
-      const mockScore: AssessmentScore = {
-        overall_score: 90,
-        subscores: {},
-        band: 'thriving',
-        calculated_at: new Date(),
-      };
-
-      const result = calculateCompositeScore({ ema: mockScore }, []);
-
-      expect(result.overall_score).toBe(90);
-      expect(result.band).toBe('thriving');
-    });
-
-    it('should classify score 100 as THRIVING (perfect score, not crisis)', () => {
-      const mockScore: AssessmentScore = {
-        overall_score: 100,
-        subscores: {},
-        band: 'thriving',
-        calculated_at: new Date(),
-      };
-
-      const result = calculateCompositeScore({ ema: mockScore }, []);
-
-      expect(result.overall_score).toBe(100);
-      expect(result.band).toBe('thriving');
-    });
+        expect(result.overall_score).toBe(score)
+        expect(result.band).toBe(band)
+      })
+    })
   });
 
   describe('Scale Direction Validation', () => {
