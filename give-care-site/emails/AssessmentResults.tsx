@@ -98,6 +98,12 @@ export default function AssessmentResults({
             <Text style={promoText}>Use code BSFC20 for 20% off</Text>
           </Section>
 
+          <Section style={disclaimerSection}>
+            <Text style={disclaimerText}>
+              <strong>Screening Tool:</strong> This assessment is a screening tool for informational purposes only and does not replace professional medical advice, diagnosis, or treatment. If your burden level is moderate or severe, we strongly encourage you to consult with a healthcare professional. In a crisis, contact 988 Suicide & Crisis Lifeline.
+            </Text>
+          </Section>
+
           <Section style={footer}>
             <Text style={footerText}>
               GiveCare • <a href="mailto:hello@my.givecareapp.com?subject=Unsubscribe" style={link}>Unsubscribe</a>
@@ -222,6 +228,21 @@ const promoText = {
   margin: '12px 0 0 0',
   fontSize: '13px',
   color: '#92400e',
+  fontFamily: 'Georgia, "Times New Roman", serif',
+};
+
+const disclaimerSection = {
+  padding: '20px 16px',
+  backgroundColor: '#f5e6d3',
+  borderRadius: '6px',
+  margin: '0 0 20px 0',
+};
+
+const disclaimerText = {
+  margin: '0',
+  fontSize: '11px',
+  lineHeight: '1.6',
+  color: '#78350f',
   fontFamily: 'Georgia, "Times New Roman", serif',
 };
 

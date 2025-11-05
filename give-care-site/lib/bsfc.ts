@@ -79,8 +79,8 @@ export function getBurdenBand(score: number): 'Mild' | 'Moderate' | 'Severe' {
 export function getInterpretation(band: 'Mild' | 'Moderate' | 'Severe'): string {
   const interpretations = {
     Mild: "Your burden level is in the mild range. You're managing well, but it's still important to practice self-care and monitor your wellbeing.",
-    Moderate: "Your burden level is moderate. You're experiencing significant stress. Evidence-based interventions can help reduce your burden and improve your quality of life.",
-    Severe: "Your burden level is severe. You're at high risk for burnout and health complications. Immediate support is crucial. We're here to help you find relief.",
+    Moderate: "Your burden level is moderate. You're experiencing significant stress. Evidence-based interventions can help reduce your burden and improve your quality of life. Consider discussing your caregiving situation with a healthcare professional.",
+    Severe: "Your burden level is severe, which indicates you may be experiencing significant stress that could impact your health. We strongly encourage you to consult with a healthcare professional, therapist, or counselor who can provide personalized support. Immediate relief and professional guidance are important for your wellbeing.",
   };
 
   return interpretations[band];

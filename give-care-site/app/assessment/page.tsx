@@ -91,6 +91,13 @@ export default function AssessmentIntro() {
             </p>
           </div>
 
+          {/* Screening Tool Note */}
+          <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 mb-6">
+            <p className="text-xs text-amber-950 leading-relaxed">
+              <strong>Screening Tool:</strong> This is a screening assessment for informational and educational purposes only. It does not provide a medical diagnosis and should not replace professional evaluation. If you're experiencing significant stress or burden, please consult with a healthcare professional.
+            </p>
+          </div>
+
           {/* Citation */}
           <div className="text-center text-sm text-amber-700 border-t border-amber-200 pt-6">
             <p>Developed by Elmar Graessel et al.</p>

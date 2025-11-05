@@ -87,6 +87,11 @@ export default function Footer() {
         <Link href="/terms" className="link link-hover">Terms of Service</Link>
         <Link href="/privacy" className="link link-hover">Privacy Policy</Link>
       </nav>
+      <nav className="col-span-full mt-4">
+        <p className="text-xs text-base-content/60 max-w-2xl">
+          <strong>Medical Disclaimer:</strong> The information and assessments provided by GiveCare are for informational and educational purposes only and do not constitute medical advice, diagnosis, or treatment. Always seek the advice of your physician or other qualified health provider with any questions you may have regarding a medical condition. If you are experiencing a mental health crisis, please contact the 988 Suicide & Crisis Lifeline by dialing 988, or seek immediate medical attention.
+        </p>
+      </nav>
     </footer>
   );
 }
