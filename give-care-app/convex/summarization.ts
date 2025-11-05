@@ -34,7 +34,7 @@ type TokenSavingsResult = {
   savingsPercent: number
 }
 
-type UserDoc = Doc<'users'>
+type ConversationStateDoc = Doc<'conversationState'>
 
 /**
  * Split conversation history into recent (< 7 days) and historical (>= 7 days)
@@ -174,9 +174,15 @@ export const _getUser = internalQuery({
   args: {
     userId: v.id('users'),
   },
-  handler: async (ctx: QueryCtx, args: { userId: Id<'users'> }): Promise<UserDoc | null> => {
-    const user = await ctx.db.get(args.userId)
-    return (user as UserDoc | null) ?? null
+  handler: async (
+    ctx: QueryCtx,
+    args: { userId: Id<'users'> }
+  ): Promise<ConversationStateDoc | null> => {
+    const conversationState = await ctx.db
+      .query('conversationState')
+      .withIndex('by_user', (q: any) => q.eq('userId', args.userId))
+      .first()
+    return (conversationState as ConversationStateDoc | null) ?? null
   },
 })
 
@@ -196,9 +202,9 @@ export const calculateTokenSavings = internalAction({
       historicalMessages: ConversationMessage[]
     }
 
-    const user = (await ctx.runQuery(internal.summarization._getUser, { userId: args.userId })) as
-      | UserDoc
-      | null
+    const conversationState = (await ctx.runQuery(internal.summarization._getUser, {
+      userId: args.userId,
+    })) as ConversationStateDoc | null
 
     // Rough token estimation: 1 token ≈ 4 characters
     const estimateTokens = (text: string) => Math.ceil(text.length / 4)
@@ -211,7 +217,9 @@ export const calculateTokenSavings = internalAction({
     )
 
     // With summarization: summary (max 500 tokens) + recent messages
-    const summaryTokens = user?.historicalSummary ? estimateTokens(user.historicalSummary) : 0
+    const summaryTokens = conversationState?.historicalSummary
+      ? estimateTokens(conversationState.historicalSummary)
+      : 0
     const recentTokens = recentMessages.reduce<number>(
       (sum, message) => sum + estimateTokens(message.content),
       0

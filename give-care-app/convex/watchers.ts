@@ -21,7 +21,21 @@ import { logSafe } from './utils/logger';
 import type { Doc, Id } from './_generated/dataModel';
 import { v } from 'convex/values';
 
-type ActiveUser = Doc<'users'>;
+// Enriched user type for watchers (joins users + caregiverProfiles + subscriptions + conversationState)
+type ActiveUser = {
+  _id: Id<'users'>
+  phoneNumber?: string
+  firstName?: string
+  journeyPhase?: string
+  subscriptionStatus?: string
+  recentMessages?: Array<{
+    role: string
+    content: string
+    timestamp: number
+  }>
+  totalInteractionCount?: number
+  conversationStartDate?: number
+}
 type AlertDoc = Doc<'alerts'>;
 type WellnessScoreDoc = Doc<'wellnessScores'>;
 type RecentMessage = NonNullable<ActiveUser['recentMessages']>[number];
@@ -377,14 +391,42 @@ export const getActiveUsers = internalAction({
  */
 export const _getActiveUsers = internalQuery({
   handler: async (ctx: QueryCtx): Promise<ActiveUser[]> => {
-    // Limit query to first 100 active users to prevent unbounded collect()
-    // Watchers processing large user bases should implement batching
-    const users = await ctx.db
-      .query('users')
+    // Limit query to first 100 active users from caregiverProfiles
+    // (journeyPhase has moved from users to caregiverProfiles)
+    const profiles = await ctx.db
+      .query('caregiverProfiles')
       .withIndex('by_journey', (q) => q.eq('journeyPhase', 'active'))
       .take(100);
 
-    return users as ActiveUser[];
+    // Enrich with data from related tables
+    const enrichedUsers = await Promise.all(
+      profiles.map(async (profile) => {
+        const [user, subscription, conversationState] = await Promise.all([
+          ctx.db.get(profile.userId),
+          ctx.db
+            .query('subscriptions')
+            .withIndex('by_user', (q) => q.eq('userId', profile.userId))
+            .first(),
+          ctx.db
+            .query('conversationState')
+            .withIndex('by_user', (q) => q.eq('userId', profile.userId))
+            .first(),
+        ])
+
+        return {
+          _id: profile.userId,
+          phoneNumber: user?.phoneNumber,
+          firstName: profile.firstName,
+          journeyPhase: profile.journeyPhase,
+          subscriptionStatus: subscription?.subscriptionStatus,
+          recentMessages: conversationState?.recentMessages,
+          totalInteractionCount: conversationState?.totalInteractionCount,
+          conversationStartDate: conversationState?.conversationStartDate,
+        } as ActiveUser
+      })
+    )
+
+    return enrichedUsers;
   },
 });
 

@@ -24,6 +24,13 @@ export const getUser = internalQuery({
   },
 })
 
+export const getEnrichedUserById = internalQuery({
+  args: { userId: v.id('users') },
+  handler: async (ctx, args) => {
+    return await getEnrichedUser(ctx, args.userId)
+  },
+})
+
 export const getUserByPhone = internalQuery({
   args: { phoneNumber: v.string() },
   handler: async (ctx, args) => {
