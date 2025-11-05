@@ -14,9 +14,9 @@ import * as React from 'react'
 // Helper to get interpretation text
 function getInterpretation(band: string): string {
   const interpretations: Record<string, string> = {
-    Mild: "Your burden level is in the mild range. You're managing well, but it's still important to practice self-care and monitor your wellbeing.",
-    Moderate: "Your burden level is moderate. You're experiencing significant stress. Evidence-based interventions can help reduce your burden and improve your quality of life.",
-    Severe: "Your burden level is severe. You're at high risk for burnout and health complications. Immediate support is crucial. We're here to help you find relief.",
+    Mild: "You're carrying a lighter load right now. That's worth celebrating—and it's still important to care for yourself along the way.",
+    Moderate: "You're carrying a heavy load. What you're experiencing is real, and you don't have to carry it alone. Support can help lighten the weight.",
+    Severe: "You're carrying an overwhelming load right now. This isn't sustainable, and you deserve relief. Immediate support can help you find your footing again.",
   }
   return interpretations[band] || ''
 }

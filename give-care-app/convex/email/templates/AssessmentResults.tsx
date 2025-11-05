@@ -43,8 +43,8 @@ export default function AssessmentResults({
           <Section style={logoSection}>
             <Img
               src="https://www.givecareapp.com/gc-logo.png"
-              width="200"
-              height="30"
+              width="150"
+              height="23"
               alt="GiveCare"
               style={logo}
             />
@@ -59,7 +59,7 @@ export default function AssessmentResults({
 
           <Section style={contentSection}>
             <Text style={bodyText}>
-              What you're feeling is real—and now it's measured. This clinically validated assessment gives you language for what you're experiencing.
+              What you're feeling is real—and now you have language for it. This assessment reflects your experience, not a judgment.
             </Text>
           </Section>
 
@@ -69,7 +69,7 @@ export default function AssessmentResults({
 
           <Section style={contentSection}>
             <Text style={bodyText}>
-              Caregiving is hard. You're not alone in this, and you deserve support.
+              Caregiving is hard. You're doing important work, and you deserve support along the way.
             </Text>
           </Section>
 
@@ -87,7 +87,7 @@ export default function AssessmentResults({
 
           <Section style={contentSection}>
             <Text style={bodyText}>
-              GiveCare uses clinical assessments over SMS to measure your burnout. Evidence-based interventions lower it. Progress tracking proves it.
+              GiveCare checks in with you over SMS, helps you understand what you're experiencing, and offers support that fits your life. You choose what helps.
             </Text>
           </Section>
 
