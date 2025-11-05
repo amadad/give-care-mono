@@ -4,7 +4,7 @@
  */
 
 import { v } from 'convex/values'
-import { internalMutation, query } from './_generated/server'
+import { internalMutation, mutation, query } from './_generated/server'
 import {
   getEnrichedUser,
   updateCaregiverProfile,
@@ -184,6 +184,50 @@ export const updateSubscriptionStatus = internalMutation({
     await ctx.db.patch(userId, {
       updatedAt: Date.now(),
     })
+  },
+})
+
+/**
+ * Fix user subscription status (admin utility)
+ * Manually activates a subscription for users where Stripe webhook missed
+ */
+export const fixUserSubscription = mutation({
+  args: {
+    phoneNumber: v.string(),
+    subscriptionStatus: v.union(
+      v.literal('active'),
+      v.literal('trialing'),
+      v.literal('incomplete')
+    ),
+  },
+  handler: async (ctx, { phoneNumber, subscriptionStatus }) => {
+    // Find user by phone
+    const user = await ctx.db
+      .query('users')
+      .withIndex('by_phone', (q: any) => q.eq('phoneNumber', phoneNumber))
+      .first()
+
+    if (!user) {
+      throw new Error(`User not found with phone: ${phoneNumber}`)
+    }
+
+    // Update subscription
+    await updateSubscription(ctx, user._id, {
+      subscriptionStatus,
+    })
+
+    // Move to active journey phase if activating
+    if (subscriptionStatus === 'active' || subscriptionStatus === 'trialing') {
+      await updateCaregiverProfile(ctx, user._id, {
+        journeyPhase: 'active',
+      })
+    }
+
+    return {
+      success: true,
+      userId: user._id,
+      newStatus: subscriptionStatus,
+    }
   },
 })
 

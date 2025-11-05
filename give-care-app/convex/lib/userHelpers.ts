@@ -432,7 +432,7 @@ export async function getOrCreateEnrichedUserByPhone(
   if (!subscription) {
     await ctx.db.insert('subscriptions', {
       userId: user._id,
-      subscriptionStatus: 'inactive',
+      subscriptionStatus: 'incomplete', // Valid Stripe status for users not yet subscribed
       createdAt: Date.now(),
       updatedAt: Date.now(),
     })
