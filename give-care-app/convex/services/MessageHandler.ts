@@ -52,7 +52,7 @@ interface MessageResult {
 }
 
 export class MessageHandler {
-  constructor(private _ctx: ActionCtx) {}
+  constructor(private ctx: ActionCtx) {}
 
   /**
    * Main message processing pipeline
