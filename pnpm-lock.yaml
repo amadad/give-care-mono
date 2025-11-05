@@ -35,6 +35,12 @@ importers:
       '@openai/agents-extensions':
         specifier: ^0.1.5
         version: 0.1.5(@openai/agents@0.1.11(ws@8.18.3)(zod@3.23.8))(ws@8.18.3)(zod@3.23.8)
+      '@react-email/components':
+        specifier: ^0.5.7
+        version: 0.5.7(react-dom@19.2.0(react@19.2.0))(react@19.2.0)
+      '@react-email/render':
+        specifier: ^1.4.0
+        version: 1.4.0(react-dom@19.2.0(react@19.2.0))(react@19.2.0)
       convex:
         specifier: ^1.28.0
         version: 1.28.0(react@19.2.0)
@@ -47,6 +53,9 @@ importers:
       openai:
         specifier: ^5.23.2
         version: 5.23.2(ws@8.18.3)(zod@3.23.8)
+      react:
+        specifier: ^19.0.0
+        version: 19.2.0
       resend:
         specifier: ^6.2.2
         version: 6.2.2(@react-email/render@1.4.0(react-dom@19.2.0(react@19.2.0))(react@19.2.0))
