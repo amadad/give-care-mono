@@ -137,7 +137,7 @@ export function SignupFormConvex() {
 
           <div>
             <label className="block text-sm font-light text-amber-950 mb-2">
-              Phone Number
+              Mobile Phone Number
             </label>
             <input
               type="tel"
@@ -149,6 +149,9 @@ export function SignupFormConvex() {
               autoComplete="tel"
               inputMode="tel"
             />
+            <p className="text-xs text-amber-950/60 mt-1">
+              We'll text you at this number for caregiving support
+            </p>
           </div>
         </div>
 
