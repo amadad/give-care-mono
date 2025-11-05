@@ -56,6 +56,12 @@ VITE_CONVEX_URL=${convexUrl}
   console.log(`   VITE_CONVEX_URL=${convexUrl}`);
   console.log('');
 
+  // Also create parent .env.local for codegen
+  const parentEnvPath = join(__dirname, '..', '..', '.env.local');
+  writeFileSync(parentEnvPath, envContent, 'utf-8');
+  console.log('✅ Created parent .env.local for codegen');
+  console.log('');
+
 } catch (error) {
   console.error('❌ Error setting up Convex configuration:', error.message);
   process.exit(1);
