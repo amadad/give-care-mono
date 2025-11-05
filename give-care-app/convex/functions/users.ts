@@ -4,15 +4,12 @@
  * Uses helpers from lib/userHelpers.ts for multi-table joins
  */
 
-import { mutation, query, internalMutation, internalQuery } from '../_generated/server'
+import { mutation, internalMutation, internalQuery } from '../_generated/server'
 import { v } from 'convex/values'
 import {
   getEnrichedUser,
-  getEnrichedUserByPhone,
   getOrCreateEnrichedUserByPhone,
   updateCaregiverProfile,
-  updateSubscription,
-  updateConversationState,
 } from '../lib/userHelpers'
 
 // QUERIES

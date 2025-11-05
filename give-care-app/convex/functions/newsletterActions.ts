@@ -61,7 +61,7 @@ export const newsletterSignup = action({
           audienceId: process.env.RESEND_AUDIENCE_ID as string,
         })
         console.log(`✅ Synced newsletter subscriber to Resend: ${normalizedEmail}`)
-      } catch (err) {
+      } catch (_err) {
         // Ignore if already exists in Resend
         console.log('Resend sync skipped (may already exist):', normalizedEmail)
       }

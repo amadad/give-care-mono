@@ -542,7 +542,7 @@ export const setWellnessSchedule = tool({
       // Import parseTime from convex/triggers.ts
       const { parseTime } = await import('../convex/triggers')
       time = parseTime(input.preferred_time)
-    } catch (error) {
+    } catch (_error) {
       return `I couldn't understand the time "${input.preferred_time}". Please use format like "9:00 AM" or "14:30".`
     }
 
@@ -551,8 +551,8 @@ export const setWellnessSchedule = tool({
     try {
       const { buildRRule } = await import('../convex/triggers')
       rrule = buildRRule(input.frequency, time, input.days_of_week ?? undefined)
-    } catch (error) {
-      return `Error setting schedule: ${error}`
+    } catch (_error) {
+      return 'Error setting schedule. Please try again or contact support.'
     }
 
     // Create trigger via Convex
@@ -679,7 +679,7 @@ If user hasn't shared their location yet, ask for zip code or city first.`,
   }),
 
   execute: async ({ query, latitude, longitude }, runContext) => {
-    const context = runContext!.context as GiveCareContext
+    const _context = runContext!.context as GiveCareContext
 
     // If no lat/lng provided, try to use context (if available from future geocoding)
     // For now, require explicit location

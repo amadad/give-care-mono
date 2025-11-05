@@ -301,7 +301,7 @@ export async function findResourcesInternal(
   // Pre-collect all resources and facility IDs
   const resourcesByProgram = new Map<Id<'programs'>, ResourceRecord[]>()
 
-  for (const [programId, program] of Array.from(programsMap.entries())) {
+  for (const [programId, _program] of Array.from(programsMap.entries())) {
     // OPTIMIZATION 5: Limit resources per program to prevent over-fetching
     // Use .take() to limit results per program (most programs have 1-3 resources)
     const MAX_RESOURCES_PER_PROGRAM = 10

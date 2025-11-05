@@ -1,7 +1,7 @@
 "use node";
 
 import { internalAction } from '../_generated/server';
-import { internal, api } from '../_generated/api';
+import { api } from '../_generated/api';
 
 /**
  * Day 3 assessment follow-up
@@ -9,9 +9,6 @@ import { internal, api } from '../_generated/api';
 export const sendDay3Followup = internalAction({
   args: {},
   handler: async (ctx): Promise<{ sent: number }> => {
-    const threeDaysAgo = Date.now() - (3 * 24 * 60 * 60 * 1000);
-    const oneDayWindow = 2 * 60 * 60 * 1000; // 2 hour window
-
     // Get contacts eligible for Day 3 follow-up
     const allContacts = await ctx.runQuery(
       api.functions.emailContacts.getAssessmentFollowupSubscribers,

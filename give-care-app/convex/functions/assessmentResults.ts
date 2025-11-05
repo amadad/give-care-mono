@@ -4,7 +4,7 @@
  */
 
 import { v } from 'convex/values'
-import { action, mutation, query, internalMutation } from '../_generated/server'
+import { action, query, internalMutation } from '../_generated/server'
 import { internal, api } from '../_generated/api'
 
 // Handler function extracted to avoid circular reference

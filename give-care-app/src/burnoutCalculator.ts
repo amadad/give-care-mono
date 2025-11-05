@@ -212,7 +212,7 @@ function identifyPressureZones(
   }
 
   // Aggregate subscale scores into zones
-  for (const [assessmentType, scoreData] of Object.entries(assessmentScores)) {
+  for (const [_assessmentType, scoreData] of Object.entries(assessmentScores)) {
     const subscores = scoreData.subscores || {}
     for (const [subscale, score] of Object.entries(subscores)) {
       const zone = subscaleToZone[subscale]

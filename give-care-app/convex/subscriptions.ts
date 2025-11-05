@@ -83,7 +83,7 @@ export const updateCheckoutSession = internalMutation({
     userId: v.id('users'),
     checkoutSessionId: v.string(),
   },
-  handler: async (ctx, { userId, checkoutSessionId }) => {
+  handler: async (ctx, { userId, _checkoutSessionId }) => {
     // Update user timestamp (checkout session ID not stored in normalized schema)
     await ctx.db.patch(userId, {
       updatedAt: Date.now(),

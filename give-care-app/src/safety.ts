@@ -6,7 +6,7 @@
 import type { InputGuardrail, OutputGuardrail, TextOutput } from '@openai/agents'
 
 // Crisis detection data
-const CRISIS_KEYWORDS = [
+const _CRISIS_KEYWORDS = [
   'suicide',
   'kill myself',
   'end my life',

@@ -5,7 +5,6 @@
  */
 
 import { mutation } from '../_generated/server'
-import { v } from 'convex/values'
 
 /**
  * Seed knowledgeBase with 5 essential interventions from ZONE_INTERVENTIONS

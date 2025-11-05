@@ -435,11 +435,6 @@ export const getSystemHealth = query({
 
     // Database performance: Calculate average query time from recent conversations
     const conversationsWithLatency = recentConvos.filter(c => c.latency !== undefined)
-    const avgLatency =
-      conversationsWithLatency.length > 0
-        ? conversationsWithLatency.reduce((sum, c) => sum + (c.latency || 0), 0) /
-          conversationsWithLatency.length
-        : 0
 
     // P95 latency
     const latencies = conversationsWithLatency.map(c => c.latency!).sort((a, b) => a - b)

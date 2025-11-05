@@ -2,14 +2,14 @@
 
 import { action } from './_generated/server';
 import { v } from 'convex/values';
-import { api, internal } from './_generated/api';
+import { api } from './_generated/api';
 import { Resend } from 'resend';
 import OpenAI from 'openai';
 import { buildEmailContext } from '../src/email/context';
 import { getOrchestratorInstructions, getComposerInstructions } from '../src/email/instructions';
 
 // Lazy-load API clients to avoid initialization errors during deployment
-function getResend() {
+function _getResend() {
   return new Resend(process.env.RESEND_API_KEY!);
 }
 
@@ -79,7 +79,7 @@ export const generateAndSendEmail = action({
       // 4. Composer: Map to components
       const composerPrompt = getComposerInstructions(contentPlan, contentBlocks, emailContext);
 
-      const composerResponse = await openai.chat.completions.create({
+      const _composerResponse = await openai.chat.completions.create({
         model: process.env.OPENAI_MODEL || 'gpt-5-nano',
         messages: [
           {
@@ -94,8 +94,6 @@ export const generateAndSendEmail = action({
         response_format: { type: 'json_object' },
         temperature: 0.7,
       });
-
-      const componentTree = JSON.parse(composerResponse.choices[0].message.content || '{}');
 
       // 5. Render to HTML
       // TODO: React Email rendering needs Node.js runtime not available in Cloudflare Workers

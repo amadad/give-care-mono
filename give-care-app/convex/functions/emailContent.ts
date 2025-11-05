@@ -110,7 +110,7 @@ export const searchEmailContent = query({
     limit: v.optional(v.number()),
   },
   handler: async (ctx, args) => {
-    let query = ctx.db.query('knowledgeBase').withIndex('by_status', (q) => q.eq('status', 'active'));
+    const query = ctx.db.query('knowledgeBase').withIndex('by_status', (q) => q.eq('status', 'active'));
 
     const results = await query.collect();
 

@@ -22,7 +22,6 @@ import { logScheduling, logSafe } from '../utils/logger'
 
 // Constants
 const DAY_MS = 24 * 60 * 60 * 1000
-const HOUR_MS = 60 * 60 * 1000
 
 /**
  * Helper: Check if user can receive proactive message (deduplication + subscription)
@@ -135,7 +134,6 @@ export const sendTieredWellnessCheckins = internalAction({
   handler: async ctx => {
     logSafe('Scheduling', 'cron_start', { job: 'sendTieredWellnessCheckins' })
 
-    const now = Date.now()
     let sentCount = 0
 
     // Crisis users (first 7 days) - Daily check-ins
@@ -331,7 +329,7 @@ export const reactivateDormantUsers = internalAction({
  * Runs Monday at 8am PT (16:00 UTC)
  */
 export const generateWeeklyReport = internalAction({
-  handler: async ctx => {
+  handler: async _ctx => {
     logSafe('Scheduling', 'cron_start', { job: 'generateWeeklyReport' })
 
     // Get weekly stats (placeholder - implement in analytics module)
