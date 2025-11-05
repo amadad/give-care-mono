@@ -37,7 +37,12 @@ type UserSummaryJob = {
  */
 export const createWeeklySummarizationBatch = internalAction({
   handler: async (ctx): Promise<any> => {
-    const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
+    const apiKey = process.env.OPENAI_API_KEY
+    if (!apiKey) {
+      console.log('[BatchSummarization] OPENAI_API_KEY not configured, skipping batch creation')
+      return { success: false, reason: 'OPENAI_API_KEY not configured' }
+    }
+    const openai = new OpenAI({ apiKey })
 
     // Get active users with >30 messages
     const users: any = await ctx.runQuery(internal.summarization.getActiveUsers, {})
@@ -146,7 +151,12 @@ Maximum length: 500 tokens.`
  */
 export const processBatchJobs = internalAction({
   handler: async (ctx): Promise<any> => {
-    const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
+    const apiKey = process.env.OPENAI_API_KEY
+    if (!apiKey) {
+      console.log('[BatchSummarization] OPENAI_API_KEY not configured, skipping batch processing')
+      return { success: false, reason: 'OPENAI_API_KEY not configured' }
+    }
+    const openai = new OpenAI({ apiKey })
 
     // Get all in-progress batches
     const pendingBatches: any = await ctx.runQuery(internal.batchJobs.getPendingBatches, {})
@@ -197,7 +207,12 @@ export const processCompletedBatch = internalAction({
     outputFileId: v.string(),
   },
   handler: async (ctx, args): Promise<any> => {
-    const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
+    const apiKey = process.env.OPENAI_API_KEY
+    if (!apiKey) {
+      console.log('[BatchSummarization] OPENAI_API_KEY not configured, skipping batch completion')
+      return { success: false, reason: 'OPENAI_API_KEY not configured' }
+    }
+    const openai = new OpenAI({ apiKey })
 
     // Download output file
     const fileContent = await openai.files.content(args.outputFileId)
