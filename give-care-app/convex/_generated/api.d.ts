@@ -14,6 +14,7 @@ import type * as batchSummarization from "../batchSummarization.js";
 import type * as crons from "../crons.js";
 import type * as email_campaigns from "../email/campaigns.js";
 import type * as email_sequences from "../email/sequences.js";
+import type * as email_templates_AssessmentResults from "../email/templates/AssessmentResults.js";
 import type * as emailActions from "../emailActions.js";
 import type * as emailActionsTest from "../emailActionsTest.js";
 import type * as etl from "../etl.js";
@@ -78,6 +79,7 @@ declare const fullApi: ApiFromModules<{
   crons: typeof crons;
   "email/campaigns": typeof email_campaigns;
   "email/sequences": typeof email_sequences;
+  "email/templates/AssessmentResults": typeof email_templates_AssessmentResults;
   emailActions: typeof emailActions;
   emailActionsTest: typeof emailActionsTest;
   etl: typeof etl;
