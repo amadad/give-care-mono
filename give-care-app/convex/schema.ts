@@ -81,7 +81,6 @@ export default defineSchema({
     onboardingCooldownUntil: v.optional(v.number()),
 
     // Assessment state (temp tracking for in-progress assessments)
-    // TODO: Eventually migrate to query assessmentSessions directly
     assessmentInProgress: v.optional(v.boolean()),
     assessmentType: v.optional(v.string()),
     assessmentCurrentQuestion: v.optional(v.number()),

@@ -244,6 +244,12 @@
 - **Zero data loss** (all bugs caught)
 - **Strict TypeScript** (type-safe)
 
+### Developer Experience ✅
+- **Markdown System Prompts**: Agent instructions in markdown (59% smaller, easier to edit)
+- **Template Variables**: `{{userName}}` syntax for dynamic content
+- **Version Control**: Clear git diffs for prompt changes
+- **Non-Technical Editing**: Stakeholders can review/edit prompts directly
+
 ---
 
 ## Business Features

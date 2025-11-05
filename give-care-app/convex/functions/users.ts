@@ -185,7 +185,6 @@ export const updateContextState = internalMutation({
       profileUpdates.pressureZoneScores = updates.pressureZoneScores
 
     // Assessment fields stay on caregiverProfiles for now
-    // TODO: Move to assessmentSessions table in future refactor
     if (updates.assessmentInProgress !== undefined)
       profileUpdates.assessmentInProgress = updates.assessmentInProgress
     if (updates.assessmentType !== undefined) profileUpdates.assessmentType = updates.assessmentType

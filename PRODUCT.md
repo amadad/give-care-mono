@@ -69,7 +69,8 @@
 - **OpenAI Agents SDK**: Multi-agent orchestration
 - **Twilio**: SMS delivery
 - **Stripe**: Payment processing
-- **Vitest**: 235 passing tests
+- **Markdown Prompts**: System prompts in markdown with template variables
+- **Vitest**: 235 passing tests (TDD approach)
 
 ### Frontend (give-care-site)
 - **Next.js 15**: SSR + SSG

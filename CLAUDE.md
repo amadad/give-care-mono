@@ -44,6 +44,7 @@ pnpm --filter give-care-story dev     # Presentations
 **Key Patterns**:
 - Files importing `@openai/agents` need `"use node"` directive
 - Use Convex validators, NOT Zod
+- System prompts are markdown files (`src/prompts/*.md`) with template variables
 - Use `hasContextState()` guard before accessing context
 
 **Docs**: See `give-care-app/docs/CLAUDE.md`

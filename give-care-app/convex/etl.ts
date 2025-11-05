@@ -378,9 +378,6 @@ export const approveQARecord = mutation({
       qaFeedback: args.feedback,
     })
 
-    // TODO: In Phase 2, insert into production resources table
-    // await ctx.db.insert("resources", { ... });
-
     return { success: true }
   },
 })

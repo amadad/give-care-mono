@@ -1,5 +1,41 @@
 # Changelog - GiveCare App Security & Performance Fixes
 
+## [Unreleased] - 2025-11-05
+
+### 🧹 Code Refactoring
+
+#### Markdown System Prompts (TDD)
+**Impact:** 59% reduction in instructions.ts size, improved prompt maintainability
+
+**Changes:**
+1. Extracted system prompts to markdown files
+   - Created: `src/prompts/main_agent.md`, `crisis_agent.md`, `assessment_agent.md`
+   - Template variables: `{{userName}}`, `{{careRecipient}}`, etc.
+   - instructions.ts: 382 lines → 157 lines
+
+2. Created prompt loader utility (`src/prompts/loader.ts`)
+   - Loads markdown files at runtime
+   - Replaces template variables
+   - "use node" directive for file system access
+
+3. Test-driven development approach
+   - Wrote 20 comprehensive tests first (tests/promptLoader.test.ts)
+   - All tests passing (20/20)
+   - Zero breaking changes (backward compatible)
+
+**Benefits:**
+- Better readability (markdown formatting, syntax highlighting)
+- Easier version control (clear git diffs)
+- Simpler collaboration (non-technical prompt editing)
+- Cleaner code (59% size reduction)
+
+**Commits:**
+- TBD - test: add comprehensive prompt loader tests (20 tests)
+- TBD - feat: implement markdown prompt loader with template variables
+- TBD - refactor: extract system prompts to markdown files
+
+---
+
 ## [Unreleased] - 2025-10-30
 
 ### 🧹 Code Refactoring

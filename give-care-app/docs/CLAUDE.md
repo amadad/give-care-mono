@@ -14,7 +14,8 @@ npx convex deploy --prod    # Deploy to production
 
 ### Files importing `@openai/agents` MUST have `"use node"` directive at top
 ### Use Convex validators in `convex/` files, NOT Zod
-### Agent instructions are functions, not strings
+### System prompts are markdown files in `src/prompts/` with template variables
+### Agent instructions load prompts at runtime via `loadPrompt()` and `replaceVariables()`
 ### Use `hasContextState()` guard before accessing `result.state.context`
 ### Touch parent file to trigger rebuild: `touch convex/twilio.ts && npx convex dev --once`
 
@@ -39,7 +40,9 @@ npx convex deploy --prod    # Deploy to production
 | File | Purpose |
 |------|---------|
 | `convex/schema.ts` | Database schema |
-| `src/instructions.ts` | Agent instructions |
+| `src/instructions.ts` | Agent instruction loaders |
+| `src/prompts/*.md` | System prompts (main, crisis, assessment) |
+| `src/prompts/loader.ts` | Prompt loader utility |
 | `src/tools.ts` | Agent tools |
 | `convex/twilio.ts` | SMS handling |
 | `convex/agents.ts` | Agent initialization |

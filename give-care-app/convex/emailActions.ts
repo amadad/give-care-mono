@@ -96,7 +96,6 @@ export const generateAndSendEmail = action({
       });
 
       // 5. Render to HTML
-      // TODO: React Email rendering needs Node.js runtime not available in Cloudflare Workers
       // Temporary workaround: disable LLM email system until we set up proper rendering service
       throw new Error('LLM email rendering temporarily disabled - needs Node.js service');
     } catch (error) {
