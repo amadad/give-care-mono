@@ -104,6 +104,7 @@ export const createCheckoutSession = action({
       ],
       mode: 'subscription',
       discounts,
+      allow_promotion_codes: true, // Enable promo code field on checkout page
       success_url: `${domain}/welcome?session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${domain}/signup`,
       metadata: {
