@@ -21,6 +21,7 @@ import type { ActionCtx, QueryCtx } from './_generated/server'
 import { internal } from './_generated/api'
 import { v } from 'convex/values'
 import type { Doc, Id } from './_generated/dataModel'
+import { updateConversationState, batchGetEnrichedUsers } from './lib/userHelpers'
 
 type ConversationMessage = {
   role: string
@@ -106,7 +107,7 @@ export const patchUserSummary = internalMutation({
     ),
   },
   handler: async (ctx, args) => {
-    await ctx.db.patch(args.userId, {
+    await updateConversationState(ctx, args.userId, {
       recentMessages: args.recentMessages,
       historicalSummary: args.historicalSummary,
       conversationStartDate: args.conversationStartDate,
@@ -122,10 +123,15 @@ export const patchUserSummary = internalMutation({
  */
 export const getActiveUsers = internalQuery({
   handler: async ctx => {
-    return await ctx.db
-      .query('users')
+    // Query caregiverProfiles for active users
+    const activeProfiles = await ctx.db
+      .query('caregiverProfiles')
       .withIndex('by_journey', q => q.eq('journeyPhase', 'active'))
       .collect()
+
+    // Get enriched user data
+    const userIds = activeProfiles.map(p => p.userId)
+    return await batchGetEnrichedUsers(ctx, userIds)
   },
 })
 

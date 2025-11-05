@@ -5,6 +5,11 @@
 
 import { v } from 'convex/values'
 import { internalMutation, query } from './_generated/server'
+import {
+  getEnrichedUser,
+  updateCaregiverProfile,
+  updateSubscription,
+} from './lib/userHelpers'
 
 /**
  * Create a pending user record when checkout starts
@@ -25,44 +30,44 @@ export const createPendingUser = internalMutation({
       .first()
 
     if (existing) {
-      // Update existing user
+      // Update existing user (auth fields only)
       await ctx.db.patch(existing._id, {
         name: fullName,
         email,
-        stripeCustomerId,
         updatedAt: Date.now(),
       })
+
+      // Update subscription table with Stripe ID
+      await updateSubscription(ctx, existing._id, {
+        stripeCustomerId,
+      })
+
       return existing._id
     }
 
-    // Create new user with pending status
+    // Create new user (auth fields only)
     const userId = await ctx.db.insert('users', {
-      // Auth fields
       name: fullName,
       email,
-      phone: phoneNumber,
-
-      // Caregiver fields
       phoneNumber,
-      firstName: fullName.split(' ')[0], // Extract first name
+      createdAt: Date.now(),
+      updatedAt: Date.now(),
+    })
+
+    // Create caregiver profile
+    await updateCaregiverProfile(ctx, userId, {
+      firstName: fullName.split(' ')[0],
       journeyPhase: 'onboarding',
       assessmentInProgress: false,
       assessmentCurrentQuestion: 0,
       pressureZones: [],
       onboardingAttempts: {},
-      rcsCapable: false,
-      languagePreference: 'en',
+    })
 
-      // Stripe fields
+    // Create subscription record
+    await updateSubscription(ctx, userId, {
       stripeCustomerId,
       subscriptionStatus: 'incomplete', // Will become "active" after payment
-
-      // App state
-      appState: {},
-
-      // Timestamps
-      createdAt: Date.now(),
-      updatedAt: Date.now(),
     })
 
     return userId
@@ -71,6 +76,7 @@ export const createPendingUser = internalMutation({
 
 /**
  * Update user with checkout session ID
+ * Note: Checkout session is temporary - we retrieve final subscription data from Stripe webhooks
  */
 export const updateCheckoutSession = internalMutation({
   args: {
@@ -78,13 +84,11 @@ export const updateCheckoutSession = internalMutation({
     checkoutSessionId: v.string(),
   },
   handler: async (ctx, { userId, checkoutSessionId }) => {
+    // Update user timestamp (checkout session ID not stored in normalized schema)
     await ctx.db.patch(userId, {
-      // Store in appState.metadata as JSON string
-      appState: {
-        metadata: JSON.stringify({ checkoutSessionId }),
-      },
       updatedAt: Date.now(),
     })
+    // Note: checkoutSessionId is temporary metadata - final subscription data comes from webhooks
   },
 })
 
@@ -104,10 +108,19 @@ export const activateSubscription = internalMutation({
     ),
   },
   handler: async (ctx, { userId, stripeSubscriptionId, subscriptionStatus }) => {
-    await ctx.db.patch(userId, {
+    // Update subscription table
+    await updateSubscription(ctx, userId, {
       stripeSubscriptionId,
       subscriptionStatus,
-      journeyPhase: 'active', // Move from onboarding to active
+    })
+
+    // Move from onboarding to active
+    await updateCaregiverProfile(ctx, userId, {
+      journeyPhase: 'active',
+    })
+
+    // Update user timestamp
+    await ctx.db.patch(userId, {
       updatedAt: Date.now(),
     })
   },
@@ -140,8 +153,13 @@ export const updateSubscriptionStatus = internalMutation({
     ),
   },
   handler: async (ctx, { userId, subscriptionStatus }) => {
-    const user = await ctx.db.get(userId)
+    const user = await getEnrichedUser(ctx, userId)
     if (!user) throw new Error('User not found')
+
+    // Update subscription status
+    await updateSubscription(ctx, userId, {
+      subscriptionStatus,
+    })
 
     // Determine journey phase based on subscription status
     let journeyPhase = user.journeyPhase
@@ -155,9 +173,15 @@ export const updateSubscriptionStatus = internalMutation({
       // No change to journey phase
     }
 
+    // Update journey phase if it changed
+    if (journeyPhase && journeyPhase !== user.journeyPhase) {
+      await updateCaregiverProfile(ctx, userId, {
+        journeyPhase,
+      })
+    }
+
+    // Update user timestamp
     await ctx.db.patch(userId, {
-      subscriptionStatus,
-      journeyPhase,
       updatedAt: Date.now(),
     })
   },

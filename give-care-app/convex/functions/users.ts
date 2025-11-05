@@ -305,8 +305,11 @@ export const getEligibleForCrisisDaily = internalQuery({
         (!profile.lastContactAt || profile.lastContactAt < twoDaysAgo)
     )
 
-    // Return enriched users
-    return await Promise.all(eligibleProfiles.map(profile => getEnrichedUser(ctx, profile.userId)))
+    // Return enriched users (filter out any nulls)
+    const enrichedUsers = await Promise.all(
+      eligibleProfiles.map(profile => getEnrichedUser(ctx, profile.userId))
+    )
+    return enrichedUsers.filter((u): u is NonNullable<typeof u> => u !== null)
   },
 })
 
@@ -335,8 +338,11 @@ export const getEligibleForCrisisWeekly = internalQuery({
         (!profile.lastContactAt || profile.lastContactAt < threeDaysAgo)
     )
 
-    // Return enriched users
-    return await Promise.all(eligibleProfiles.map(profile => getEnrichedUser(ctx, profile.userId)))
+    // Return enriched users (filter out any nulls)
+    const enrichedUsers = await Promise.all(
+      eligibleProfiles.map(profile => getEnrichedUser(ctx, profile.userId))
+    )
+    return enrichedUsers.filter((u): u is NonNullable<typeof u> => u !== null)
   },
 })
 
@@ -362,8 +368,11 @@ export const getEligibleForHighBurnoutCheckin = internalQuery({
         (!profile.lastContactAt || profile.lastContactAt < twoDaysAgo)
     )
 
-    // Return enriched users
-    return await Promise.all(eligibleProfiles.map(profile => getEnrichedUser(ctx, profile.userId)))
+    // Return enriched users (filter out any nulls)
+    const enrichedUsers = await Promise.all(
+      eligibleProfiles.map(profile => getEnrichedUser(ctx, profile.userId))
+    )
+    return enrichedUsers.filter((u): u is NonNullable<typeof u> => u !== null)
   },
 })
 
@@ -389,8 +398,11 @@ export const getEligibleForModerateCheckin = internalQuery({
         (!profile.lastContactAt || profile.lastContactAt < threeDaysAgo)
     )
 
-    // Return enriched users
-    return await Promise.all(eligibleProfiles.map(profile => getEnrichedUser(ctx, profile.userId)))
+    // Return enriched users (filter out any nulls)
+    const enrichedUsers = await Promise.all(
+      eligibleProfiles.map(profile => getEnrichedUser(ctx, profile.userId))
+    )
+    return enrichedUsers.filter((u): u is NonNullable<typeof u> => u !== null)
   },
 })
 
@@ -418,7 +430,10 @@ export const getDormantAtMilestones = internalQuery({
       profile => (profile.reactivationMessageCount || 0) < 3
     )
 
-    // Return enriched users
-    return await Promise.all(eligibleProfiles.map(profile => getEnrichedUser(ctx, profile.userId)))
+    // Return enriched users (filter out any nulls)
+    const enrichedUsers = await Promise.all(
+      eligibleProfiles.map(profile => getEnrichedUser(ctx, profile.userId))
+    )
+    return enrichedUsers.filter((u): u is NonNullable<typeof u> => u !== null)
   },
 })

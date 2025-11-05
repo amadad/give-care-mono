@@ -290,6 +290,7 @@ export async function updateCaregiverProfile(
     assessmentSessionId?: string
     onboardingAttempts?: Record<string, number>
     onboardingCooldownUntil?: number
+    rcsCapable?: boolean
   }
 ): Promise<void> {
   const profile = await ctx.db
@@ -357,6 +358,8 @@ export async function updateConversationState(
     historicalSummary?: string
     historicalSummaryVersion?: string
     historicalSummaryTokenUsage?: any
+    conversationStartDate?: number
+    totalInteractionCount?: number
   }
 ): Promise<void> {
   const state = await ctx.db

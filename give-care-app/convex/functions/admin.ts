@@ -8,7 +8,7 @@
 
 import { query, mutation } from '../_generated/server'
 import { v } from 'convex/values'
-import { batchGetEnrichedUsers, getEnrichedUser } from '../lib/userHelpers'
+import { batchGetEnrichedUsers, getEnrichedUser, updateCaregiverProfile } from '../lib/userHelpers'
 
 /**
  * Get system-wide metrics for dashboard home page
@@ -320,7 +320,7 @@ export const sendAdminMessage = mutation({
     })
 
     // Update last contact
-    await ctx.db.patch(args.userId, {
+    await updateCaregiverProfile(ctx, args.userId, {
       lastContactAt: Date.now(),
     })
 
@@ -340,7 +340,7 @@ export const resetUserAssessment = mutation({
     }
 
     // Clear assessment state
-    await ctx.db.patch(args.userId, {
+    await updateCaregiverProfile(ctx, args.userId, {
       assessmentInProgress: false,
       assessmentType: undefined,
       assessmentCurrentQuestion: 0,
@@ -413,8 +413,8 @@ export const getSystemHealth = query({
 
     // Count priority tier users (users with subscriptionStatus === "active")
     const activeSubscriptions = await ctx.db
-      .query('users')
-      .withIndex('by_subscription', q => q.eq('subscriptionStatus', 'active'))
+      .query('subscriptions')
+      .withIndex('by_status', q => q.eq('subscriptionStatus', 'active'))
       .collect()
 
     // OpenAI usage: Query conversations for token usage in last 24h

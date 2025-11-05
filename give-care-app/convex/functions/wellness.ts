@@ -8,6 +8,7 @@ import { mutation, query, internalMutation, internalQuery, QueryCtx } from '../_
 import { v } from 'convex/values'
 import { internal } from '../_generated/api'
 import { Id } from '../_generated/dataModel'
+import { updateCaregiverProfile } from '../lib/userHelpers'
 
 /**
  * SECURITY HELPER: Verify userId ownership
@@ -184,13 +185,12 @@ export const saveScore = internalMutation({
     })
 
     // Update user's burnout score
-    await ctx.db.patch(args.userId, {
+    await updateCaregiverProfile(ctx, args.userId, {
       burnoutScore: args.overallScore,
       burnoutBand: args.band,
       burnoutConfidence: args.confidence,
       pressureZones: args.pressureZones,
       pressureZoneScores: args.pressureZoneScores,
-      updatedAt: Date.now(),
     })
 
     // Schedule 7-day assessment reminder (Task 1: Revised cadence)
