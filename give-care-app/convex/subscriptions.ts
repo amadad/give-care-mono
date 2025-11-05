@@ -194,7 +194,21 @@ export const checkSubscription = query({
       return { isActive: false, user: null }
     }
 
-    const isActive = user.subscriptionStatus === 'active' || user.subscriptionStatus === 'trialing'
+    // Get subscription and profile data
+    const [subscription, profile] = await Promise.all([
+      ctx.db
+        .query('subscriptions')
+        .withIndex('by_user', (q: any) => q.eq('userId', user._id))
+        .first(),
+      ctx.db
+        .query('caregiverProfiles')
+        .withIndex('by_user', (q: any) => q.eq('userId', user._id))
+        .first(),
+    ])
+
+    const isActive =
+      subscription?.subscriptionStatus === 'active' ||
+      subscription?.subscriptionStatus === 'trialing'
 
     return {
       isActive,
@@ -203,8 +217,8 @@ export const checkSubscription = query({
         name: user.name,
         email: user.email,
         phoneNumber: user.phoneNumber,
-        subscriptionStatus: user.subscriptionStatus,
-        journeyPhase: user.journeyPhase,
+        subscriptionStatus: subscription?.subscriptionStatus,
+        journeyPhase: profile?.journeyPhase,
       },
     }
   },

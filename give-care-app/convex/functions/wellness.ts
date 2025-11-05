@@ -195,10 +195,14 @@ export const saveScore = internalMutation({
 
     // Schedule 7-day assessment reminder (Task 1: Revised cadence)
     // Changed from 14 days to 7 days (habit formation research)
-    const user = await ctx.db.get(args.userId)
-    if (user && user.journeyPhase === 'active') {
+    const profile = await ctx.db
+      .query('caregiverProfiles')
+      .withIndex('by_user', (q: any) => q.eq('userId', args.userId))
+      .first()
+
+    if (profile && profile.journeyPhase === 'active') {
       const sevenDays = 7 * 24 * 60 * 60 * 1000
-      const firstName = user.firstName || 'friend'
+      const firstName = profile.firstName || 'friend'
 
       await ctx.scheduler.runAfter(sevenDays, internal.functions.scheduling.sendScheduledMessage, {
         userId: args.userId,

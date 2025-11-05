@@ -483,8 +483,14 @@ export const getResourceRecommendations = query({
     limit: v.optional(v.number()),
   },
   handler: async (ctx, { userId, limit = 3 }) => {
-    // Get user
-    const user = await ctx.db.get(userId)
+    // Get user and profile
+    const [user, profile] = await Promise.all([
+      ctx.db.get(userId),
+      ctx.db
+        .query('caregiverProfiles')
+        .withIndex('by_user', (q: any) => q.eq('userId', userId))
+        .first(),
+    ])
     if (!user) return []
 
     // Get latest wellness score with pressure zones
@@ -495,7 +501,7 @@ export const getResourceRecommendations = query({
       .first()
 
     const zones = score?.pressureZones || []
-    const zip = user.zipCode || ''
+    const zip = profile?.zipCode || ''
 
     // If no zones, return empty
     if (zones.length === 0) return []
@@ -504,7 +510,7 @@ export const getResourceRecommendations = query({
     const results = await findResourcesInternal(ctx, {
       zip,
       zones,
-      bands: user.burnoutBand ? [user.burnoutBand] : undefined,
+      bands: profile?.burnoutBand ? [profile.burnoutBand] : undefined,
       limit,
     })
 

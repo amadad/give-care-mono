@@ -72,8 +72,14 @@ export const processDueTriggers = internalMutation({
           continue
         }
 
-        // Get user
-        const user = await ctx.db.get(trigger.userId)
+        // Get user and subscription
+        const [user, subscription] = await Promise.all([
+          ctx.db.get(trigger.userId),
+          ctx.db
+            .query('subscriptions')
+            .withIndex('by_user', (q: any) => q.eq('userId', trigger.userId))
+            .first(),
+        ])
         if (!user || !user.phoneNumber) {
           logSafe('Triggers', 'User not found or missing phone', { userId: trigger.userId })
           errors++
@@ -82,13 +88,14 @@ export const processDueTriggers = internalMutation({
 
         // Check subscription status before sending
         const isSubscribed =
-          user.subscriptionStatus === 'active' || user.subscriptionStatus === 'trialing'
+          subscription?.subscriptionStatus === 'active' ||
+          subscription?.subscriptionStatus === 'trialing'
 
         if (!isSubscribed) {
           logSafe('Triggers', 'Skipping trigger - no active subscription', {
             triggerId: trigger._id,
             userId: trigger.userId,
-            status: user.subscriptionStatus,
+            status: subscription?.subscriptionStatus,
           })
           // Still update next occurrence so we don't keep trying
           const nextOccurrence = calculateNextOccurrence(

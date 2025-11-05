@@ -35,7 +35,7 @@ const HOUR_MS = 60 * 60 * 1000
  * @returns true if message can be sent
  */
 async function canSendProactiveMessage(ctx: any, userId: Id<'users'>): Promise<boolean> {
-  const user = await ctx.runQuery(internal.functions.users.getUser, { userId })
+  const user = await ctx.runQuery(internal.functions.users.getEnrichedUserById, { userId })
   if (!user) return false
 
   // Check subscription status (CRITICAL: Don't send to non-subscribers)
@@ -411,7 +411,9 @@ export const sendScheduledMessage = internalAction({
     })
 
     // Get user
-    const user = await ctx.runQuery(internal.functions.users.getUser, { userId: args.userId })
+    const user = await ctx.runQuery(internal.functions.users.getEnrichedUserById, {
+      userId: args.userId,
+    })
     if (!user) {
       logSafe('Scheduling', 'message_error', {
         userId: String(args.userId),
@@ -529,7 +531,8 @@ export const scheduleCrisisFollowups = internalMutation({
     })
 
     // Update crisis tracking
-    await ctx.db.patch(userId, {
+    await ctx.runMutation(internal.functions.users.updateUser, {
+      userId,
       lastCrisisEventAt: Date.now(),
       crisisFollowupCount: 0, // Reset counter
     })
@@ -561,7 +564,7 @@ export const checkOnboardingAndNudge = internalAction({
     const { userId, nudgeStage } = args
 
     // Get user
-    const user = await ctx.runQuery(internal.functions.users.getUser, { userId })
+    const user = await ctx.runQuery(internal.functions.users.getEnrichedUserById, { userId })
     if (!user) return { success: false, error: 'User not found' }
 
     // Check if profile is complete
