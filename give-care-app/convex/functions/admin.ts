@@ -8,6 +8,7 @@
 
 import { query, mutation } from '../_generated/server'
 import { v } from 'convex/values'
+import { batchGetEnrichedUsers, getEnrichedUser } from '../lib/userHelpers'
 
 /**
  * Get system-wide metrics for dashboard home page
@@ -15,7 +16,10 @@ import { v } from 'convex/values'
 export const getSystemMetrics = query({
   args: {},
   handler: async ctx => {
-    const users = await ctx.db.query('users').collect()
+    // Get all users with enriched data from joined tables
+    const plainUsers = await ctx.db.query('users').collect()
+    const userIds = plainUsers.map(u => u._id)
+    const users = await batchGetEnrichedUsers(ctx, userIds)
 
     // Active users (contacted in last 7 days)
     const sevenDaysAgo = Date.now() - 7 * 24 * 60 * 60 * 1000
@@ -84,43 +88,62 @@ export const getAllUsers = query({
   handler: async (ctx, args) => {
     const limit = Math.min(Math.max(args.limit, 1), 200)
 
-    // Build query with index (can only use one index)
+    // Query caregiverProfiles or subscriptions based on filters
     // Priority: journeyPhase > burnoutBand > subscriptionStatus
-    let usersQuery
+    let baseQuery
 
     if (args.journeyPhase) {
-      usersQuery = ctx.db
-        .query('users')
+      // Query caregiverProfiles with journeyPhase index
+      baseQuery = ctx.db
+        .query('caregiverProfiles')
         .withIndex('by_journey', q => q.eq('journeyPhase', args.journeyPhase))
-
-      // Apply additional filters
-      if (args.burnoutBand) {
-        usersQuery = usersQuery.filter(q => q.eq(q.field('burnoutBand'), args.burnoutBand))
-      }
-      if (args.subscriptionStatus) {
-        usersQuery = usersQuery.filter(q =>
-          q.eq(q.field('subscriptionStatus'), args.subscriptionStatus)
-        )
-      }
     } else if (args.burnoutBand) {
-      usersQuery = ctx.db
-        .query('users')
+      // Query caregiverProfiles with burnoutBand index
+      baseQuery = ctx.db
+        .query('caregiverProfiles')
         .withIndex('by_burnout_band', q => q.eq('burnoutBand', args.burnoutBand))
-
-      if (args.subscriptionStatus) {
-        usersQuery = usersQuery.filter(q =>
-          q.eq(q.field('subscriptionStatus'), args.subscriptionStatus)
-        )
-      }
-    } else if (args.subscriptionStatus) {
-      usersQuery = ctx.db
-        .query('users')
-        .withIndex('by_subscription', q => q.eq('subscriptionStatus', args.subscriptionStatus))
     } else {
-      usersQuery = ctx.db.query('users')
+      // No index filter - query all caregiverProfiles
+      baseQuery = ctx.db.query('caregiverProfiles')
     }
 
+    // Get profiles page
+    const profileResults = await baseQuery
+      .order('desc')
+      .paginate({ numItems: limit * 2, cursor: args.cursor || null }) // Fetch more to account for filtering
+
+    // Get userIds and fetch enriched users
+    const userIds = profileResults.page.map(p => p.userId)
+    const enrichedUsers = await batchGetEnrichedUsers(ctx, userIds)
+
+    // Apply additional filters
+    let filtered = enrichedUsers
+    if (args.burnoutBand && !args.journeyPhase) {
+      // Already filtered by index
+    } else if (args.burnoutBand) {
+      filtered = filtered.filter(u => u.burnoutBand === args.burnoutBand)
+    }
+    if (args.subscriptionStatus) {
+      filtered = filtered.filter(u => u.subscriptionStatus === args.subscriptionStatus)
+    }
+
+    // Apply search filter
     const searchTerm = args.search?.trim()
+    if (searchTerm) {
+      const searchLower = searchTerm.toLowerCase()
+      filtered = filtered.filter(u => {
+        const nameMatches = u.firstName && u.firstName.toLowerCase().includes(searchLower)
+        const phoneMatches = u.phoneNumber && u.phoneNumber.includes(searchLower)
+        const recipientMatches =
+          u.careRecipientName && u.careRecipientName.toLowerCase().includes(searchLower)
+        return Boolean(nameMatches || phoneMatches || recipientMatches)
+      })
+    }
+
+    // Slice to limit
+    const sliced = filtered.slice(0, limit)
+
+    // Map to response format
     const mapUser = (u: any) => ({
       _id: u._id,
       firstName: u.firstName || 'Unknown',
@@ -134,59 +157,10 @@ export const getAllUsers = query({
       createdAt: u.createdAt,
     })
 
-    if (searchTerm) {
-      const searchLower = searchTerm.toLowerCase()
-      const matches: any[] = []
-      let cursor: string | null | undefined = args.cursor || null
-      let continueCursor: string | null = null
-      let isDone = false
-
-      while (matches.length < limit) {
-        const page = await usersQuery
-          .order('desc')
-          .paginate({ numItems: limit, cursor: cursor ?? null })
-
-        const pageMatches = page.page.filter(u => {
-          const nameMatches = u.firstName && u.firstName.toLowerCase().includes(searchLower)
-          const phoneMatches = u.phoneNumber && u.phoneNumber.includes(searchLower)
-          const recipientMatches =
-            u.careRecipientName && u.careRecipientName.toLowerCase().includes(searchLower)
-          return Boolean(nameMatches || phoneMatches || recipientMatches)
-        })
-
-        matches.push(...pageMatches)
-
-        if (page.isDone) {
-          continueCursor = null
-          isDone = true
-          break
-        }
-
-        if (matches.length >= limit) {
-          continueCursor = page.continueCursor
-          break
-        }
-
-        cursor = page.continueCursor
-      }
-
-      const sliced = matches.slice(0, limit)
-
-      return {
-        users: sliced.map(mapUser),
-        continueCursor,
-        isDone: continueCursor === null || isDone,
-      }
-    }
-
-    const results = await usersQuery
-      .order('desc')
-      .paginate({ numItems: limit, cursor: args.cursor || null })
-
     return {
-      users: results.page.map(mapUser),
-      continueCursor: results.continueCursor,
-      isDone: results.isDone,
+      users: sliced.map(mapUser),
+      continueCursor: profileResults.continueCursor,
+      isDone: profileResults.isDone || sliced.length < limit,
     }
   },
 })
@@ -197,7 +171,8 @@ export const getAllUsers = query({
 export const getUserDetails = query({
   args: { userId: v.id('users') },
   handler: async (ctx, args) => {
-    const user = await ctx.db.get(args.userId)
+    // Get enriched user with all joined data
+    const user = await getEnrichedUser(ctx, args.userId)
     if (!user) {
       throw new Error('User not found')
     }
@@ -257,15 +232,24 @@ export const getUserDetails = query({
 export const getCrisisAlerts = query({
   args: {},
   handler: async ctx => {
-    // Users in crisis band (burnout >= 80)
-    const crisisUsers = await ctx.db
-      .query('users')
+    // Users in crisis band (burnout >= 80) - query caregiverProfiles
+    const crisisProfiles = await ctx.db
+      .query('caregiverProfiles')
       .withIndex('by_burnout_band', q => q.eq('burnoutBand', 'crisis'))
       .collect()
 
+    // Get enriched users for crisis band
+    const crisisUserIds = crisisProfiles.map(p => p.userId)
+    const crisisUsers = await batchGetEnrichedUsers(ctx, crisisUserIds)
+
     // Users pending 24hr crisis follow-up (lastCrisisEventAt within last 7 days, crisisFollowupCount < 7)
     const sevenDaysAgo = Date.now() - 7 * 24 * 60 * 60 * 1000
-    const allUsers = await ctx.db.query('users').collect()
+
+    // Get all users with enriched data
+    const plainUsers = await ctx.db.query('users').collect()
+    const allUserIds = plainUsers.map(u => u._id)
+    const allUsers = await batchGetEnrichedUsers(ctx, allUserIds)
+
     const pendingFollowups = allUsers.filter(
       u =>
         u.lastCrisisEventAt &&

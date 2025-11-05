@@ -3,68 +3,35 @@ import { v } from 'convex/values'
 import { authTables } from '@convex-dev/auth/server'
 
 /**
- * NORMALIZED SCHEMA - Pre-launch refactor
- *
- * Splits god-object users table into focused domain tables:
- * - users: Auth + identity only
- * - caregiverProfiles: Profile data (firstName, relationship, journey, burnout)
- * - subscriptions: Stripe billing
- * - conversationState: Message summarization
- * - assessmentSessions: Assessment state (already exists, enhanced)
- *
- * Benefits:
- * - Clearer separation of concerns
- * - Easier to query specific domains
- * - Better index organization
- * - Simpler to add fields per domain
+ * Complete Convex schema mirroring Supabase production database.
  */
 export default defineSchema({
   ...authTables,
-
-  // ============================================================================
-  // USERS - Identity & Auth Only
-  // ============================================================================
+  // Customize the users table from authTables to include both admin and caregiver fields
   users: defineTable({
-    // Auth fields (from @convex-dev/auth)
+    // Auth fields (for admin dashboard login)
     name: v.optional(v.string()),
     image: v.optional(v.string()),
     email: v.optional(v.string()),
     emailVerificationTime: v.optional(v.number()),
-    phone: v.optional(v.string()), // For admin auth
+    phone: v.optional(v.string()),
     phoneVerificationTime: v.optional(v.number()),
     isAnonymous: v.optional(v.boolean()),
 
-    // SMS user identifier (E.164 format)
-    phoneNumber: v.optional(v.string()), // Keep in users for fast webhook lookup
-
-    // Timestamps
-    createdAt: v.optional(v.number()),
-    updatedAt: v.optional(v.number()),
-  })
-    .index('email', ['email']) // Admin login
-    .index('by_phone', ['phoneNumber']) // SMS user lookup (CRITICAL: webhook performance)
-    .index('by_created', ['createdAt']),
-
-  // ============================================================================
-  // CAREGIVER PROFILES - Profile, Journey & Burnout Data
-  // ============================================================================
-  caregiverProfiles: defineTable({
-    userId: v.id('users'),
-
-    // Profile
+    // Caregiver fields (for SMS users - all optional since admins won't have these)
+    phoneNumber: v.optional(v.string()), // E.164 format for SMS users
     firstName: v.optional(v.string()),
     relationship: v.optional(v.string()),
     careRecipientName: v.optional(v.string()),
     zipCode: v.optional(v.string()),
-    languagePreference: v.optional(v.string()),
-
-    // Journey tracking
     journeyPhase: v.optional(v.string()), // onboarding | active | maintenance | churned | crisis
-
-    // Burnout assessment
     burnoutScore: v.optional(v.number()), // 0-100
     burnoutBand: v.optional(v.string()), // crisis | high | moderate | mild | thriving
     burnoutConfidence: v.optional(v.number()), // 0-1
+    assessmentInProgress: v.optional(v.boolean()),
+    assessmentType: v.optional(v.string()), // ema | cwbs | reach_ii | sdoh
+    assessmentCurrentQuestion: v.optional(v.number()),
+    assessmentSessionId: v.optional(v.string()),
     pressureZones: v.optional(v.array(v.string())),
     pressureZoneScores: v.optional(
       v.object({
@@ -75,85 +42,33 @@ export default defineSchema({
         social_support: v.optional(v.number()),
       })
     ),
-
-    // Onboarding (trauma-informed)
+    // Map of field names to attempt counts (e.g., { "first_name": 2, "relationship": 1 })
+    // Used for trauma-informed onboarding (P3: max 2 attempts per field)
     onboardingAttempts: v.optional(v.record(v.string(), v.number())),
     onboardingCooldownUntil: v.optional(v.number()),
-
-    // Assessment state (temp tracking for in-progress assessments)
-    // TODO: Eventually migrate to query assessmentSessions directly
-    assessmentInProgress: v.optional(v.boolean()),
-    assessmentType: v.optional(v.string()),
-    assessmentCurrentQuestion: v.optional(v.number()),
-    assessmentSessionId: v.optional(v.string()),
-
-    // Device capabilities
     rcsCapable: v.optional(v.boolean()),
     deviceType: v.optional(v.string()),
     consentAt: v.optional(v.number()),
-
-    // Activity tracking
+    languagePreference: v.optional(v.string()),
+    stripeCustomerId: v.optional(v.string()),
+    stripeSubscriptionId: v.optional(v.string()),
+    subscriptionStatus: v.optional(v.string()),
+    appState: v.optional(
+      v.object({
+        lastActivity: v.optional(v.number()),
+        sessionCount: v.optional(v.number()),
+        metadata: v.optional(v.string()), // JSON string for flexible data
+      })
+    ),
+    createdAt: v.optional(v.number()),
+    updatedAt: v.optional(v.number()),
     lastContactAt: v.optional(v.number()),
     lastProactiveMessageAt: v.optional(v.number()),
     lastCrisisEventAt: v.optional(v.number()),
     crisisFollowupCount: v.optional(v.number()),
     reactivationMessageCount: v.optional(v.number()),
 
-    // App state (flexible metadata)
-    appState: v.optional(
-      v.object({
-        lastActivity: v.optional(v.number()),
-        sessionCount: v.optional(v.number()),
-        metadata: v.optional(v.string()),
-      })
-    ),
-
-    // Timestamps
-    createdAt: v.number(),
-    updatedAt: v.number(),
-  })
-    .index('by_user', ['userId']) // Primary lookup
-    .index('by_journey', ['journeyPhase']) // Scheduling queries
-    .index('by_burnout', ['burnoutScore']) // Crisis detection
-    .index('by_burnout_band', ['burnoutBand']) // Wellness check-ins
-    .index('by_last_contact', ['lastContactAt']) // Dormant detection
-    .index('by_last_proactive', ['lastProactiveMessageAt']) // Deduplication
-    .index('by_crisis_event', ['lastCrisisEventAt']) // Follow-up scheduling
-    // Composite indexes for dashboard
-    .index('by_journey_contact', ['journeyPhase', 'lastContactAt'])
-    .index('by_band_crisis', ['burnoutBand', 'lastCrisisEventAt']),
-
-  // ============================================================================
-  // SUBSCRIPTIONS - Stripe Billing
-  // ============================================================================
-  subscriptions: defineTable({
-    userId: v.id('users'),
-
-    // Stripe IDs
-    stripeCustomerId: v.optional(v.string()),
-    stripeSubscriptionId: v.optional(v.string()),
-
-    // Status
-    subscriptionStatus: v.optional(v.string()), // active | trialing | past_due | canceled | incomplete | etc
-
-    // Timestamps
-    createdAt: v.number(),
-    updatedAt: v.number(),
-    canceledAt: v.optional(v.number()),
-    trialEndsAt: v.optional(v.number()),
-  })
-    .index('by_user', ['userId']) // Primary lookup
-    .index('by_status', ['subscriptionStatus']) // Filter by status
-    .index('by_stripe_customer', ['stripeCustomerId']) // Stripe webhook lookup
-    .index('by_stripe_subscription', ['stripeSubscriptionId']), // Stripe webhook lookup
-
-  // ============================================================================
-  // CONVERSATION STATE - Message Summarization
-  // ============================================================================
-  conversationState: defineTable({
-    userId: v.id('users'),
-
-    // Recent messages (sliding window, last 10-20 messages)
+    // Conversation Summarization (Task 9)
     recentMessages: v.optional(
       v.array(
         v.object({
@@ -163,14 +78,10 @@ export default defineSchema({
         })
       )
     ),
-
-    // Historical summary (compressed via Batch API)
     historicalSummary: v.optional(v.string()),
     conversationStartDate: v.optional(v.number()),
     totalInteractionCount: v.optional(v.number()),
     historicalSummaryVersion: v.optional(v.string()),
-
-    // Token usage tracking
     historicalSummaryTokenUsage: v.optional(
       v.object({
         promptTokens: v.number(),
@@ -180,16 +91,73 @@ export default defineSchema({
         recordedAt: v.number(),
       })
     ),
-
-    // Timestamps
-    createdAt: v.number(),
-    updatedAt: v.number(),
   })
-    .index('by_user', ['userId']), // Primary lookup (one per user)
+    .index('email', ['email']) // For admin login
+    .index('by_phone', ['phoneNumber']) // For SMS user lookup
+    .index('by_journey', ['journeyPhase'])
+    .index('by_burnout', ['burnoutScore'])
+    .index('by_burnout_band', ['burnoutBand'])
+    .index('by_subscription', ['subscriptionStatus'])
+    .index('by_last_contact', ['lastContactAt'])
+    .index('by_last_proactive', ['lastProactiveMessageAt'])
+    .index('by_crisis_event', ['lastCrisisEventAt'])
+    // Composite indexes for common dashboard queries
+    .index('by_subscription_contact', ['subscriptionStatus', 'lastContactAt']) // Active users by recency
+    .index('by_journey_contact', ['journeyPhase', 'lastContactAt']) // Onboarding users by recency
+    .index('by_band_crisis', ['burnoutBand', 'lastCrisisEventAt']) // Crisis users needing follow-up
+    .index('by_journey_subscription', ['journeyPhase', 'subscriptionStatus']), // Onboarding + active filter
 
-  // ============================================================================
-  // ASSESSMENT SESSIONS - Enhanced with in-progress state
-  // ============================================================================
+  // WELLNESS_SCORES (maps to public.wellness_scores)
+  wellnessScores: defineTable({
+    userId: v.id('users'),
+
+    // Core score (maps to overall_score)
+    overallScore: v.number(), // 0-100
+
+    // Source (maps to assessment_source, assessment_type, assessment_session_id)
+    assessmentSource: v.optional(v.string()),
+    assessmentType: v.optional(v.string()),
+    assessmentSessionId: v.optional(v.id('assessmentSessions')),
+
+    // Extended fields (not in Supabase, but needed for agent)
+    confidence: v.optional(v.number()), // 0-1
+    band: v.optional(v.string()), // crisis | high | moderate | mild | thriving
+    pressureZones: v.array(v.string()),
+    pressureZoneScores: v.any(), // domain -> score (flexible object structure)
+
+    // Timestamp (maps to created_at)
+    recordedAt: v.number(),
+  })
+    .index('by_user', ['userId'])
+    .index('by_user_recorded', ['userId', 'recordedAt'])
+    .index('by_source', ['assessmentSource'])
+    .index('by_session', ['assessmentSessionId']),
+
+  // ASSESSMENT_RESPONSES (maps to public.assessment_responses)
+  assessmentResponses: defineTable({
+    // Foreign keys (maps to session_id)
+    sessionId: v.id('assessmentSessions'),
+    userId: v.id('users'), // Denormalized for faster queries
+
+    // Question (maps to question_id)
+    questionId: v.string(),
+    questionText: v.optional(v.string()), // Not in Supabase, but useful
+
+    // Response (maps to response_value)
+    responseValue: v.string(),
+
+    // Score (not in Supabase, but needed for burnout calculation)
+    score: v.optional(v.number()),
+
+    // Timestamps (maps to responded_at, created_at)
+    respondedAt: v.number(),
+    createdAt: v.number(),
+  })
+    .index('by_session', ['sessionId'])
+    .index('by_user', ['userId'])
+    .index('by_question', ['questionId']),
+
+  // ASSESSMENT_SESSIONS (not in Supabase, but needed for workflow)
   assessmentSessions: defineTable({
     userId: v.id('users'),
     type: v.string(), // ema | cwbs | reach_ii | sdoh
@@ -200,11 +168,11 @@ export default defineSchema({
     totalQuestions: v.number(),
 
     // Responses (for quick access)
-    responses: v.any(), // question_id -> response_value
+    responses: v.any(), // question_id -> response_value (flexible object)
 
     // Scoring (calculated on completion)
-    overallScore: v.optional(v.union(v.number(), v.null())), // null if all skipped
-    domainScores: v.optional(v.any()),
+    overallScore: v.optional(v.union(v.number(), v.null())), // null if all questions skipped
+    domainScores: v.optional(v.any()), // Flexible domain scores object
 
     // Timestamps
     startedAt: v.number(),
@@ -212,81 +180,65 @@ export default defineSchema({
   })
     .index('by_user', ['userId'])
     .index('by_user_type', ['userId', 'type'])
-    .index('by_completed', ['completed']) // Find in-progress assessments
+    .index('by_completed', ['completed'])
     .index('by_completion_date', ['completedAt']),
 
-  // ============================================================================
-  // EXISTING TABLES (Unchanged)
-  // ============================================================================
-
-  // WELLNESS_SCORES
-  wellnessScores: defineTable({
-    userId: v.id('users'),
-    overallScore: v.number(),
-    assessmentSource: v.optional(v.string()),
-    assessmentType: v.optional(v.string()),
-    assessmentSessionId: v.optional(v.id('assessmentSessions')),
-    confidence: v.optional(v.number()),
-    band: v.optional(v.string()),
-    pressureZones: v.array(v.string()),
-    pressureZoneScores: v.any(),
-    recordedAt: v.number(),
-  })
-    .index('by_user', ['userId'])
-    .index('by_user_recorded', ['userId', 'recordedAt'])
-    .index('by_source', ['assessmentSource'])
-    .index('by_session', ['assessmentSessionId']),
-
-  // ASSESSMENT_RESPONSES
-  assessmentResponses: defineTable({
-    sessionId: v.id('assessmentSessions'),
-    userId: v.id('users'),
-    questionId: v.string(),
-    questionText: v.optional(v.string()),
-    responseValue: v.string(),
-    score: v.optional(v.number()),
-    respondedAt: v.number(),
-    createdAt: v.number(),
-  })
-    .index('by_session', ['sessionId'])
-    .index('by_user', ['userId'])
-    .index('by_question', ['questionId']),
-
-  // KNOWLEDGE_BASE
+  // KNOWLEDGE_BASE (maps to public.knowledge_base)
   knowledgeBase: defineTable({
+    // Type (routine | resource | intervention | education)
     type: v.string(),
     category: v.optional(v.string()),
+
+    // Content
     title: v.string(),
     description: v.string(),
     content: v.optional(v.string()),
+
+    // Matching
     pressureZones: v.array(v.string()),
     tags: v.array(v.string()),
+
+    // Evidence
     evidenceSource: v.optional(v.string()),
-    evidenceLevel: v.optional(v.string()),
-    effectivenessPct: v.optional(v.number()),
-    deliveryFormat: v.optional(v.string()),
-    deliveryData: v.any(),
-    emailBlockType: v.optional(v.string()),
-    tone: v.optional(v.string()),
-    length: v.optional(v.string()),
-    componentHint: v.optional(v.string()),
-    emailSubject: v.optional(v.string()),
-    ctaText: v.optional(v.string()),
-    ctaHref: v.optional(v.string()),
+    evidenceLevel: v.optional(v.string()), // peer_reviewed | clinical_trial | expert_consensus | verified_directory | community_validated
+    effectivenessPct: v.optional(v.number()), // 0-100
+
+    // Delivery
+    deliveryFormat: v.optional(v.string()), // sms_text | rcs_card | url | phone_number | interactive | email
+    deliveryData: v.any(), // jsonb (flexible object)
+
+    // Email-specific metadata (for LLM-composable email system)
+    emailBlockType: v.optional(v.string()), // validation | tip | intervention | resource
+    tone: v.optional(v.string()), // compassionate | encouraging | urgent | neutral
+    length: v.optional(v.string()), // short | medium | long
+    componentHint: v.optional(v.string()), // ValidationBlock | TipCallout | InterventionCard | etc
+    emailSubject: v.optional(v.string()), // Suggested subject line if used as email hero
+    ctaText: v.optional(v.string()), // Call-to-action button text
+    ctaHref: v.optional(v.string()), // CTA link URL
+
+    // Localization
     language: v.string(),
     culturalTags: v.array(v.string()),
     locationSpecific: v.boolean(),
     zipCodes: v.array(v.string()),
+
+    // Usage tracking
     usageCount: v.number(),
-    avgRating: v.optional(v.number()),
+    avgRating: v.optional(v.number()), // 1-5
     lastUsedAt: v.optional(v.number()),
+
+    // Status (pending | active | archived | rejected)
     status: v.string(),
     createdBy: v.optional(v.string()),
     approvedBy: v.optional(v.string()),
     approvedAt: v.optional(v.number()),
+
+    // Timestamps
     createdAt: v.number(),
     updatedAt: v.number(),
-    embedding: v.optional(v.array(v.number())),
+
+    // Vector Search (Task 2)
+    embedding: v.optional(v.array(v.number())), // 1536-dim vector (text-embedding-3-small)
   })
     .index('by_type', ['type'])
     .index('by_status', ['status'])
@@ -302,16 +254,22 @@ export default defineSchema({
       filterFields: ['status', 'type', 'language'],
     }),
 
-  // KNOWLEDGE_USAGE
+  // KNOWLEDGE_USAGE (maps to public.knowledge_usage)
   knowledgeUsage: defineTable({
     knowledgeId: v.id('knowledgeBase'),
     userId: v.optional(v.id('users')),
+
+    // Context
     pressureZones: v.array(v.string()),
     userQuery: v.optional(v.string()),
-    searchMethod: v.optional(v.string()),
+    searchMethod: v.optional(v.string()), // semantic | keyword | web_search | direct
+
+    // Engagement
     delivered: v.boolean(),
     userAction: v.optional(v.string()),
-    rating: v.optional(v.number()),
+    rating: v.optional(v.number()), // 1-5
+
+    // Timestamp
     createdAt: v.number(),
   })
     .index('by_knowledge', ['knowledgeId'])
@@ -364,8 +322,8 @@ export default defineSchema({
 
   serviceAreas: defineTable({
     programId: v.id('programs'),
-    type: v.string(),
-    geoCodes: v.array(v.string()),
+    type: v.string(), // county | city | zip_cluster | statewide | national
+    geoCodes: v.array(v.string()), // e.g., ['36059', '11001'] or ['941', '946']
     jurisdictionLevel: v.optional(v.string()),
     createdAt: v.number(),
     updatedAt: v.number(),
@@ -375,9 +333,9 @@ export default defineSchema({
     programId: v.id('programs'),
     facilityId: v.optional(v.id('facilities')),
     primaryUrl: v.optional(v.string()),
-    aggregatorSource: v.optional(v.string()),
-    dataSourceType: v.string(),
-    verificationStatus: v.string(),
+    aggregatorSource: v.optional(v.string()), // eldercare | benefitscheckup | findhelp
+    dataSourceType: v.string(), // manual_entry | scraped | aggregator | partner_api
+    verificationStatus: v.string(), // unverified | verified_basic | verified_full
     jurisdictionLevel: v.optional(v.string()),
     lastVerifiedDate: v.optional(v.number()),
     scoreRbi: v.optional(v.number()),
@@ -402,7 +360,7 @@ export default defineSchema({
     resourceId: v.id('resources'),
     snapshot: v.any(),
     changeSummary: v.optional(v.string()),
-    actorId: v.optional(v.string()),
+    actorId: v.optional(v.string()), // admin user id or email
     createdAt: v.number(),
   })
     .index('by_resource', ['resourceId'])
@@ -411,7 +369,7 @@ export default defineSchema({
   resourceVerifications: defineTable({
     resourceId: v.id('resources'),
     verificationStatus: v.string(),
-    method: v.string(),
+    method: v.string(), // phone_call | email | web_check | partner_api
     verifiedBy: v.optional(v.string()),
     notes: v.optional(v.string()),
     evidenceUrl: v.optional(v.string()),
@@ -425,7 +383,7 @@ export default defineSchema({
   resourceFeedback: defineTable({
     resourceId: v.id('resources'),
     userId: v.optional(v.id('users')),
-    type: v.string(),
+    type: v.string(), // success | issue
     band: v.optional(v.string()),
     pressureZones: v.optional(v.array(v.string())),
     notes: v.optional(v.string()),
@@ -435,14 +393,16 @@ export default defineSchema({
     .index('by_type', ['type'])
     .index('by_submitted', ['submittedAt']),
 
-  // CONVERSATIONS
+  // CONVERSATIONS (not in Supabase, but needed for dashboard)
   conversations: defineTable({
     userId: v.id('users'),
-    role: v.string(),
+    role: v.string(), // user | assistant | system
     text: v.string(),
-    mode: v.string(),
-    messageSid: v.optional(v.string()),
-    sessionId: v.optional(v.string()),
+    mode: v.string(), // sms | rcs | voice | web
+
+    // Metadata
+    messageSid: v.optional(v.string()), // Twilio message ID
+    sessionId: v.optional(v.string()), // OpenAI session ID for tracing
     toolCalls: v.optional(
       v.array(
         v.object({
@@ -451,9 +411,11 @@ export default defineSchema({
         })
       )
     ),
-    agentName: v.optional(v.string()),
+    agentName: v.optional(v.string()), // main | crisis | assessment
+
+    // Performance
     latency: v.optional(v.number()),
-    serviceTier: v.optional(v.string()),
+    serviceTier: v.optional(v.string()), // priority | default | auto | flex
     tokenUsage: v.optional(
       v.object({
         input: v.number(),
@@ -461,8 +423,11 @@ export default defineSchema({
         total: v.number(),
       })
     ),
+
+    // Execution Trace (for admin dashboard trace viewer)
     executionTrace: v.optional(
       v.object({
+        // Total duration breakdown
         totalMs: v.number(),
         phases: v.object({
           rateLimitMs: v.optional(v.number()),
@@ -472,18 +437,22 @@ export default defineSchema({
           toolExecutionMs: v.optional(v.number()),
           persistenceMs: v.optional(v.number()),
         }),
+
+        // Linear span array (execution order)
         spans: v.array(
           v.object({
             id: v.string(),
-            name: v.string(),
-            type: v.string(),
-            startMs: v.number(),
+            name: v.string(), // "Rate Limit Check", "Input Guardrails", "Main Agent", "updateProfile Tool", etc.
+            type: v.string(), // "rate_limit" | "guardrail" | "agent" | "tool" | "database" | "external_api"
+            startMs: v.number(), // Relative to request start
             durationMs: v.number(),
-            status: v.string(),
-            metadata: v.optional(v.any()),
+            status: v.string(), // "success" | "error" | "skipped"
+            metadata: v.optional(v.any()), // Type-specific data (tool args, error messages, cache hits, etc.)
           })
         ),
-        model: v.optional(v.string()),
+
+        // Resource usage
+        model: v.optional(v.string()), // e.g., "gpt-5-nano"
         cacheHit: v.optional(v.boolean()),
         rateLimitRemaining: v.optional(
           v.object({
@@ -492,6 +461,8 @@ export default defineSchema({
             openai: v.number(),
           })
         ),
+
+        // Errors (if any)
         errors: v.optional(
           v.array(
             v.object({
@@ -503,6 +474,8 @@ export default defineSchema({
         ),
       })
     ),
+
+    // Timestamp
     timestamp: v.number(),
   })
     .index('by_user', ['userId'])
@@ -512,14 +485,20 @@ export default defineSchema({
     .index('by_service_tier', ['serviceTier'])
     .searchIndex('search_text', { searchField: 'text' }),
 
-  // CONVERSATION_FEEDBACK
+  // CONVERSATION_FEEDBACK (for admin dashboard quality evaluations)
   conversationFeedback: defineTable({
     conversationId: v.id('conversations'),
     userId: v.id('users'),
-    rating: v.number(),
-    dimension: v.string(),
-    feedbackText: v.optional(v.string()),
-    source: v.string(),
+
+    // Rating
+    rating: v.number(), // 1-5 stars
+    dimension: v.string(), // empathy | clarity | trauma_informed | user_satisfaction
+    feedbackText: v.optional(v.string()), // Optional user comment
+
+    // Source
+    source: v.string(), // user | gpt4_judge | manual_review
+
+    // Timestamp
     timestamp: v.number(),
   })
     .index('by_timestamp', ['timestamp'])
@@ -528,29 +507,43 @@ export default defineSchema({
     .index('by_conversation', ['conversationId'])
     .index('by_source', ['source']),
 
-  // EMAIL CONTACTS
+  // EMAIL CONTACTS (unified contact management for marketing site)
   emailContacts: defineTable({
     email: v.string(),
-    tags: v.array(v.string()),
-    latestAssessmentScore: v.optional(v.number()),
-    latestAssessmentBand: v.optional(v.string()),
+
+    // Subscription sources (can have multiple)
+    tags: v.array(v.string()), // ["newsletter", "assessment", "lead_magnet"]
+
+    // Assessment metadata (for segmentation)
+    latestAssessmentScore: v.optional(v.number()), // 0-30
+    latestAssessmentBand: v.optional(v.string()), // Mild | Moderate | Severe
     latestAssessmentDate: v.optional(v.number()),
-    pressureZones: v.optional(v.array(v.string())),
+    pressureZones: v.optional(v.array(v.string())), // Top pressure zone names
+
+    // Subscription preferences (granular opt-in/opt-out)
     preferences: v.object({
       newsletter: v.boolean(),
       assessmentFollowup: v.boolean(),
       productUpdates: v.boolean(),
     }),
+
+    // Resend sync (optional - for tracking external system state)
     resendContactId: v.optional(v.string()),
     resendAudienceId: v.optional(v.string()),
     lastSyncedToResend: v.optional(v.number()),
+
+    // Engagement tracking
     emailsSentCount: v.number(),
     lastEmailSentAt: v.optional(v.number()),
     lastEmailOpenedAt: v.optional(v.number()),
     lastEmailClickedAt: v.optional(v.number()),
-    status: v.string(),
+
+    // Status
+    status: v.string(), // active | unsubscribed | bounced | complained
     unsubscribedAt: v.optional(v.number()),
     unsubscribeReason: v.optional(v.string()),
+
+    // Timestamps
     createdAt: v.number(),
     updatedAt: v.number(),
   })
@@ -560,7 +553,8 @@ export default defineSchema({
     .index('by_band', ['latestAssessmentBand'])
     .index('by_created', ['createdAt']),
 
-  // NEWSLETTER SUBSCRIBERS (DEPRECATED)
+  // NEWSLETTER SUBSCRIBERS (DEPRECATED - kept for backward compatibility)
+  // Use emailContacts table for new code
   newsletterSubscribers: defineTable({
     email: v.string(),
     subscribedAt: v.number(),
@@ -572,12 +566,13 @@ export default defineSchema({
     .index('by_subscribed', ['unsubscribed'])
     .index('by_subscribed_at', ['subscribedAt']),
 
-  // ASSESSMENT RESULTS
+  // ASSESSMENT RESULTS (domain-specific assessment data)
+  // Linked to emailContacts via email field
   assessmentResults: defineTable({
     email: v.string(),
     responses: v.array(v.number()),
     totalScore: v.number(),
-    band: v.string(),
+    band: v.string(), // Mild | Moderate | Severe
     pressureZones: v.optional(v.any()),
     submittedAt: v.number(),
   })
@@ -585,7 +580,7 @@ export default defineSchema({
     .index('by_submitted_at', ['submittedAt'])
     .index('by_band', ['band']),
 
-  // EMAIL FAILURES
+  // Email delivery failure tracking for admin monitoring
   emailFailures: defineTable({
     email: v.string(),
     error: v.string(),
@@ -597,15 +592,15 @@ export default defineSchema({
     .index('by_failed_at', ['failedAt'])
     .index('by_retried', ['retried']),
 
-  // TRIGGERS (RRULE scheduling)
+  // TRIGGERS (RRULE-based scheduling for personalized wellness check-ins)
   triggers: defineTable({
     userId: v.id('users'),
-    recurrenceRule: v.string(),
-    type: v.string(),
+    recurrenceRule: v.string(), // RRULE format (RFC 5545) e.g., "FREQ=DAILY;BYHOUR=9;BYMINUTE=0"
+    type: v.string(), // "wellness_checkin" | "assessment_reminder" | "crisis_followup"
     message: v.string(),
-    timezone: v.string(),
+    timezone: v.string(), // IANA timezone (e.g., "America/Los_Angeles", "America/New_York")
     enabled: v.boolean(),
-    nextOccurrence: v.number(),
+    nextOccurrence: v.number(), // Unix timestamp (milliseconds)
     createdAt: v.number(),
     lastTriggeredAt: v.optional(v.number()),
   })
@@ -615,16 +610,16 @@ export default defineSchema({
     .index('by_enabled', ['enabled'])
     .index('by_user_type', ['userId', 'type']),
 
-  // MEMORIES (Working Memory System)
+  // MEMORIES (Working Memory System - Task 10)
   memories: defineTable({
     userId: v.id('users'),
     content: v.string(),
-    category: v.string(),
-    importance: v.number(),
+    category: v.string(), // "care_routine" | "preference" | "intervention_result" | "crisis_trigger"
+    importance: v.number(), // 1-10
     createdAt: v.number(),
     lastAccessedAt: v.optional(v.number()),
     accessCount: v.optional(v.number()),
-    embedding: v.optional(v.array(v.number())),
+    embedding: v.optional(v.array(v.number())), // For future vector search (Task 2)
   })
     .index('by_user', ['userId'])
     .index('by_user_importance', ['userId', 'importance'])
@@ -635,12 +630,12 @@ export default defineSchema({
       filterFields: ['userId'],
     }),
 
-  // ALERTS (Engagement Watcher)
+  // ALERTS (Engagement Watcher - Task 11)
   alerts: defineTable({
     userId: v.id('users'),
-    type: v.string(),
-    pattern: v.string(),
-    severity: v.string(),
+    type: v.string(), // "disengagement" | "high_stress" | "wellness_decline"
+    pattern: v.string(), // "sudden_drop" | "crisis_burst" | "worsening_scores"
+    severity: v.string(), // "low" | "medium" | "urgent"
     createdAt: v.number(),
     resolvedAt: v.optional(v.number()),
   })
@@ -648,11 +643,11 @@ export default defineSchema({
     .index('by_severity', ['severity'])
     .index('by_created', ['createdAt']),
 
-  // BATCH JOBS
+  // BATCH JOBS (OpenAI Batch API tracking for conversation summarization)
   batchJobs: defineTable({
-    batchId: v.string(),
-    status: v.string(),
-    endpoint: v.string(),
+    batchId: v.string(), // OpenAI batch ID (e.g., "batch_abc123")
+    status: v.string(), // validating | in_progress | completed | failed | cancelled | expired
+    endpoint: v.string(), // "/v1/chat/completions"
     inputFileId: v.optional(v.string()),
     outputFileId: v.optional(v.string()),
     errorFileId: v.optional(v.string()),
@@ -661,7 +656,7 @@ export default defineSchema({
       completed: v.number(),
       failed: v.number(),
     }),
-    userIds: v.array(v.id('users')),
+    userIds: v.array(v.id('users')), // Which users were included in this batch
     createdAt: v.number(),
     completedAt: v.optional(v.number()),
     expiresAt: v.optional(v.number()),
@@ -670,21 +665,22 @@ export default defineSchema({
     .index('by_status', ['status'])
     .index('by_created', ['createdAt']),
 
-  // ETL WORKFLOWS
+  // ETL WORKFLOWS (Resource Discovery Pipeline)
+  // Updated for 3-agent architecture: Extraction agent handles extraction + categorization + validation
   etlWorkflows: defineTable({
-    sessionId: v.string(),
-    task: v.string(),
-    state: v.optional(v.string()),
-    limit: v.optional(v.number()),
-    currentStep: v.string(),
-    status: v.string(),
-    trigger: v.optional(v.string()),
-    sourcesCount: v.number(),
-    extractedCount: v.number(),
-    categorizedCount: v.optional(v.number()),
-    validatedCount: v.number(),
-    errorCount: v.number(),
-    errors: v.array(v.string()),
+    sessionId: v.string(), // orch-{timestamp} from Durable Object
+    task: v.string(), // "discover_eldercare_resources", "discover_all_states"
+    state: v.optional(v.string()), // "NY", "CA", etc. (if state-specific)
+    limit: v.optional(v.number()), // Max sources to discover
+    currentStep: v.string(), // "discovery" | "extraction" | "complete" | "failed"
+    status: v.string(), // "running" | "completed" | "failed" | "paused"
+    trigger: v.optional(v.string()), // "cron" | "manual" | "api"
+    sourcesCount: v.number(), // Total sources discovered
+    extractedCount: v.number(), // Records extracted (includes categorization + validation)
+    categorizedCount: v.optional(v.number()), // DEPRECATED (v0.3.0): Legacy field for backward compatibility
+    validatedCount: v.number(), // Records fully validated (ready for QA)
+    errorCount: v.number(), // Total errors encountered
+    errors: v.array(v.string()), // Error messages
     startedAt: v.number(),
     completedAt: v.optional(v.number()),
     durationMs: v.optional(v.number()),
@@ -694,21 +690,21 @@ export default defineSchema({
     .index('by_started', ['startedAt'])
     .index('by_task', ['task']),
 
-  // ETL SOURCES
+  // ETL DISCOVERED SOURCES (Output from Discovery Agent)
   etlSources: defineTable({
     workflowId: v.id('etlWorkflows'),
     url: v.string(),
     title: v.string(),
     description: v.optional(v.string()),
-    sourceType: v.string(),
-    trustScore: v.number(),
+    sourceType: v.string(), // "government" | "nonprofit" | "medical" | "directory"
+    trustScore: v.number(), // 0-10 from Discovery Agent
     discoveredAt: v.number(),
   })
     .index('by_workflow', ['workflowId'])
     .index('by_url', ['url'])
     .index('by_trust_score', ['trustScore']),
 
-  // ETL EXTRACTED RECORDS
+  // ETL EXTRACTED RECORDS (Output from Extraction Agent, input to Validator)
   etlExtractedRecords: defineTable({
     workflowId: v.id('etlWorkflows'),
     sourceId: v.id('etlSources'),
@@ -716,8 +712,8 @@ export default defineSchema({
     providerName: v.string(),
     phones: v.array(v.string()),
     website: v.string(),
-    serviceTypes: v.array(v.string()),
-    coverage: v.string(),
+    serviceTypes: v.array(v.string()), // From taxonomy
+    coverage: v.string(), // "national" | "state" | "county" | "zip" | "radius"
     state: v.optional(v.string()),
     county: v.optional(v.string()),
     zipCodes: v.optional(v.array(v.string())),
@@ -725,23 +721,23 @@ export default defineSchema({
     eligibility: v.optional(v.string()),
     cost: v.optional(v.string()),
     extractedAt: v.number(),
-    validationStatus: v.optional(v.string()),
+    validationStatus: v.optional(v.string()), // "pending" | "passed" | "failed"
     validationErrors: v.optional(v.array(v.string())),
   })
     .index('by_workflow', ['workflowId'])
     .index('by_source', ['sourceId'])
     .index('by_validation_status', ['validationStatus']),
 
-  // ETL VALIDATED RECORDS
+  // ETL VALIDATED RECORDS (Output from Validator, ready for human QA)
   etlValidatedRecords: defineTable({
     workflowId: v.id('etlWorkflows'),
-    extractedRecordId: v.optional(v.id('etlExtractedRecords')),
+    extractedRecordId: v.optional(v.id('etlExtractedRecords')), // Optional for Phase 1
     title: v.string(),
     providerName: v.string(),
-    phones: v.array(v.string()),
-    website: v.string(),
+    phones: v.array(v.string()), // E.164 normalized
+    website: v.string(), // Validated (HEAD check)
     serviceTypes: v.array(v.string()),
-    zones: v.array(v.string()),
+    zones: v.array(v.string()), // Mapped from serviceTypes
     coverage: v.string(),
     state: v.optional(v.string()),
     county: v.optional(v.string()),
@@ -749,7 +745,7 @@ export default defineSchema({
     description: v.optional(v.string()),
     eligibility: v.optional(v.string()),
     cost: v.optional(v.string()),
-    qualityScore: v.number(),
+    qualityScore: v.number(), // 0-10 from Validator
     phoneValidation: v.object({
       valid: v.boolean(),
       normalized: v.array(v.string()),
@@ -759,7 +755,7 @@ export default defineSchema({
       statusCode: v.optional(v.number()),
     }),
     validatedAt: v.number(),
-    qaStatus: v.string(),
+    qaStatus: v.string(), // "pending" | "approved" | "rejected" | "edited"
     qaReviewedAt: v.optional(v.number()),
     qaReviewedBy: v.optional(v.id('users')),
     qaFeedback: v.optional(v.string()),
@@ -769,19 +765,24 @@ export default defineSchema({
     .index('by_quality_score', ['qualityScore'])
     .index('by_validated', ['validatedAt']),
 
-  // FEEDBACK (Poke-style implicit feedback)
+  // FEEDBACK (Poke-style implicit feedback for training data)
   feedback: defineTable({
     userId: v.id('users'),
-    conversationId: v.optional(v.id('conversations')),
-    signal: v.string(),
-    value: v.number(),
+    conversationId: v.optional(v.id('conversations')), // The agent message being evaluated (references conversations table)
+
+    // Implicit signal type
+    signal: v.string(), // "follow_up" | "gratitude" | "frustration" | "re_ask" | "silence" | "link_click" | "tool_success"
+    value: v.number(), // 0.0 to 1.0 (helpfulness score)
+
+    // Context for training data
     context: v.object({
-      agentResponse: v.optional(v.string()),
-      userMessage: v.optional(v.string()),
-      toolUsed: v.optional(v.string()),
-      timeSincePrevious: v.optional(v.number()),
-      sessionLength: v.optional(v.number()),
+      agentResponse: v.optional(v.string()), // What the agent said
+      userMessage: v.optional(v.string()), // What the user said (that triggered feedback)
+      toolUsed: v.optional(v.string()), // Which tool was called (if any)
+      timeSincePrevious: v.optional(v.number()), // Milliseconds between messages
+      sessionLength: v.optional(v.number()), // Messages in this conversation
     }),
+
     timestamp: v.number(),
   })
     .index('by_user', ['userId'])

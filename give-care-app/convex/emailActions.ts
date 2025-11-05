@@ -45,7 +45,7 @@ export const generateAndSendEmail = action({
       const openai = getOpenAI();
 
       const orchestratorResponse = await openai.chat.completions.create({
-        model: 'gpt-4o',
+        model: process.env.OPENAI_MODEL || 'gpt-5-nano',
         messages: [
           {
             role: 'system',
@@ -80,7 +80,7 @@ export const generateAndSendEmail = action({
       const composerPrompt = getComposerInstructions(contentPlan, contentBlocks, emailContext);
 
       const composerResponse = await openai.chat.completions.create({
-        model: 'gpt-4o',
+        model: process.env.OPENAI_MODEL || 'gpt-5-nano',
         messages: [
           {
             role: 'system',

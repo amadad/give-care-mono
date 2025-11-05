@@ -27,9 +27,8 @@ These docs tracked the email system implementation from October-November 2025:
 
 ## Current Documentation
 
-See root directory:
-- **EMAIL_SYSTEM.md** - Consolidated current implementation
-- **EMAIL_DELIVERY_FIX.md** - Troubleshooting guide (RESEND_API_KEY)
+- **../EMAIL_SYSTEM.md** - Consolidated current implementation
+- **../../../give-care-app/docs/EMAIL_DELIVERY_FIX.md** - Troubleshooting guide (RESEND_API_KEY in Convex)
 
 ---
 

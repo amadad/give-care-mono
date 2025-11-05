@@ -1,10 +1,19 @@
 /**
  * User management functions
- * CRUD operations for users table
+ * CRUD operations for users table (normalized schema)
+ * Uses helpers from lib/userHelpers.ts for multi-table joins
  */
 
 import { mutation, query, internalMutation, internalQuery } from '../_generated/server'
 import { v } from 'convex/values'
+import {
+  getEnrichedUser,
+  getEnrichedUserByPhone,
+  getOrCreateEnrichedUserByPhone,
+  updateCaregiverProfile,
+  updateSubscription,
+  updateConversationState,
+} from '../lib/userHelpers'
 
 // QUERIES
 
@@ -33,24 +42,17 @@ export const createUser = internalMutation({
     rcsCapable: v.boolean(),
   },
   handler: async (ctx, args) => {
-    const now = Date.now()
+    // Create user and all related tables using helper
+    const enrichedUser = await getOrCreateEnrichedUserByPhone(ctx, args.phoneNumber)
 
-    const userId = await ctx.db.insert('users', {
-      phoneNumber: args.phoneNumber,
-      journeyPhase: 'onboarding',
-      assessmentInProgress: false,
-      assessmentCurrentQuestion: 0,
-      pressureZones: [],
-      onboardingAttempts: {},
-      rcsCapable: args.rcsCapable,
-      subscriptionStatus: 'inactive',
-      languagePreference: 'en',
-      appState: {},
-      createdAt: now,
-      updatedAt: now,
-    })
+    // Update RCS capability if provided
+    if (args.rcsCapable) {
+      await updateCaregiverProfile(ctx, enrichedUser._id, {
+        rcsCapable: args.rcsCapable,
+      })
+    }
 
-    return userId
+    return enrichedUser._id
   },
 })
 
@@ -66,14 +68,14 @@ export const updateProfile = internalMutation({
     const { userId, ...updates } = args
 
     // Filter out undefined values
-    const cleanUpdates: Record<string, any> = { updatedAt: Date.now() }
+    const cleanUpdates: Record<string, any> = {}
     if (updates.firstName !== undefined) cleanUpdates.firstName = updates.firstName
     if (updates.relationship !== undefined) cleanUpdates.relationship = updates.relationship
     if (updates.careRecipientName !== undefined)
       cleanUpdates.careRecipientName = updates.careRecipientName
     if (updates.zipCode !== undefined) cleanUpdates.zipCode = updates.zipCode
 
-    await ctx.db.patch(userId, cleanUpdates)
+    await updateCaregiverProfile(ctx, userId, cleanUpdates)
 
     return { success: true }
   },
@@ -86,10 +88,9 @@ export const updateWellness = internalMutation({
     pressureZones: v.array(v.string()),
   },
   handler: async (ctx, args) => {
-    await ctx.db.patch(args.userId, {
+    await updateCaregiverProfile(ctx, args.userId, {
       burnoutScore: args.burnoutScore,
       pressureZones: args.pressureZones,
-      updatedAt: Date.now(),
     })
   },
 })
@@ -104,9 +105,10 @@ export const updateAssessmentState = internalMutation({
   handler: async (ctx, args) => {
     const { userId, ...updates } = args
 
-    await ctx.db.patch(userId, {
-      ...updates,
-      updatedAt: Date.now(),
+    await updateCaregiverProfile(ctx, userId, {
+      assessmentInProgress: updates.assessmentInProgress,
+      assessmentType: updates.assessmentType,
+      assessmentCurrentQuestion: updates.assessmentCurrentQuestion,
     })
   },
 })
@@ -114,9 +116,8 @@ export const updateAssessmentState = internalMutation({
 export const updateLastContact = internalMutation({
   args: { userId: v.id('users') },
   handler: async (ctx, args) => {
-    await ctx.db.patch(args.userId, {
+    await updateCaregiverProfile(ctx, args.userId, {
       lastContactAt: Date.now(),
-      updatedAt: Date.now(),
     })
   },
 })
@@ -127,9 +128,8 @@ export const updateJourneyPhase = internalMutation({
     journeyPhase: v.string(),
   },
   handler: async (ctx, args) => {
-    await ctx.db.patch(args.userId, {
+    await updateCaregiverProfile(ctx, args.userId, {
       journeyPhase: args.journeyPhase,
-      updatedAt: Date.now(),
     })
   },
 })
@@ -157,39 +157,43 @@ export const updateContextState = internalMutation({
   handler: async (ctx, args) => {
     const { userId, ...updates } = args
 
-    // Filter out undefined values
-    const cleanUpdates: Record<string, any> = { updatedAt: Date.now() }
-
-    if (updates.firstName !== undefined) cleanUpdates.firstName = updates.firstName
-    if (updates.relationship !== undefined) cleanUpdates.relationship = updates.relationship
+    // Build updates for caregiverProfiles table
+    const profileUpdates: Record<string, any> = {}
+    if (updates.firstName !== undefined) profileUpdates.firstName = updates.firstName
+    if (updates.relationship !== undefined) profileUpdates.relationship = updates.relationship
     if (updates.careRecipientName !== undefined)
-      cleanUpdates.careRecipientName = updates.careRecipientName
-    if (updates.zipCode !== undefined) cleanUpdates.zipCode = updates.zipCode
-    if (updates.journeyPhase !== undefined) cleanUpdates.journeyPhase = updates.journeyPhase
+      profileUpdates.careRecipientName = updates.careRecipientName
+    if (updates.zipCode !== undefined) profileUpdates.zipCode = updates.zipCode
+    if (updates.journeyPhase !== undefined) profileUpdates.journeyPhase = updates.journeyPhase
     if (updates.onboardingAttempts !== undefined)
-      cleanUpdates.onboardingAttempts = updates.onboardingAttempts
-    // FIX #4: Persist cooldown timestamp
+      profileUpdates.onboardingAttempts = updates.onboardingAttempts
     if (updates.onboardingCooldownUntil !== undefined) {
-      cleanUpdates.onboardingCooldownUntil = updates.onboardingCooldownUntil
+      profileUpdates.onboardingCooldownUntil = updates.onboardingCooldownUntil
         ? Date.parse(updates.onboardingCooldownUntil)
         : undefined
     }
-    if (updates.assessmentInProgress !== undefined)
-      cleanUpdates.assessmentInProgress = updates.assessmentInProgress
-    if (updates.assessmentType !== undefined) cleanUpdates.assessmentType = updates.assessmentType
-    if (updates.assessmentCurrentQuestion !== undefined)
-      cleanUpdates.assessmentCurrentQuestion = updates.assessmentCurrentQuestion
-    if (updates.assessmentSessionId !== undefined)
-      cleanUpdates.assessmentSessionId = updates.assessmentSessionId
-    if (updates.burnoutScore !== undefined) cleanUpdates.burnoutScore = updates.burnoutScore
-    if (updates.burnoutBand !== undefined) cleanUpdates.burnoutBand = updates.burnoutBand
+    if (updates.burnoutScore !== undefined) profileUpdates.burnoutScore = updates.burnoutScore
+    if (updates.burnoutBand !== undefined) profileUpdates.burnoutBand = updates.burnoutBand
     if (updates.burnoutConfidence !== undefined)
-      cleanUpdates.burnoutConfidence = updates.burnoutConfidence
-    if (updates.pressureZones !== undefined) cleanUpdates.pressureZones = updates.pressureZones
+      profileUpdates.burnoutConfidence = updates.burnoutConfidence
+    if (updates.pressureZones !== undefined) profileUpdates.pressureZones = updates.pressureZones
     if (updates.pressureZoneScores !== undefined)
-      cleanUpdates.pressureZoneScores = updates.pressureZoneScores
+      profileUpdates.pressureZoneScores = updates.pressureZoneScores
 
-    await ctx.db.patch(userId, cleanUpdates)
+    // Assessment fields stay on caregiverProfiles for now
+    // TODO: Move to assessmentSessions table in future refactor
+    if (updates.assessmentInProgress !== undefined)
+      profileUpdates.assessmentInProgress = updates.assessmentInProgress
+    if (updates.assessmentType !== undefined) profileUpdates.assessmentType = updates.assessmentType
+    if (updates.assessmentCurrentQuestion !== undefined)
+      profileUpdates.assessmentCurrentQuestion = updates.assessmentCurrentQuestion
+    if (updates.assessmentSessionId !== undefined)
+      profileUpdates.assessmentSessionId = updates.assessmentSessionId
+
+    // Update caregiverProfiles if any fields present
+    if (Object.keys(profileUpdates).length > 0) {
+      await updateCaregiverProfile(ctx, userId, profileUpdates)
+    }
 
     return { success: true }
   },
@@ -200,51 +204,8 @@ export const updateContextState = internalMutation({
 export const getOrCreateByPhone = internalMutation({
   args: { phoneNumber: v.string() },
   handler: async (ctx, args) => {
-    const existing = await ctx.db
-      .query('users')
-      .withIndex('by_phone', (q: any) => q.eq('phoneNumber', args.phoneNumber))
-      .unique()
-
-    if (existing) {
-      return existing
-    }
-
-    const now = Date.now()
-    const id = await ctx.db.insert('users', {
-      phoneNumber: args.phoneNumber,
-      journeyPhase: 'onboarding',
-      assessmentInProgress: false,
-      assessmentCurrentQuestion: 0,
-      pressureZones: [],
-      onboardingAttempts: {},
-      rcsCapable: false,
-      subscriptionStatus: 'inactive',
-      languagePreference: 'en',
-      appState: {},
-      createdAt: now,
-      updatedAt: now,
-    })
-
-    // Fetch the newly created user - use a small delay to ensure commit
-    // This is a workaround for Convex transaction timing
-    const newUser = await ctx.db.get(id)
-
-    if (!newUser) {
-      // Fallback: If get() returns null, query by phone
-      console.warn('[getOrCreateByPhone] ctx.db.get() returned null, falling back to query')
-      const fallback = await ctx.db
-        .query('users')
-        .withIndex('by_phone', (q: any) => q.eq('phoneNumber', args.phoneNumber))
-        .unique()
-
-      if (!fallback) {
-        throw new Error('Failed to retrieve newly created user')
-      }
-
-      return fallback
-    }
-
-    return newUser
+    // Use helper that handles all table creation
+    return await getOrCreateEnrichedUserByPhone(ctx, args.phoneNumber)
   },
 })
 
@@ -262,10 +223,16 @@ export const patchProfile = mutation({
     const user = await ctx.db.get(args.userId)
     if (!user) throw new Error('user not found')
 
-    await ctx.db.patch(args.userId, {
-      ...args.updates,
-      updatedAt: Date.now(),
-    })
+    // Filter out undefined values
+    const cleanUpdates: Record<string, any> = {}
+    if (args.updates.firstName !== undefined) cleanUpdates.firstName = args.updates.firstName
+    if (args.updates.relationship !== undefined)
+      cleanUpdates.relationship = args.updates.relationship
+    if (args.updates.careRecipientName !== undefined)
+      cleanUpdates.careRecipientName = args.updates.careRecipientName
+    if (args.updates.zipCode !== undefined) cleanUpdates.zipCode = args.updates.zipCode
+
+    await updateCaregiverProfile(ctx, args.userId, cleanUpdates)
 
     return { success: true }
   },
@@ -285,7 +252,7 @@ export const updateUser = internalMutation({
     const { userId, ...updates } = args
 
     // Filter out undefined values
-    const cleanUpdates: Record<string, any> = { updatedAt: Date.now() }
+    const cleanUpdates: Record<string, any> = {}
     if (updates.journeyPhase !== undefined) cleanUpdates.journeyPhase = updates.journeyPhase
     if (updates.lastProactiveMessageAt !== undefined)
       cleanUpdates.lastProactiveMessageAt = updates.lastProactiveMessageAt
@@ -296,7 +263,7 @@ export const updateUser = internalMutation({
     if (updates.reactivationMessageCount !== undefined)
       cleanUpdates.reactivationMessageCount = updates.reactivationMessageCount
 
-    await ctx.db.patch(userId, cleanUpdates)
+    await updateCaregiverProfile(ctx, userId, cleanUpdates)
 
     return { success: true }
   },
@@ -317,19 +284,22 @@ export const getEligibleForCrisisDaily = internalQuery({
     const twoDaysAgo = now - 2 * DAY_MS
     const sevenDaysAgo = now - 7 * DAY_MS
 
-    const users = await ctx.db
-      .query('users')
+    const profiles = await ctx.db
+      .query('caregiverProfiles')
       .withIndex('by_burnout_band', (q: any) => q.eq('burnoutBand', 'crisis'))
       .collect()
 
     // Filter: crisis within last 7 days, not contacted in 2+ days
-    return users.filter(
-      user =>
-        user.journeyPhase === 'active' &&
-        user.lastCrisisEventAt &&
-        user.lastCrisisEventAt > sevenDaysAgo &&
-        (!user.lastContactAt || user.lastContactAt < twoDaysAgo)
+    const eligibleProfiles = profiles.filter(
+      profile =>
+        profile.journeyPhase === 'active' &&
+        profile.lastCrisisEventAt &&
+        profile.lastCrisisEventAt > sevenDaysAgo &&
+        (!profile.lastContactAt || profile.lastContactAt < twoDaysAgo)
     )
+
+    // Return enriched users
+    return await Promise.all(eligibleProfiles.map(profile => getEnrichedUser(ctx, profile.userId)))
   },
 })
 
@@ -343,20 +313,23 @@ export const getEligibleForCrisisWeekly = internalQuery({
     const sevenDaysAgo = now - 7 * DAY_MS
     const oneWeekAgo = now - 7 * DAY_MS
 
-    const users = await ctx.db
-      .query('users')
+    const profiles = await ctx.db
+      .query('caregiverProfiles')
       .withIndex('by_burnout_band', (q: any) => q.eq('burnoutBand', 'crisis'))
       .collect()
 
     // Filter: crisis >7 days ago, not proactively messaged in 7+ days, not contacted in 3+ days
-    return users.filter(
-      user =>
-        user.journeyPhase === 'active' &&
-        user.lastCrisisEventAt &&
-        user.lastCrisisEventAt <= sevenDaysAgo &&
-        (!user.lastProactiveMessageAt || user.lastProactiveMessageAt < oneWeekAgo) &&
-        (!user.lastContactAt || user.lastContactAt < threeDaysAgo)
+    const eligibleProfiles = profiles.filter(
+      profile =>
+        profile.journeyPhase === 'active' &&
+        profile.lastCrisisEventAt &&
+        profile.lastCrisisEventAt <= sevenDaysAgo &&
+        (!profile.lastProactiveMessageAt || profile.lastProactiveMessageAt < oneWeekAgo) &&
+        (!profile.lastContactAt || profile.lastContactAt < threeDaysAgo)
     )
+
+    // Return enriched users
+    return await Promise.all(eligibleProfiles.map(profile => getEnrichedUser(ctx, profile.userId)))
   },
 })
 
@@ -369,18 +342,21 @@ export const getEligibleForHighBurnoutCheckin = internalQuery({
     const twoDaysAgo = now - 2 * DAY_MS
     const threeDaysAgo = now - 3 * DAY_MS
 
-    const users = await ctx.db
-      .query('users')
+    const profiles = await ctx.db
+      .query('caregiverProfiles')
       .withIndex('by_burnout_band', (q: any) => q.eq('burnoutBand', 'high'))
       .collect()
 
     // Filter: active, not proactively messaged in 3+ days, not contacted in 2+ days
-    return users.filter(
-      user =>
-        user.journeyPhase === 'active' &&
-        (!user.lastProactiveMessageAt || user.lastProactiveMessageAt < threeDaysAgo) &&
-        (!user.lastContactAt || user.lastContactAt < twoDaysAgo)
+    const eligibleProfiles = profiles.filter(
+      profile =>
+        profile.journeyPhase === 'active' &&
+        (!profile.lastProactiveMessageAt || profile.lastProactiveMessageAt < threeDaysAgo) &&
+        (!profile.lastContactAt || profile.lastContactAt < twoDaysAgo)
     )
+
+    // Return enriched users
+    return await Promise.all(eligibleProfiles.map(profile => getEnrichedUser(ctx, profile.userId)))
   },
 })
 
@@ -393,18 +369,21 @@ export const getEligibleForModerateCheckin = internalQuery({
     const threeDaysAgo = now - 3 * DAY_MS
     const oneWeekAgo = now - 7 * DAY_MS
 
-    const users = await ctx.db
-      .query('users')
+    const profiles = await ctx.db
+      .query('caregiverProfiles')
       .withIndex('by_burnout_band', (q: any) => q.eq('burnoutBand', 'moderate'))
       .collect()
 
     // Filter: active, not proactively messaged in 7+ days, not contacted in 3+ days
-    return users.filter(
-      user =>
-        user.journeyPhase === 'active' &&
-        (!user.lastProactiveMessageAt || user.lastProactiveMessageAt < oneWeekAgo) &&
-        (!user.lastContactAt || user.lastContactAt < threeDaysAgo)
+    const eligibleProfiles = profiles.filter(
+      profile =>
+        profile.journeyPhase === 'active' &&
+        (!profile.lastProactiveMessageAt || profile.lastProactiveMessageAt < oneWeekAgo) &&
+        (!profile.lastContactAt || profile.lastContactAt < threeDaysAgo)
     )
+
+    // Return enriched users
+    return await Promise.all(eligibleProfiles.map(profile => getEnrichedUser(ctx, profile.userId)))
   },
 })
 
@@ -416,8 +395,8 @@ export const getDormantAtMilestones = internalQuery({
     const now = Date.now()
     const sevenDaysAgo = now - 7 * DAY_MS
 
-    const users = await ctx.db
-      .query('users')
+    const profiles = await ctx.db
+      .query('caregiverProfiles')
       .withIndex('by_last_contact')
       .filter(q =>
         q.and(
@@ -428,6 +407,11 @@ export const getDormantAtMilestones = internalQuery({
       .collect()
 
     // Filter out users who already received 3 reactivation messages (in memory)
-    return users.filter(user => (user.reactivationMessageCount || 0) < 3)
+    const eligibleProfiles = profiles.filter(
+      profile => (profile.reactivationMessageCount || 0) < 3
+    )
+
+    // Return enriched users
+    return await Promise.all(eligibleProfiles.map(profile => getEnrichedUser(ctx, profile.userId)))
   },
 })
