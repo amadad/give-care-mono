@@ -26,7 +26,7 @@ export default function SuccessPage() {
         <div className="container mx-auto px-4">
           <div className="flex flex-col lg:flex-row items-center justify-between gap-8">
             {/* Left side - Success message */}
-            <div className="lg:w-1/2 space-y-6 text-center lg:text-left">
+            <div className="w-full lg:w-1/2 space-y-6 text-center lg:text-left">
               <div className="inline-flex items-center px-4 py-2 bg-success/10 border border-success/20 rounded-full text-success text-sm font-medium mb-4">
                 <svg className="w-4 h-4 mr-2" fill="currentColor" viewBox="0 0 20 20">
                   <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
@@ -77,8 +77,8 @@ export default function SuccessPage() {
               </p>
             </div>
             
-            {/* Right side - Phone mockup with success chat */}
-            <div className="lg:w-1/2 flex flex-col items-center gap-6">
+            {/* Right side - Phone mockup with success chat (hidden on mobile) */}
+            <div className="hidden lg:flex lg:w-1/2 flex-col items-center gap-6">
               <div className="w-full">
                 <div className="mockup-phone border-primary transform scale-90 shadow-2xl">
                   <div className="mockup-phone-camera"></div>
