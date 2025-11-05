@@ -118,8 +118,6 @@ export const createCheckoutSession = action({
           couponCode: couponCode || 'none',
         },
       },
-      // Pre-fill customer information from signup form
-      customer_email: customer.email || undefined, // Pre-fill email (user can't change it)
       phone_number_collection: {
         enabled: false, // Don't collect phone - we already have it
       },
