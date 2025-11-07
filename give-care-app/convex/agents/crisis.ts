@@ -15,9 +15,12 @@
 import { action } from '../_generated/server';
 import { internal } from '../_generated/api';
 import { v } from 'convex/values';
-import { Agent } from '@openai/agents';
+import { Agent, run, setOpenAIAPI } from '@openai/agents';
 import type { AgentContext, AgentInput, StreamChunk } from '../lib/types';
 import { CRISIS_PROMPT, renderPrompt } from '../lib/prompts';
+
+// Configure OpenAI SDK to use responses API
+setOpenAIAPI('responses');
 
 const channelValidator = v.union(
   v.literal('sms'),
@@ -89,23 +92,11 @@ export const runCrisisAgent = action({
       metadata: context.metadata,
     };
 
-    // Create agent with @openai/agents SDK
-    const agent = new Agent({
-      name: 'crisis',
-      instructions: systemPrompt,
-      model: 'gpt-4o-mini', // Fast model for crisis response
-      tools: [], // No tools needed for crisis response (just provide resources)
-    });
-
-    // Run agent and collect response
-    const chunks: StreamChunk[] = [];
-    const startTime = Date.now();
-
-    try {
-      // @openai/agents Agent has a chat() method for conversations
-      // For now, provide a simple crisis response
-      // TODO: Integrate proper OpenAI streaming in Phase 3
-      const responseText = `I hear that you're going through a very difficult time.
+    // Check for OpenAI API key
+    const apiKey = process.env.OPENAI_API_KEY;
+    if (!apiKey) {
+      console.error('OPENAI_API_KEY not found in Convex environment');
+      const fallbackResponse = `I hear that you're going through a very difficult time.
 
 If you're experiencing a crisis, please reach out for immediate help:
 - Call 988 (Suicide & Crisis Lifeline)
@@ -113,6 +104,48 @@ If you're experiencing a crisis, please reach out for immediate help:
 - Call 911 if you are in immediate danger
 
 For ${careRecipient}, resources are available 24/7. You're not alone in this.`;
+
+      await ctx.runMutation(internal.functions.logs.logCrisisInteraction, {
+        userId: context.userId,
+        input: input.text,
+        chunks: [fallbackResponse],
+        timestamp: Date.now(),
+      });
+
+      return {
+        chunks: [{ type: 'text', content: fallbackResponse }],
+        latencyMs: 0,
+      };
+    }
+
+    // Create agent with @openai/agents SDK
+    const agent = new Agent({
+      name: 'crisis',
+      instructions: systemPrompt,
+      model: process.env.OPENAI_MODEL ?? 'gpt-4o-mini', // Fast model for crisis response
+      tools: [], // No tools needed for crisis response
+    });
+
+    // Run agent and collect response
+    const chunks: StreamChunk[] = [];
+    const startTime = Date.now();
+
+    try {
+      // Call OpenAI via @openai/agents SDK
+      const result = await run(agent, input.text, {
+        context: llmContext,
+        conversationId: context.sessionId ?? context.userId,
+      });
+
+      // Extract response from result
+      let responseText = '';
+      if (result && typeof result.finalOutput === 'string') {
+        responseText = result.finalOutput;
+      } else if (result && result.finalOutput) {
+        responseText = JSON.stringify(result.finalOutput);
+      } else {
+        responseText = 'I hear you. Please reach out to 988 (Suicide & Crisis Lifeline) for immediate support.';
+      }
 
       chunks.push({
         type: 'text',

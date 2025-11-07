@@ -15,10 +15,13 @@
 import { action } from '../_generated/server';
 import { internal } from '../_generated/api';
 import { v } from 'convex/values';
-import { Agent } from '@openai/agents';
+import { Agent, run, setOpenAIAPI } from '@openai/agents';
 import type { AgentContext, AgentInput, StreamChunk } from '../lib/types';
 import { MAIN_PROMPT, renderPrompt } from '../lib/prompts';
 import { getTone } from '../lib/policy';
+
+// Configure OpenAI SDK to use responses API
+setOpenAIAPI('responses');
 
 const channelValidator = v.union(
   v.literal('sms'),
@@ -101,22 +104,11 @@ export const runMainAgent = action({
       metadata: context.metadata,
     };
 
-    // Create agent with @openai/agents SDK
-    const agent = new Agent({
-      name: 'main',
-      instructions: systemPrompt,
-      model: 'gpt-4o-mini',
-      tools: [], // TODO: Add tools in future phase (schedule, assess, etc.)
-    });
-
-    // Run agent and collect response
-    const chunks: StreamChunk[] = [];
-    const startTime = Date.now();
-
-    try {
-      // TODO: Integrate proper OpenAI streaming in future phase
-      // For now, provide a helpful response
-      const responseText = `Hello ${userName}! I'm here to support you in caring for ${careRecipient}.
+    // Check for OpenAI API key
+    const apiKey = process.env.OPENAI_API_KEY;
+    if (!apiKey) {
+      console.error('OPENAI_API_KEY not found in Convex environment');
+      const fallbackResponse = `Hello ${userName}! I'm here to support you in caring for ${careRecipient}.
 
 How can I help you today? I can:
 - Answer questions about caregiving
@@ -125,6 +117,54 @@ How can I help you today? I can:
 - Connect you with assessments and interventions
 
 What's on your mind?`;
+
+      await ctx.runMutation(internal.functions.logs.logAgentRunInternal, {
+        userId: context.userId,
+        agent: 'main',
+        policyBundle: 'default_v1',
+        budgetResult: {
+          usedInputTokens: input.text.length,
+          usedOutputTokens: fallbackResponse.length,
+          toolCalls: 0,
+        },
+        latencyMs: 0,
+        traceId: `main-${Date.now()}`,
+      });
+
+      return {
+        chunks: [{ type: 'text', content: fallbackResponse }],
+        latencyMs: 0,
+      };
+    }
+
+    // Create agent with @openai/agents SDK
+    const agent = new Agent({
+      name: 'main',
+      instructions: systemPrompt,
+      model: process.env.OPENAI_MODEL ?? 'gpt-4o-mini',
+      tools: [], // TODO: Add tools (schedule, assess, etc.)
+    });
+
+    // Run agent and collect response
+    const chunks: StreamChunk[] = [];
+    const startTime = Date.now();
+
+    try {
+      // Call OpenAI via @openai/agents SDK
+      const result = await run(agent, input.text, {
+        context: llmContext,
+        conversationId: context.sessionId ?? context.userId,
+      });
+
+      // Extract response from result
+      let responseText = '';
+      if (result && typeof result.finalOutput === 'string') {
+        responseText = result.finalOutput;
+      } else if (result && result.finalOutput) {
+        responseText = JSON.stringify(result.finalOutput);
+      } else {
+        responseText = `I'm here to support you, ${userName}. How can I help you with caring for ${careRecipient}?`;
+      }
 
       chunks.push({
         type: 'text',
