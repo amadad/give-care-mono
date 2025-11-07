@@ -1,209 +1,96 @@
-/**
- * Assessment session and response management functions
- */
+import { mutation } from '../_generated/server';
+import { v } from 'convex/values';
+import * as Users from '../model/users';
 
-import { internalMutation, internalQuery } from '../_generated/server'
-import { v } from 'convex/values'
+const QUESTIONS = {
+  burnout_v1: [
+    { id: 'energy', prompt: 'How much energy do you have right now?', type: 'scale', min: 0, max: 4 },
+    { id: 'stress', prompt: 'How stressed do you feel?', type: 'scale', min: 0, max: 4 },
+    { id: 'support', prompt: 'Do you feel supported today?', type: 'scale', min: 0, max: 4 },
+    { id: 'hope', prompt: 'How hopeful do you feel about the week ahead?', type: 'scale', min: 0, max: 4 },
+  ],
+} as const;
 
-// QUERIES
+type DefinitionId = keyof typeof QUESTIONS;
 
-export const getSession = internalQuery({
-  args: { sessionId: v.id('assessmentSessions') },
-  handler: async (ctx, args) => {
-    return await ctx.db.get(args.sessionId)
-  },
-})
+const getQuestions = (definitionId: string) => {
+  const qs = QUESTIONS[definitionId as DefinitionId];
+  if (!qs) throw new Error(`Unknown assessment definition ${definitionId}`);
+  return qs;
+};
 
-export const getLatestSession = internalQuery({
+const scoreAnswers = (answers: Array<{ value: number }>) => {
+  const total = answers.reduce((sum, a) => sum + a.value, 0);
+  const band = total >= 15 ? 'high' : total >= 8 ? 'medium' : 'low';
+  return {
+    total,
+    band,
+    explanation: `Total score ${total}/20 indicates ${band} burnout.`,
+  };
+};
+
+export const start = mutation({
   args: {
-    userId: v.id('users'),
-    type: v.optional(v.string()),
+    userId: v.string(),
+    definitionId: v.string(),
   },
-  handler: async (ctx, args) => {
-    const query = ctx.db
-      .query('assessmentSessions')
-      .withIndex('by_user', (q: any) => q.eq('userId', args.userId))
-      .order('desc')
-
-    const sessions = await query.collect()
-
-    if (args.type) {
-      return sessions.find(s => s.type === args.type)
-    }
-
-    return sessions[0]
+  handler: async (ctx, { userId, definitionId }) => {
+    const user = await Users.ensureUser(ctx, { externalId: userId, channel: 'sms' });
+    const questions = getQuestions(definitionId);
+    const sessionId = await ctx.db.insert('assessment_sessions', {
+      userId: user._id,
+      definitionId,
+      channel: 'sms',
+      questionIndex: 0,
+      answers: [],
+      status: 'active',
+    });
+    return { sessionId, question: questions[0] };
   },
-})
+});
 
-export const getSessionResponses = internalQuery({
-  args: { sessionId: v.id('assessmentSessions') },
-  handler: async (ctx, args) => {
-    return await ctx.db
-      .query('assessmentResponses')
-      .withIndex('by_session', (q: any) => q.eq('sessionId', args.sessionId))
-      .collect()
-  },
-})
-
-// MUTATIONS
-
-export const insertAssessmentSession = internalMutation({
+export const recordAnswer = mutation({
   args: {
-    userId: v.id('users'),
-    type: v.string(), // ema | cwbs | reach_ii | sdoh
-    totalQuestions: v.number(),
-  },
-  handler: async (ctx, args) => {
-    const now = Date.now()
-
-    const sessionId = await ctx.db.insert('assessmentSessions', {
-      userId: args.userId,
-      type: args.type,
-      completed: false,
-      currentQuestion: 0,
-      totalQuestions: args.totalQuestions,
-      responses: {},
-      startedAt: now,
-    })
-
-    return sessionId
-  },
-})
-
-export const insertAssessmentResponse = internalMutation({
-  args: {
-    sessionId: v.id('assessmentSessions'),
-    userId: v.id('users'),
+    sessionId: v.id('assessment_sessions'),
+    definitionId: v.string(),
     questionId: v.string(),
-    questionText: v.string(),
-    responseValue: v.string(),
-    score: v.optional(v.number()),
+    value: v.number(),
   },
-  handler: async (ctx, args) => {
-    const now = Date.now()
-
-    // Insert response record
-    const responseId = await ctx.db.insert('assessmentResponses', {
-      sessionId: args.sessionId,
-      userId: args.userId,
-      questionId: args.questionId,
-      questionText: args.questionText,
-      responseValue: args.responseValue,
-      score: args.score,
-      respondedAt: now,
-      createdAt: now,
-    })
-
-    // Update session with response in responses object
-    const session = await ctx.db.get(args.sessionId)
-    if (session) {
-      const updatedResponses = {
-        ...session.responses,
-        [args.questionId]: args.responseValue,
-      }
-
-      await ctx.db.patch(args.sessionId, {
-        responses: updatedResponses,
-        currentQuestion: session.currentQuestion + 1,
-      })
+  handler: async (ctx, { sessionId, definitionId, questionId, value }) => {
+    const session = await ctx.db.get(sessionId);
+    if (!session || session.status !== 'active') {
+      throw new Error('Assessment session not active');
+    }
+    const questions = getQuestions(definitionId);
+    const currentIndex = session.questionIndex;
+    const expectedQuestion = questions[currentIndex];
+    if (!expectedQuestion || expectedQuestion.id !== questionId) {
+      throw new Error('Question mismatch');
     }
 
-    return responseId
-  },
-})
+    const updatedAnswers = [...session.answers, { questionId, value }];
+    const nextIndex = currentIndex + 1;
 
-/**
- * PERFORMANCE OPTIMIZATION: Batch insert multiple assessment responses
- * Reduces RPC calls from N (one per response) to 1 (single batch)
- *
- * Example: 10 responses = 10 RPC calls → 1 RPC call = ~90% latency reduction
- */
-export const batchInsertAssessmentResponses = internalMutation({
-  args: {
-    sessionId: v.id('assessmentSessions'),
-    userId: v.id('users'),
-    responses: v.array(
-      v.object({
-        questionId: v.string(),
-        questionText: v.string(),
-        responseValue: v.string(),
-        score: v.optional(v.number()),
-      })
-    ),
-  },
-  handler: async (ctx, args) => {
-    const now = Date.now()
-    const session = await ctx.db.get(args.sessionId)
-
-    if (!session) {
-      throw new Error(`Session ${args.sessionId} not found`)
+    if (nextIndex >= questions.length) {
+      const score = scoreAnswers(updatedAnswers);
+      const assessmentId = await ctx.db.insert('assessments', {
+        userId: session.userId,
+        definitionId,
+        version: 'v1',
+        answers: updatedAnswers,
+      });
+      await ctx.db.insert('scores', {
+        userId: session.userId,
+        assessmentId,
+        composite: score.total,
+        band: score.band,
+        confidence: 0.8,
+      });
+      await ctx.db.patch(session._id, { status: 'completed', questionIndex: nextIndex, answers: updatedAnswers });
+      return { completed: true, score };
     }
 
-    // Batch insert all response records
-    const responseIds = await Promise.all(
-      args.responses.map(response =>
-        ctx.db.insert('assessmentResponses', {
-          sessionId: args.sessionId,
-          userId: args.userId,
-          questionId: response.questionId,
-          questionText: response.questionText,
-          responseValue: response.responseValue,
-          score: response.score,
-          respondedAt: now,
-          createdAt: now,
-        })
-      )
-    )
-
-    // Build updated responses object
-    const updatedResponses = { ...session.responses }
-    for (const response of args.responses) {
-      updatedResponses[response.questionId] = response.responseValue
-    }
-
-    // Single session update with all responses
-    await ctx.db.patch(args.sessionId, {
-      responses: updatedResponses,
-      currentQuestion: session.currentQuestion + args.responses.length,
-    })
-
-    return {
-      responseIds,
-      count: args.responses.length,
-    }
+    await ctx.db.patch(session._id, { questionIndex: nextIndex, answers: updatedAnswers });
+    return { completed: false, nextQuestion: questions[nextIndex] };
   },
-})
-
-export const completeAssessmentSession = internalMutation({
-  args: {
-    sessionId: v.id('assessmentSessions'),
-    overallScore: v.union(v.number(), v.null()), // Can be null if all questions skipped
-    domainScores: v.any(), // object of domain -> score
-  },
-  handler: async (ctx, args) => {
-    const now = Date.now()
-
-    await ctx.db.patch(args.sessionId, {
-      completed: true,
-      overallScore: args.overallScore,
-      domainScores: args.domainScores,
-      completedAt: now,
-    })
-
-    return { success: true }
-  },
-})
-
-export const updateSessionProgress = internalMutation({
-  args: {
-    sessionId: v.id('assessmentSessions'),
-    currentQuestion: v.number(),
-  },
-  handler: async (ctx, args) => {
-    await ctx.db.patch(args.sessionId, {
-      currentQuestion: args.currentQuestion,
-    })
-
-    return { success: true }
-  },
-})
+});

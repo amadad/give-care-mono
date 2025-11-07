@@ -1,19 +1,17 @@
 {
+  "extends": "../tsconfig.json",
   "compilerOptions": {
-    "target": "ES2022",
-    "module": "ESNext",
-    "moduleResolution": "Bundler",
-    "jsx": "react",
-    "strict": true,
-    "esModuleInterop": true,
-    "skipLibCheck": true,
-    "forceConsistentCasingInFileNames": true,
-    "baseUrl": ".",
+    "rootDir": "./",
+    "outDir": "./dist",
+    "baseUrl": "./",
+    "resolveJsonModule": true,
     "paths": {
-      "@/src/*": ["src/*"],
-      "@/convex/*": ["convex/*"]
+      "@harness/*": ["packages/*"],
+      "@harness/app/*": ["apps/*"],
+      "@harness/tests/*": ["tests/*"],
+      "@harness/docs/*": ["docs/*"]
     }
   },
-  "include": ["src", "convex", "index.ts"],
-  "exclude": ["node_modules"]
+  "include": ["packages", "apps", "tests", "docs"],
+  "exclude": ["node_modules", "dist"]
 }

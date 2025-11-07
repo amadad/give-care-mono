@@ -1,25 +1,86 @@
-import type { MutationCtx, QueryCtx } from '../_generated/server'
-import type { Id } from '../_generated/dataModel'
+import type { QueryCtx, MutationCtx } from '../_generated/server';
+import type { Id } from '../_generated/dataModel';
+import type { Channel } from '../../packages/shared/types';
 
-export async function patch(
-  ctx: MutationCtx,
-  userId: Id<'users'>,
-  updates: Record<string, unknown>
-) {
-  await ctx.db.patch(userId, { ...updates, updatedAt: Date.now() })
-}
+const DEFAULT_LOCALE = 'en-US';
 
-export async function updateLastContact(
-  ctx: MutationCtx,
-  userId: Id<'users'>
-) {
-  await ctx.db.patch(userId, { lastContactAt: Date.now(), updatedAt: Date.now() })
-}
-
-export async function getByPhone(ctx: QueryCtx, phoneNumber: string) {
-  return await ctx.db
+export const getByExternalId = async (ctx: QueryCtx | MutationCtx, externalId: string) => {
+  return ctx.db
     .query('users')
-    .withIndex('by_phone', q => q.eq('phoneNumber', phoneNumber))
-    .first()
-}
+    .withIndex('by_externalId', (q) => q.eq('externalId', externalId))
+    .unique();
+};
 
+type EnsureUserParams = {
+  externalId: string;
+  channel: Channel;
+  phone?: string;
+  locale?: string;
+};
+
+export const ensureUser = async (ctx: MutationCtx, params: EnsureUserParams) => {
+  const existing = await getByExternalId(ctx, params.externalId);
+  if (existing) {
+    return existing;
+  }
+  const userId = await ctx.db.insert('users', {
+    externalId: params.externalId,
+    phone: params.phone,
+    channel: params.channel,
+    locale: params.locale ?? DEFAULT_LOCALE,
+    createdByHarness: true,
+  });
+  const user = await ctx.db.get(userId);
+  if (!user) {
+    throw new Error('Failed to load user after insert');
+  }
+  return user;
+};
+
+type EnsureSessionParams = {
+  userId: Id<'users'>;
+  channel: Channel;
+  locale?: string;
+};
+
+export const ensureSession = async (ctx: MutationCtx, params: EnsureSessionParams) => {
+  const existing = await ctx.db
+    .query('sessions')
+    .withIndex('by_user_channel', (q) => q.eq('userId', params.userId).eq('channel', params.channel))
+    .unique();
+  if (existing) {
+    await ctx.db.patch(existing._id, {
+      lastSeen: Date.now(),
+      locale: params.locale ?? existing.locale,
+    });
+    const updated = await ctx.db.get(existing._id);
+    if (!updated) throw new Error('Session disappeared after patch');
+    return updated;
+  }
+  const sessionId = await ctx.db.insert('sessions', {
+    userId: params.userId,
+    channel: params.channel,
+    locale: params.locale ?? DEFAULT_LOCALE,
+    policyBundle: 'trauma_informed_v1',
+    budget: { maxInputTokens: 2000, maxOutputTokens: 1000, maxTools: 2 },
+    promptHistory: [],
+    consent: { emergency: false, marketing: false },
+    metadata: {},
+    lastSeen: Date.now(),
+  });
+  const session = await ctx.db.get(sessionId);
+  if (!session) throw new Error('Failed to load session after insert');
+  return session;
+};
+
+export const getSessionByExternalId = async (
+  ctx: QueryCtx | MutationCtx,
+  params: { externalId: string; channel: Channel }
+) => {
+  const user = await getByExternalId(ctx, params.externalId);
+  if (!user) return null;
+  return ctx.db
+    .query('sessions')
+    .withIndex('by_user_channel', (q) => q.eq('userId', user._id).eq('channel', params.channel))
+    .unique();
+};

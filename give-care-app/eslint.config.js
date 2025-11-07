@@ -5,10 +5,8 @@ import convexPlugin from "@convex-dev/eslint-plugin";
 export default tseslint.config(
   {
     ignores: [
-      "admin-frontend/**",
       "convex/_generated/**",
       "dist/**",
-      "docs/**",
       "node_modules/**"
     ]
   },
@@ -19,7 +17,6 @@ export default tseslint.config(
       ecmaVersion: "latest",
       sourceType: "module",
       parserOptions: {
-        // Enable type-aware linting for rules like no-floating-promises
         projectService: true,
         tsconfigRootDir: new URL('.', import.meta.url).pathname
       }
