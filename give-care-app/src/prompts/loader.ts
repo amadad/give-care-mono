@@ -1,8 +1,7 @@
 /**
  * Prompt Loader Utility
  *
- * Loads system prompt templates from markdown files and replaces
- * template variables with actual values.
+ * Loads system prompt templates and replaces template variables with actual values.
  *
  * Template Variable Format: {{variableName}}
  * Example: "Hello {{userName}}" → "Hello Alice"
@@ -10,29 +9,21 @@
 
 "use node";
 
-import { readFileSync } from 'fs';
-import { join, dirname } from 'path';
-import { fileURLToPath } from 'url';
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
+import { prompts, type PromptName } from '../../convex/prompts/index';
 
 /**
- * Load a prompt template from markdown file
+ * Load a prompt template
  *
- * @param promptName - Name of the prompt file (without .md extension)
+ * @param promptName - Name of the prompt
  * @returns Raw template content with template variables
- * @throws Error if file doesn't exist or can't be read
+ * @throws Error if prompt doesn't exist
  */
 export function loadPrompt(promptName: string): string {
-  try {
-    const filePath = join(__dirname, `${promptName}.md`);
-    return readFileSync(filePath, 'utf-8');
-  } catch (error) {
-    throw new Error(
-      `Failed to load prompt "${promptName}": ${error instanceof Error ? error.message : 'Unknown error'}`
-    );
+  const prompt = prompts[promptName as PromptName];
+  if (!prompt) {
+    throw new Error(`Failed to load prompt "${promptName}": Prompt not found`);
   }
+  return prompt;
 }
 
 /**

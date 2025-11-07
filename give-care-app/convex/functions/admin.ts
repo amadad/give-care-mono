@@ -352,3 +352,39 @@ export const getSystemHealth = query({
     }
   },
 })
+
+/**
+ * TEMPORARY: Fix subscription status for a user (no auth required for debugging)
+ * TODO: Remove this after fixing subscription sync
+ */
+export const fixUserSubscriptionNoAuth = mutation({
+  args: {
+    userId: v.id('users'),
+    subscriptionStatus: v.string(),
+    stripeCustomerId: v.optional(v.string()),
+    stripeSubscriptionId: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    const user = await ctx.db.get(args.userId)
+    if (!user) {
+      throw new Error('User not found')
+    }
+
+    const updates: any = {
+      subscriptionStatus: args.subscriptionStatus,
+      updatedAt: Date.now(),
+    }
+
+    if (args.stripeCustomerId) {
+      updates.stripeCustomerId = args.stripeCustomerId
+    }
+
+    if (args.stripeSubscriptionId) {
+      updates.stripeSubscriptionId = args.stripeSubscriptionId
+    }
+
+    await ctx.db.patch(args.userId, updates)
+
+    return { success: true, user: await ctx.db.get(args.userId) }
+  },
+})

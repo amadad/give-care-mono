@@ -259,3 +259,38 @@ export const checkSubscription = query({
     }
   },
 })
+
+/**
+ * TEMPORARY: Manually patch subscription data (for debugging only)
+ * TODO: Remove after fixing Stripe webhook sync issue
+ */
+export const patchSubscriptionDebug = mutation({
+  args: {
+    phoneNumber: v.string(),
+    subscriptionStatus: v.string(),
+    stripeCustomerId: v.optional(v.string()),
+    stripeSubscriptionId: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    const user = await ctx.db
+      .query('users')
+      .withIndex('by_phone', (q: any) => q.eq('phoneNumber', args.phoneNumber))
+      .first()
+
+    if (!user) {
+      throw new Error(`User not found: ${args.phoneNumber}`)
+    }
+
+    const updates: any = {
+      subscriptionStatus: args.subscriptionStatus,
+      updatedAt: Date.now(),
+    }
+
+    if (args.stripeCustomerId) updates.stripeCustomerId = args.stripeCustomerId
+    if (args.stripeSubscriptionId) updates.stripeSubscriptionId = args.stripeSubscriptionId
+
+    await ctx.db.patch(user._id, updates)
+
+    return { success: true, userId: user._id, updates }
+  },
+})

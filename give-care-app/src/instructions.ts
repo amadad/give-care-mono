@@ -78,7 +78,7 @@ Pressure zones: ${context.pressureZones.length > 0 ? context.pressureZones.map(z
     context.firstName && context.relationship && context.careRecipientName && context.zipCode
       ? ''
       : `
-Missing fields: ${[
+Missing profile fields: ${[
         !context.firstName && 'first name',
         !context.relationship && 'relationship',
         !context.careRecipientName && 'care recipient name',
@@ -86,9 +86,7 @@ Missing fields: ${[
       ]
         .filter(Boolean)
         .join(', ')}
-
-Onboarding attempts so far: ${JSON.stringify(context.onboardingAttempts)}
-(Remember P3: Max 2 attempts per field, then cooldown)
+Onboarding attempts: ${JSON.stringify(context.onboardingAttempts)}
 `
 
   const template = loadPrompt('main_agent')
