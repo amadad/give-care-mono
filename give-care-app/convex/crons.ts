@@ -17,4 +17,11 @@ crons.interval(
   {}
 );
 
+crons.daily(
+  'aggregate-daily-metrics',
+  { hourUTC: 2, minuteUTC: 0 },
+  internal.internal.metrics.aggregateDailyMetrics,
+  {}
+);
+
 export default crons;

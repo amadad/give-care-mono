@@ -1,7 +1,6 @@
 import { mutation } from '../_generated/server';
 import { v } from 'convex/values';
 import * as Messages from '../model/messages';
-import { requireHarnessToken } from '../model/security';
 import { channelValidator } from './context';
 
 const messageArgs = v.object({

@@ -1,7 +1,6 @@
-import { action, mutation, internalAction, internalMutation } from '../_generated/server';
+import { mutation, internalAction, internalMutation } from '../_generated/server';
 import { internal } from '../_generated/api';
 import { v } from 'convex/values';
-import { requireHarnessToken } from '../model/security';
 import * as Triggers from '../model/triggers';
 
 export const enqueueOnce = mutation({
@@ -59,7 +58,12 @@ export const processBatchInternal = internalMutation({
     batchSize: v.number(),
   },
   handler: async (ctx, { batchSize }) => {
+    const startTime = Date.now();
+    console.info(`[scheduler] Starting batch processing, batchSize: ${batchSize}`);
+
     const due = await Triggers.dueTriggers(ctx, Date.now(), batchSize);
+    console.info(`[scheduler] Found ${due.length} due triggers`);
+
     for (const trigger of due) {
       await ctx.db.insert('alerts', {
         userId: trigger.userId,
@@ -73,19 +77,11 @@ export const processBatchInternal = internalMutation({
       });
       await ctx.runMutation(internal.internal.scheduler.advanceTriggerMutation, { triggerId: trigger._id });
     }
-    return due.length;
-  },
-});
 
-export const processDueTriggers = action({
-  args: {
-    token: v.string(),
-    batchSize: v.optional(v.number()),
-  },
-  handler: async (ctx, { token, batchSize }): Promise<{ processed: number }> => {
-    requireHarnessToken(token);
-    const processed: number = await ctx.runMutation(internal.functions.scheduler.processBatchInternal, { batchSize: batchSize ?? 25 });
-    return { processed };
+    const duration = Date.now() - startTime;
+    console.info(`[scheduler] Completed batch processing in ${duration}ms, processed ${due.length} triggers`);
+
+    return due.length;
   },
 });
 

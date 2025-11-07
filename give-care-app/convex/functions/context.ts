@@ -1,7 +1,8 @@
-import { mutation } from '../_generated/server';
+import { mutation, query } from '../_generated/server';
 import { v } from 'convex/values';
 import * as ContextModel from '../model/context';
-import { requireHarnessToken } from '../model/security';
+import { summarizeConversation, formatForContext } from '../lib/summarization';
+import * as Users from '../model/users';
 
 export const channelValidator = v.union(v.literal('sms'), v.literal('web'));
 
@@ -40,5 +41,35 @@ export const persist = mutation({
   },
   handler: async (ctx, { context }) => {
     await ContextModel.persist(ctx, context);
+  },
+});
+
+/**
+ * Get conversation summary for a user
+ *
+ * Returns compressed conversation history with 60-80% token savings
+ */
+export const getConversationSummary = query({
+  args: {
+    externalId: v.string(),
+    limit: v.optional(v.number()),
+  },
+  handler: async (ctx, { externalId, limit = 25 }) => {
+    const user = await Users.getByExternalId(ctx, externalId);
+    if (!user) {
+      return {
+        recentMessages: [],
+        compressedHistory: '',
+        totalMessages: 0,
+        tokensSaved: 0,
+        compressionRatio: 0,
+      };
+    }
+
+    const summary = await summarizeConversation(ctx, user._id, limit);
+    return {
+      ...summary,
+      formattedContext: formatForContext(summary),
+    };
   },
 });

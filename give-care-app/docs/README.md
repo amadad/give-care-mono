@@ -1,16 +1,26 @@
 # GiveCare Backend
 
-**Version**: 1.0.0 | **Status**: Production Ready | **Architecture**: Convex-Native
+**Version**: 1.2.0 | **Status**: Production Ready | **Architecture**: Convex-Native
 
 AI-powered SMS caregiving support platform built entirely on Convex with Agent Component.
 
 ---
 
-## What's New (v1.0.0)
+## What's New (v1.2.0)
+
+**Feature Complete: Clinical Coverage & Resource Discovery**:
+
+This release closes all PRODUCT.md gaps with:
+
+- **Complete assessment suite**: 4 validated assessments (EMA, BSFC, REACH-II, SDOH) with 57 total questions
+- **5 pressure zones**: emotional, physical, social, time, financial (SDOH adds financial tracking)
+- **Conversation summarization**: 60-80% token savings via recent detail + compressed history
+- **Local resource search**: Google Maps grounding for location-aware caregiving resources
+- **Test coverage**: 21/21 passing tests
+
+### Previous Release (v1.0.0)
 
 **Complete Refactor to Convex-Native Architecture**:
-
-This release replaces the hexagonal harness implementation (v0.9.0) with a streamlined Convex-native architecture that achieves:
 
 - **40% code reduction**: 2,894 LOC (from 4,824 LOC)
 - **Simplified architecture**: 3 layers (from 5)
@@ -237,14 +247,144 @@ give-care-app/
 **Main Agent** (`convex/agents/main.ts`):
 - General caregiving conversation & support
 - Burnout prevention & stress management
-- Resource recommendations
+- Resource recommendations via Google Maps grounding
 - Profile-aware responses (name, relationship, journey phase)
+- Conversation summarization for token efficiency
 
 **Assessment Agent** (`convex/agents/assessment.ts`):
-- Burnout assessment interpretation
-- Score calculation (low/moderate/high burnout)
+- 4 validated assessments (EMA, BSFC, REACH-II, SDOH)
+- Score calculation across 5 pressure zones
 - Personalized intervention suggestions
-- Pressure zone-specific recommendations
+- Evidence-based recommendations
+
+### Clinical Assessment Suite (v1.2.0)
+
+**4 Validated Instruments** (`convex/functions/assessments.ts`):
+
+1. **EMA (Ecological Momentary Assessment)** - 3 questions
+   - Real-time stress monitoring
+   - Mood tracking (0-4 scale)
+   - Coping capacity assessment
+
+2. **BSFC (Burden Scale for Family Caregivers)** - 10 questions
+   - Emotional burden (3 questions)
+   - Physical burden (3 questions)
+   - Social burden (2 questions)
+   - Time burden (2 questions)
+   - 4 pressure zones output
+
+3. **REACH-II (Risk Appraisal)** - 16 questions
+   - Caregiver strain assessment
+   - Binary yes/no questions
+   - Risk score: low (<11), moderate (11-26), high (27+)
+
+4. **SDOH (Social Determinants of Health)** - 28 questions
+   - Food security (2 questions)
+   - Housing stability (3 questions)
+   - Transportation access (2 questions)
+   - Social isolation (12 questions)
+   - Financial strain (9 questions)
+   - **5 pressure zones** including financial
+
+**Total**: 57 questions across 4 assessments
+
+### Conversation Summarization (v1.2.0)
+
+**Token Compression** (`convex/lib/summarization.ts`):
+
+Strategy: Recent detail (last 5 messages) + compressed history (older messages)
+
+```typescript
+// Automatic summarization integrated into main agent
+const summary = await ctx.runQuery(api.functions.context.getConversationSummary, {
+  externalId: userId,
+  limit: 25,
+});
+
+// Returns:
+// - recentMessages: Last 5 messages in full detail
+// - compressedHistory: Theme-based compression of older messages
+// - tokensSaved: ~1200 tokens (typical)
+// - compressionRatio: 60-80%
+```
+
+**Theme Detection**:
+- Stress & overwhelm
+- Sleep issues & exhaustion
+- Anxiety & worry
+- Mood concerns
+- Caregiving challenges
+- Seeking support
+
+**Benefits**:
+- 60-80% token savings for long conversations
+- Maintains context quality
+- Automatic injection into agent prompts
+- No user-facing impact
+
+### Local Resource Search (v1.2.0)
+
+**Google Maps Grounding** (`convex/lib/maps.ts`, `convex/functions/resources.ts`):
+
+```typescript
+// Agent tool integrated into main agent
+const searchResourcesTool = createTool({
+  args: z.object({
+    query: z.string(),
+    category: z.string().optional(),
+  }),
+  description: 'Search for local caregiving resources using Google Maps',
+  handler: async (ctx, args) => {
+    // Uses Gemini 2.0 Flash + Google Maps API
+    const result = await ctx.runAction(api.functions.resources.searchResources, {
+      query: args.query,
+      metadata: userMetadata, // includes location
+    });
+
+    return {
+      resources: result.text, // Grounded natural language description
+      sources: result.sources, // Google Maps URIs + place IDs
+      widgetToken: result.widgetToken, // For rendering interactive maps
+    };
+  },
+});
+```
+
+**10 Predefined Categories**:
+1. Respite Care - Temporary relief services
+2. Support Groups - Peer support meetings
+3. Adult Day Care - Supervised daytime activities
+4. Home Health Care - In-home medical services
+5. Medical Supplies - Mobility aids, equipment
+6. Senior Centers - Community programs
+7. Meal Delivery - Meals on Wheels, etc.
+8. Transportation - Medical transport services
+9. Hospice Care - End-of-life care
+10. Memory Care - Alzheimer's programs
+
+**Features**:
+- **Zip-code first** - Uses zip code from user onboarding (no asking for location)
+- Natural language queries ("respite care near me")
+- Grounded results backed by Google Maps data
+- Source attribution (URI, title, placeId)
+- Optional widget tokens for interactive maps
+- Falls back to full address or lat/lng if available
+
+**Example Usage**:
+```
+User: "Find support groups near me"
+Agent: [Invokes searchResourcesTool]
+Result: "Here are 3 caregiver support groups near you:
+1. Weekly Caregiver Support Group - St. Mary's Church
+   📍 123 Main St, opens 6pm Tuesdays
+   ⭐ 4.8/5 (42 reviews)
+
+2. Alzheimer's Family Support - Community Center
+   📍 456 Oak Ave, every other Thursday
+   ⭐ 4.9/5 (28 reviews)
+
+[Sources: Google Maps links + place IDs]"
+```
 
 ### Automatic Thread Persistence
 

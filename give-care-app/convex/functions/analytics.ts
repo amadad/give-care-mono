@@ -26,34 +26,40 @@ const formatTimeAgo = (timestamp: number) => {
 export const getBurnoutDistribution = query({
   args: {},
   handler: async (ctx) => {
-    const scores = await ctx.db.query('scores').order('desc').take(5000);
-    const latestByUser = new Map<string, number>();
-    for (const score of scores) {
-      if (latestByUser.has(score.userId)) continue;
-      latestByUser.set(score.userId, score.composite);
-    }
-    const counts = burnoutBuckets.map(() => 0);
-    for (const value of latestByUser.values()) {
-      const bucketIndex = burnoutBuckets.findIndex((bucket) => value >= bucket.min && value <= bucket.max);
-      const index = bucketIndex === -1 ? burnoutBuckets.length - 1 : bucketIndex;
-      counts[index] += 1;
-    }
-    return burnoutBuckets.map((bucket, index) => ({ range: bucket.label, count: counts[index] }));
+    // Read from materialized metrics (updated daily by cron)
+    const distribution = await ctx.db
+      .query('metrics_burnout_distribution')
+      .collect();
+
+    // Return in expected format
+    return burnoutBuckets.map((bucket) => {
+      const entry = distribution.find(d => d.bucket === bucket.label);
+      return { range: bucket.label, count: entry?.count || 0 };
+    });
   },
 });
 
 export const getUserJourneyFunnel = query({
   args: {},
   handler: async (ctx) => {
-    const sessions = await ctx.db.query('sessions').take(2000);
-    const buckets = new Map<string, number>(journeyPhases.map((phase) => [phase, 0]));
-    for (const session of sessions) {
-      const metadata = (session.metadata as Record<string, unknown> | undefined) ?? {};
-      const phase = (metadata.journeyPhase as string) ?? 'active';
-      const currentCount = buckets.get(phase) ?? 0;
-      buckets.set(phase, currentCount + 1);
-    }
-    return journeyPhases.map((phase) => ({ phase, count: buckets.get(phase) ?? 0 }));
+    // Read from materialized metrics (updated daily by cron)
+    const funnel = await ctx.db
+      .query('metrics_journey_funnel')
+      .first();
+
+    // Fallback to empty if not yet populated
+    const metrics = funnel || {
+      onboarding: 0,
+      active: 0,
+      maintenance: 0,
+      crisis: 0,
+      churned: 0,
+    };
+
+    return journeyPhases.map((phase) => ({
+      phase,
+      count: metrics[phase as keyof typeof metrics] || 0,
+    }));
   },
 });
 
@@ -64,25 +70,25 @@ export const getDailyMetrics = query({
   handler: async (ctx, { days }) => {
     const clampedDays = Math.min(Math.max(days, 1), 60);
     const now = Date.now();
-    const windowStart = now - clampedDays * DAY_MS;
-    const recentMessages = await ctx.db
-      .query('messages')
-      .filter((q) => q.gte(q.field('_creationTime'), windowStart))
-      .take(10000);
-    const buckets = new Map<string, { sent: number; received: number }>();
-    for (const message of recentMessages) {
-      const day = new Date(message._creationTime).toISOString().slice(0, 10);
-      const bucket = buckets.get(day) ?? { sent: 0, received: 0 };
-      if (message.direction === 'outbound') bucket.sent += 1;
-      else bucket.received += 1;
-      buckets.set(day, bucket);
-    }
+
+    // Read from materialized daily metrics (updated by cron)
     const data = [] as Array<{ date: string; sent: number; received: number }>;
+
     for (let offset = clampedDays - 1; offset >= 0; offset -= 1) {
       const day = new Date(now - offset * DAY_MS).toISOString().slice(0, 10);
-      const bucket = buckets.get(day) ?? { sent: 0, received: 0 };
-      data.push({ date: day, sent: bucket.sent, received: bucket.received });
+
+      const dayMetrics = await ctx.db
+        .query('metrics_daily')
+        .withIndex('by_date', (q) => q.eq('date', day))
+        .first();
+
+      data.push({
+        date: day,
+        sent: dayMetrics?.outboundMessages || 0,
+        received: dayMetrics?.inboundMessages || 0,
+      });
     }
+
     return data;
   },
 });

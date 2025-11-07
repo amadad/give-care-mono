@@ -14,12 +14,13 @@
  */
 
 import { action } from '../_generated/server';
-import { internal, components } from '../_generated/api';
+import { api, internal, components } from '../_generated/api';
 import { v } from 'convex/values';
-import { Agent } from '@convex-dev/agent';
+import { Agent, createTool } from '@convex-dev/agent';
 import { openai } from '@ai-sdk/openai';
 import { MAIN_PROMPT, renderPrompt } from '../lib/prompts';
 import { getTone } from '../lib/policy';
+import { z } from 'zod';
 
 const channelValidator = v.union(
   v.literal('sms'),
@@ -44,11 +45,45 @@ const agentContextValidator = v.object({
   metadata: v.optional(v.any()),
 });
 
+// Tool: Search for local caregiving resources using Google Maps
+const searchResourcesTool = createTool({
+  // @ts-expect-error - Type instantiation depth issue with Zod/AI SDK integration
+  args: z.object({
+    query: z.string().describe('Natural language query for caregiving resources (e.g., "respite care near me", "support groups")'),
+    category: z.string().optional().describe('Optional category: respite, support, daycare, homecare, medical, community, meals, transport, hospice, memory'),
+  }),
+  description: 'Search for local caregiving resources using Google Maps. Returns nearby services like respite care, support groups, adult day care, home health agencies, and community resources with addresses, hours, and reviews.',
+  handler: async (ctx, args: { query: string; category?: string }) => {
+    // Get user metadata to extract location
+    const contextData = ctx.metadata as { context?: { metadata?: Record<string, unknown> } };
+    const userMetadata = contextData?.context?.metadata || {};
+
+    const result = await ctx.runAction(api.functions.resources.searchResources, {
+      query: args.query,
+      metadata: userMetadata,
+    });
+
+    if ('error' in result && result.error) {
+      return {
+        error: result.error,
+        suggestion: 'I need your zip code to find nearby resources. What\'s your zip code?',
+      };
+    }
+
+    return {
+      resources: result.text,
+      sources: result.sources,
+      widgetToken: result.widgetToken,
+    };
+  },
+});
+
 const mainAgent = new Agent(components.agent, {
   name: 'Caregiver Support',
   // @ts-expect-error - LanguageModelV1/V2 type mismatch between AI SDK versions
   languageModel: openai.chat('gpt-4o-mini'),
   instructions: 'You are a compassionate AI caregiver assistant providing empathetic support and practical advice.',
+  tools: [searchResourcesTool],
 });
 
 /**
@@ -82,6 +117,12 @@ export const runMainAgent = action({
       const journeyPhase = (metadata.journeyPhase as string) ?? 'active';
       const totalInteractionCount = String((metadata.totalInteractionCount as number) ?? 0);
 
+      // Fetch conversation summary for context compression
+      const conversationSummary = await ctx.runQuery(api.functions.context.getConversationSummary, {
+        externalId: input.userId,
+        limit: 25,
+      });
+
       const basePrompt = renderPrompt(MAIN_PROMPT, {
         userName,
         relationship,
@@ -91,17 +132,39 @@ export const runMainAgent = action({
       });
 
       const tone = getTone(context);
-      const systemPrompt = `${basePrompt}\n\n${tone}`;
+
+      // Inject compressed conversation history if available
+      let contextSection = '';
+      const formattedContext = (conversationSummary as { formattedContext?: string }).formattedContext;
+      if (formattedContext) {
+        contextSection = `\n\n## Conversation Context\n${formattedContext}\n\n(Token savings: ${conversationSummary.tokensSaved} tokens, ${conversationSummary.compressionRatio}% compression)`;
+      }
+
+      const systemPrompt = `${basePrompt}\n\n${tone}${contextSection}`;
 
       let newThreadId: string;
       let thread;
 
+      // Prepare metadata for tool access
+      const threadMetadata = {
+        context: {
+          metadata,
+        },
+      };
+
       if (threadId) {
-        const threadResult = await mainAgent.continueThread(ctx, { threadId, userId: context.userId });
+        const threadResult = await mainAgent.continueThread(ctx, {
+          threadId,
+          userId: context.userId,
+          metadata: threadMetadata,
+        });
         thread = threadResult.thread;
         newThreadId = threadId;
       } else {
-        const threadResult = await mainAgent.createThread(ctx, { userId: context.userId });
+        const threadResult = await mainAgent.createThread(ctx, {
+          userId: context.userId,
+          metadata: threadMetadata,
+        });
         thread = threadResult.thread;
         newThreadId = threadResult.threadId;
       }

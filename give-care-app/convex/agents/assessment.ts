@@ -14,11 +14,12 @@
  */
 
 import { action } from '../_generated/server';
-import { internal, components } from '../_generated/api';
+import { internal, components, api } from '../_generated/api';
 import { v } from 'convex/values';
-import { Agent } from '@convex-dev/agent';
+import { Agent, createTool } from '@convex-dev/agent';
 import { openai } from '@ai-sdk/openai';
 import { ASSESSMENT_PROMPT, renderPrompt } from '../lib/prompts';
+import { z } from 'zod';
 
 const channelValidator = v.union(
   v.literal('sms'),
@@ -43,12 +44,51 @@ const agentContextValidator = v.object({
   metadata: v.optional(v.any()),
 });
 
-const assessmentAgent = new Agent(components.agent, {
+// Tool: Get evidence-based interventions by pressure zones
+const getInterventionsTool = createTool({
+  // @ts-expect-error - Type instantiation depth issue with Zod/AI SDK integration
+  args: z.object({
+    zones: z.array(z.string()).describe('Pressure zones from BSFC assessment'),
+    minEvidenceLevel: z.string().optional().describe('Minimum evidence level (default: moderate)'),
+    limit: z.number().optional().describe('Max number of interventions (default: 5)'),
+  }),
+  description: 'Lookup evidence-based caregiver interventions matching pressure zones. Use this to provide specific, research-backed recommendations.',
+  handler: async (ctx, args: { zones: string[]; minEvidenceLevel?: 'high' | 'moderate' | 'low'; limit?: number }) => {
+    const interventions: Array<{
+      title: string;
+      category: string;
+      targetZones: string[];
+      evidenceLevel: string;
+      duration: string;
+      description: string;
+      content: string;
+    }> = await ctx.runQuery(api.functions.interventions.getByZones, {
+      zones: args.zones,
+      minEvidenceLevel: args.minEvidenceLevel || 'moderate',
+      limit: args.limit || 5,
+    });
+
+    return {
+      interventions: interventions.map((i: any) => ({
+        title: i.title,
+        category: i.category,
+        targetZones: i.targetZones,
+        evidenceLevel: i.evidenceLevel,
+        duration: i.duration,
+        description: i.description,
+        content: i.content,
+      })),
+    };
+  },
+});
+
+const assessmentAgent: any = new Agent(components.agent, {
   name: 'Assessment Specialist',
   // @ts-expect-error - LanguageModelV1/V2 type mismatch between AI SDK versions
   languageModel: openai.chat('gpt-4o-mini'),
   instructions:
-    'You are a burnout assessment specialist who provides personalized, compassionate interpretations and actionable intervention suggestions.',
+    'You are a burnout assessment specialist who provides personalized, compassionate interpretations and actionable intervention suggestions. Use the getInterventions tool to recommend evidence-based interventions matching the user\'s pressure zones.',
+  tools: { getInterventions: getInterventionsTool },
 });
 
 /**
@@ -60,7 +100,7 @@ const assessmentAgent = new Agent(components.agent, {
  * @param context - User context including assessment answers
  * @returns Stream of response chunks
  */
-export const runAssessmentAgent = action({
+export const runAssessmentAgent: any = action({
   args: {
     input: v.object({
       channel: channelValidator,
@@ -70,7 +110,7 @@ export const runAssessmentAgent = action({
     context: agentContextValidator,
     threadId: v.optional(v.string()),
   },
-  handler: async (ctx, { input, context, threadId }) => {
+  handler: async (ctx, { input, context, threadId }): Promise<any> => {
     const startTime = Date.now();
 
     try {
@@ -112,24 +152,24 @@ export const runAssessmentAgent = action({
       });
 
       let newThreadId: string;
-      let thread;
+      let thread: any;
 
       if (threadId) {
-        const threadResult = await assessmentAgent.continueThread(ctx, { threadId, userId: context.userId });
+        const threadResult: any = await assessmentAgent.continueThread(ctx, { threadId, userId: context.userId });
         thread = threadResult.thread;
         newThreadId = threadId;
       } else {
-        const threadResult = await assessmentAgent.createThread(ctx, { userId: context.userId });
+        const threadResult: any = await assessmentAgent.createThread(ctx, { userId: context.userId });
         thread = threadResult.thread;
         newThreadId = threadResult.threadId;
       }
 
-      const result = await thread.generateText({
+      const result: any = await thread.generateText({
         prompt: input.text || 'Please interpret my burnout assessment results and suggest interventions.',
         system: systemPrompt, // Override default instructions with assessment-specific context
       });
 
-      const responseText = result.text;
+      const responseText: string = result.text;
       const latencyMs = Date.now() - startTime;
 
       await ctx.runMutation(internal.functions.logs.logAgentRunInternal, {

@@ -132,51 +132,57 @@ const computeSubscriptionBreakdown = (subscriptions: Doc<'subscriptions'>[], tot
 export const getMetrics = query({
   args: {},
   handler: async (ctx) => {
-    const users = await ctx.db.query('users').collect();
-    const totalUsers = users.length;
-    const sessions = await ctx.db.query('sessions').collect();
-    const subscriptions = await ctx.db.query('subscriptions').collect();
-    const alerts = await ctx.db.query('alerts').collect();
-    const now = Date.now();
-    const weekAgo = now - WEEK_MS;
-    const dayAgo = now - DAY_MS;
-
-    const recentRuns = await ctx.db
-      .query('agent_runs')
-      .filter((q) => q.gte(q.field('_creationTime'), weekAgo))
-      .take(500);
-
-    const latencies = recentRuns.map((run) => run.latencyMs);
-    const avgLatencyMs = latencies.length ? Math.round(latencies.reduce((sum, value) => sum + value, 0) / latencies.length) : 0;
-    const p95ResponseTime = percentile(latencies, 95);
-
-    const alertsLast24h = alerts.filter((alert) => alert._creationTime >= dayAgo).length;
-    const crisisAlerts = alerts.filter((alert) => alert.severity === 'high' || alert.severity === 'critical').length;
-
-    const activeUsers = new Set(
-      sessions
-        .filter((session) => (session.lastSeen ?? session._creationTime) >= dayAgo)
-        .map((session) => session.userId)
-    ).size;
-
-    const latestScores = await ctx.db
-      .query('scores')
+    // Read from materialized metrics (updated daily by cron)
+    const latestDaily = await ctx.db
+      .query('metrics_daily')
+      .withIndex('by_date')
       .order('desc')
-      .take(3000);
-    const seen = new Set<string>();
-    let cumulativeScore = 0;
-    let scoreCount = 0;
-    for (const score of latestScores) {
-      const key = score.userId;
-      if (seen.has(key)) continue;
-      seen.add(key);
-      cumulativeScore += score.composite;
-      scoreCount += 1;
-    }
-    const avgBurnoutScore = scoreCount ? Number((cumulativeScore / scoreCount).toFixed(1)) : 0;
+      .first();
 
-    const subscriptionBreakdown = computeSubscriptionBreakdown(subscriptions, totalUsers);
-    const activeSubscriptions = subscriptionBreakdown.active;
+    const subscriptionMetrics = await ctx.db
+      .query('metrics_subscriptions')
+      .first();
+
+    // Fallback to empty metrics if not yet aggregated
+    const metrics = latestDaily || {
+      totalUsers: 0,
+      activeUsers: 0,
+      newUsers: 0,
+      avgBurnoutScore: 0,
+      crisisAlerts: 0,
+      avgResponseLatencyMs: 0,
+      p95ResponseLatencyMs: 0,
+    };
+
+    const subMetrics = subscriptionMetrics || {
+      total: 0,
+      active: 0,
+      trialing: 0,
+      pastDue: 0,
+      canceled: 0,
+      free: 0,
+      plus: 0,
+      enterprise: 0,
+    };
+
+    const totalUsers = metrics.totalUsers;
+    const activeUsers = metrics.activeUsers;
+    const avgLatencyMs = metrics.avgResponseLatencyMs;
+    const p95ResponseTime = metrics.p95ResponseLatencyMs;
+    const avgBurnoutScore = metrics.avgBurnoutScore;
+    const alertsLast24h = metrics.crisisAlerts;
+    const crisisAlerts = metrics.crisisAlerts;
+
+    const subscriptionBreakdown = {
+      active: subMetrics.active,
+      trialing: subMetrics.trialing,
+      pastDue: subMetrics.pastDue,
+      canceled: subMetrics.canceled,
+      free: subMetrics.free,
+      plus: subMetrics.plus,
+      enterprise: subMetrics.enterprise,
+    };
+    const activeSubscriptions = subMetrics.active;
 
     return {
       totalUsers,
@@ -219,8 +225,13 @@ export const getAllUsers = query({
   },
   handler: async (ctx, args) => {
     const limit = Math.min(Math.max(args.limit ?? 50, 1), 200);
-    const users = await ctx.db.query('users').collect();
-    users.sort((a, b) => b._creationTime - a._creationTime);
+
+    // Use indexed pagination instead of .collect()
+    // Fetch more than needed to account for filtering
+    const users = await ctx.db
+      .query('users')
+      .order('desc')
+      .take(limit * 3); // Buffer for post-filter results
 
     const summaries: AdminUserSummary[] = [];
     for (const user of users) {
@@ -231,7 +242,11 @@ export const getAllUsers = query({
       if (summaries.length >= limit) break;
     }
 
-    return { users: summaries, total: users.length };
+    // Get approximate total (materialized from metrics)
+    const metrics = await ctx.db.query('metrics_daily').withIndex('by_date').order('desc').first();
+    const total = metrics?.totalUsers || summaries.length;
+
+    return { users: summaries, total };
   },
 });
 
@@ -341,8 +356,12 @@ export const getSystemHealth = query({
     const latencies = runs.map((run) => run.latencyMs);
     const queryLatency = latencies.length ? percentile(latencies, 95) : 0;
 
-    const sessions = await ctx.db.query('sessions').collect();
-    const activeSessions = sessions.filter((session) => (session.lastSeen ?? session._creationTime) >= now - 15 * 60 * 1000);
+    // Use bounded query instead of .collect()
+    const recentSessions = await ctx.db
+      .query('sessions')
+      .filter((q) => q.gte(q.field('lastSeen'), now - 15 * 60 * 1000))
+      .take(1000);
+    const activeSessions = recentSessions;
 
     const alerts = await ctx.db
       .query('alerts')
@@ -355,7 +374,10 @@ export const getSystemHealth = query({
       .filter((q) => q.gte(q.field('_creationTime'), dayAgo))
       .take(500);
 
-    const totalDocs = (await ctx.db.query('users').collect()).length + messagesLast24h.length + runs.length + alerts.length;
+    // Use materialized metrics for total users
+    const metrics = await ctx.db.query('metrics_daily').withIndex('by_date').order('desc').first();
+    const userCount = metrics?.totalUsers || 0;
+    const totalDocs = userCount + messagesLast24h.length + runs.length + alerts.length;
     const storageUsed = Number((totalDocs * 0.0002).toFixed(2));
     const storageLimit = 5; // GB
 

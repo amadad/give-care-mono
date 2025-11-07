@@ -1,7 +1,6 @@
 import { mutation, internalMutation } from '../_generated/server';
 import { v } from 'convex/values';
 import * as Logs from '../model/logs';
-import { requireHarnessToken } from '../model/security';
 
 const budgetResultValidator = v.object({
   usedInputTokens: v.number(),

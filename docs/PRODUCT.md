@@ -16,9 +16,14 @@
 - **Trauma-informed**: P1-P6 principles (never repeat questions, offer skip, warmth)
 
 ### Clinical Measurement
-- **4 validated assessments**: EMA (daily), CWBS (wellbeing), REACH-II (stress), SDOH (needs)
+- **4 validated assessments**:
+  - EMA (Ecological Momentary Assessment) - real-time stress monitoring, 3 questions
+  - BSFC (Burden Scale for Family Caregivers) - 10 questions, 4 pressure zones
+  - REACH-II (Risk Appraisal) - 16 questions, caregiver strain assessment
+  - SDOH (Social Determinants of Health) - 28 questions, 5 pressure zones
 - **Burnout score**: 0-100 scale with 5 bands (Crisis→Thriving)
-- **Pressure zones**: 5 domains (emotional, physical, social, financial, time)
+- **Pressure zones**: 5 domains (emotional, physical, social, time, financial)
+  - Note: BSFC uses 4 zones (no financial), SDOH adds financial zone
 - **Personalized scheduling**: RRULE-based check-ins in user timezone
 
 ### Intelligence Layer
@@ -95,9 +100,9 @@
 - Auto-scaling: 10K+ concurrent users
 
 ### Clinical
-- 4 assessments, 53 questions
-- 5 pressure zones
-- 20 evidence-based interventions
+- 4 assessments: EMA (3q), BSFC (10q), REACH-II (16q), SDOH (28q) = 57 questions total
+- 5 pressure zones (financial zone added via SDOH)
+- 16 evidence-based interventions seeded
 
 ### Business
 - Cost: $1.52/user at 10K scale

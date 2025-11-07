@@ -102,7 +102,7 @@ describe('Prompt Rendering', () => {
       expect(ASSESSMENT_PROMPT).toContain('{{totalScore}}');
       expect(ASSESSMENT_PROMPT).toContain('{{avgScore}}');
       expect(ASSESSMENT_PROMPT).toContain('{{band}}');
-      expect(ASSESSMENT_PROMPT).toContain('{{pressureZone}}');
+      expect(ASSESSMENT_PROMPT).toContain('{{pressureZones}}');
     });
 
     it('renders with assessment variables', () => {
@@ -112,7 +112,7 @@ describe('Prompt Rendering', () => {
         totalScore: 45,
         avgScore: 3.5,
         band: 'moderate',
-        pressureZone: 'emotional',
+        pressureZones: 'emotional, physical',
       });
       expect(result).toContain('Carol');
       expect(result).toContain('Brother');

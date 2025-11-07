@@ -236,4 +236,55 @@ export default defineSchema({
     type: v.string(),
     data: v.any(),
   }).index('by_event', ['stripeEventId']),
+
+  // Materialized metrics (pre-aggregated for dashboard performance)
+  // Updated daily by cron job to avoid full table scans
+  metrics_daily: defineTable({
+    date: v.string(), // YYYY-MM-DD
+    totalUsers: v.number(),
+    activeUsers: v.number(), // users with activity in last 24h
+    newUsers: v.number(),
+    totalMessages: v.number(),
+    inboundMessages: v.number(),
+    outboundMessages: v.number(),
+    avgBurnoutScore: v.number(),
+    crisisAlerts: v.number(),
+    avgResponseLatencyMs: v.number(),
+    p95ResponseLatencyMs: v.number(),
+  })
+    .index('by_date', ['date']),
+
+  metrics_subscriptions: defineTable({
+    updatedAt: v.number(), // timestamp of last update
+    total: v.number(),
+    active: v.number(),
+    trialing: v.number(),
+    pastDue: v.number(),
+    canceled: v.number(),
+    free: v.number(),
+    plus: v.number(),
+    enterprise: v.number(),
+  }),
+
+  metrics_journey_funnel: defineTable({
+    updatedAt: v.number(),
+    onboarding: v.number(),
+    active: v.number(),
+    maintenance: v.number(),
+    crisis: v.number(),
+    churned: v.number(),
+  }),
+
+  metrics_burnout_distribution: defineTable({
+    updatedAt: v.number(),
+    bucket: v.string(), // "0-20", "21-40", etc.
+    count: v.number(),
+  })
+    .index('by_bucket', ['bucket']),
+
+  watcher_state: defineTable({
+    watcherName: v.string(),
+    cursor: v.optional(v.id('users')),
+    lastRun: v.number(),
+  }).index('by_watcher', ['watcherName']),
 });
