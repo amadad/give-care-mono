@@ -68,6 +68,7 @@ type PendingAlert = {
  * OPTIMIZED: Batch queries to eliminate N+1 pattern
  */
 export const watchCaregiverEngagement = internalAction({
+  args: {},
   handler: async (ctx: ActionCtx): Promise<EngagementWatcherResult> => {
     logSafe('Watcher', 'Starting engagement monitoring');
 
@@ -183,6 +184,7 @@ export const watchCaregiverEngagement = internalAction({
  * OPTIMIZED: Batch queries to eliminate N+1 pattern
  */
 export const watchWellnessTrends = internalAction({
+  args: {},
   handler: async (ctx: ActionCtx): Promise<WellnessWatcherResult> => {
     logSafe('Watcher', 'Starting wellness trend monitoring');
 
@@ -377,6 +379,7 @@ function isWorseningTrend(scores: WellnessScoreDoc[]): boolean {
  * Query: Get all active users
  */
 export const getActiveUsers = internalAction({
+  args: {},
   handler: async (ctx: ActionCtx): Promise<ActiveUser[]> => {
     const users = await ctx.runQuery(internal.watchers._getActiveUsers);
     return users as ActiveUser[];
@@ -390,6 +393,7 @@ export const getActiveUsers = internalAction({
  * cursor-based pagination or batch processing with multiple calls.
  */
 export const _getActiveUsers = internalQuery({
+  args: {},
   handler: async (ctx: QueryCtx): Promise<ActiveUser[]> => {
     // Query users table directly (denormalized)
     const users = await ctx.db
@@ -447,14 +451,10 @@ export const findExistingAlert = internalQuery({
   ): Promise<AlertDoc | null> => {
     const alerts = await ctx.db
       .query('alerts')
-      .withIndex('by_user', (q) => q.eq('userId', args.userId))
-      .filter((q) =>
-        q.and(
-          q.eq(q.field('type'), args.type),
-          q.eq(q.field('pattern'), args.pattern),
-          q.eq(q.field('resolvedAt'), undefined) // Only unresolved alerts
-        )
+      .withIndex('by_user_type', (q) =>
+        q.eq('userId', args.userId).eq('type', args.type)
       )
+      .filter((q) => q.and(q.eq(q.field('pattern'), args.pattern), q.eq(q.field('resolvedAt'), undefined)))
       .first();
 
     return (alerts as AlertDoc | null) ?? null;

@@ -131,6 +131,7 @@ async function sendProactiveMessage(
  * - Mild/Thriving: Never (opt-in only)
  */
 export const sendTieredWellnessCheckins = internalAction({
+  args: {},
   handler: async ctx => {
     logSafe('Scheduling', 'cron_start', { job: 'sendTieredWellnessCheckins' })
 
@@ -224,6 +225,7 @@ export const sendTieredWellnessCheckins = internalAction({
  * - Day 31+: Mark as churned, stop messaging
  */
 export const reactivateDormantUsers = internalAction({
+  args: {},
   handler: async ctx => {
     logSafe('Scheduling', 'cron_start', { job: 'reactivateDormantUsers' })
 
@@ -329,6 +331,7 @@ export const reactivateDormantUsers = internalAction({
  * Runs Monday at 8am PT (16:00 UTC)
  */
 export const generateWeeklyReport = internalAction({
+  args: {},
   handler: async _ctx => {
     logSafe('Scheduling', 'cron_start', { job: 'generateWeeklyReport' })
 

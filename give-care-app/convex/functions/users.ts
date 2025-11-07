@@ -296,6 +296,7 @@ const DAY_MS = 24 * 60 * 60 * 1000
  * Get crisis users eligible for DAILY check-ins (first 7 days post-crisis)
  */
 export const getEligibleForCrisisDaily = internalQuery({
+  args: {},
   handler: async ctx => {
     const now = Date.now()
     const twoDaysAgo = now - 2 * DAY_MS
@@ -327,6 +328,7 @@ export const getEligibleForCrisisDaily = internalQuery({
  * Get crisis users eligible for WEEKLY check-ins (after day 7)
  */
 export const getEligibleForCrisisWeekly = internalQuery({
+  args: {},
   handler: async ctx => {
     const now = Date.now()
     const threeDaysAgo = now - 3 * DAY_MS
@@ -362,6 +364,7 @@ export const getEligibleForCrisisWeekly = internalQuery({
  * Get high burnout users eligible for check-ins (every 3 days)
  */
 export const getEligibleForHighBurnoutCheckin = internalQuery({
+  args: {},
   handler: async ctx => {
     const now = Date.now()
     const twoDaysAgo = now - 2 * DAY_MS
@@ -394,6 +397,7 @@ export const getEligibleForHighBurnoutCheckin = internalQuery({
  * Get moderate burnout users eligible for check-ins (weekly)
  */
 export const getEligibleForModerateCheckin = internalQuery({
+  args: {},
   handler: async ctx => {
     const now = Date.now()
     const threeDaysAgo = now - 3 * DAY_MS
@@ -426,10 +430,13 @@ export const getEligibleForModerateCheckin = internalQuery({
  * Get dormant users at specific milestones (day 7, 14, 30, 31+)
  */
 export const getDormantAtMilestones = internalQuery({
+  args: {},
   handler: async ctx => {
     const now = Date.now()
     const sevenDaysAgo = now - 7 * DAY_MS
 
+    // Limit to 500 users per run to prevent unbounded queries
+    // For larger user bases, implement pagination or batch processing
     const users = await ctx.db
       .query('users')
       .withIndex('by_last_contact')
@@ -443,7 +450,7 @@ export const getDormantAtMilestones = internalQuery({
           )
         )
       )
-      .collect()
+      .take(500)
 
     return users
   },

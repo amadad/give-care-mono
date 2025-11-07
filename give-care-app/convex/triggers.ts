@@ -33,6 +33,7 @@ import { logSafe } from './utils/logger'
  * 3. Skip triggers that are too old (>24h missed)
  */
 export const processDueTriggers = internalMutation({
+  args: {},
   handler: async ctx => {
     const now = Date.now()
     const twentyFourHoursAgo = now - 24 * 60 * 60 * 1000
@@ -40,8 +41,8 @@ export const processDueTriggers = internalMutation({
     // Query all enabled triggers that are due
     const dueTriggers = await ctx.db
       .query('triggers')
-      .withIndex('by_next_occurrence')
-      .filter(q => q.and(q.lte(q.field('nextOccurrence'), now), q.eq(q.field('enabled'), true)))
+      .withIndex('by_enabled_next', q => q.eq('enabled', true))
+      .filter(q => q.lte(q.field('nextOccurrence'), now))
       .collect()
 
     logSafe('Triggers', 'Found due triggers', { count: dueTriggers.length })

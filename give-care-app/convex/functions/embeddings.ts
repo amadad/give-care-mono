@@ -43,6 +43,7 @@ export const generateEmbedding = internalAction({
  * `npx convex run functions/embeddings:generateAllEmbeddings`
  */
 export const generateAllEmbeddings: any = internalAction({
+  args: {},
   handler: async ctx => {
     'use node'
 
@@ -101,6 +102,7 @@ export const generateAllEmbeddings: any = internalAction({
  * Get all knowledge base entries without embeddings
  */
 export const getAllWithoutEmbeddings = internalQuery({
+  args: {},
   handler: async ctx => {
     const entries = await ctx.db
       .query('knowledgeBase')

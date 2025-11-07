@@ -7,6 +7,7 @@ import { internalMutation } from '../_generated/server'
 import { v } from 'convex/values'
 
 export const deleteAllUsers = internalMutation({
+  args: {},
   handler: async ctx => {
     const users = await ctx.db.query('users').collect()
     let deletedCount = 0
