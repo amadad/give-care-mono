@@ -138,6 +138,32 @@ export const generateMainResponse = internalAction({
 });
 
 /**
+ * Send signup message to non-subscribers
+ */
+export const sendSignupMessage = internalAction({
+  args: {
+    userId: v.string(),
+    channel: v.union(v.literal('sms'), v.literal('email'), v.literal('web')),
+    phone: v.optional(v.string()),
+    signupUrl: v.string(),
+  },
+  handler: async (ctx, { userId, channel, phone, signupUrl }) => {
+    if (channel !== 'sms' || !phone) {
+      console.log('[inbound] Signup message only sent via SMS');
+      return;
+    }
+
+    const message = `Thanks for reaching out! To access GiveCare support, please subscribe at: ${signupUrl}`;
+
+    await ctx.runAction(internal.functions.inboundActions.sendSmsResponse, {
+      to: phone,
+      text: message,
+      userId,
+    });
+  },
+});
+
+/**
  * Send SMS response via Twilio
  */
 export const sendSmsResponse = internalAction({

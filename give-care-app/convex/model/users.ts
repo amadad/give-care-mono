@@ -16,6 +16,8 @@ type EnsureUserParams = {
   channel: Channel;
   phone?: string;
   locale?: string;
+  consent?: { emergency: boolean; marketing: boolean };
+  metadata?: Record<string, unknown>;
 };
 
 export const ensureUser = async (ctx: MutationCtx, params: EnsureUserParams) => {
@@ -34,6 +36,8 @@ export const ensureUser = async (ctx: MutationCtx, params: EnsureUserParams) => 
     phone: params.phone,
     channel: params.channel,
     locale: params.locale ?? DEFAULT_LOCALE,
+    consent: params.consent,
+    metadata: params.metadata,
     createdByHarness: true,
   });
   const user = await ctx.db.get(userId);

@@ -85,9 +85,7 @@ const searchResourcesTool = createTool({
 const mainAgent = new Agent(components.agent, {
   name: 'Caregiver Support',
   // @ts-expect-error - LanguageModelV1/V2 type mismatch between AI SDK versions
-  languageModel: openai.chat('gpt-4o-nano', {
-    reasoningEffort: 'minimal', // Lower latency for faster responses
-  }),
+  languageModel: openai.chat('gpt-5-nano'),
   instructions: 'You are a compassionate AI caregiver assistant providing empathetic support and practical advice.',
   // @ts-ignore - Tool array type inference
   tools: [searchResourcesTool],

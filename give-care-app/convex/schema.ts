@@ -40,10 +40,17 @@ export default defineSchema({
     phone: v.optional(v.string()),
     channel: v.optional(v.union(v.literal('sms'), v.literal('web'))),
     locale: v.optional(v.string()),
+    consent: v.optional(consentValidator),
+    metadata: v.optional(v.any()),
     createdByHarness: v.optional(v.boolean()),
   })
     .index('by_externalId', ['externalId'])
     .index('by_phone', ['phone']),
+
+  threads: defineTable({
+    userId: v.id('users'),
+    metadata: v.optional(v.any()),
+  }).index('by_userId', ['userId']),
 
   profiles: defineTable({
     userId: v.id('users'),

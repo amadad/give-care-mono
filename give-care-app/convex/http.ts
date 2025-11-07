@@ -1,6 +1,6 @@
 import { httpRouter } from 'convex/server';
 import { httpAction } from './_generated/server';
-import { api } from './_generated/api';
+import { api, internal } from './_generated/api';
 
 const http = httpRouter();
 
@@ -97,7 +97,7 @@ http.route({
       });
 
       // Trigger async processing and response generation
-      await ctx.scheduler.runAfter(0, api.functions.inbound.processInboundMessage, {
+      await ctx.scheduler.runAfter(0, internal.functions.inbound.processInboundMessage, {
         messageId: messageRecord.messageId,
         userId: messageRecord.userId,
         text: body,

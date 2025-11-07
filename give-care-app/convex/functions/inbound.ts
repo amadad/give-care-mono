@@ -10,6 +10,7 @@ import { internal } from '../_generated/api';
 import { v } from 'convex/values';
 import { saveMessage } from '@convex-dev/agent';
 import { components } from '../_generated/api';
+import * as Subscriptions from '../model/subscriptions';
 
 const CRISIS_TERMS = [
   'suicide',
@@ -36,6 +37,25 @@ export const processInboundMessage = internalMutation({
     channel: v.union(v.literal('sms'), v.literal('email'), v.literal('web')),
   },
   handler: async (ctx, { messageId, userId, text, externalId, channel }) => {
+    // Check subscription status
+    const hasSubscription = await Subscriptions.hasActiveSubscription(ctx, userId);
+
+    if (!hasSubscription) {
+      // Get user to extract phone for signup URL
+      const user = await ctx.db.get(userId);
+      const signupUrl = Subscriptions.getSignupUrl(user?.phone);
+
+      // Send signup message
+      await ctx.scheduler.runAfter(0, internal.functions.inboundActions.sendSignupMessage, {
+        userId: externalId,
+        channel,
+        phone: user?.phone,
+        signupUrl,
+      });
+
+      return { threadId: null, agent: 'signup_required' };
+    }
+
     // Check for crisis terms
     const lowerText = text.toLowerCase();
     const hasCrisisTerms = CRISIS_TERMS.some((term) => lowerText.includes(term));
@@ -64,7 +84,6 @@ export const processInboundMessage = internalMutation({
     const { messageId: promptMessageId } = await saveMessage(ctx, components.agent, {
       threadId,
       prompt: text,
-      role: 'user' as const,
     });
 
     // Route to appropriate agent based on context

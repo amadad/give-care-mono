@@ -47,6 +47,7 @@ import type * as lib_types from "../lib/types.js";
 import type * as model_context from "../model/context.js";
 import type * as model_logs from "../model/logs.js";
 import type * as model_messages from "../model/messages.js";
+import type * as model_subscriptions from "../model/subscriptions.js";
 import type * as model_triggers from "../model/triggers.js";
 import type * as model_users from "../model/users.js";
 import type * as stripe from "../stripe.js";
@@ -105,6 +106,7 @@ declare const fullApi: ApiFromModules<{
   "model/context": typeof model_context;
   "model/logs": typeof model_logs;
   "model/messages": typeof model_messages;
+  "model/subscriptions": typeof model_subscriptions;
   "model/triggers": typeof model_triggers;
   "model/users": typeof model_users;
   stripe: typeof stripe;

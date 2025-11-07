@@ -17,7 +17,7 @@ export const recordInbound = mutation({
     message: messageArgs,
   },
   handler: async (ctx, { message }) => {
-    await Messages.recordInbound(ctx, message);
+    return await Messages.recordInbound(ctx, message);
   },
 });
 
@@ -26,6 +26,6 @@ export const recordOutbound = mutation({
     message: messageArgs,
   },
   handler: async (ctx, { message }) => {
-    await Messages.recordOutbound(ctx, message);
+    return await Messages.recordOutbound(ctx, message);
   },
 });
