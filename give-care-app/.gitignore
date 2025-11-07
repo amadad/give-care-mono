@@ -1,6 +1,9 @@
 # Convex specific
 # convex/_generated/ - Commented out to allow committing types for monorepo builds
 .convex/
+# Prevent compiled JS in convex source (Convex deploys .ts directly)
+convex/**/*.js
+!convex/_generated/**/*.js
 
 # Environment
 .env
@@ -13,6 +16,16 @@ node_modules/
 # Build
 dist/
 build/
+
+# Prevent compiled artifacts in source tree
+src/**/*.js
+src/**/*.d.ts
+src/**/*.d.ts.map
+src/**/*.js.map
+apps/**/*.js
+apps/**/*.d.ts
+apps/**/*.d.ts.map
+apps/**/*.js.map
 
 # Testing
 coverage/

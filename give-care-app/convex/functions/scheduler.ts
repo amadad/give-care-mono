@@ -1,4 +1,4 @@
-import { action, mutation, internalAction } from '../_generated/server';
+import { action, mutation, internalAction, internalMutation } from '../_generated/server';
 import { internal } from '../_generated/api';
 import { v } from 'convex/values';
 import { requireHarnessToken } from '../model/security';
@@ -60,32 +60,37 @@ export const cancelTrigger = mutation({
   },
 });
 
-const processBatch = async (ctx: Parameters<typeof Triggers.dueTriggers>[0], batchSize = 25) => {
-  const due = await Triggers.dueTriggers(ctx, Date.now(), batchSize);
-  for (const trigger of due) {
-    await ctx.db.insert('alerts', {
-      userId: trigger.userId,
-      type: 'scheduled_trigger',
-      severity: 'medium',
-      context: { payload: trigger.payload, timezone: trigger.timezone },
-      message: 'Scheduled follow-up ready. Reach out with a gentle nudge.',
-      channel: 'email',
-      payload: trigger.payload ?? {},
-      status: 'pending',
-    });
-    await ctx.runMutation(internal.scheduler.advanceTriggerMutation, { triggerId: trigger._id });
-  }
-  return due.length;
-};
+export const processBatchInternal = internalMutation({
+  args: {
+    batchSize: v.number(),
+  },
+  handler: async (ctx, { batchSize }) => {
+    const due = await Triggers.dueTriggers(ctx, Date.now(), batchSize);
+    for (const trigger of due) {
+      await ctx.db.insert('alerts', {
+        userId: trigger.userId,
+        type: 'scheduled_trigger',
+        severity: 'medium',
+        context: { payload: trigger.payload, timezone: trigger.timezone },
+        message: 'Scheduled follow-up ready. Reach out with a gentle nudge.',
+        channel: 'email',
+        payload: trigger.payload ?? {},
+        status: 'pending',
+      });
+      await ctx.runMutation(internal.internal.scheduler.advanceTriggerMutation, { triggerId: trigger._id });
+    }
+    return due.length;
+  },
+});
 
 export const processDueTriggers = action({
   args: {
     token: v.string(),
     batchSize: v.optional(v.number()),
   },
-  handler: async (ctx, { token, batchSize }) => {
+  handler: async (ctx, { token, batchSize }): Promise<{ processed: number }> => {
     requireHarnessToken(token);
-    const processed = await processBatch(ctx, batchSize ?? 25);
+    const processed: number = await ctx.runMutation(internal.functions.scheduler.processBatchInternal, { batchSize: batchSize ?? 25 });
     return { processed };
   },
 });
@@ -95,6 +100,6 @@ export const internalProcessDueTriggers = internalAction({
     batchSize: v.optional(v.number()),
   },
   handler: async (ctx, { batchSize }) => {
-    await processBatch(ctx, batchSize ?? 25);
+    await ctx.runMutation(internal.functions.scheduler.processBatchInternal, { batchSize: batchSize ?? 25 });
   },
 });

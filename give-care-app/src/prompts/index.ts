@@ -1,7 +1,8 @@
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
 
-const PROMPT_DIR = path.resolve(process.cwd(), 'give-care-app', 'src', 'prompts');
+// Use __dirname to get prompts relative to this file, not cwd
+const PROMPT_DIR = path.join(__dirname);
 
 const readPrompt = (name: string) => readFileSync(path.join(PROMPT_DIR, `${name}.md`), 'utf-8');
 
