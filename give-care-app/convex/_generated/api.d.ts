@@ -8,7 +8,6 @@
  * @module
  */
 
-import type * as _cleanup from "../_cleanup.js";
 import type * as actions_messageProcessing from "../actions/messageProcessing.js";
 import type * as actions_twilio from "../actions/twilio.js";
 import type * as auth from "../auth.js";
@@ -27,6 +26,7 @@ import type * as functions_conversations from "../functions/conversations.js";
 import type * as functions_emailContacts from "../functions/emailContacts.js";
 import type * as functions_emailContent from "../functions/emailContent.js";
 import type * as functions_embeddings from "../functions/embeddings.js";
+import type * as functions_jobs from "../functions/jobs.js";
 import type * as functions_memories from "../functions/memories.js";
 import type * as functions_messages from "../functions/messages.js";
 import type * as functions_newsletter from "../functions/newsletter.js";
@@ -42,8 +42,12 @@ import type * as functions_vectorSearch from "../functions/vectorSearch.js";
 import type * as functions_wellness from "../functions/wellness.js";
 import type * as http from "../http.js";
 import type * as lib_auth from "../lib/auth.js";
+import type * as lib_context from "../lib/context.js";
+import type * as lib_idempotency from "../lib/idempotency.js";
 import type * as lib_scoring from "../lib/scoring.js";
+import type * as lib_webhooks from "../lib/webhooks.js";
 import type * as messages from "../messages.js";
+import type * as migrations_splitUsersTable from "../migrations/splitUsersTable.js";
 import type * as model_admin from "../model/admin.js";
 import type * as model_analytics from "../model/analytics.js";
 import type * as model_conversations from "../model/conversations.js";
@@ -79,7 +83,6 @@ import type {
  * ```
  */
 declare const fullApi: ApiFromModules<{
-  _cleanup: typeof _cleanup;
   "actions/messageProcessing": typeof actions_messageProcessing;
   "actions/twilio": typeof actions_twilio;
   auth: typeof auth;
@@ -98,6 +101,7 @@ declare const fullApi: ApiFromModules<{
   "functions/emailContacts": typeof functions_emailContacts;
   "functions/emailContent": typeof functions_emailContent;
   "functions/embeddings": typeof functions_embeddings;
+  "functions/jobs": typeof functions_jobs;
   "functions/memories": typeof functions_memories;
   "functions/messages": typeof functions_messages;
   "functions/newsletter": typeof functions_newsletter;
@@ -113,8 +117,12 @@ declare const fullApi: ApiFromModules<{
   "functions/wellness": typeof functions_wellness;
   http: typeof http;
   "lib/auth": typeof lib_auth;
+  "lib/context": typeof lib_context;
+  "lib/idempotency": typeof lib_idempotency;
   "lib/scoring": typeof lib_scoring;
+  "lib/webhooks": typeof lib_webhooks;
   messages: typeof messages;
+  "migrations/splitUsersTable": typeof migrations_splitUsersTable;
   "model/admin": typeof model_admin;
   "model/analytics": typeof model_analytics;
   "model/conversations": typeof model_conversations;

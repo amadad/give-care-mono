@@ -116,6 +116,23 @@ crons.interval('process-rrule-triggers', { minutes: 15 }, internal.triggers.proc
 crons.interval('engagement-watcher', { hours: 6 }, internal.watchers.watchCaregiverEngagement)
 
 /**
+ * JOBS PROCESSOR
+ * Runs every 30 seconds
+ *
+ * Processes pending jobs from the jobs queue for idempotent side-effects:
+ * - send_sms: Send outbound SMS via Twilio
+ * - send_email: Send emails via Resend
+ * - process_inbound_sms: Process incoming SMS messages
+ *
+ * Features:
+ * - Exactly-once semantics via unique job keys
+ * - Exponential backoff on failure (2s, 4s, 8s, ...)
+ * - Max 3 retry attempts per job
+ * - Processes up to 10 jobs per execution
+ */
+crons.interval('process-jobs', { seconds: 30 }, internal.functions.jobs.processJobs)
+
+/**
  * WELLNESS TREND WATCHER (Task 11)
  * Runs weekly on Monday at 9am PT (16:00 UTC during standard time)
  *
