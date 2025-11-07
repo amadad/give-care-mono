@@ -1,0 +1,11 @@
+name: trauma_informed_v1
+rules:
+  - id: throttle_repeated_prompts
+    when: "ctx.promptHistory.filter((p) => p.fieldId === 'message').length >= 2"
+    action: suppress_question
+  - id: crisis_detect
+    when: "input.text.toLowerCase().includes('suicide') && !ctx.consent.emergency"
+    action: route:crisis
+  - id: medical_advice_block
+    when: "input.text.toLowerCase().includes('diagnose')"
+    action: block_with_message:medical_disclaimer

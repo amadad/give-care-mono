@@ -1,0 +1,12 @@
+import { handle } from '../../packages/harness';
+import { Inbound } from '../../packages/shared/types';
+
+export const websocketHandler = async (event: { userId: string; text: string; meta?: Record<string, unknown> }) => {
+  const inbound: Inbound = {
+    channel: 'web',
+    userId: event.userId,
+    text: event.text,
+    meta: event.meta ?? {},
+  };
+  return handle(inbound);
+};

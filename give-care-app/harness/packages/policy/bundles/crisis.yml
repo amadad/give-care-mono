@@ -1,0 +1,8 @@
+name: crisis_v1
+rules:
+  - id: escalate_on_988_terms
+    when: "['suicide','kill myself','end it'].some((term) => input.text.toLowerCase().includes(term))"
+    action: route:crisis
+  - id: deny_medical_diagnosis
+    when: "input.text.toLowerCase().includes('diagnose')"
+    action: block_with_message:diagnosis_disclaimer

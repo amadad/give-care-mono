@@ -1,0 +1,15 @@
+{
+  "name": "@givecare/harness-convex",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "convex dev",
+    "deploy": "convex deploy",
+    "codegen": "convex codegen"
+  },
+  "dependencies": {
+    "convex": "^1.11.0",
+    "luxon": "^3.4.4",
+    "rrule": "^2.8.1"
+  }
+}
