@@ -45,10 +45,7 @@ export const matchResourcesForUser = query({
   },
   handler: async (ctx, { userId, limit = 10 }): Promise<ScoredResource[]> => {
     // 1. Get user context
-    const [user, profile] = await Promise.all([
-      ctx.db.get(userId),
-      ctx.db.query('caregiverProfiles').withIndex('by_user', q => q.eq('userId', userId)).first(),
-    ])
+    const user = await ctx.db.get(userId)
     if (!user) throw new Error('User not found')
 
     const latestScore = await ctx.db
@@ -57,9 +54,9 @@ export const matchResourcesForUser = query({
       .order('desc')
       .first()
 
-    const userZones = latestScore?.pressureZones || []
-    const userBand = profile?.burnoutBand || 'moderate'
-    const userZip = profile?.zipCode || ''
+    const userZones = latestScore?.pressureZones || (user as any).pressureZones || []
+    const userBand = (user as any).burnoutBand || 'moderate'
+    const userZip = (user as any).zipCode || ''
     const userZip3 = userZip.slice(0, 3)
 
     // 2. Get all active resources

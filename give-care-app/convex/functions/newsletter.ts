@@ -4,14 +4,14 @@
  */
 
 import { v } from 'convex/values'
-import { action, mutation, query } from '../_generated/server'
-import { api } from '../_generated/api'
+import { mutation, query } from '../_generated/server'
 
 /**
  * Subscribe to newsletter
- * Public action - called from marketing site
+ * Public mutation - called from marketing site
+ * REFACTORED: Single transaction (was 3 RPC calls)
  */
-export const subscribe = action({
+export const subscribe = mutation({
   args: {
     email: v.string(),
   },
@@ -25,10 +25,11 @@ export const subscribe = action({
     // Normalize email (lowercase, trim)
     const normalizedEmail = email.toLowerCase().trim()
 
-    // Check if already subscribed
-    const existing = await ctx.runQuery(api.functions.newsletter.getByEmail, {
-      email: normalizedEmail,
-    })
+    // Read + write in ONE transaction
+    const existing = await ctx.db
+      .query('newsletterSubscribers')
+      .withIndex('by_email', (q: any) => q.eq('email', normalizedEmail))
+      .first()
 
     if (existing && !existing.unsubscribed) {
       return {
@@ -38,16 +39,22 @@ export const subscribe = action({
       }
     }
 
-    // Store in database
+    const now = Date.now()
+
     if (existing) {
       // Resubscribe
-      await ctx.runMutation(api.functions.newsletter.resubscribe, {
-        email: normalizedEmail,
+      await ctx.db.patch(existing._id, {
+        unsubscribed: false,
+        resubscribedAt: now,
+        updatedAt: now,
       })
     } else {
       // New subscriber
-      await ctx.runMutation(api.functions.newsletter.create, {
+      await ctx.db.insert('newsletterSubscribers', {
         email: normalizedEmail,
+        subscribedAt: now,
+        unsubscribed: false,
+        updatedAt: now,
       })
     }
 
@@ -61,9 +68,10 @@ export const subscribe = action({
 
 /**
  * Unsubscribe from newsletter
- * Public action - called from unsubscribe links
+ * Public mutation - called from unsubscribe links
+ * REFACTORED: Single transaction (was 1 RPC call to mutation)
  */
-export const unsubscribe = action({
+export const unsubscribe = mutation({
   args: {
     email: v.string(),
   },
@@ -75,91 +83,37 @@ export const unsubscribe = action({
     }
 
     const normalizedEmail = email.toLowerCase().trim()
+    const now = Date.now()
 
-    // Mark as unsubscribed in database
-    await ctx.runMutation(api.functions.newsletter.markUnsubscribed, {
-      email: normalizedEmail,
-    })
+    // Read + write in ONE transaction
+    const subscriber = await ctx.db
+      .query('newsletterSubscribers')
+      .withIndex('by_email', (q: any) => q.eq('email', normalizedEmail))
+      .first()
+
+    if (!subscriber) {
+      // Create a record for this email as unsubscribed
+      await ctx.db.insert('newsletterSubscribers', {
+        email: normalizedEmail,
+        subscribedAt: now,
+        unsubscribed: true,
+        unsubscribedAt: now,
+        updatedAt: now,
+      })
+    } else {
+      // Mark existing subscriber as unsubscribed
+      await ctx.db.patch(subscriber._id, {
+        unsubscribed: true,
+        unsubscribedAt: now,
+        updatedAt: now,
+      })
+    }
 
     return {
       success: true,
       message: `${normalizedEmail} has been unsubscribed`,
       email: normalizedEmail,
     }
-  },
-})
-
-// Internal mutations and queries
-
-export const create = mutation({
-  args: {
-    email: v.string(),
-  },
-  handler: async (ctx, { email }) => {
-    const now = Date.now()
-
-    const id = await ctx.db.insert('newsletterSubscribers', {
-      email,
-      subscribedAt: now,
-      unsubscribed: false,
-      updatedAt: now,
-    })
-
-    return id
-  },
-})
-
-export const resubscribe = mutation({
-  args: {
-    email: v.string(),
-  },
-  handler: async (ctx, { email }) => {
-    const subscriber = await ctx.db
-      .query('newsletterSubscribers')
-      .withIndex('by_email', (q: any) => q.eq('email', email))
-      .first()
-
-    if (!subscriber) {
-      throw new Error('Subscriber not found')
-    }
-
-    await ctx.db.patch(subscriber._id, {
-      unsubscribed: false,
-      subscribedAt: Date.now(),
-      updatedAt: Date.now(),
-    })
-
-    return subscriber._id
-  },
-})
-
-export const markUnsubscribed = mutation({
-  args: {
-    email: v.string(),
-  },
-  handler: async (ctx, { email }) => {
-    const subscriber = await ctx.db
-      .query('newsletterSubscribers')
-      .withIndex('by_email', (q: any) => q.eq('email', email))
-      .first()
-
-    if (!subscriber) {
-      // Create a record for this email as unsubscribed
-      await ctx.db.insert('newsletterSubscribers', {
-        email,
-        subscribedAt: Date.now(),
-        unsubscribed: true,
-        unsubscribedAt: Date.now(),
-        updatedAt: Date.now(),
-      })
-      return
-    }
-
-    await ctx.db.patch(subscriber._id, {
-      unsubscribed: true,
-      unsubscribedAt: Date.now(),
-      updatedAt: Date.now(),
-    })
   },
 })
 

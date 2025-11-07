@@ -442,29 +442,38 @@ export class MessageHandler {
       await this.completeAssessment(updatedContext)
     }
 
-    // 7d. Log conversation
-    await this.logConversation(
-      user._id,
-      originalContext.phoneNumber,
+    // 7d. Persist messages + context in a single mutation
+    await this.ctx.runMutation(internal.messages.processIncomingMessage, {
+      userId: user._id,
       userMessage,
-      agentResult,
+      agentMessage: agentResult.message,
+      contextUpdates: {
+        firstName: updatedContext.firstName ?? undefined,
+        relationship: updatedContext.relationship ?? undefined,
+        careRecipientName: updatedContext.careRecipientName ?? undefined,
+        zipCode: updatedContext.zipCode ?? undefined,
+        journeyPhase: updatedContext.journeyPhase ?? undefined,
+        assessmentInProgress: updatedContext.assessmentInProgress ?? undefined,
+        assessmentType: updatedContext.assessmentType ?? undefined,
+        assessmentCurrentQuestion: updatedContext.assessmentCurrentQuestion ?? undefined,
+        assessmentSessionId: updatedContext.assessmentSessionId ?? undefined,
+        burnoutScore: updatedContext.burnoutScore ?? undefined,
+        burnoutBand: updatedContext.burnoutBand ?? undefined,
+        burnoutConfidence: updatedContext.burnoutConfidence ?? undefined,
+        pressureZones: updatedContext.pressureZones ?? undefined,
+        pressureZoneScores: updatedContext.pressureZoneScores ?? undefined,
+      },
       messageSid,
-      startTime
-    )
+      startTime,
+    })
 
     // 7e. Track implicit feedback (ASYNC - Poke-style passive collection)
-    this.trackImplicitFeedbackAsync(user._id, userMessage, agentResult, startTime)
+    void this.trackImplicitFeedbackAsync(user._id, userMessage, agentResult, startTime)
 
-    // 7f. Update user context (ASYNC - don't block response)
-    this.updateUserContextAsync(user._id, updatedContext)
-
-    // 7g. Save wellness score if changed (ASYNC - don't block response)
+    // 7f-7h. Context + lastContactAt handled in single mutation above; keep wellness async if changed
     if (updatedContext.burnoutScore !== null && updatedContext.burnoutScore !== user.burnoutScore) {
-      this.saveWellnessScoreAsync(user._id, updatedContext)
+      void this.saveWellnessScoreAsync(user._id, updatedContext)
     }
-
-    // 7h. Update last contact (ASYNC - don't block response)
-    this.updateLastContactAsync(user._id)
   }
 
   private async createAssessmentSession(context: GiveCareContext, userId: any): Promise<void> {

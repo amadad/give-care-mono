@@ -5,11 +5,6 @@
 
 import { v } from 'convex/values'
 import { internalMutation, mutation, query } from './_generated/server'
-import {
-  getEnrichedUser,
-  updateCaregiverProfile,
-  updateSubscription,
-} from './lib/userHelpers'
 
 /**
  * Create a pending user record when checkout starts
@@ -34,12 +29,8 @@ export const createPendingUser = internalMutation({
       await ctx.db.patch(existing._id, {
         name: fullName,
         email,
-        updatedAt: Date.now(),
-      })
-
-      // Update subscription table with Stripe ID
-      await updateSubscription(ctx, existing._id, {
         stripeCustomerId,
+        updatedAt: Date.now(),
       })
 
       return existing._id
@@ -54,20 +45,22 @@ export const createPendingUser = internalMutation({
       updatedAt: Date.now(),
     })
 
-    // Create caregiver profile
-    await updateCaregiverProfile(ctx, userId, {
+    // Populate profile defaults directly on user record
+    await ctx.db.patch(userId, {
       firstName: fullName.split(' ')[0],
       journeyPhase: 'onboarding',
       assessmentInProgress: false,
       assessmentCurrentQuestion: 0,
       pressureZones: [],
       onboardingAttempts: {},
+      updatedAt: Date.now(),
     })
 
-    // Create subscription record
-    await updateSubscription(ctx, userId, {
+    // Initialize subscription fields
+    await ctx.db.patch(userId, {
       stripeCustomerId,
       subscriptionStatus: 'incomplete', // Will become "active" after payment
+      updatedAt: Date.now(),
     })
 
     return userId
@@ -108,19 +101,10 @@ export const activateSubscription = internalMutation({
     ),
   },
   handler: async (ctx, { userId, stripeSubscriptionId, subscriptionStatus }) => {
-    // Update subscription table
-    await updateSubscription(ctx, userId, {
+    await ctx.db.patch(userId, {
       stripeSubscriptionId,
       subscriptionStatus,
-    })
-
-    // Move from onboarding to active
-    await updateCaregiverProfile(ctx, userId, {
       journeyPhase: 'active',
-    })
-
-    // Update user timestamp
-    await ctx.db.patch(userId, {
       updatedAt: Date.now(),
     })
   },
@@ -153,13 +137,8 @@ export const updateSubscriptionStatus = internalMutation({
     ),
   },
   handler: async (ctx, { userId, subscriptionStatus }) => {
-    const user = await getEnrichedUser(ctx, userId)
+    const user = await ctx.db.get(userId)
     if (!user) throw new Error('User not found')
-
-    // Update subscription status
-    await updateSubscription(ctx, userId, {
-      subscriptionStatus,
-    })
 
     // Determine journey phase based on subscription status
     let journeyPhase = user.journeyPhase
@@ -173,17 +152,17 @@ export const updateSubscriptionStatus = internalMutation({
       // No change to journey phase
     }
 
-    // Update journey phase if it changed
-    if (journeyPhase && journeyPhase !== user.journeyPhase) {
-      await updateCaregiverProfile(ctx, userId, {
-        journeyPhase,
-      })
+    const updates: Partial<typeof user> & { updatedAt: number } = {
+      subscriptionStatus,
+      updatedAt: Date.now(),
     }
 
-    // Update user timestamp
-    await ctx.db.patch(userId, {
-      updatedAt: Date.now(),
-    })
+    // Update journey phase if it changed
+    if (journeyPhase && journeyPhase !== user.journeyPhase) {
+      updates.journeyPhase = journeyPhase
+    }
+
+    await ctx.db.patch(userId, updates)
   },
 })
 
@@ -211,17 +190,17 @@ export const fixUserSubscription = mutation({
       throw new Error(`User not found with phone: ${phoneNumber}`)
     }
 
-    // Update subscription
-    await updateSubscription(ctx, user._id, {
+    const updates: Partial<typeof user> & { updatedAt: number } = {
       subscriptionStatus,
-    })
+      updatedAt: Date.now(),
+    }
 
     // Move to active journey phase if activating
     if (subscriptionStatus === 'active' || subscriptionStatus === 'trialing') {
-      await updateCaregiverProfile(ctx, user._id, {
-        journeyPhase: 'active',
-      })
+      updates.journeyPhase = 'active'
     }
+
+    await ctx.db.patch(user._id, updates)
 
     return {
       success: true,
@@ -262,21 +241,8 @@ export const checkSubscription = query({
       return { isActive: false, user: null }
     }
 
-    // Get subscription and profile data
-    const [subscription, profile] = await Promise.all([
-      ctx.db
-        .query('subscriptions')
-        .withIndex('by_user', (q: any) => q.eq('userId', user._id))
-        .first(),
-      ctx.db
-        .query('caregiverProfiles')
-        .withIndex('by_user', (q: any) => q.eq('userId', user._id))
-        .first(),
-    ])
-
     const isActive =
-      subscription?.subscriptionStatus === 'active' ||
-      subscription?.subscriptionStatus === 'trialing'
+      user.subscriptionStatus === 'active' || user.subscriptionStatus === 'trialing'
 
     return {
       isActive,
@@ -285,8 +251,8 @@ export const checkSubscription = query({
         name: user.name,
         email: user.email,
         phoneNumber: user.phoneNumber,
-        subscriptionStatus: subscription?.subscriptionStatus,
-        journeyPhase: profile?.journeyPhase,
+        subscriptionStatus: user.subscriptionStatus,
+        journeyPhase: user.journeyPhase,
       },
     }
   },

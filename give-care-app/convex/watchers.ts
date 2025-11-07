@@ -391,42 +391,22 @@ export const getActiveUsers = internalAction({
  */
 export const _getActiveUsers = internalQuery({
   handler: async (ctx: QueryCtx): Promise<ActiveUser[]> => {
-    // Limit query to first 100 active users from caregiverProfiles
-    // (journeyPhase has moved from users to caregiverProfiles)
-    const profiles = await ctx.db
-      .query('caregiverProfiles')
+    // Query users table directly (denormalized)
+    const users = await ctx.db
+      .query('users')
       .withIndex('by_journey', (q) => q.eq('journeyPhase', 'active'))
       .take(100);
 
-    // Enrich with data from related tables
-    const enrichedUsers = await Promise.all(
-      profiles.map(async (profile) => {
-        const [user, subscription, conversationState] = await Promise.all([
-          ctx.db.get(profile.userId),
-          ctx.db
-            .query('subscriptions')
-            .withIndex('by_user', (q) => q.eq('userId', profile.userId))
-            .first(),
-          ctx.db
-            .query('conversationState')
-            .withIndex('by_user', (q) => q.eq('userId', profile.userId))
-            .first(),
-        ])
-
-        return {
-          _id: profile.userId,
-          phoneNumber: user?.phoneNumber,
-          firstName: profile.firstName,
-          journeyPhase: profile.journeyPhase,
-          subscriptionStatus: subscription?.subscriptionStatus,
-          recentMessages: conversationState?.recentMessages,
-          totalInteractionCount: conversationState?.totalInteractionCount,
-          conversationStartDate: conversationState?.conversationStartDate,
-        } as ActiveUser
-      })
-    )
-
-    return enrichedUsers;
+    return (users as any[]).map((u) => ({
+      _id: u._id,
+      phoneNumber: u.phoneNumber,
+      firstName: u.firstName,
+      journeyPhase: u.journeyPhase,
+      subscriptionStatus: u.subscriptionStatus,
+      recentMessages: u.recentMessages,
+      totalInteractionCount: u.totalInteractionCount,
+      conversationStartDate: u.conversationStartDate,
+    }));
   },
 });
 
