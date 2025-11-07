@@ -118,7 +118,7 @@ export const getCrisisAlerts = query({
 
     const pendingFollowups = (await ctx.db
       .query('users')
-      .withIndex('by_band_crisis', q => q.eq('burnoutBand', 'crisis'))
+      .withIndex('by_burnout_band', q => q.eq('burnoutBand', 'crisis'))
       .filter(q =>
         q.and(
           q.neq(q.field('lastCrisisEventAt'), undefined),
