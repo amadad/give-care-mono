@@ -1,10 +1,11 @@
-import { internalAction } from '../_generated/server';
+import { internalMutation } from '../_generated/server';
+import type { MutationCtx } from '../_generated/server';
 import * as Users from '../model/users';
 
 const CRISIS_TERMS = ['suicide', 'kill myself', 'end it'];
 
 const insertAlert = async (
-  ctx: Parameters<typeof internalAction>[0],
+  ctx: MutationCtx,
   userId: string,
   type: string,
   severity: 'low' | 'medium' | 'high' | 'critical',
@@ -25,7 +26,7 @@ const insertAlert = async (
   });
 };
 
-export const runEngagementChecks = internalAction({
+export const runEngagementChecks = internalMutation({
   args: {},
   handler: async (ctx) => {
     const now = Date.now();

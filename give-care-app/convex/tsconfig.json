@@ -1,14 +1,14 @@
 {
-  "extends": "../tsconfig.json",
   "compilerOptions": {
-    "rootDir": "./",
-    "baseUrl": "./",
     "module": "ESNext",
     "target": "ES2022",
     "moduleResolution": "Node",
     "esModuleInterop": true,
-    "strict": true
+    "strict": true,
+    "skipLibCheck": true,
+    "allowSyntheticDefaultImports": true,
+    "isolatedModules": true
   },
-  "include": ["./**/*.ts"],
+  "include": ["./**/*.ts", "../src/shared/types.ts"],
   "exclude": ["node_modules", "_generated"]
 }

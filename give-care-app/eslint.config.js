@@ -6,14 +6,14 @@ export default tseslint.config(
   {
     ignores: [
       "_archive/**",
-      "admin/**",
       "convex/_generated/**",
       "dist/**",
-      "node_modules/**"
+      "node_modules/**",
+      "admin/vitest.config.ts"
     ]
   },
   {
-    files: ["**/*.ts"],
+    files: ["**/*.ts", "**/*.tsx"],
     extends: [js.configs.recommended, ...tseslint.configs.recommended],
     languageOptions: {
       ecmaVersion: "latest",
@@ -35,6 +35,15 @@ export default tseslint.config(
           varsIgnorePattern: "^_"
         }
       ]
+    }
+  },
+  {
+    files: ["admin/**/*.{ts,tsx}"],
+    languageOptions: {
+      parserOptions: {
+        projectService: true,
+        tsconfigRootDir: new URL('./admin', import.meta.url).pathname
+      }
     }
   },
   ...convexPlugin.configs.recommended

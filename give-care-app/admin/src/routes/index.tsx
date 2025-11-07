@@ -15,7 +15,7 @@ export const Route = createFileRoute('/')({
 })
 
 function DashboardHome() {
-  const metrics = useQuery(api["functions/admin"].getSystemMetrics)
+  const metrics = useQuery(api["functions/admin"].getMetrics)
 
   if (!metrics) {
     return (

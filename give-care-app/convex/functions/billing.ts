@@ -1,4 +1,5 @@
 import { mutation } from '../_generated/server';
+import type { MutationCtx } from '../_generated/server';
 import { v } from 'convex/values';
 import * as Users from '../model/users';
 
@@ -8,7 +9,7 @@ const PLAN_ENTITLEMENTS: Record<string, string[]> = {
   enterprise: ['assessments', 'interventions', 'resources', 'priority_support'],
 };
 
-const applyEntitlements = async (ctx: Parameters<typeof mutation>[0], userId: string, plan: string, expiresAt?: number) => {
+const applyEntitlements = async (ctx: MutationCtx, userId: string, plan: string, expiresAt?: number) => {
   const user = await Users.getByExternalId(ctx, userId);
   if (!user) return;
   const features = PLAN_ENTITLEMENTS[plan] ?? PLAN_ENTITLEMENTS.free;
@@ -41,17 +42,20 @@ export const applyStripeEvent = mutation({
     const currentPeriodEnd = payload?.data?.object?.current_period_end ?? Date.now();
     const externalUserId = payload?.metadata?.userId ?? payload?.data?.object?.metadata?.userId;
 
-    let userRef = null;
+    let user = null;
     if (externalUserId) {
-      userRef = await Users.getByExternalId(ctx, externalUserId);
+      user = await Users.getByExternalId(ctx, externalUserId);
     } else if (customerId) {
-      userRef = await ctx.db
+      const sub = await ctx.db
         .query('subscriptions')
         .withIndex('by_customer', (q) => q.eq('stripeCustomerId', customerId))
         .unique();
+      if (sub) {
+        user = await ctx.db.get(sub.userId);
+      }
     }
 
-    const userId = userRef?._id;
+    const userId = user?._id;
 
     await ctx.db.insert('billing_events', {
       userId: userId ?? undefined,
@@ -60,7 +64,7 @@ export const applyStripeEvent = mutation({
       data: payload,
     });
 
-    if (userId) {
+    if (userId && user) {
       await ctx.db.insert('subscriptions', {
         userId,
         stripeCustomerId: customerId ?? 'unknown',
@@ -68,7 +72,7 @@ export const applyStripeEvent = mutation({
         status,
         currentPeriodEnd,
       });
-      await applyEntitlements(ctx, userRef!.externalId, planId, currentPeriodEnd);
+      await applyEntitlements(ctx, user.externalId, planId, currentPeriodEnd);
     }
   },
 });

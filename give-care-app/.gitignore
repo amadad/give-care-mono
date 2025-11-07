@@ -17,16 +17,6 @@ node_modules/
 dist/
 build/
 
-# Prevent compiled artifacts in source tree
-src/**/*.js
-src/**/*.d.ts
-src/**/*.d.ts.map
-src/**/*.js.map
-apps/**/*.js
-apps/**/*.d.ts
-apps/**/*.d.ts.map
-apps/**/*.js.map
-
 # Testing
 coverage/
 
@@ -37,6 +27,7 @@ convex-build.log
 
 # Archives
 _archive-convex/
+_archive/
 
 # OS
 .DS_Store

@@ -39,7 +39,7 @@ export const cancelTrigger = async (ctx: MutationCtx, triggerId: Doc<'triggers'>
   await ctx.db.patch(triggerId, { status: 'paused' });
 };
 
-export const dueTriggers = async (ctx: ActionCtx | MutationCtx, now = Date.now(), limit = 50) => {
+export const dueTriggers = async (ctx: MutationCtx, now = Date.now(), limit = 50) => {
   return ctx.db
     .query('triggers')
     .withIndex('by_nextRun', (q) => q.lte('nextRun', now))

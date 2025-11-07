@@ -84,12 +84,12 @@ pnpm install
 ```bash
 cp .env.example .env
 # Runtime environment variables:
-# - HARNESS_OPENAI_API_KEY (or OPENAI_API_KEY)
-# - HARNESS_GEMINI_API_KEY (for resource search)
-# - HARNESS_RESEND_API_KEY (for email notifications)
-# - HARNESS_STRIPE_SECRET (for billing)
-# - HARNESS_CONVEX_URL (Convex deployment URL)
-# - HARNESS_CONVEX_TOKEN (shared secret for auth)
+# - OPENAI_API_KEY (for LLM execution)
+# - GEMINI_API_KEY (for resource search)
+# - RESEND_API_KEY (for email notifications)
+# - STRIPE_SECRET_KEY (for billing)
+# - CONVEX_URL (Convex deployment URL)
+# - CONVEX_TOKEN (shared secret for auth)
 ```
 
 ### 3. Deploy Convex Backend
@@ -98,7 +98,7 @@ npx convex dev    # Development
 npx convex deploy # Production
 ```
 
-Set `HARNESS_API_TOKEN` in Convex dashboard (must match `HARNESS_CONVEX_TOKEN` in runtime).
+Set `HARNESS_API_TOKEN` in Convex dashboard (must match `CONVEX_TOKEN` in runtime).
 
 ### 4. Run Tests
 ```bash
@@ -197,32 +197,32 @@ See `docs/CAPABILITIES.md` for complete reference.
 - Swappable: Replace `src/drivers/model/oai.driver.ts` for other providers
 
 **Config**:
-- `HARNESS_OPENAI_API_KEY` - API key
-- `HARNESS_OPENAI_MODEL` - Model name (default: `gpt-5.5-mini`)
-- `HARNESS_OPENAI_SERVICE_TIER` - Service tier (default: `auto`)
+- `OPENAI_API_KEY` - API key
+- `OPENAI_MODEL` - Model name (default: `gpt-5.5-mini`)
+- `OPENAI_SERVICE_TIER` - Service tier (default: `auto`)
 
 ### Google Gemini (Resource Search)
 - Maps grounding for local respite resource discovery
 - Latitude/longitude-based search
 
 **Config**:
-- `HARNESS_GEMINI_API_KEY` - API key
-- `HARNESS_GEMINI_MODEL` - Model name (default: `gemini-2.5-flash-lite`)
+- `GEMINI_API_KEY` - API key
+- `GEMINI_MODEL` - Model name (default: `gemini-2.5-flash-lite`)
 
 ### Resend (Email Notifications)
 - Email delivery for alerts, summaries, notifications
 
 **Config**:
-- `HARNESS_RESEND_API_KEY` - API key
-- `HARNESS_EMAIL_FROM` - From address (default: `GiveCare <care@givecare.ai>`)
+- `RESEND_API_KEY` - API key
+- `EMAIL_FROM` - From address (default: `GiveCare <care@givecare.ai>`)
 
 ### Stripe (Billing)
 - Subscription management via Convex backend
 - Entitlements refresh capability
 
 **Config**:
-- `HARNESS_STRIPE_SECRET` - Stripe API key
-- `HARNESS_STRIPE_WEBHOOK_SECRET` - Webhook secret for `apps/edge-stripe`
+- `STRIPE_SECRET_KEY` - Stripe API key
+- `STRIPE_WEBHOOK_SECRET` - Webhook secret for `apps/edge-stripe`
 
 ### Convex (Database Backend)
 - Token-authenticated API (16 public functions)
@@ -231,8 +231,8 @@ See `docs/CAPABILITIES.md` for complete reference.
 - 15-method Store interface implementation
 
 **Config**:
-- `HARNESS_CONVEX_URL` - Deployment URL (e.g., `https://YOUR-DEPLOYMENT.convex.cloud`)
-- `HARNESS_CONVEX_TOKEN` - Shared secret (must match `HARNESS_API_TOKEN` in Convex env)
+- `CONVEX_URL` - Deployment URL (e.g., `https://YOUR-DEPLOYMENT.convex.cloud`)
+- `CONVEX_TOKEN` - Shared secret (must match `HARNESS_API_TOKEN` in Convex env)
 
 ---
 
@@ -272,12 +272,12 @@ pnpm deploy
 ```
 
 Set environment variables in edge worker config:
-- `HARNESS_CONVEX_URL`
-- `HARNESS_CONVEX_TOKEN`
-- `HARNESS_OPENAI_API_KEY`
-- `HARNESS_GEMINI_API_KEY`
-- `HARNESS_RESEND_API_KEY`
-- `HARNESS_STRIPE_SECRET`
+- `CONVEX_URL`
+- `CONVEX_TOKEN`
+- `OPENAI_API_KEY`
+- `GEMINI_API_KEY`
+- `RESEND_API_KEY`
+- `STRIPE_SECRET_KEY`
 
 **Step 3: Configure Webhooks**
 - Twilio SMS webhook: `https://YOUR-EDGE-WORKER.workers.dev/sms`
