@@ -13,27 +13,6 @@ export default defineSchema({
   ...authTables,
 
   // ============================================================================
-  // JOBS - Idempotent Side-Effects (outbox pattern)
-  // ============================================================================
-  jobs: defineTable({
-    key: v.string(), // Unique idempotency key (e.g., 'twilio:SMxxxxx', 'stripe:evt_xxx')
-    type: v.string(), // Job type: 'send_sms', 'send_email', 'process_webhook', etc.
-    payload: v.any(), // Job-specific data
-    status: v.string(), // 'pending', 'processing', 'completed', 'failed'
-    attempts: v.number(), // Retry count
-    maxAttempts: v.optional(v.number()), // Max retries (default 3)
-    nextAttemptAt: v.number(), // When to process (for scheduling + backoff)
-    lastError: v.optional(v.string()), // Last failure reason
-    result: v.optional(v.any()), // Result data when completed
-    createdAt: v.number(),
-    completedAt: v.optional(v.number()),
-  })
-    .index('by_key', ['key']) // UNIQUE constraint enforcement
-    .index('by_status_next', ['status', 'nextAttemptAt']) // Worker query
-    .index('by_type_status', ['type', 'status']) // Monitoring
-    .index('by_created', ['createdAt']),
-
-  // ============================================================================
   // USERS - Auth Identity Only (minimal for fast webhook lookup)
   // ============================================================================
   users: defineTable({

@@ -467,12 +467,12 @@ export class MessageHandler {
       startTime,
     })
 
-    // 7e. Track implicit feedback (ASYNC - Poke-style passive collection)
-    void this.trackImplicitFeedbackAsync(user._id, userMessage, agentResult, startTime)
+    // 7e. Track implicit feedback (Poke-style passive collection)
+    await this.trackImplicitFeedback(user._id, userMessage, agentResult, startTime)
 
-    // 7f-7h. Context + lastContactAt handled in single mutation above; keep wellness async if changed
+    // 7f-7h. Context + lastContactAt handled in single mutation above; save wellness score if changed
     if (updatedContext.burnoutScore !== null && updatedContext.burnoutScore !== user.burnoutScore) {
-      void this.saveWellnessScoreAsync(user._id, updatedContext)
+      await this.saveWellnessScore(user._id, updatedContext)
     }
   }
 
@@ -582,57 +582,6 @@ export class MessageHandler {
     })
   }
 
-  private async updateUserContext(userId: any, context: GiveCareContext): Promise<void> {
-    await this._ctx.runMutation(internal.functions.users.updateContextState, {
-      userId,
-      firstName: context.firstName || undefined,
-      relationship: context.relationship || undefined,
-      careRecipientName: context.careRecipientName || undefined,
-      zipCode: context.zipCode || undefined,
-      journeyPhase: context.journeyPhase,
-      onboardingAttempts: context.onboardingAttempts,
-      assessmentInProgress: context.assessmentInProgress,
-      assessmentType: context.assessmentType || undefined,
-      assessmentCurrentQuestion: context.assessmentCurrentQuestion,
-      assessmentSessionId: context.assessmentSessionId || undefined,
-      burnoutScore: context.burnoutScore || undefined,
-      burnoutBand: context.burnoutBand || undefined,
-      burnoutConfidence: context.burnoutConfidence || undefined,
-      pressureZones: context.pressureZones,
-      pressureZoneScores: context.pressureZoneScores,
-    })
-  }
-
-  /**
-   * Async version - fires and forgets (no await)
-   * FIX #4: Now includes onboardingCooldownUntil
-   */
-  private updateUserContextAsync(userId: any, context: GiveCareContext): void {
-    void this._ctx
-      .runMutation(internal.functions.users.updateContextState, {
-        userId,
-        firstName: context.firstName || undefined,
-        relationship: context.relationship || undefined,
-        careRecipientName: context.careRecipientName || undefined,
-        zipCode: context.zipCode || undefined,
-        journeyPhase: context.journeyPhase,
-        onboardingAttempts: context.onboardingAttempts,
-        onboardingCooldownUntil: context.onboardingCooldownUntil || undefined, // FIX #4: Persist cooldown
-        assessmentInProgress: context.assessmentInProgress,
-        assessmentType: context.assessmentType || undefined,
-        assessmentCurrentQuestion: context.assessmentCurrentQuestion,
-        assessmentSessionId: context.assessmentSessionId || undefined,
-        burnoutScore: context.burnoutScore || undefined,
-        burnoutBand: context.burnoutBand || undefined,
-        burnoutConfidence: context.burnoutConfidence || undefined,
-        pressureZones: context.pressureZones,
-        pressureZoneScores: context.pressureZoneScores,
-      })
-      .catch(err => {
-        logSafe('Background', 'Failed to update user context', { error: String(err) })
-      })
-  }
-
   private async saveWellnessScore(userId: any, context: GiveCareContext): Promise<void> {
     await this._ctx.runMutation(internal.functions.wellness.saveScore, {
       userId,
@@ -646,32 +595,9 @@ export class MessageHandler {
   }
 
   /**
-   * Async version - fires and forgets (no await)
-   */
-  private saveWellnessScoreAsync(userId: any, context: GiveCareContext): void {
-    void this._ctx
-      .runMutation(internal.functions.wellness.saveScore, {
-        userId,
-        overallScore: context.burnoutScore!,
-        band: context.burnoutBand || undefined,
-        confidence: context.burnoutConfidence || undefined,
-        pressureZones: context.pressureZones,
-        pressureZoneScores: context.pressureZoneScores,
-        assessmentType: context.assessmentType || undefined,
-      })
-      .catch(err => {
-        logSafe('Background', 'Failed to save wellness score', { error: String(err) })
-      })
-  }
-
-  /**
-   * Async version - fires and forgets (no await)
-   */
-  /**
    * Track implicit feedback signals (Poke-inspired passive collection)
-   * Runs async to not block SMS response
    */
-  private async trackImplicitFeedbackAsync(
+  private async trackImplicitFeedback(
     userId: any,
     userMessage: string,
     agentResult: any,
@@ -747,16 +673,6 @@ export class MessageHandler {
       // Don't throw - this is background work
       logSafe('Background', 'Failed to track feedback', { error: String(error) })
     }
-  }
-
-  private updateLastContactAsync(userId: any): void {
-    void this._ctx
-      .runMutation(internal.functions.users.updateLastContact, {
-        userId,
-      })
-      .catch(err => {
-        logSafe('Background', 'Failed to update last contact', { error: String(err) })
-      })
   }
 
   /**
