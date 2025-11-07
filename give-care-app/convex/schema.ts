@@ -13,7 +13,28 @@ export default defineSchema({
   ...authTables,
 
   // ============================================================================
-  // USERS - Identity & Auth Only
+  // JOBS - Idempotent Side-Effects (outbox pattern)
+  // ============================================================================
+  jobs: defineTable({
+    key: v.string(), // Unique idempotency key (e.g., 'twilio:SMxxxxx', 'stripe:evt_xxx')
+    type: v.string(), // Job type: 'send_sms', 'send_email', 'process_webhook', etc.
+    payload: v.any(), // Job-specific data
+    status: v.string(), // 'pending', 'processing', 'completed', 'failed'
+    attempts: v.number(), // Retry count
+    maxAttempts: v.optional(v.number()), // Max retries (default 3)
+    nextAttemptAt: v.number(), // When to process (for scheduling + backoff)
+    lastError: v.optional(v.string()), // Last failure reason
+    result: v.optional(v.any()), // Result data when completed
+    createdAt: v.number(),
+    completedAt: v.optional(v.number()),
+  })
+    .index('by_key', ['key']) // UNIQUE constraint enforcement
+    .index('by_status_next', ['status', 'nextAttemptAt']) // Worker query
+    .index('by_type_status', ['type', 'status']) // Monitoring
+    .index('by_created', ['createdAt']),
+
+  // ============================================================================
+  // USERS - Auth Identity Only (minimal for fast webhook lookup)
   // ============================================================================
   users: defineTable({
     // Auth fields (from @convex-dev/auth)
@@ -25,10 +46,27 @@ export default defineSchema({
     phoneVerificationTime: v.optional(v.number()),
     isAnonymous: v.optional(v.boolean()),
 
-    // SMS user identifier (E.164 format)
-    phoneNumber: v.optional(v.string()), // Keep in users for fast webhook lookup
+    // SMS identifier (E.164 format) - CRITICAL for webhook performance
+    phoneNumber: v.optional(v.string()),
 
-    // Profile & Journey (from caregiverProfiles)
+    // Admin roles (DB-driven, not hardcoded)
+    roles: v.optional(v.array(v.string())), // ['admin', 'support', etc.]
+
+    // Timestamps
+    createdAt: v.optional(v.number()),
+    updatedAt: v.optional(v.number()),
+  })
+    .index('email', ['email']) // Admin login
+    .index('by_phone', ['phoneNumber']) // SMS lookup (CRITICAL: webhook performance)
+    .index('by_created', ['createdAt']),
+
+  // ============================================================================
+  // USER_PROFILES - Mostly Static Profile Data
+  // ============================================================================
+  userProfiles: defineTable({
+    userId: v.id('users'),
+
+    // Profile
     firstName: v.optional(v.string()),
     relationship: v.optional(v.string()),
     careRecipientName: v.optional(v.string()),
@@ -36,7 +74,7 @@ export default defineSchema({
     languagePreference: v.optional(v.string()),
     journeyPhase: v.optional(v.string()),
 
-    // Burnout (from caregiverProfiles)
+    // Burnout (updated occasionally)
     burnoutScore: v.optional(v.number()),
     burnoutBand: v.optional(v.string()),
     burnoutConfidence: v.optional(v.number()),
@@ -51,14 +89,14 @@ export default defineSchema({
       })
     ),
 
-    // Activity (from caregiverProfiles)
+    // Activity timestamps
     lastContactAt: v.optional(v.number()),
     lastProactiveMessageAt: v.optional(v.number()),
     lastCrisisEventAt: v.optional(v.number()),
     crisisFollowupCount: v.optional(v.number()),
     reactivationMessageCount: v.optional(v.number()),
 
-    // Onboarding & assessments (from caregiverProfiles)
+    // Onboarding & assessments
     onboardingAttempts: v.optional(v.record(v.string(), v.number())),
     onboardingCooldownUntil: v.optional(v.number()),
     assessmentInProgress: v.optional(v.boolean()),
@@ -66,12 +104,12 @@ export default defineSchema({
     assessmentCurrentQuestion: v.optional(v.number()),
     assessmentSessionId: v.optional(v.string()),
 
-    // Device & consent (from caregiverProfiles)
+    // Device & consent
     rcsCapable: v.optional(v.boolean()),
     deviceType: v.optional(v.string()),
     consentAt: v.optional(v.number()),
 
-    // Flexible app metadata (from caregiverProfiles)
+    // Flexible app metadata
     appState: v.optional(
       v.object({
         lastActivity: v.optional(v.number()),
@@ -80,14 +118,27 @@ export default defineSchema({
       })
     ),
 
-    // Subscription (from subscriptions)
-    stripeCustomerId: v.optional(v.string()),
-    stripeSubscriptionId: v.optional(v.string()),
-    subscriptionStatus: v.optional(v.string()),
-    canceledAt: v.optional(v.number()),
-    trialEndsAt: v.optional(v.number()),
+    // Timestamps
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index('by_user', ['userId'])
+    .index('by_journey', ['journeyPhase'])
+    .index('by_burnout', ['burnoutScore'])
+    .index('by_burnout_band', ['burnoutBand'])
+    .index('by_last_contact', ['lastContactAt'])
+    .index('by_journey_contact', ['journeyPhase', 'lastContactAt'])
+    .index('by_band_journey', ['burnoutBand', 'journeyPhase'])
+    .index('by_band_contact', ['burnoutBand', 'lastContactAt'])
+    .index('by_band_crisis', ['burnoutBand', 'lastCrisisEventAt']),
 
-    // Conversation (from conversationState)
+  // ============================================================================
+  // CONVERSATION_STATE - High-Churn Conversation Data
+  // ============================================================================
+  conversationState: defineTable({
+    userId: v.id('users'),
+
+    // Recent message window (performance optimization)
     recentMessages: v.optional(
       v.array(
         v.object({
@@ -97,6 +148,8 @@ export default defineSchema({
         })
       )
     ),
+
+    // Historical summary (updated periodically)
     historicalSummary: v.optional(v.string()),
     historicalSummaryVersion: v.optional(v.string()),
     conversationStartDate: v.optional(v.number()),
@@ -112,23 +165,34 @@ export default defineSchema({
     ),
 
     // Timestamps
-    createdAt: v.optional(v.number()),
-    updatedAt: v.optional(v.number()),
+    updatedAt: v.number(),
   })
-    .index('email', ['email']) // Admin login
-    .index('by_phone', ['phoneNumber']) // SMS user lookup (CRITICAL: webhook performance)
-    .index('by_created', ['createdAt'])
-    .index('by_journey', ['journeyPhase'])
-    .index('by_burnout', ['burnoutScore'])
-    .index('by_burnout_band', ['burnoutBand'])
-    .index('by_last_contact', ['lastContactAt'])
+    .index('by_user', ['userId'])
+    .index('by_updated', ['updatedAt']),
+
+  // ============================================================================
+  // BILLING_ACCOUNTS - Subscription Data
+  // ============================================================================
+  billingAccounts: defineTable({
+    userId: v.id('users'),
+
+    // Stripe identifiers
+    stripeCustomerId: v.optional(v.string()),
+    stripeSubscriptionId: v.optional(v.string()),
+
+    // Subscription state
+    subscriptionStatus: v.optional(v.string()), // 'active', 'trialing', 'canceled', etc.
+    canceledAt: v.optional(v.number()),
+    trialEndsAt: v.optional(v.number()),
+
+    // Timestamps
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index('by_user', ['userId'])
     .index('by_stripe_customer', ['stripeCustomerId'])
     .index('by_stripe_subscription', ['stripeSubscriptionId'])
-    .index('by_journey_contact', ['journeyPhase', 'lastContactAt'])
-    .index('by_band_journey', ['burnoutBand', 'journeyPhase'])
-    // Composite index to support band + contact time filtering for scheduling
-    .index('by_band_contact', ['burnoutBand', 'lastContactAt'])
-    .index('by_band_crisis', ['burnoutBand', 'lastCrisisEventAt']),
+    .index('by_status', ['subscriptionStatus']),
 
   // ============================================================================
   // ASSESSMENT SESSIONS - Enhanced with in-progress state

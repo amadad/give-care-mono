@@ -86,24 +86,59 @@ export async function requireAuth(ctx: AuthContext) {
 /**
  * Ensure the caller is an admin.
  *
- * Strategy:
- * - Read ADMIN_USER_IDS (comma-separated) from environment and allow if identity.subject matches.
- * - Additionally allow if the loaded user has an `role === "admin"` field (future-proofing).
+ * IMPROVED STRATEGY (DB-first with bootstrap path):
+ * 1. Check if user has 'admin' in roles array (from DB)
+ * 2. Fallback to ADMIN_USER_IDS for bootstrap/emergency access
  *
- * Note: Keep this fast and deterministic so it can be used in every admin handler.
+ * WHY: Role-based auth is more flexible and manageable than hardcoded IDs.
+ * Environment variable is only for bootstrap or account merges.
+ *
+ * @param ctx - Convex context with db and auth
+ * @throws Error if user is not authenticated or not an admin
  */
-export async function ensureAdmin(ctx: AuthContext) {
+export async function ensureAdmin(ctx: AuthContext): Promise<void> {
   const identity = await requireAuth(ctx)
 
-  // 1) Environment-configured superusers
-  const raw = (process.env.ADMIN_USER_IDS || '').trim()
-  const admins = raw.length > 0 ? new Set(raw.split(',').map(s => s.trim())) : new Set<string>()
-  if (admins.has(identity.subject)) return
-
-  // 2) Role-based fallback (optional)
+  // 1) DB-driven role check (PREFERRED)
   const user = await ctx.db.get(identity.subject as unknown as Id<'users'>)
-  const role = (user as any)?.role
-  if (role === 'admin') return
+  if (!user) {
+    throw new Error('User not found')
+  }
+
+  // Check roles array (new schema)
+  if (user.roles && Array.isArray(user.roles) && user.roles.includes('admin')) {
+    return
+  }
+
+  // 2) Bootstrap path via environment (FALLBACK ONLY)
+  const raw = (process.env.ADMIN_USER_IDS || '').trim()
+  if (raw.length > 0) {
+    const admins = new Set(raw.split(',').map((s) => s.trim()))
+    if (admins.has(identity.subject)) {
+      return
+    }
+  }
 
   throw new Error('Admin privileges required')
+}
+
+/**
+ * Check if user has a specific role
+ *
+ * @param ctx - Convex context with db and auth
+ * @param role - Role to check (e.g., 'admin', 'support')
+ * @returns True if user has the role
+ */
+export async function hasRole(ctx: AuthContext, role: string): Promise<boolean> {
+  const identity = await ctx.auth.getUserIdentity()
+  if (!identity || !identity.subject) {
+    return false
+  }
+
+  const user = await ctx.db.get(identity.subject as unknown as Id<'users'>)
+  if (!user || !user.roles || !Array.isArray(user.roles)) {
+    return false
+  }
+
+  return user.roles.includes(role)
 }
