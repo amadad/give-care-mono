@@ -608,7 +608,7 @@ export class MessageHandler {
    * FIX #4: Now includes onboardingCooldownUntil
    */
   private updateUserContextAsync(userId: any, context: GiveCareContext): void {
-    this._ctx
+    void this._ctx
       .runMutation(internal.functions.users.updateContextState, {
         userId,
         firstName: context.firstName || undefined,
@@ -649,7 +649,7 @@ export class MessageHandler {
    * Async version - fires and forgets (no await)
    */
   private saveWellnessScoreAsync(userId: any, context: GiveCareContext): void {
-    this._ctx
+    void this._ctx
       .runMutation(internal.functions.wellness.saveScore, {
         userId,
         overallScore: context.burnoutScore!,
@@ -752,7 +752,7 @@ export class MessageHandler {
   }
 
   private updateLastContactAsync(userId: any): void {
-    this._ctx
+    void this._ctx
       .runMutation(internal.functions.users.updateLastContact, {
         userId,
       })
