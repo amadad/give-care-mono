@@ -1,3 +1,4 @@
+import { z } from 'zod';
 import { capability } from './factory';
 
 export const getWellnessStatus = capability({
@@ -5,7 +6,7 @@ export const getWellnessStatus = capability({
   description: 'Fetch latest burnout scores, trends, and pressure zones.',
   costHint: 'low',
   latencyHint: 'low',
-  io: {},
+  io: { input: z.object({}) },
   async run(_input, ctx) {
     return ctx.store.getWellnessStatus(ctx.context.userId);
   },

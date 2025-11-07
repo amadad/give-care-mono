@@ -3,7 +3,7 @@ import { capability } from './factory';
 
 const InputSchema = z.object({
   sessionId: z.string(),
-  definitionId: z.string().default('burnout_v1'),
+  definitionId: z.string().optional().default('burnout_v1'),
   questionId: z.string(),
   value: z.number().min(0).max(4),
 });
@@ -16,8 +16,13 @@ export const recordAssessmentAnswerCapability = capability({
   io: { input: InputSchema },
   requiresConsent: false,
   async run(input, ctx) {
-    const payload = InputSchema.parse(input);
-    const result = await ctx.store.recordAssessmentAnswer(payload);
+    const parsed = InputSchema.parse(input);
+    const result = await ctx.store.recordAssessmentAnswer({
+      sessionId: parsed.sessionId,
+      definitionId: parsed.definitionId,
+      questionId: parsed.questionId,
+      value: parsed.value,
+    });
 
     if (result.completed) {
       return {

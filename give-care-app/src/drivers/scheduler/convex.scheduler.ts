@@ -11,7 +11,7 @@ const mutate = async <T>(name: string, args: Record<string, unknown>): Promise<T
   if (!client || !convexToken) {
     throw new Error('HARNESS_CONVEX_URL and HARNESS_CONVEX_TOKEN must be set to use ConvexScheduler');
   }
-  return client.mutation(name, { token: convexToken, ...args });
+  return client.mutation(name as any, { token: convexToken, ...args });
 };
 
 export const ConvexScheduler: Scheduler = {

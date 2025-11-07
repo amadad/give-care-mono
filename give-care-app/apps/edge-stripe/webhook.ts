@@ -15,6 +15,6 @@ export const handleStripeWebhook = async (rawBody: Buffer | string, signature: s
     throw new Error('Stripe webhook secrets not configured');
   }
   const event = stripe.webhooks.constructEvent(rawBody, signature, webhookSecret);
-  await runtime.store.applyStripeEvent({ id: event.id, type: event.type, payload: event });
+  await runtime.store.applyStripeEvent({ id: event.id, type: event.type, payload: event as unknown as Record<string, unknown> });
   return { received: true };
 };

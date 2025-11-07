@@ -17,8 +17,8 @@ const buildTools = (specs: StreamRequest['tools'], onToolCall?: StreamRequest['o
   return specs.map((spec) =>
     agentTool({
       name: spec.name,
-      description: spec.description,
-      parameters: spec.schema ?? z.object({}),
+      description: spec.description ?? `Execute ${spec.name}`,
+      parameters: (spec.schema ?? z.object({})) as z.ZodObject<any>,
       execute: async (args) => {
         if (!onToolCall) {
           return `Tool ${spec.name} is unavailable.`;
@@ -43,10 +43,9 @@ const buildAgent = (instructions: string, budget: StreamRequest['budget'], tools
     modelSettings: {
       reasoning: { effort: 'minimal' },
       text: { verbosity: 'low' },
-      maxOutputTokens: budget?.maxOutput ?? 800,
       store: true,
-      service_tier: process.env.HARNESS_OPENAI_SERVICE_TIER ?? 'auto',
-    },
+      serviceTier: process.env.HARNESS_OPENAI_SERVICE_TIER ?? 'auto',
+    } as any,
     tools,
   });
 
@@ -59,7 +58,7 @@ const extractConversationId = (context?: Record<string, unknown>) => {
   return undefined;
 };
 
-const finalOutputAsText = (result: Awaited<ReturnType<typeof run>>) => {
+const finalOutputAsText = (result: any) => {
   if (!result) return '';
   if (typeof result.finalOutput === 'string') return result.finalOutput;
   if (typeof result.finalOutput === 'object' && result.finalOutput !== null) {

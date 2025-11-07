@@ -14,6 +14,6 @@ describe('harness handle', () => {
     const result = await handle(inbound);
     expect(result.type).toBe('stream');
     expect(Array.isArray(result.chunks)).toBe(true);
-    expect(result.chunks.length).toBeGreaterThan(0);
+    expect(result.chunks?.length).toBeGreaterThan(0);
   });
 });

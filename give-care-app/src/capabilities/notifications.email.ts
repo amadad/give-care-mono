@@ -24,6 +24,8 @@ export const sendEmailCapability = capability({
       status: 'sent',
       traceId: ctx.trace.id,
     });
-    return { id: result.id ?? 'pending' };
+    // Resend API returns { data: { id: string } } on success
+    const emailId = result.data?.id ?? 'pending';
+    return { id: emailId };
   },
 });
