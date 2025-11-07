@@ -8,7 +8,7 @@ import { query, internalMutation, QueryCtx } from '../_generated/server'
 import { v } from 'convex/values'
 import { internal } from '../_generated/api'
 import { Id } from '../_generated/dataModel'
-import { updateCaregiverProfile } from '../lib/userHelpers'
+// Denormalized: Update users table directly (no caregiverProfiles helper)
 
 /**
  * SECURITY HELPER: Verify userId ownership
@@ -184,25 +184,22 @@ export const saveScore = internalMutation({
       recordedAt: Date.now(),
     })
 
-    // Update user's burnout score
-    await updateCaregiverProfile(ctx, args.userId, {
+    // Update user's burnout fields directly on users table
+    await ctx.db.patch(args.userId, {
       burnoutScore: args.overallScore,
       burnoutBand: args.band,
       burnoutConfidence: args.confidence,
       pressureZones: args.pressureZones,
       pressureZoneScores: args.pressureZoneScores,
+      updatedAt: Date.now(),
     })
 
     // Schedule 7-day assessment reminder (Task 1: Revised cadence)
     // Changed from 14 days to 7 days (habit formation research)
-    const profile = await ctx.db
-      .query('caregiverProfiles')
-      .withIndex('by_user', (q: any) => q.eq('userId', args.userId))
-      .first()
-
-    if (profile && profile.journeyPhase === 'active') {
+    const user = await ctx.db.get(args.userId)
+    if (user && user.journeyPhase === 'active') {
       const sevenDays = 7 * 24 * 60 * 60 * 1000
-      const firstName = profile.firstName || 'friend'
+      const firstName = (user as any).firstName || 'friend'
 
       await ctx.scheduler.runAfter(sevenDays, internal.functions.scheduling.sendScheduledMessage, {
         userId: args.userId,
