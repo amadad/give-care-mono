@@ -95,8 +95,8 @@ export default function DisclaimerPage() {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
               </svg>
               <span>
-                For full privacy details, see our <a href="/privacy" className="link link-primary">Privacy Policy</a>.
-                For terms of use, see our <a href="/terms" className="link link-primary">Terms of Service</a>.
+                For full privacy details, see our <a href="/privacy" className="link underline font-medium">Privacy Policy</a>.
+                For terms of use, see our <a href="/terms" className="link underline font-medium">Terms of Service</a>.
               </span>
             </div>
           </div>
@@ -119,7 +119,7 @@ export default function DisclaimerPage() {
             </ul>
 
             <p className="mt-4">
-              If you receive concerning or inappropriate content, please contact us immediately at <a href="mailto:support@givecareapp.com" className="link link-primary">support@givecareapp.com</a>.
+              If you receive concerning or inappropriate content, please contact us immediately at <a href="mailto:support@givecareapp.com" className="link underline font-medium">support@givecareapp.com</a>.
             </p>
           </div>
         </section>
@@ -131,8 +131,8 @@ export default function DisclaimerPage() {
             If you have questions about this disclaimer, our privacy practices, or data handling, please contact us:
           </p>
           <div className="mt-4 space-y-2">
-            <p><strong>Email:</strong> <a href="mailto:support@givecareapp.com" className="link link-primary">support@givecareapp.com</a></p>
-            <p><strong>Privacy:</strong> <a href="mailto:privacy@givecareapp.com" className="link link-primary">privacy@givecareapp.com</a></p>
+            <p><strong>Email:</strong> <a href="mailto:support@givecareapp.com" className="link underline font-medium">support@givecareapp.com</a></p>
+            <p><strong>Privacy:</strong> <a href="mailto:privacy@givecareapp.com" className="link underline font-medium">privacy@givecareapp.com</a></p>
           </div>
         </section>
 

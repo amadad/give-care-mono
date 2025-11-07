@@ -88,12 +88,6 @@ export default function Footer() {
         <Link href="/privacy" className="link link-hover">Privacy Policy</Link>
         <Link href="/disclaimer" className="link link-hover">Medical Disclaimer</Link>
       </nav>
-      <nav className="col-span-full mt-4">
-        <p className="text-xs text-base-content/60">
-          Not medical advice. Crisis? Call <strong>988</strong> or <strong>911</strong>.
-          <Link href="/disclaimer" className="link link-hover ml-2">Full disclaimer →</Link>
-        </p>
-      </nav>
     </footer>
   );
 }
