@@ -10,19 +10,18 @@
  */
 
 import type { QueryCtx, MutationCtx } from '../_generated/server'
-import type { DatabaseReader, DatabaseWriter } from 'convex/server'
 
 /**
  * Read-only database access
  * Use in model helpers that only need to query data
  */
-export type DbReader = DatabaseReader
+export type DbReader = QueryCtx['db']
 
 /**
  * Read/write database access
  * Use in model helpers that need to insert/patch/delete
  */
-export type DbWriter = DatabaseWriter
+export type DbWriter = MutationCtx['db']
 
 /**
  * Scheduler capability for mutations

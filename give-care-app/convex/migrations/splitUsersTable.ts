@@ -126,6 +126,7 @@ export const migrate = internalMutation({
  * Run with: npx convex run migrations/splitUsersTable:verify --prod
  */
 export const verify = internalMutation({
+  args: {},
   handler: async (ctx) => {
     const users = await ctx.db.query('users').collect()
     const profiles = await ctx.db.query('userProfiles').collect()
