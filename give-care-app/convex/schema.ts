@@ -1,4 +1,4 @@
-import { defineSchema, defineTable } from 'convex/schema';
+import { defineSchema, defineTable } from 'convex/server';
 import { v } from 'convex/values';
 
 const budgetValidator = v.object({
@@ -29,11 +29,18 @@ const crisisFlagsValidator = v.object({
 
 export default defineSchema({
   users: defineTable({
-    externalId: v.string(),
+    // Old fields (from pre-refactor schema)
+    createdAt: v.optional(v.number()),
+    updatedAt: v.optional(v.number()),
+    email: v.optional(v.string()),
+    name: v.optional(v.string()),
+    phoneNumber: v.optional(v.string()),
+    // New fields
+    externalId: v.optional(v.string()),
     phone: v.optional(v.string()),
-    channel: v.union(v.literal('sms'), v.literal('web')),
-    locale: v.string(),
-    createdByHarness: v.boolean(),
+    channel: v.optional(v.union(v.literal('sms'), v.literal('web'))),
+    locale: v.optional(v.string()),
+    createdByHarness: v.optional(v.boolean()),
   })
     .index('by_externalId', ['externalId'])
     .index('by_phone', ['phone']),
@@ -67,8 +74,8 @@ export default defineSchema({
     traceId: v.string(),
     redactionFlags: v.array(v.string()),
   })
-    .index('by_user_created', ['userId', '_creationTime'])
-    .index('by_user_direction', ['userId', 'direction', '_creationTime']),
+    .index('by_user_created', ['userId'])
+    .index('by_user_direction', ['userId', 'direction']),
 
   assessments: defineTable({
     userId: v.id('users'),
@@ -167,9 +174,9 @@ export default defineSchema({
     severity: v.union(v.literal('low'), v.literal('medium'), v.literal('high'), v.literal('critical')),
     context: v.any(),
     message: v.string(),
-    channel: v.union(v.literal('sms'), v.literal('email')).default('email'),
+    channel: v.union(v.literal('sms'), v.literal('email')),
     payload: v.optional(v.any()),
-    status: v.union(v.literal('pending'), v.literal('processed')).default('pending'),
+    status: v.union(v.literal('pending'), v.literal('processed')),
   })
     .index('by_user', ['userId'])
     .index('by_type', ['type', 'severity']),

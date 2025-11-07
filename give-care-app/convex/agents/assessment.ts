@@ -1,7 +1,7 @@
 "use node";
 
 /**
- * Assessment Agent - Convex-native implementation
+ * Assessment Agent - Convex-native implementation using Agent Component
  *
  * Handles burnout assessments and intervention suggestions.
  *
@@ -10,12 +10,15 @@
  * - Provides explanations and band classifications
  * - Suggests interventions based on results
  * - Logs assessment completions
+ * - Uses AI to provide personalized, compassionate interpretations
  */
 
 import { action } from '../_generated/server';
-import { internal } from '../_generated/api';
+import { internal, components } from '../_generated/api';
 import { v } from 'convex/values';
-import type { AgentContext, AgentInput, StreamChunk } from '../lib/types';
+import { Agent } from '@convex-dev/agent';
+import { openai } from '@ai-sdk/openai';
+import { ASSESSMENT_PROMPT, renderPrompt } from '../lib/prompts';
 
 const channelValidator = v.union(
   v.literal('sms'),
@@ -40,6 +43,14 @@ const agentContextValidator = v.object({
   metadata: v.optional(v.any()),
 });
 
+// Define the assessment agent with Convex Agent Component
+const assessmentAgent = new Agent(components.agent, {
+  name: 'Assessment Specialist',
+  languageModel: openai.chat('gpt-4o-mini'),
+  instructions:
+    'You are a burnout assessment specialist who provides personalized, compassionate interpretations and actionable intervention suggestions.',
+});
+
 /**
  * Assessment Agent Action
  *
@@ -57,98 +68,110 @@ export const runAssessmentAgent = action({
       userId: v.string(),
     }),
     context: agentContextValidator,
+    threadId: v.optional(v.string()),
   },
-  handler: async (ctx, { input, context }) => {
-    const chunks: StreamChunk[] = [];
+  handler: async (ctx, { input, context, threadId }) => {
     const startTime = Date.now();
 
     try {
-      // Extract assessment data from context
+      // Validate assessment data
       const metadata = (context.metadata ?? {}) as Record<string, unknown>;
       const answers = (metadata.assessmentAnswers as number[]) ?? [];
-      const definitionId = 'burnout_v1'; // Default to burnout assessment
-      const pressureZone = (metadata.pressureZone as string) ?? 'work';
 
       if (answers.length === 0) {
-        chunks.push({
-          type: 'error',
-          content: 'No assessment answers found. Please complete an assessment first.',
-        });
-        return { chunks, latencyMs: Date.now() - startTime };
+        const errorMessage = 'No assessment answers found. Please complete an assessment first.';
+        return {
+          chunks: [{ type: 'error', content: errorMessage }],
+          latencyMs: Date.now() - startTime,
+        };
       }
 
-      // TODO: Call actual scoring function from convex/functions/assessments.ts
-      // For now, provide mock scoring logic
+      // Extract user profile data
+      const profile = (metadata.profile as Record<string, unknown> | undefined) ?? {};
+      const userName = (profile.firstName as string) ?? 'caregiver';
+      const careRecipient = (profile.careRecipientName as string) ?? 'your loved one';
+
+      // Calculate assessment scores
       const total = answers.reduce((sum, val) => sum + val, 0);
       const avgScore = total / answers.length;
+      const pressureZone = (metadata.pressureZone as string) ?? 'work';
 
+      // Determine burnout band
       let band: string;
-      let explanation: string;
-
       if (avgScore < 2) {
         band = 'low';
-        explanation = 'You are experiencing low levels of burnout. Keep up your self-care practices!';
       } else if (avgScore < 3.5) {
         band = 'moderate';
-        explanation = 'You are experiencing moderate burnout. Consider implementing some stress management strategies.';
       } else {
         band = 'high';
-        explanation = 'You are experiencing high levels of burnout. It\'s important to prioritize self-care and seek support.';
       }
 
-      // First chunk: score and explanation
-      const scoreMessage = `Your burnout assessment score is ${total.toFixed(1)} out of ${answers.length * 5} (${band} burnout).
-
-${explanation}`;
-
-      chunks.push({
-        type: 'text',
-        content: scoreMessage,
+      // Render dynamic system prompt with assessment context
+      const systemPrompt = renderPrompt(ASSESSMENT_PROMPT, {
+        userName,
+        careRecipient,
+        totalScore: total.toFixed(1),
+        avgScore: avgScore.toFixed(1),
+        band,
+        pressureZone,
       });
 
-      // If not low burnout, suggest interventions
-      if (band !== 'low') {
-        // TODO: Call actual intervention suggestion from convex/functions/assessments.ts
-        // For now, provide mock interventions based on pressure zone
-        const interventions = [
-          { title: 'Take regular breaks throughout the day' },
-          { title: 'Practice deep breathing or meditation' },
-          { title: 'Connect with other caregivers for support' },
-          { title: 'Set boundaries around caregiving time' },
-        ];
+      // Get or create thread
+      const thread = threadId
+        ? await assessmentAgent.continueThread(ctx, { threadId, userId: context.userId })
+        : await assessmentAgent.createThread(ctx, { userId: context.userId });
 
-        const interventionMessage = `\nRecommended next steps for managing ${pressureZone} stress:\n${interventions.map((i, idx) => `${idx + 1}. ${i.title}`).join('\n')}`;
+      // Generate personalized assessment interpretation
+      const result = await thread.generateText({
+        prompt: input.text || 'Please interpret my burnout assessment results and suggest interventions.',
+        system: systemPrompt, // Override default instructions with assessment-specific context
+      });
 
-        chunks.push({
-          type: 'text',
-          content: interventionMessage,
-        });
-      }
+      const responseText = result.text;
+      const latencyMs = Date.now() - startTime;
+
+      // Log agent run
+      await ctx.runMutation(internal.functions.logs.logAgentRunInternal, {
+        userId: context.userId,
+        agent: 'assessment',
+        policyBundle: 'assessment_v1',
+        budgetResult: {
+          usedInputTokens: input.text.length,
+          usedOutputTokens: responseText.length,
+          toolCalls: 0,
+        },
+        latencyMs,
+        traceId: `assessment-${Date.now()}`,
+      });
+
+      return {
+        chunks: [{ type: 'text', content: responseText }],
+        latencyMs,
+        threadId: thread.threadId,
+      };
     } catch (error) {
       console.error('Assessment agent error:', error);
-      chunks.push({
-        type: 'error',
-        content: 'I apologize, but I encountered an error processing your assessment.',
-        meta: { error: String(error) },
+
+      const errorMessage = 'I apologize, but I encountered an error processing your assessment. Please try again.';
+      const latencyMs = Date.now() - startTime;
+
+      await ctx.runMutation(internal.functions.logs.logAgentRunInternal, {
+        userId: context.userId,
+        agent: 'assessment',
+        policyBundle: 'assessment_v1',
+        budgetResult: {
+          usedInputTokens: input.text.length,
+          usedOutputTokens: errorMessage.length,
+          toolCalls: 0,
+        },
+        latencyMs,
+        traceId: `assessment-${Date.now()}`,
       });
+
+      return {
+        chunks: [{ type: 'error', content: errorMessage, meta: { error: String(error) } }],
+        latencyMs,
+      };
     }
-
-    const latencyMs = Date.now() - startTime;
-
-    // Log agent run
-    await ctx.runMutation(internal.functions.logs.logAgentRunInternal, {
-      userId: context.userId,
-      agent: 'assessment',
-      policyBundle: 'assessment_v1',
-      budgetResult: {
-        usedInputTokens: input.text.length,
-        usedOutputTokens: chunks.map((c) => c.content).join('').length,
-        toolCalls: 0,
-      },
-      latencyMs,
-      traceId: `assessment-${Date.now()}`,
-    });
-
-    return { chunks, latencyMs };
   },
 });

@@ -1,7 +1,7 @@
 "use node";
 
 /**
- * Main Agent - Convex-native implementation
+ * Main Agent - Convex-native implementation using Agent Component
  *
  * Handles general caregiving conversations and support.
  *
@@ -10,18 +10,16 @@
  * - Offers practical advice and resources
  * - Helps manage caregiver burnout
  * - Routes to specialized agents when needed
+ * - Manages persistent threads with automatic message history
  */
 
 import { action } from '../_generated/server';
-import { internal } from '../_generated/api';
+import { internal, components } from '../_generated/api';
 import { v } from 'convex/values';
-import { Agent, run, setOpenAIAPI } from '@openai/agents';
-import type { AgentContext, AgentInput, StreamChunk } from '../lib/types';
+import { Agent } from '@convex-dev/agent';
+import { openai } from '@ai-sdk/openai';
 import { MAIN_PROMPT, renderPrompt } from '../lib/prompts';
 import { getTone } from '../lib/policy';
-
-// Configure OpenAI SDK to use responses API
-setOpenAIAPI('responses');
 
 const channelValidator = v.union(
   v.literal('sms'),
@@ -46,10 +44,18 @@ const agentContextValidator = v.object({
   metadata: v.optional(v.any()),
 });
 
+// Define the main agent with Convex Agent Component
+const mainAgent = new Agent(components.agent, {
+  name: 'Caregiver Support',
+  languageModel: openai.chat('gpt-4o-mini'),
+  instructions: 'You are a compassionate AI caregiver assistant providing empathetic support and practical advice.',
+  // TODO: Add tools (schedule, assess, etc.)
+});
+
 /**
  * Main Agent Action
  *
- * Runs general caregiving conversation workflow.
+ * Runs general caregiving conversation workflow using Convex Agent Component.
  *
  * @param input - User message and channel
  * @param context - User context including profile
@@ -63,51 +69,76 @@ export const runMainAgent = action({
       userId: v.string(),
     }),
     context: agentContextValidator,
+    threadId: v.optional(v.string()),
   },
-  handler: async (ctx, { input, context }) => {
-    // Extract user profile data
-    const metadata = (context.metadata ?? {}) as Record<string, unknown>;
-    const profile = (metadata.profile as Record<string, unknown> | undefined) ?? {};
-    const userName = (profile.firstName as string) ?? 'caregiver';
-    const relationship = (profile.relationship as string) ?? 'caregiver';
-    const careRecipient = (profile.careRecipientName as string) ?? 'your loved one';
-    const journeyPhase = (metadata.journeyPhase as string) ?? 'active';
-    const totalInteractionCount = String((metadata.totalInteractionCount as number) ?? 0);
-    const wellnessInfo = metadata.wellnessInfo as string | undefined;
-    const profileComplete = String(Boolean(metadata.profileComplete));
-    const missingFieldsSection = metadata.missingFieldsSection as string | undefined;
+  handler: async (ctx, { input, context, threadId }) => {
+    const startTime = Date.now();
 
-    // Render system prompt with user variables
-    const basePrompt = renderPrompt(MAIN_PROMPT, {
-      userName,
-      relationship,
-      careRecipient,
-      journeyPhase,
-      totalInteractionCount,
-      wellnessInfo,
-      profileComplete,
-      missingFieldsSection,
-    });
+    try {
+      // Extract user profile data
+      const metadata = (context.metadata ?? {}) as Record<string, unknown>;
+      const profile = (metadata.profile as Record<string, unknown> | undefined) ?? {};
+      const userName = (profile.firstName as string) ?? 'caregiver';
+      const relationship = (profile.relationship as string) ?? 'caregiver';
+      const careRecipient = (profile.careRecipientName as string) ?? 'your loved one';
+      const journeyPhase = (metadata.journeyPhase as string) ?? 'active';
+      const totalInteractionCount = String((metadata.totalInteractionCount as number) ?? 0);
 
-    // Add tone guidance
-    const tone = getTone(context);
-    const systemPrompt = `${basePrompt}\n\n${tone}`;
+      // Render dynamic system prompt
+      const basePrompt = renderPrompt(MAIN_PROMPT, {
+        userName,
+        relationship,
+        careRecipient,
+        journeyPhase,
+        totalInteractionCount,
+      });
 
-    // Build LLM context
-    const llmContext = {
-      userId: context.userId,
-      sessionId: context.sessionId,
-      locale: context.locale,
-      consent: context.consent,
-      crisisFlags: context.crisisFlags,
-      channel: input.channel,
-      metadata: context.metadata,
-    };
+      // Add tone guidance
+      const tone = getTone(context);
+      const systemPrompt = `${basePrompt}\n\n${tone}`;
 
-    // Check for OpenAI API key
-    const apiKey = process.env.OPENAI_API_KEY;
-    if (!apiKey) {
-      console.error('OPENAI_API_KEY not found in Convex environment');
+      // Get or create thread
+      const thread = threadId
+        ? await mainAgent.continueThread(ctx, { threadId, userId: context.userId })
+        : await mainAgent.createThread(ctx, { userId: context.userId });
+
+      // Generate response with automatic context and history
+      const result = await thread.generateText({
+        prompt: input.text,
+        system: systemPrompt, // Override default instructions
+      });
+
+      const responseText = result.text;
+      const latencyMs = Date.now() - startTime;
+
+      // Log agent run for analytics
+      await ctx.runMutation(internal.functions.logs.logAgentRunInternal, {
+        userId: context.userId,
+        agent: 'main',
+        policyBundle: 'default_v1',
+        budgetResult: {
+          usedInputTokens: input.text.length,
+          usedOutputTokens: responseText.length,
+          toolCalls: 0,
+        },
+        latencyMs,
+        traceId: `main-${Date.now()}`,
+      });
+
+      return {
+        chunks: [{ type: 'text', content: responseText }],
+        latencyMs,
+        threadId: thread.threadId,
+      };
+    } catch (error) {
+      console.error('Main agent error:', error);
+
+      // Extract user profile for fallback
+      const metadata = (context.metadata ?? {}) as Record<string, unknown>;
+      const profile = (metadata.profile as Record<string, unknown> | undefined) ?? {};
+      const userName = (profile.firstName as string) ?? 'caregiver';
+      const careRecipient = (profile.careRecipientName as string) ?? 'your loved one';
+
       const fallbackResponse = `Hello ${userName}! I'm here to support you in caring for ${careRecipient}.
 
 How can I help you today? I can:
@@ -118,6 +149,8 @@ How can I help you today? I can:
 
 What's on your mind?`;
 
+      const latencyMs = Date.now() - startTime;
+
       await ctx.runMutation(internal.functions.logs.logAgentRunInternal, {
         userId: context.userId,
         agent: 'main',
@@ -127,74 +160,14 @@ What's on your mind?`;
           usedOutputTokens: fallbackResponse.length,
           toolCalls: 0,
         },
-        latencyMs: 0,
+        latencyMs,
         traceId: `main-${Date.now()}`,
       });
 
       return {
-        chunks: [{ type: 'text', content: fallbackResponse }],
-        latencyMs: 0,
+        chunks: [{ type: 'error', content: fallbackResponse, meta: { error: String(error) } }],
+        latencyMs,
       };
     }
-
-    // Create agent with @openai/agents SDK
-    const agent = new Agent({
-      name: 'main',
-      instructions: systemPrompt,
-      model: process.env.OPENAI_MODEL ?? 'gpt-4o-mini',
-      tools: [], // TODO: Add tools (schedule, assess, etc.)
-    });
-
-    // Run agent and collect response
-    const chunks: StreamChunk[] = [];
-    const startTime = Date.now();
-
-    try {
-      // Call OpenAI via @openai/agents SDK
-      const result = await run(agent, input.text, {
-        context: llmContext,
-        conversationId: context.sessionId ?? context.userId,
-      });
-
-      // Extract response from result
-      let responseText = '';
-      if (result && typeof result.finalOutput === 'string') {
-        responseText = result.finalOutput;
-      } else if (result && result.finalOutput) {
-        responseText = JSON.stringify(result.finalOutput);
-      } else {
-        responseText = `I'm here to support you, ${userName}. How can I help you with caring for ${careRecipient}?`;
-      }
-
-      chunks.push({
-        type: 'text',
-        content: responseText,
-      });
-    } catch (error) {
-      console.error('Main agent error:', error);
-      chunks.push({
-        type: 'error',
-        content: 'I apologize, but I encountered an error. Please try again.',
-        meta: { error: String(error) },
-      });
-    }
-
-    const latencyMs = Date.now() - startTime;
-
-    // Log agent run for analytics
-    await ctx.runMutation(internal.functions.logs.logAgentRunInternal, {
-      userId: context.userId,
-      agent: 'main',
-      policyBundle: 'default_v1',
-      budgetResult: {
-        usedInputTokens: input.text.length,
-        usedOutputTokens: chunks.map((c) => c.content).join('').length,
-        toolCalls: 0,
-      },
-      latencyMs,
-      traceId: `main-${Date.now()}`,
-    });
-
-    return { chunks, latencyMs };
   },
 });

@@ -14,12 +14,18 @@ importers:
 
   give-care-app:
     dependencies:
+      '@ai-sdk/openai':
+        specifier: ^1.3.24
+        version: 1.3.24(zod@3.25.76)
+      '@convex-dev/agent':
+        specifier: ^0.2.12
+        version: 0.2.12(@ai-sdk/provider-utils@3.0.16(zod@3.25.76))(ai@5.0.89(zod@3.25.76))(convex-helpers@0.1.104(@standard-schema/spec@1.0.0)(convex@1.28.2(react@19.2.0))(react@19.2.0)(typescript@5.8.3)(zod@3.25.76))(convex@1.28.2(react@19.2.0))(react@19.2.0)
       '@google/genai':
         specifier: ^1.27.0
         version: 1.27.0(@modelcontextprotocol/sdk@1.20.2)
-      '@openai/agents':
-        specifier: ^0.3.0
-        version: 0.3.0(ws@8.18.3)(zod@3.25.76)
+      ai:
+        specifier: ^5.0.89
+        version: 5.0.89(zod@3.25.76)
       convex:
         specifier: ^1.11.0
         version: 1.28.2(react@19.2.0)
@@ -321,6 +327,12 @@ packages:
   '@adobe/css-tools@4.4.4':
     resolution: {integrity: sha512-Elp+iwUx5rN5+Y8xLt5/GRoG20WGoDCQ/1Fb+1LiGtvwbDavuSk0jhD/eZdckHAuzcDzccnkv+rEjyWfRx18gg==}
 
+  '@ai-sdk/gateway@2.0.7':
+    resolution: {integrity: sha512-/AI5AKi4vOK9SEb8Z1dfXkhsJ5NAfWsoJQc96B/mzn2KIrjw5occOjIwD06scuhV9xWlghCoXJT1sQD9QH/tyg==}
+    engines: {node: '>=18'}
+    peerDependencies:
+      zod: ^3.25.76 || ^4.1.8
+
   '@ai-sdk/openai@1.3.24':
     resolution: {integrity: sha512-GYXnGJTHRTZc4gJMSmFRgEQudjqd4PUN0ZjQhPwOAYH1yOAvQoG/Ikqs+HyISRbLPCrhbZnPKCNHuRU4OfpW0Q==}
     engines: {node: '>=18'}
@@ -333,8 +345,18 @@ packages:
     peerDependencies:
       zod: ^3.23.8
 
+  '@ai-sdk/provider-utils@3.0.16':
+    resolution: {integrity: sha512-lsWQY9aDXHitw7C1QRYIbVGmgwyT98TF3MfM8alNIXKpdJdi+W782Rzd9f1RyOfgRmZ08gJ2EYNDhWNK7RqpEA==}
+    engines: {node: '>=18'}
+    peerDependencies:
+      zod: ^3.25.76 || ^4.1.8
+
   '@ai-sdk/provider@1.1.3':
     resolution: {integrity: sha512-qZMxYJ0qqX/RfnuIaab+zp8UAeJn/ygXXAffR5I4N0n1IrvA6qBsjc8hXLmBiMV2zoXlifkacF7sEFnYnjBcqg==}
+    engines: {node: '>=18'}
+
+  '@ai-sdk/provider@2.0.0':
+    resolution: {integrity: sha512-6o7Y2SeO9vFKB8lArHXehNuusnpddKPk7xqL7T2/b+OvXMRIXUO1rR4wcv1hAFUAT9avGZshty3Wlua/XA7TvA==}
     engines: {node: '>=18'}
 
   '@alloc/quick-lru@5.2.0':
@@ -508,6 +530,18 @@ packages:
 
   '@cloudflare/workers-types@4.20251014.0':
     resolution: {integrity: sha512-tEW98J/kOa0TdylIUOrLKRdwkUw0rvvYVlo+Ce0mqRH3c8kSoxLzUH9gfCvwLe0M89z1RkzFovSKAW2Nwtyn3w==}
+
+  '@convex-dev/agent@0.2.12':
+    resolution: {integrity: sha512-eJgtij+4bfnAlBoZFORRWo9QwY28z2ePUu2jToCUMse1rP6/A0GWR/eQmgK5hOE2kGOSpgA3LmbUYOVbt+63+g==}
+    peerDependencies:
+      '@ai-sdk/provider-utils': ^3.0.7
+      ai: ^5.0.29
+      convex: ^1.23.0
+      convex-helpers: ^0.1.103
+      react: ^18.3.1 || ^19.0.0
+    peerDependenciesMeta:
+      react:
+        optional: true
 
   '@convex-dev/eslint-plugin@1.0.0':
     resolution: {integrity: sha512-ublJRBKcLCioNaf1ylkCHD2KzAqWE2RIQ6DA/UgXAXQW5qg4vZSWY8wy+EK11yJkSSxcGfFXDWaE1+cHaWJvNA==}
@@ -1599,43 +1633,20 @@ packages:
       zod:
         optional: true
 
-  '@openai/agents-core@0.3.0':
-    resolution: {integrity: sha512-2WNHfMzBCwkVfXD6B5bLy7y4SPJbmucvOnSPhqOS25gAEnf7FrVu94hACUP/Q2+qWbGpC6okPb1fwtCI7yZmhw==}
-    peerDependencies:
-      zod: ^3.25.40 || ^4.0
-    peerDependenciesMeta:
-      zod:
-        optional: true
-
   '@openai/agents-openai@0.1.11':
     resolution: {integrity: sha512-TYYbY7o1cNxtOIO4F1a20qkqDT1Iwr9ZEi0MO2sEaeioK8rGB/Ux54iFvsA3IblUYyK+5fD25vr4vXFasvg2Kg==}
     peerDependencies:
       zod: ^3.25.40
-
-  '@openai/agents-openai@0.3.0':
-    resolution: {integrity: sha512-y3v4m2dUf5jyZnpTnUrqN0Akleje/G78RII81rtdo0iaPhCqcVrH6f/j+nEYqsyhPA+jJCL1gyaasZZR1NTm8g==}
-    peerDependencies:
-      zod: ^3.25.40 || ^4.0
 
   '@openai/agents-realtime@0.1.11':
     resolution: {integrity: sha512-8jaNuYU1acra28i7bYrZIPubI6s2ziY2ZudqAVK2ad+giopXcrNSiJTuZ2S3z+ESnIejwMiYLfnY2Le8W0SJ7A==}
     peerDependencies:
       zod: ^3.25.40
 
-  '@openai/agents-realtime@0.3.0':
-    resolution: {integrity: sha512-sa9MuUjWe9bhog3R1JbNQ9u/bIzMy+oiMziWScDerSouVSpauPxA8CcNT9MfBb3yDjDRYLlvuy9DUj2IX958oQ==}
-    peerDependencies:
-      zod: ^3.25.40 || ^4.0
-
   '@openai/agents@0.1.11':
     resolution: {integrity: sha512-jnaFt54iP71vYDXvpG3EGX2kVRYIU2xBdCT3uFqdXm4KqFAP9JQFNGiKKBEeE5rbXARpqAQpKH+5HfoANndpcQ==}
     peerDependencies:
       zod: ^3.25.40
-
-  '@openai/agents@0.3.0':
-    resolution: {integrity: sha512-afVZc4/ev/jpMDmMHH8DYV0m+b8mEhRuwC0qog14untuxPq6FJFOUG8J6UnKKDf4vXsnODyYbOoXT+qkXGJy/w==}
-    peerDependencies:
-      zod: ^3.25.40 || ^4.0
 
   '@opentelemetry/api@1.9.0':
     resolution: {integrity: sha512-3giAOQvZiH5F9bMlMiv8+GSPMeqg0dbaeo58/0SlA9sxSqZhnUtxzX9/2FzyhS9sWQf5S0GJE0AKBrFqjpeYcg==}
@@ -2045,6 +2056,9 @@ packages:
 
   '@stablelib/base64@1.0.1':
     resolution: {integrity: sha512-1bnPQqSxSuc3Ii6MhBysoWCg58j97aUjuCSZrGSmDxNqtytIi0k8utUenAwTZN4V5mXXYGsVUI9zeBqy+jBOSQ==}
+
+  '@standard-schema/spec@1.0.0':
+    resolution: {integrity: sha512-m2bOd0f2RT9k8QJx1JN85cZYyH1RqFBdlwtkSlf4tBDYLCiiZnv1fIIwacK6cqwXavOydf0NPToMQgpKq+dVlA==}
 
   '@swc/helpers@0.5.15':
     resolution: {integrity: sha512-JQ5TuMi45Owi4/BIMAJBoSQoOJu12oOk/gADqlcUL9JEdHB8vyjUSsxqeNXnmXHjYKMi2WcYtezGEEhqUI/E2g==}
@@ -2544,6 +2558,10 @@ packages:
     cpu: [x64]
     os: [win32]
 
+  '@vercel/oidc@3.0.3':
+    resolution: {integrity: sha512-yNEQvPcVrK9sIe637+I0jD6leluPxzwJKx/Haw6F4H77CdDsszUn5V3o96LPziXkSNE2B83+Z3mjqGKBK/R6Gg==}
+    engines: {node: '>= 20'}
+
   '@vitejs/plugin-react@4.7.0':
     resolution: {integrity: sha512-gUu9hwfWvvEDBBmgtAowQCojwZmJ5mcLn3aufeCsitijs3+f2NsrPtlAWIR6OPiqljl96GVCUbLe0HyqIpVaoA==}
     engines: {node: ^14.18.0 || >=16.0.0}
@@ -2629,6 +2647,12 @@ packages:
   agent-base@7.1.4:
     resolution: {integrity: sha512-MnA+YT8fwfJPgBx3m60MNqakm30XOkyIoH1y6huTQvC0PwZG7ki8NacLBcrPbNoo8vEZy7Jpuk7+jMO+CUovTQ==}
     engines: {node: '>= 14'}
+
+  ai@5.0.89:
+    resolution: {integrity: sha512-8Nq+ZojGacQrupoJEQLrTDzT5VtR3gyp5AaqFSV3tzsAXlYQ9Igb7QE3yeoEdzOk5IRfDwWL7mDCUD+oBg1hDA==}
+    engines: {node: '>=18'}
+    peerDependencies:
+      zod: ^3.25.76 || ^4.1.8
 
   ajv@6.12.6:
     resolution: {integrity: sha512-j3fVLgvTo527anyYyJOGTYJbG+vnnQYvE0m5mmkc1TK+nxAppkCLMIL0aZ4dblVCNoGShhm+kzE4ZUykBoMg4g==}
@@ -3009,6 +3033,28 @@ packages:
 
   convert-source-map@2.0.0:
     resolution: {integrity: sha512-Kvp459HrV2FEJ1CAsi1Ku+MY3kasH19TFykTz2xWmMeq6bk2NU3XXvfJ+Q61m0xktWwt+1HSYf3JZsTms3aRJg==}
+
+  convex-helpers@0.1.104:
+    resolution: {integrity: sha512-7CYvx7T3K6n+McDTK4ZQaQNNGBzq5aWezpjzsKbOxPXx7oNcTP9wrpef3JxeXWFzkByJv5hRCjseh9B7eNJ7Ig==}
+    hasBin: true
+    peerDependencies:
+      '@standard-schema/spec': ^1.0.0
+      convex: ^1.24.0
+      hono: ^4.0.5
+      react: ^17.0.2 || ^18.0.0 || ^19.0.0
+      typescript: ^5.5
+      zod: ^3.22.4 || ^4.0.15
+    peerDependenciesMeta:
+      '@standard-schema/spec':
+        optional: true
+      hono:
+        optional: true
+      react:
+        optional: true
+      typescript:
+        optional: true
+      zod:
+        optional: true
 
   convex@1.28.0:
     resolution: {integrity: sha512-40FgeJ/LxP9TxnkDDztU/A5gcGTdq1klcTT5mM0Ak+kSlQiDktMpjNX1TfkWLxXaE3lI4qvawKH95v2RiYgFxA==}
@@ -4962,18 +5008,6 @@ packages:
       zod:
         optional: true
 
-  openai@6.8.1:
-    resolution: {integrity: sha512-ACifslrVgf+maMz9vqwMP4+v9qvx5Yzssydizks8n+YUJ6YwUoxj51sKRQ8HYMfR6wgKLSIlaI108ZwCk+8yig==}
-    hasBin: true
-    peerDependencies:
-      ws: ^8.18.0
-      zod: ^3.25 || ^4.0
-    peerDependenciesMeta:
-      ws:
-        optional: true
-      zod:
-        optional: true
-
   opener@1.5.2:
     resolution: {integrity: sha512-ur5UIdyw5Y7yEj9wLzhqXiy6GZ3Mwx0yGI+5sMn2r0N0v3cKJvUmFH5yPP+WXh9e0xfyzyJX95D8l088DNFj7A==}
     hasBin: true
@@ -6334,6 +6368,13 @@ snapshots:
 
   '@adobe/css-tools@4.4.4': {}
 
+  '@ai-sdk/gateway@2.0.7(zod@3.25.76)':
+    dependencies:
+      '@ai-sdk/provider': 2.0.0
+      '@ai-sdk/provider-utils': 3.0.16(zod@3.25.76)
+      '@vercel/oidc': 3.0.3
+      zod: 3.25.76
+
   '@ai-sdk/openai@1.3.24(zod@3.25.76)':
     dependencies:
       '@ai-sdk/provider': 1.1.3
@@ -6347,7 +6388,18 @@ snapshots:
       secure-json-parse: 2.7.0
       zod: 3.25.76
 
+  '@ai-sdk/provider-utils@3.0.16(zod@3.25.76)':
+    dependencies:
+      '@ai-sdk/provider': 2.0.0
+      '@standard-schema/spec': 1.0.0
+      eventsource-parser: 3.0.6
+      zod: 3.25.76
+
   '@ai-sdk/provider@1.1.3':
+    dependencies:
+      json-schema: 0.4.0
+
+  '@ai-sdk/provider@2.0.0':
     dependencies:
       json-schema: 0.4.0
 
@@ -6543,6 +6595,16 @@ snapshots:
     optional: true
 
   '@cloudflare/workers-types@4.20251014.0': {}
+
+  '@convex-dev/agent@0.2.12(@ai-sdk/provider-utils@3.0.16(zod@3.25.76))(ai@5.0.89(zod@3.25.76))(convex-helpers@0.1.104(@standard-schema/spec@1.0.0)(convex@1.28.2(react@19.2.0))(react@19.2.0)(typescript@5.8.3)(zod@3.25.76))(convex@1.28.2(react@19.2.0))(react@19.2.0)':
+    dependencies:
+      '@ai-sdk/provider-utils': 3.0.16(zod@3.25.76)
+      ai: 5.0.89(zod@3.25.76)
+      convex: 1.28.2(react@19.2.0)
+      convex-helpers: 0.1.104(@standard-schema/spec@1.0.0)(convex@1.28.2(react@19.2.0))(react@19.2.0)(typescript@5.8.3)(zod@3.25.76)
+    optionalDependencies:
+      '@ungap/structured-clone': 1.3.0
+      react: 19.2.0
 
   '@convex-dev/eslint-plugin@1.0.0(eslint@9.38.0(jiti@2.6.1))(typescript@5.8.3)':
     dependencies:
@@ -7351,17 +7413,6 @@ snapshots:
       - supports-color
       - ws
 
-  '@openai/agents-core@0.3.0(ws@8.18.3)(zod@3.25.76)':
-    dependencies:
-      debug: 4.4.3
-      openai: 6.8.1(ws@8.18.3)(zod@3.25.76)
-    optionalDependencies:
-      '@modelcontextprotocol/sdk': 1.20.2
-      zod: 3.25.76
-    transitivePeerDependencies:
-      - supports-color
-      - ws
-
   '@openai/agents-openai@0.1.11(ws@8.18.3)(zod@3.25.76)':
     dependencies:
       '@openai/agents-core': 0.1.11(ws@8.18.3)(zod@3.25.76)
@@ -7372,31 +7423,9 @@ snapshots:
       - supports-color
       - ws
 
-  '@openai/agents-openai@0.3.0(ws@8.18.3)(zod@3.25.76)':
-    dependencies:
-      '@openai/agents-core': 0.3.0(ws@8.18.3)(zod@3.25.76)
-      debug: 4.4.3
-      openai: 6.8.1(ws@8.18.3)(zod@3.25.76)
-      zod: 3.25.76
-    transitivePeerDependencies:
-      - supports-color
-      - ws
-
   '@openai/agents-realtime@0.1.11(zod@3.25.76)':
     dependencies:
       '@openai/agents-core': 0.1.11(ws@8.18.3)(zod@3.25.76)
-      '@types/ws': 8.18.1
-      debug: 4.4.3
-      ws: 8.18.3
-      zod: 3.25.76
-    transitivePeerDependencies:
-      - bufferutil
-      - supports-color
-      - utf-8-validate
-
-  '@openai/agents-realtime@0.3.0(zod@3.25.76)':
-    dependencies:
-      '@openai/agents-core': 0.3.0(ws@8.18.3)(zod@3.25.76)
       '@types/ws': 8.18.1
       debug: 4.4.3
       ws: 8.18.3
@@ -7420,22 +7449,7 @@ snapshots:
       - utf-8-validate
       - ws
 
-  '@openai/agents@0.3.0(ws@8.18.3)(zod@3.25.76)':
-    dependencies:
-      '@openai/agents-core': 0.3.0(ws@8.18.3)(zod@3.25.76)
-      '@openai/agents-openai': 0.3.0(ws@8.18.3)(zod@3.25.76)
-      '@openai/agents-realtime': 0.3.0(zod@3.25.76)
-      debug: 4.4.3
-      openai: 6.8.1(ws@8.18.3)(zod@3.25.76)
-      zod: 3.25.76
-    transitivePeerDependencies:
-      - bufferutil
-      - supports-color
-      - utf-8-validate
-      - ws
-
-  '@opentelemetry/api@1.9.0':
-    optional: true
+  '@opentelemetry/api@1.9.0': {}
 
   '@pkgjs/parseargs@0.11.0':
     optional: true
@@ -7779,6 +7793,8 @@ snapshots:
   '@sinclair/typebox@0.27.8': {}
 
   '@stablelib/base64@1.0.1': {}
+
+  '@standard-schema/spec@1.0.0': {}
 
   '@swc/helpers@0.5.15':
     dependencies:
@@ -8362,6 +8378,8 @@ snapshots:
   '@unrs/resolver-binding-win32-x64-msvc@1.11.1':
     optional: true
 
+  '@vercel/oidc@3.0.3': {}
+
   '@vitejs/plugin-react@4.7.0(vite@5.4.21(@types/node@20.19.0)(lightningcss@1.30.2)(terser@5.44.0))':
     dependencies:
       '@babel/core': 7.28.5
@@ -8495,6 +8513,14 @@ snapshots:
   acorn@8.15.0: {}
 
   agent-base@7.1.4: {}
+
+  ai@5.0.89(zod@3.25.76):
+    dependencies:
+      '@ai-sdk/gateway': 2.0.7(zod@3.25.76)
+      '@ai-sdk/provider': 2.0.0
+      '@ai-sdk/provider-utils': 3.0.16(zod@3.25.76)
+      '@opentelemetry/api': 1.9.0
+      zod: 3.25.76
 
   ajv@6.12.6:
     dependencies:
@@ -8905,6 +8931,15 @@ snapshots:
     optional: true
 
   convert-source-map@2.0.0: {}
+
+  convex-helpers@0.1.104(@standard-schema/spec@1.0.0)(convex@1.28.2(react@19.2.0))(react@19.2.0)(typescript@5.8.3)(zod@3.25.76):
+    dependencies:
+      convex: 1.28.2(react@19.2.0)
+    optionalDependencies:
+      '@standard-schema/spec': 1.0.0
+      react: 19.2.0
+      typescript: 5.8.3
+      zod: 3.25.76
 
   convex@1.28.0(react@19.2.0):
     dependencies:
@@ -10056,8 +10091,7 @@ snapshots:
     transitivePeerDependencies:
       - bare-abort-controller
 
-  eventsource-parser@3.0.6:
-    optional: true
+  eventsource-parser@3.0.6: {}
 
   eventsource@3.0.7:
     dependencies:
@@ -11591,11 +11625,6 @@ snapshots:
       mimic-fn: 4.0.0
 
   openai@5.23.2(ws@8.18.3)(zod@3.25.76):
-    optionalDependencies:
-      ws: 8.18.3
-      zod: 3.25.76
-
-  openai@6.8.1(ws@8.18.3)(zod@3.25.76):
     optionalDependencies:
       ws: 8.18.3
       zod: 3.25.76

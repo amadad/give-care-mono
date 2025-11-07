@@ -1,7 +1,7 @@
 "use node";
 
 /**
- * Crisis Agent - Convex-native implementation
+ * Crisis Agent - Convex-native implementation using Agent Component
  *
  * Handles crisis detection and provides immediate support resources.
  *
@@ -9,18 +9,15 @@
  * - Detects crisis situations (active crisis flags in context)
  * - Provides 988 hotline and crisis resources
  * - Uses empathetic, safety-focused tone
- * - Streams responses using @openai/agents SDK
+ * - Manages persistent threads with automatic message history
  */
 
 import { action } from '../_generated/server';
-import { internal } from '../_generated/api';
+import { internal, components } from '../_generated/api';
 import { v } from 'convex/values';
-import { Agent, run, setOpenAIAPI } from '@openai/agents';
-import type { AgentContext, AgentInput, StreamChunk } from '../lib/types';
+import { Agent } from '@convex-dev/agent';
+import { openai } from '@ai-sdk/openai';
 import { CRISIS_PROMPT, renderPrompt } from '../lib/prompts';
-
-// Configure OpenAI SDK to use responses API
-setOpenAIAPI('responses');
 
 const channelValidator = v.union(
   v.literal('sms'),
@@ -45,10 +42,17 @@ const agentContextValidator = v.object({
   metadata: v.optional(v.any()),
 });
 
+// Define the crisis agent with Convex Agent Component
+const crisisAgent = new Agent(components.agent, {
+  name: 'Crisis Support',
+  languageModel: openai.chat('gpt-4o-mini'), // Fast model for crisis response
+  instructions: 'You are a compassionate crisis support assistant for caregivers providing immediate support resources.',
+});
+
 /**
  * Crisis Agent Action
  *
- * Runs crisis detection and response workflow.
+ * Runs crisis detection and response workflow using Convex Agent Component.
  *
  * @param input - User message and channel
  * @param context - User context including crisis flags
@@ -62,8 +66,11 @@ export const runCrisisAgent = action({
       userId: v.string(),
     }),
     context: agentContextValidator,
+    threadId: v.optional(v.string()),
   },
-  handler: async (ctx, { input, context }) => {
+  handler: async (ctx, { input, context, threadId }) => {
+    const startTime = Date.now();
+
     // Check preconditions: crisis flags must be active
     if (!context.crisisFlags?.active) {
       throw new Error('Crisis agent requires active crisis flags');
@@ -75,27 +82,41 @@ export const runCrisisAgent = action({
     const userName = (profile.firstName as string) ?? 'friend';
     const careRecipient = (profile.careRecipientName as string) ?? 'loved one';
 
-    // Render system prompt
-    const systemPrompt = renderPrompt(CRISIS_PROMPT, {
-      userName,
-      careRecipient,
-    });
+    try {
+      // Render dynamic system prompt
+      const systemPrompt = renderPrompt(CRISIS_PROMPT, { userName, careRecipient });
 
-    // Build LLM context
-    const llmContext = {
-      userId: context.userId,
-      sessionId: context.sessionId,
-      locale: context.locale,
-      crisisFlags: context.crisisFlags,
-      channel: input.channel,
-      consent: context.consent,
-      metadata: context.metadata,
-    };
+      // Get or create thread
+      const thread = threadId
+        ? await crisisAgent.continueThread(ctx, { threadId, userId: context.userId })
+        : await crisisAgent.createThread(ctx, { userId: context.userId });
 
-    // Check for OpenAI API key
-    const apiKey = process.env.OPENAI_API_KEY;
-    if (!apiKey) {
-      console.error('OPENAI_API_KEY not found in Convex environment');
+      // Generate response with automatic context and history
+      const result = await thread.generateText({
+        prompt: input.text,
+        system: systemPrompt, // Override default instructions
+      });
+
+      const responseText = result.text;
+      const latencyMs = Date.now() - startTime;
+
+      // Log crisis interaction for safety monitoring
+      await ctx.runMutation(internal.functions.logs.logCrisisInteraction, {
+        userId: context.userId,
+        input: input.text,
+        chunks: [responseText],
+        timestamp: Date.now(),
+      });
+
+      return {
+        chunks: [{ type: 'text', content: responseText }],
+        latencyMs,
+        threadId: thread.threadId,
+      };
+    } catch (error) {
+      console.error('Crisis agent error:', error);
+
+      // Fallback response with crisis resources
       const fallbackResponse = `I hear that you're going through a very difficult time.
 
 If you're experiencing a crisis, please reach out for immediate help:
@@ -113,64 +134,10 @@ For ${careRecipient}, resources are available 24/7. You're not alone in this.`;
       });
 
       return {
-        chunks: [{ type: 'text', content: fallbackResponse }],
-        latencyMs: 0,
+        chunks: [{ type: 'error', content: fallbackResponse, meta: { error: String(error) } }],
+        latencyMs: Date.now() - startTime,
       };
     }
-
-    // Create agent with @openai/agents SDK
-    const agent = new Agent({
-      name: 'crisis',
-      instructions: systemPrompt,
-      model: process.env.OPENAI_MODEL ?? 'gpt-4o-mini', // Fast model for crisis response
-      tools: [], // No tools needed for crisis response
-    });
-
-    // Run agent and collect response
-    const chunks: StreamChunk[] = [];
-    const startTime = Date.now();
-
-    try {
-      // Call OpenAI via @openai/agents SDK
-      const result = await run(agent, input.text, {
-        context: llmContext,
-        conversationId: context.sessionId ?? context.userId,
-      });
-
-      // Extract response from result
-      let responseText = '';
-      if (result && typeof result.finalOutput === 'string') {
-        responseText = result.finalOutput;
-      } else if (result && result.finalOutput) {
-        responseText = JSON.stringify(result.finalOutput);
-      } else {
-        responseText = 'I hear you. Please reach out to 988 (Suicide & Crisis Lifeline) for immediate support.';
-      }
-
-      chunks.push({
-        type: 'text',
-        content: responseText,
-      });
-    } catch (error) {
-      console.error('Crisis agent error:', error);
-      chunks.push({
-        type: 'error',
-        content: 'I apologize, but I encountered an error. Please call 988 immediately if you are in crisis.',
-        meta: { error: String(error) },
-      });
-    }
-
-    const latencyMs = Date.now() - startTime;
-
-    // Log crisis interaction for safety monitoring
-    await ctx.runMutation(internal.functions.logs.logCrisisInteraction, {
-      userId: context.userId,
-      input: input.text,
-      chunks: chunks.map((c) => c.content),
-      timestamp: Date.now(),
-    });
-
-    return { chunks, latencyMs };
   },
 });
 
