@@ -1,3 +1,8 @@
 # Convex generated files
 /_generated
 /.convex
+
+# Compiled JS files (should only have .ts sources)
+*.js
+*.js.map
+!convex.config.js

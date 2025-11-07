@@ -1,5 +1,5 @@
 import { defineApp } from 'convex/server';
-// @ts-ignore - TypeScript moduleResolution issue with convex.config export
+// @ts-expect-error - TypeScript moduleResolution issue with convex.config export
 import agent from '@convex-dev/agent/convex.config';
 
 const app = defineApp();

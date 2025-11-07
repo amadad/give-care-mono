@@ -141,7 +141,7 @@ export const getRecentFeedback = query({
       const dimension = dimensionPool[feedback.length % dimensionPool.length];
       feedback.push({
         _id: score._id,
-        userName: user.externalId,
+        userName: user.externalId ?? user.phone ?? user.email ?? 'Unknown',
         rating: Number(clampRating(score.composite / 20).toFixed(1)),
         timeAgo: formatTimeAgo(score._creationTime),
         dimension,

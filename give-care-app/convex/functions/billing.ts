@@ -72,7 +72,9 @@ export const applyStripeEvent = mutation({
         status,
         currentPeriodEnd,
       });
-      await applyEntitlements(ctx, user.externalId, planId, currentPeriodEnd);
+      if (user.externalId) {
+        await applyEntitlements(ctx, user.externalId, planId, currentPeriodEnd);
+      }
     }
   },
 });

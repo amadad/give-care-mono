@@ -43,9 +43,9 @@ const agentContextValidator = v.object({
   metadata: v.optional(v.any()),
 });
 
-// Define the assessment agent with Convex Agent Component
 const assessmentAgent = new Agent(components.agent, {
   name: 'Assessment Specialist',
+  // @ts-expect-error - LanguageModelV1/V2 type mismatch between AI SDK versions
   languageModel: openai.chat('gpt-4o-mini'),
   instructions:
     'You are a burnout assessment specialist who provides personalized, compassionate interpretations and actionable intervention suggestions.',
@@ -74,7 +74,6 @@ export const runAssessmentAgent = action({
     const startTime = Date.now();
 
     try {
-      // Validate assessment data
       const metadata = (context.metadata ?? {}) as Record<string, unknown>;
       const answers = (metadata.assessmentAnswers as number[]) ?? [];
 
@@ -86,17 +85,14 @@ export const runAssessmentAgent = action({
         };
       }
 
-      // Extract user profile data
       const profile = (metadata.profile as Record<string, unknown> | undefined) ?? {};
       const userName = (profile.firstName as string) ?? 'caregiver';
       const careRecipient = (profile.careRecipientName as string) ?? 'your loved one';
 
-      // Calculate assessment scores
       const total = answers.reduce((sum, val) => sum + val, 0);
       const avgScore = total / answers.length;
       const pressureZone = (metadata.pressureZone as string) ?? 'work';
 
-      // Determine burnout band
       let band: string;
       if (avgScore < 2) {
         band = 'low';
@@ -106,7 +102,6 @@ export const runAssessmentAgent = action({
         band = 'high';
       }
 
-      // Render dynamic system prompt with assessment context
       const systemPrompt = renderPrompt(ASSESSMENT_PROMPT, {
         userName,
         careRecipient,
@@ -116,12 +111,19 @@ export const runAssessmentAgent = action({
         pressureZone,
       });
 
-      // Get or create thread
-      const thread = threadId
-        ? await assessmentAgent.continueThread(ctx, { threadId, userId: context.userId })
-        : await assessmentAgent.createThread(ctx, { userId: context.userId });
+      let newThreadId: string;
+      let thread;
 
-      // Generate personalized assessment interpretation
+      if (threadId) {
+        const threadResult = await assessmentAgent.continueThread(ctx, { threadId, userId: context.userId });
+        thread = threadResult.thread;
+        newThreadId = threadId;
+      } else {
+        const threadResult = await assessmentAgent.createThread(ctx, { userId: context.userId });
+        thread = threadResult.thread;
+        newThreadId = threadResult.threadId;
+      }
+
       const result = await thread.generateText({
         prompt: input.text || 'Please interpret my burnout assessment results and suggest interventions.',
         system: systemPrompt, // Override default instructions with assessment-specific context
@@ -130,7 +132,6 @@ export const runAssessmentAgent = action({
       const responseText = result.text;
       const latencyMs = Date.now() - startTime;
 
-      // Log agent run
       await ctx.runMutation(internal.functions.logs.logAgentRunInternal, {
         userId: context.userId,
         agent: 'assessment',
@@ -147,7 +148,7 @@ export const runAssessmentAgent = action({
       return {
         chunks: [{ type: 'text', content: responseText }],
         latencyMs,
-        threadId: thread.threadId,
+        threadId: newThreadId,
       };
     } catch (error) {
       console.error('Assessment agent error:', error);

@@ -32,6 +32,9 @@ export const runEngagementChecks = internalMutation({
     const now = Date.now();
     const users = await ctx.db.query('users').take(1000);
     for (const user of users) {
+      // Skip users without externalId
+      if (!user.externalId) continue;
+
       const recentMessages = await ctx.db
         .query('messages')
         .withIndex('by_user_created', (q) => q.eq('userId', user._id))

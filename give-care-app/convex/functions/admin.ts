@@ -31,9 +31,11 @@ const DAY_MS = 86_400_000;
 const WEEK_MS = DAY_MS * 7;
 
 const loadSessionForUser = async (ctx: QueryCtx, user: Doc<'users'>) => {
+  // Skip users without a channel
+  if (!user.channel) return null;
   return ctx.db
     .query('sessions')
-    .withIndex('by_user_channel', (q) => q.eq('userId', user._id).eq('channel', user.channel))
+    .withIndex('by_user_channel', (q) => q.eq('userId', user._id).eq('channel', user.channel!))
     .unique();
 };
 
@@ -80,8 +82,8 @@ const summarizeUser = async (ctx: QueryCtx, user: Doc<'users'>): Promise<AdminUs
 
   return {
     _id: user._id,
-    externalId: user.externalId,
-    firstName: (profile.firstName as string) ?? user.externalId,
+    externalId: user.externalId ?? 'unknown',
+    firstName: (profile.firstName as string) ?? user.externalId ?? 'unknown',
     relationship: profile.relationship as string | undefined,
     phoneNumber: user.phone ?? 'unavailable',
     burnoutScore: latestScore?.composite,

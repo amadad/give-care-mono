@@ -44,12 +44,11 @@ const agentContextValidator = v.object({
   metadata: v.optional(v.any()),
 });
 
-// Define the main agent with Convex Agent Component
 const mainAgent = new Agent(components.agent, {
   name: 'Caregiver Support',
+  // @ts-expect-error - LanguageModelV1/V2 type mismatch between AI SDK versions
   languageModel: openai.chat('gpt-4o-mini'),
   instructions: 'You are a compassionate AI caregiver assistant providing empathetic support and practical advice.',
-  // TODO: Add tools (schedule, assess, etc.)
 });
 
 /**
@@ -75,7 +74,6 @@ export const runMainAgent = action({
     const startTime = Date.now();
 
     try {
-      // Extract user profile data
       const metadata = (context.metadata ?? {}) as Record<string, unknown>;
       const profile = (metadata.profile as Record<string, unknown> | undefined) ?? {};
       const userName = (profile.firstName as string) ?? 'caregiver';
@@ -84,7 +82,6 @@ export const runMainAgent = action({
       const journeyPhase = (metadata.journeyPhase as string) ?? 'active';
       const totalInteractionCount = String((metadata.totalInteractionCount as number) ?? 0);
 
-      // Render dynamic system prompt
       const basePrompt = renderPrompt(MAIN_PROMPT, {
         userName,
         relationship,
@@ -93,16 +90,22 @@ export const runMainAgent = action({
         totalInteractionCount,
       });
 
-      // Add tone guidance
       const tone = getTone(context);
       const systemPrompt = `${basePrompt}\n\n${tone}`;
 
-      // Get or create thread
-      const thread = threadId
-        ? await mainAgent.continueThread(ctx, { threadId, userId: context.userId })
-        : await mainAgent.createThread(ctx, { userId: context.userId });
+      let newThreadId: string;
+      let thread;
 
-      // Generate response with automatic context and history
+      if (threadId) {
+        const threadResult = await mainAgent.continueThread(ctx, { threadId, userId: context.userId });
+        thread = threadResult.thread;
+        newThreadId = threadId;
+      } else {
+        const threadResult = await mainAgent.createThread(ctx, { userId: context.userId });
+        thread = threadResult.thread;
+        newThreadId = threadResult.threadId;
+      }
+
       const result = await thread.generateText({
         prompt: input.text,
         system: systemPrompt, // Override default instructions
@@ -111,7 +114,6 @@ export const runMainAgent = action({
       const responseText = result.text;
       const latencyMs = Date.now() - startTime;
 
-      // Log agent run for analytics
       await ctx.runMutation(internal.functions.logs.logAgentRunInternal, {
         userId: context.userId,
         agent: 'main',
@@ -128,12 +130,11 @@ export const runMainAgent = action({
       return {
         chunks: [{ type: 'text', content: responseText }],
         latencyMs,
-        threadId: thread.threadId,
+        threadId: newThreadId,
       };
     } catch (error) {
       console.error('Main agent error:', error);
 
-      // Extract user profile for fallback
       const metadata = (context.metadata ?? {}) as Record<string, unknown>;
       const profile = (metadata.profile as Record<string, unknown> | undefined) ?? {};
       const userName = (profile.firstName as string) ?? 'caregiver';

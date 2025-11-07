@@ -21,8 +21,11 @@ Use this file as the authoritative checklist whenever you touch anything under `
 | `convex/schema.ts` | Tables, indexes, validators. Keep comments for non-obvious indexes. |
 | `convex/functions/*.ts` | Public/internal queries & mutations. One responsibility per file (e.g., `admin.ts`, `analytics.ts`). |
 | `convex/internal/*.ts` | Internal-only helpers invoked by crons/actions. |
-| `convex/agents/*` *(planned)* | Stateful agent/action logic once Option 1 simplification lands. |
-| `convex/http.ts` *(planned)* | HTTP router for webhooks (Stripe, Twilio, etc.). |
+| `convex/agents/*.ts` | AI agents using Agent Component (crisis, main, assessment). |
+| `convex/lib/*.ts` | Shared business logic (billing, policy, prompts, types). |
+| `convex/model/*.ts` | Data access helpers (context, users, messages, security). |
+| `convex/http.ts` | HTTP router for webhooks (Twilio, Stripe, health check). |
+| `convex/crons.ts` | Scheduled jobs (daily metrics, watchers). |
 | `docs/convex.md` | This playbook. Update whenever process changes. |
 
 ---

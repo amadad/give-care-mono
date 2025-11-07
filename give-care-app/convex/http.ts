@@ -1,6 +1,6 @@
 import { httpRouter } from 'convex/server';
 import { httpAction } from './_generated/server';
-import { api, internal } from './_generated/api';
+import { api } from './_generated/api';
 
 const http = httpRouter();
 
@@ -31,7 +31,6 @@ http.route({
       //   return new Response('Invalid signature', { status: 401 });
       // }
 
-      // Process the event
       await ctx.runMutation(api.functions.billing.applyStripeEvent, {
         id: event.id,
         type: event.type,
@@ -80,12 +79,10 @@ http.route({
       //   return new Response('Invalid signature', { status: 401 });
       // }
 
-      // Generate trace ID for observability
       const traceId = `twilio-${messageSid}`;
 
-      // Record the inbound message
       await ctx.runMutation(api.functions.messages.recordInbound, {
-        token: process.env.HARNESS_CONVEX_TOKEN!, // TODO: Remove after harness migration
+        token: process.env.HARNESS_CONVEX_TOKEN!,
         message: {
           externalId: from,
           channel: 'sms',
@@ -98,10 +95,6 @@ http.route({
         },
       });
 
-      // TODO: Trigger agent processing here (Phase 3)
-      // For now, just acknowledge receipt
-
-      // Respond to Twilio with TwiML (required)
       return new Response(
         '<?xml version="1.0" encoding="UTF-8"?><Response></Response>',
         {

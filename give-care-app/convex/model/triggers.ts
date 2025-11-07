@@ -1,4 +1,4 @@
-import type { MutationCtx, ActionCtx } from '../_generated/server';
+import type { MutationCtx } from '../_generated/server';
 import type { Doc } from '../_generated/dataModel';
 import { rrulestr } from 'rrule';
 import * as Users from './users';

@@ -42,10 +42,10 @@ const agentContextValidator = v.object({
   metadata: v.optional(v.any()),
 });
 
-// Define the crisis agent with Convex Agent Component
 const crisisAgent = new Agent(components.agent, {
   name: 'Crisis Support',
-  languageModel: openai.chat('gpt-4o-mini'), // Fast model for crisis response
+  // @ts-expect-error - LanguageModelV1/V2 type mismatch between AI SDK versions
+  languageModel: openai.chat('gpt-4o-mini'),
   instructions: 'You are a compassionate crisis support assistant for caregivers providing immediate support resources.',
 });
 
@@ -71,27 +71,31 @@ export const runCrisisAgent = action({
   handler: async (ctx, { input, context, threadId }) => {
     const startTime = Date.now();
 
-    // Check preconditions: crisis flags must be active
     if (!context.crisisFlags?.active) {
       throw new Error('Crisis agent requires active crisis flags');
     }
 
-    // Extract user profile data
     const metadata = (context.metadata ?? {}) as Record<string, unknown>;
     const profile = (metadata.profile as Record<string, unknown> | undefined) ?? {};
     const userName = (profile.firstName as string) ?? 'friend';
     const careRecipient = (profile.careRecipientName as string) ?? 'loved one';
 
     try {
-      // Render dynamic system prompt
       const systemPrompt = renderPrompt(CRISIS_PROMPT, { userName, careRecipient });
 
-      // Get or create thread
-      const thread = threadId
-        ? await crisisAgent.continueThread(ctx, { threadId, userId: context.userId })
-        : await crisisAgent.createThread(ctx, { userId: context.userId });
+      let newThreadId: string;
+      let thread;
 
-      // Generate response with automatic context and history
+      if (threadId) {
+        const threadResult = await crisisAgent.continueThread(ctx, { threadId, userId: context.userId });
+        thread = threadResult.thread;
+        newThreadId = threadId;
+      } else {
+        const threadResult = await crisisAgent.createThread(ctx, { userId: context.userId });
+        thread = threadResult.thread;
+        newThreadId = threadResult.threadId;
+      }
+
       const result = await thread.generateText({
         prompt: input.text,
         system: systemPrompt, // Override default instructions
@@ -100,7 +104,6 @@ export const runCrisisAgent = action({
       const responseText = result.text;
       const latencyMs = Date.now() - startTime;
 
-      // Log crisis interaction for safety monitoring
       await ctx.runMutation(internal.functions.logs.logCrisisInteraction, {
         userId: context.userId,
         input: input.text,
@@ -111,12 +114,11 @@ export const runCrisisAgent = action({
       return {
         chunks: [{ type: 'text', content: responseText }],
         latencyMs,
-        threadId: thread.threadId,
+        threadId: newThreadId,
       };
     } catch (error) {
       console.error('Crisis agent error:', error);
 
-      // Fallback response with crisis resources
       const fallbackResponse = `I hear that you're going through a very difficult time.
 
 If you're experiencing a crisis, please reach out for immediate help:
