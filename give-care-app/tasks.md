@@ -49,4 +49,4 @@
 - ⏳ Verify every admin query uses the new Convex functions (no references to archived v0.8 APIs); add integration smoke tests if needed.
 - ⏳ After the architecture simplification, double-check imports (e.g., `convex/_generated/api`) and update docs so Cloudflare deploy instructions remain accurate.
 
-**Note**: Test suite needs update for Agent Component API (see tests/agents.test.ts).
+**Note**: Basic prompt tests added (tests/prompts.test.ts). Agent integration tests pending.

@@ -201,7 +201,7 @@ give-care-app/
 │   └── Dashboard (Cloudflare Pages, separate app)
 │
 ├── tests/
-│   └── agents.test.ts           # Agent test suite
+│   └── prompts.test.ts          # Prompt rendering tests
 │
 ├── docs/
 │   ├── convex.md                # Convex playbook (MANDATORY)
@@ -464,7 +464,7 @@ pnpm lint
 pnpm lint:fix
 ```
 
-**Note**: Test suite needs updates after Agent Component migration (see `tests/agents.test.ts`).
+**Note**: Basic prompt rendering tests available in `tests/prompts.test.ts`. Agent integration tests pending.
 
 ---
 
@@ -553,7 +553,7 @@ See `REFACTOR_COMPLETE.md` for full migration analysis.
 
 **Testing**:
 1. Test queries/mutations directly with Convex CLI
-2. Update `tests/agents.test.ts` for agent changes
+2. Run `pnpm test` for prompt rendering tests
 3. Run `pnpm typecheck` before committing
 4. Ensure `npx convex dev --once` succeeds
 
