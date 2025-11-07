@@ -6,7 +6,7 @@ export default tseslint.config(
   {
     ignores: [
       "_archive/**",
-      "admin-frontend/**",
+      "admin/**",
       "convex/_generated/**",
       "dist/**",
       "node_modules/**"

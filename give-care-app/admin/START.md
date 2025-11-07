@@ -9,7 +9,7 @@ All code generated! You can see it working in **3 simple steps**.
 ### Step 1: Run Setup Script
 
 ```bash
-cd /Users/amadad/Projects/givecare/give-care-type/admin-frontend
+cd /Users/amadad/Projects/givecare/give-care-app/admin
 ./SETUP.sh
 ```
 
@@ -24,13 +24,13 @@ This will:
 
 ```bash
 # In a new terminal
-cd /Users/amadad/Projects/givecare/give-care-type
+cd /Users/amadad/Projects/givecare/give-care-app
 npx convex dashboard
 ```
 
 1. Dashboard will open in browser
 2. Copy the deployment URL (looks like: `https://xxx.convex.cloud`)
-3. Paste into `admin-frontend/.env.local`:
+3. Paste into `admin/.env.local`:
 
 ```bash
 VITE_CONVEX_URL=https://YOUR_DEPLOYMENT.convex.cloud
@@ -40,13 +40,13 @@ VITE_CONVEX_URL=https://YOUR_DEPLOYMENT.convex.cloud
 
 **Terminal 1** - Convex (leave running):
 ```bash
-cd /Users/amadad/Projects/givecare/give-care-type
+cd /Users/amadad/Projects/givecare/give-care-app
 npx convex dev
 ```
 
 **Terminal 2** - Vite:
 ```bash
-cd /Users/amadad/Projects/givecare/give-care-type/admin-frontend
+cd /Users/amadad/Projects/givecare/give-care-app/admin
 npm run dev
 ```
 
@@ -95,7 +95,7 @@ npm run dev
 ## Project Structure
 
 ```
-admin-frontend/
+admin/
 ├── src/
 │   ├── main.tsx                          Entry point
 │   ├── index.css                         Tailwind imports
@@ -176,7 +176,7 @@ Once local dev works:
 ### 1. Push to GitHub
 
 ```bash
-cd /Users/amadad/Projects/givecare/give-care-type/admin-frontend
+cd /Users/amadad/Projects/givecare/give-care-app/admin
 git init
 git add .
 git commit -m "Initial admin dashboard"
@@ -220,14 +220,14 @@ git push -u origin main
 ## Support
 
 - **Setup issues**: Check README.md
-- **Convex questions**: See give-care-type/docs/ADMIN_COMPLETE_GUIDE.md
-- **Deploy help**: See give-care-type/docs/CLOUDFLARE_PAGES_SETUP.md
+- **Convex questions**: See give-care-app/docs/ADMIN_COMPLETE_GUIDE.md
+- **Deploy help**: See give-care-app/docs/CLOUDFLARE_PAGES_SETUP.md
 
 ---
 
 **Ready to see it?** Run:
 ```bash
-cd /Users/amadad/Projects/givecare/give-care-type/admin-frontend
+cd /Users/amadad/Projects/givecare/give-care-app/admin
 ./SETUP.sh
 ```
 

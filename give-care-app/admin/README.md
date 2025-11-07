@@ -17,7 +17,7 @@ Real-time admin dashboard for GiveCare built with:
 ### 1. Navigate to Project
 
 ```bash
-cd /Users/amadad/Projects/givecare/give-care-type/admin-frontend
+cd /Users/amadad/Projects/givecare/give-care-app/admin
 ```
 
 ### 2. Install Dependencies
@@ -96,7 +96,7 @@ cd /Users/amadad/Projects/givecare/give-care-type
 npx convex dev
 
 # In another terminal: Start Vite
-cd /Users/amadad/Projects/givecare/give-care-type/admin-frontend
+cd /Users/amadad/Projects/givecare/give-care-app/admin
 npm run dev
 ```
 
@@ -107,7 +107,7 @@ Open http://localhost:5173
 ## Project Structure
 
 ```
-admin-frontend/
+admin/
 ├── src/
 │   ├── main.tsx                      # ✅ Entry point
 │   ├── index.css                     # ✅ Tailwind imports
