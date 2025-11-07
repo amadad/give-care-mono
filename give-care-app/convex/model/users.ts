@@ -1,6 +1,6 @@
 import type { QueryCtx, MutationCtx } from '../_generated/server';
 import type { Id } from '../_generated/dataModel';
-import type { Channel } from '../../packages/shared/types';
+import type { Channel } from '../lib/types';
 
 const DEFAULT_LOCALE = 'en-US';
 

@@ -1,5 +1,5 @@
 import type { MutationCtx } from '../_generated/server';
-import type { Channel } from '../../packages/shared/types';
+import type { Channel } from '../lib/types';
 import * as Users from './users';
 
 type BaseMessage = {

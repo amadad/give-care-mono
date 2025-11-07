@@ -1,6 +1,6 @@
 import type { MutationCtx } from '../_generated/server';
 import type { Id } from '../_generated/dataModel';
-import type { HydratedContext, Budget, Channel } from '../../packages/shared/types';
+import type { HydratedContext, Budget, Channel } from '../lib/types';
 import * as Users from './users';
 
 const DEFAULT_BUDGET: Budget = { maxInputTokens: 2000, maxOutputTokens: 1000, maxTools: 2 };
