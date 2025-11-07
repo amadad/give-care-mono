@@ -83,3 +83,41 @@ export const logCrisisInteraction = internalMutation({
     });
   },
 });
+
+/**
+ * Log agent run for analytics
+ *
+ * This is an internal mutation called by Convex-native agents.
+ */
+export const logAgentRunInternal = internalMutation({
+  args: {
+    userId: v.string(),
+    agent: v.string(),
+    policyBundle: v.string(),
+    budgetResult: budgetResultValidator,
+    latencyMs: v.number(),
+    traceId: v.string(),
+  },
+  handler: async (ctx, { userId, agent, policyBundle, budgetResult, latencyMs, traceId }) => {
+    // Get user ID from string (userId is externalId from agent context)
+    const user = await ctx.db
+      .query('users')
+      .withIndex('by_externalId', (q) => q.eq('externalId', userId))
+      .unique();
+
+    if (!user) {
+      console.warn('Agent run logged for unknown user:', userId);
+      return;
+    }
+
+    // Log to agent_runs table
+    await ctx.db.insert('agent_runs', {
+      userId: user._id,
+      agent,
+      policyBundle,
+      budgetResult,
+      latencyMs,
+      traceId,
+    });
+  },
+});
