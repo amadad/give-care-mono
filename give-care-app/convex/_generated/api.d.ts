@@ -22,6 +22,7 @@ import type * as functions_assessmentResults from "../functions/assessmentResult
 import type * as functions_assessments from "../functions/assessments.js";
 import type * as functions_campaigns from "../functions/campaigns.js";
 import type * as functions_cleanup from "../functions/cleanup.js";
+import type * as functions_conversationState from "../functions/conversationState.js";
 import type * as functions_conversations from "../functions/conversations.js";
 import type * as functions_emailContacts from "../functions/emailContacts.js";
 import type * as functions_emailContent from "../functions/emailContent.js";
@@ -95,6 +96,7 @@ declare const fullApi: ApiFromModules<{
   "functions/assessments": typeof functions_assessments;
   "functions/campaigns": typeof functions_campaigns;
   "functions/cleanup": typeof functions_cleanup;
+  "functions/conversationState": typeof functions_conversationState;
   "functions/conversations": typeof functions_conversations;
   "functions/emailContacts": typeof functions_emailContacts;
   "functions/emailContent": typeof functions_emailContent;

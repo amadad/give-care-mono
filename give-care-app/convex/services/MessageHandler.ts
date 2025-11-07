@@ -348,6 +348,19 @@ export class MessageHandler {
       })
     }
 
+    // FIX #2: Read recentMessages from conversationState table (not deprecated user.recentMessages)
+    const conversationState = await this._ctx.runQuery(
+      internal.functions.conversationState.getByUser,
+      { userId: user._id }
+    )
+
+    const recentMessages = conversationState?.recentMessages || user.recentMessages || []
+
+    logSafe('Context', 'Loaded conversation history', {
+      messageCount: recentMessages.length,
+      source: conversationState ? 'conversationState' : 'user (fallback)',
+    })
+
     return {
       userId: user._id,
       phoneNumber: user.phoneNumber,
@@ -376,9 +389,9 @@ export class MessageHandler {
       deviceType: user.deviceType || null,
       consentAt: user.consentAt ? String(user.consentAt) : null,
       languagePreference: user.languagePreference || 'en',
-      // Conversation summarization fields
-      recentMessages: user.recentMessages || [],
-      historicalSummary: user.historicalSummary || '',
+      // Conversation summarization fields - FIX #2: Now reads from conversationState
+      recentMessages,
+      historicalSummary: conversationState?.historicalSummary || user.historicalSummary || '',
       conversationStartDate: user.conversationStartDate || null,
       totalInteractionCount: user.totalInteractionCount || null,
     }
