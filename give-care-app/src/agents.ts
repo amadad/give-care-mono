@@ -104,7 +104,13 @@ export async function runAgentTurn(message: string, context: GiveCareContext) {
   const startTime = Date.now()
 
   try {
-    const result = await run(giveCareAgent, message, { context })
+    // CRITICAL FIX: Pass conversationId to use OpenAI's conversation storage
+    // This maintains message history across separate run() calls
+    // Without this, each run starts fresh with no prior context
+    const result = await run(giveCareAgent, message, {
+      context,
+      conversationId: context.userId, // Use userId as stable conversation ID
+    })
 
     // Log performance metrics
     const latency = Date.now() - startTime
