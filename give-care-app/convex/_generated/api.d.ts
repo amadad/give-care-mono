@@ -8,6 +8,7 @@
  * @module
  */
 
+import type * as _cleanup from "../_cleanup.js";
 import type * as actions_messageProcessing from "../actions/messageProcessing.js";
 import type * as actions_twilio from "../actions/twilio.js";
 import type * as auth from "../auth.js";
@@ -43,7 +44,6 @@ import type * as http from "../http.js";
 import type * as lib_auth from "../lib/auth.js";
 import type * as lib_scoring from "../lib/scoring.js";
 import type * as messages from "../messages.js";
-import type * as migrations_denormalizeUsers from "../migrations/denormalizeUsers.js";
 import type * as model_admin from "../model/admin.js";
 import type * as model_analytics from "../model/analytics.js";
 import type * as model_conversations from "../model/conversations.js";
@@ -75,6 +75,7 @@ import type {
  * ```
  */
 declare const fullApi: ApiFromModules<{
+  _cleanup: typeof _cleanup;
   "actions/messageProcessing": typeof actions_messageProcessing;
   "actions/twilio": typeof actions_twilio;
   auth: typeof auth;
@@ -110,7 +111,6 @@ declare const fullApi: ApiFromModules<{
   "lib/auth": typeof lib_auth;
   "lib/scoring": typeof lib_scoring;
   messages: typeof messages;
-  "migrations/denormalizeUsers": typeof migrations_denormalizeUsers;
   "model/admin": typeof model_admin;
   "model/analytics": typeof model_analytics;
   "model/conversations": typeof model_conversations;
