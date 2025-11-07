@@ -1,8 +1,9 @@
 # Convex generated files
-/_generated
+# /_generated - Commented out per convex.md - commit types for monorepo
 /.convex
 
 # Compiled JS files (should only have .ts sources)
 *.js
 *.js.map
 !convex.config.js
+!_generated/**/*.js
