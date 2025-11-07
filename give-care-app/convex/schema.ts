@@ -79,7 +79,9 @@ export default defineSchema({
     .index('by_phone', ['phoneNumber']) // SMS lookup (CRITICAL: webhook performance)
     .index('by_created', ['createdAt'])
     .index('by_burnout_band', ['burnoutBand']) // TEMP: for admin dashboard queries (remove after full migration)
-    .index('by_journey', ['journeyPhase']), // TEMP: for admin dashboard queries (remove after full migration)
+    .index('by_journey', ['journeyPhase']) // TEMP: for admin dashboard queries (remove after full migration)
+    .index('by_band_journey', ['burnoutBand', 'journeyPhase']) // TEMP: for crisis/scheduling queries (remove after full migration)
+    .index('by_band_crisis', ['burnoutBand', 'lastCrisisEventAt']), // TEMP: for crisis scheduling (remove after full migration)
 
   // ============================================================================
   // USER_PROFILES - Mostly Static Profile Data
