@@ -1,6 +1,8 @@
+import { internalQuery } from '../_generated/server';
 import type { QueryCtx, MutationCtx } from '../_generated/server';
 import type { Id } from '../_generated/dataModel';
 import type { Channel } from '../lib/types';
+import { v } from 'convex/values';
 
 const DEFAULT_LOCALE = 'en-US';
 
@@ -10,6 +12,16 @@ export const getByExternalId = async (ctx: QueryCtx | MutationCtx, externalId: s
     .withIndex('by_externalId', (q) => q.eq('externalId', externalId))
     .unique();
 };
+
+/**
+ * Get user by ID (internal query wrapper)
+ */
+export const getUser = internalQuery({
+  args: { userId: v.id('users') },
+  handler: async (ctx, { userId }) => {
+    return ctx.db.get(userId);
+  },
+});
 
 type EnsureUserParams = {
   externalId: string;

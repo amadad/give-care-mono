@@ -1,5 +1,7 @@
+import { internalQuery } from '../_generated/server';
 import type { QueryCtx, MutationCtx } from '../_generated/server';
 import type { Id } from '../_generated/dataModel';
+import { v } from 'convex/values';
 
 /**
  * Check if user has active subscription
@@ -19,6 +21,16 @@ export const hasActiveSubscription = async (
   // Check if subscription is not expired
   return subscription.currentPeriodEnd > Date.now();
 };
+
+/**
+ * Check if user has active subscription (internal query wrapper)
+ */
+export const hasActiveSubscriptionQuery = internalQuery({
+  args: { userId: v.id('users') },
+  handler: async (ctx, { userId }) => {
+    return hasActiveSubscription(ctx, userId);
+  },
+});
 
 /**
  * Get signup URL for non-subscribers

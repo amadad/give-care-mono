@@ -5,8 +5,8 @@
  * Called automatically when a new inbound message is received via webhook.
  */
 
-import { internalMutation } from '../_generated/server';
-import { internal } from '../_generated/api';
+import { internalAction, internalMutation } from '../_generated/server';
+import { internal, api } from '../_generated/api';
 import { v } from 'convex/values';
 import { saveMessage } from '@convex-dev/agent';
 import { components } from '../_generated/api';
@@ -25,10 +25,10 @@ const CRISIS_TERMS = [
 /**
  * Process a new inbound message and route to appropriate agent
  *
- * This mutation is called from the Twilio webhook after recording the message.
+ * This action is called from the Twilio webhook after recording the message.
  * It determines routing and kicks off async agent processing.
  */
-export const processInboundMessage = internalMutation({
+export const processInboundMessage = internalAction({
   args: {
     messageId: v.id('messages'),
     userId: v.id('users'),
@@ -36,17 +36,25 @@ export const processInboundMessage = internalMutation({
     externalId: v.string(),
     channel: v.union(v.literal('sms'), v.literal('email'), v.literal('web')),
   },
-  handler: async (ctx, { messageId, userId, text, externalId, channel }) => {
-    // Check subscription status
-    const hasSubscription = await Subscriptions.hasActiveSubscription(ctx, userId);
+  handler: async (ctx, { messageId, userId, text, externalId, channel }): Promise<{ threadId: string | null; agent: string }> => {
+    console.log('[inbound] Processing message', { messageId, userId, externalId, channel });
+
+    // Check subscription status via query
+    // @ts-ignore - Query return type
+    const hasSubscription = await ctx.runQuery(internal.model.subscriptions.hasActiveSubscriptionQuery, {
+      userId,
+    });
+    console.log('[inbound] Subscription check', { userId, hasSubscription });
 
     if (!hasSubscription) {
       // Get user to extract phone for signup URL
-      const user = await ctx.db.get(userId);
+      // @ts-ignore - Query return type
+      const user = await ctx.runQuery(internal.model.users.getUser, { userId });
+      // @ts-ignore - User type
       const signupUrl = Subscriptions.getSignupUrl(user?.phone);
 
-      // Send signup message
-      await ctx.scheduler.runAfter(0, internal.functions.inboundActions.sendSignupMessage, {
+      // Send signup message directly (we're already in an action)
+      await ctx.runAction(internal.functions.inboundActions.sendSignupMessage, {
         userId: externalId,
         channel,
         phone: user?.phone,
@@ -60,24 +68,12 @@ export const processInboundMessage = internalMutation({
     const lowerText = text.toLowerCase();
     const hasCrisisTerms = CRISIS_TERMS.some((term) => lowerText.includes(term));
 
-    // Get or create thread for this user
-    const existingThread = await ctx.db
-      .query('threads')
-      .withIndex('by_userId', (q) => q.eq('userId', userId))
-      .order('desc')
-      .first();
-
-    let threadId: string;
-    if (existingThread) {
-      threadId = existingThread._id as string;
-    } else {
-      // Create new thread
-      const newThreadId = await ctx.db.insert('threads', {
-        userId,
-        metadata: {},
-      });
-      threadId = newThreadId as string;
-    }
+    // Get or create thread for this user via mutation
+    // @ts-ignore - Mutation return type
+    const threadResult = await ctx.runMutation(internal.functions.inbound.getOrCreateThread, {
+      userId,
+    });
+    const threadId: string = threadResult.threadId;
 
     // Save user message to thread
     // @ts-ignore - saveMessage return type
@@ -88,20 +84,16 @@ export const processInboundMessage = internalMutation({
 
     // Route to appropriate agent based on context
     if (hasCrisisTerms) {
-      // High priority - schedule crisis agent immediately
-      await ctx.scheduler.runAfter(
-        0,
-        internal.functions.inboundActions.generateCrisisResponse,
-        {
-          threadId,
-          promptMessageId,
-          userId: externalId,
-          channel,
-        }
-      );
+      // High priority - run crisis agent immediately
+      await ctx.runAction(internal.functions.inboundActions.generateCrisisResponse, {
+        threadId,
+        promptMessageId,
+        userId: externalId,
+        channel,
+      });
     } else {
-      // Normal priority - schedule main agent
-      await ctx.scheduler.runAfter(0, internal.functions.inboundActions.generateMainResponse, {
+      // Normal priority - run main agent
+      await ctx.runAction(internal.functions.inboundActions.generateMainResponse, {
         threadId,
         promptMessageId,
         userId: externalId,
@@ -113,3 +105,27 @@ export const processInboundMessage = internalMutation({
   },
 });
 
+/**
+ * Get or create thread for user (mutation helper)
+ */
+export const getOrCreateThread = internalMutation({
+  args: { userId: v.id('users') },
+  handler: async (ctx, { userId }) => {
+    const existingThread = await ctx.db
+      .query('threads')
+      .withIndex('by_userId', (q) => q.eq('userId', userId))
+      .order('desc')
+      .first();
+
+    if (existingThread) {
+      return { threadId: existingThread._id as string };
+    }
+
+    const newThreadId = await ctx.db.insert('threads', {
+      userId,
+      metadata: {},
+    });
+
+    return { threadId: newThreadId as string };
+  },
+});

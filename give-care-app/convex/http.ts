@@ -97,12 +97,18 @@ http.route({
       });
 
       // Trigger async processing and response generation
+      console.log('[webhook] Scheduling processInboundMessage', {
+        messageId: messageRecord.messageId,
+        userId: messageRecord.userId,
+        from,
+      });
+
       await ctx.scheduler.runAfter(0, internal.functions.inbound.processInboundMessage, {
         messageId: messageRecord.messageId,
         userId: messageRecord.userId,
         text: body,
         externalId: from,
-        channel: 'sms',
+        channel: 'sms' as const,
       });
 
       return new Response(
