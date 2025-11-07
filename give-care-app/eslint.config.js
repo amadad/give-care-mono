@@ -5,6 +5,7 @@ import convexPlugin from "@convex-dev/eslint-plugin";
 export default tseslint.config(
   {
     ignores: [
+      "_archive/**",
       "convex/_generated/**",
       "dist/**",
       "node_modules/**"
