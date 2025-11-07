@@ -20,7 +20,7 @@ const record = async (ctx: MutationCtx, payload: BaseMessage, direction: 'inboun
     locale: (payload.meta?.locale as string | undefined) ?? undefined,
     phone: (payload.meta?.phone as string | undefined) ?? undefined,
   });
-  await ctx.db.insert('messages', {
+  const messageId = await ctx.db.insert('messages', {
     userId: user._id,
     channel: payload.channel,
     direction,
@@ -29,6 +29,7 @@ const record = async (ctx: MutationCtx, payload: BaseMessage, direction: 'inboun
     traceId: payload.traceId,
     redactionFlags: payload.redactionFlags ?? [],
   });
+  return { messageId, userId: user._id };
 };
 
 export const recordInbound = (ctx: MutationCtx, payload: BaseMessage) => record(ctx, payload, 'inbound');

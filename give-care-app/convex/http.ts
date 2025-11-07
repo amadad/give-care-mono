@@ -81,7 +81,8 @@ http.route({
 
       const traceId = `twilio-${messageSid}`;
 
-      await ctx.runMutation(api.functions.messages.recordInbound, {
+      // Record the inbound message (phone number is extracted from 'from' field)
+      const messageRecord = await ctx.runMutation(api.functions.messages.recordInbound, {
         message: {
           externalId: from,
           channel: 'sms',
@@ -89,9 +90,19 @@ http.route({
           meta: {
             twilioSid: messageSid,
             from,
+            phone: from, // Extract phone number for user record
           },
           traceId,
         },
+      });
+
+      // Trigger async processing and response generation
+      await ctx.scheduler.runAfter(0, api.functions.inbound.processInboundMessage, {
+        messageId: messageRecord.messageId,
+        userId: messageRecord.userId,
+        text: body,
+        externalId: from,
+        channel: 'sms',
       });
 
       return new Response(

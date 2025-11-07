@@ -21,6 +21,12 @@ type EnsureUserParams = {
 export const ensureUser = async (ctx: MutationCtx, params: EnsureUserParams) => {
   const existing = await getByExternalId(ctx, params.externalId);
   if (existing) {
+    // Update phone if provided and not set
+    if (params.phone && !existing.phone) {
+      await ctx.db.patch(existing._id, { phone: params.phone });
+      const updated = await ctx.db.get(existing._id);
+      return updated!;
+    }
     return existing;
   }
   const userId = await ctx.db.insert('users', {

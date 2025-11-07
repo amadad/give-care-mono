@@ -86,10 +86,13 @@ const getInterventionsTool = createTool({
 const assessmentAgent: any = new Agent(components.agent, {
   name: 'Assessment Specialist',
   // @ts-expect-error - LanguageModelV1/V2 type mismatch between AI SDK versions
-  languageModel: openai.chat('gpt-4o-mini'),
+  languageModel: openai.chat('gpt-4o-nano', {
+    reasoningEffort: 'minimal', // Lower latency for faster responses
+  }),
   instructions:
     'You are a burnout assessment specialist who provides personalized, compassionate interpretations and actionable intervention suggestions. Use the getInterventions tool to recommend evidence-based interventions matching the user\'s pressure zones.',
   tools: { getInterventions: getInterventionsTool },
+  maxSteps: 2, // Limit tool calls for faster responses
 });
 
 /**
