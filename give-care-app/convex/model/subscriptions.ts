@@ -36,7 +36,7 @@ export const hasActiveSubscriptionQuery = internalQuery({
  * Get signup URL for non-subscribers
  */
 export const getSignupUrl = (phone?: string): string => {
-  const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://givecare.com';
+  const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://www.givecareapp.com';
   const signupPath = '/signup';
 
   if (phone) {

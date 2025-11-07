@@ -6,10 +6,9 @@
  */
 
 import { internalAction, internalMutation } from '../_generated/server';
-import { internal, api } from '../_generated/api';
+import { internal, components } from '../_generated/api';
 import { v } from 'convex/values';
 import { saveMessage } from '@convex-dev/agent';
-import { components } from '../_generated/api';
 import * as Subscriptions from '../model/subscriptions';
 
 const CRISIS_TERMS = [
@@ -40,7 +39,6 @@ export const processInboundMessage = internalAction({
     console.log('[inbound] Processing message', { messageId, userId, externalId, channel });
 
     // Check subscription status via query
-    // @ts-ignore - Query return type
     const hasSubscription = await ctx.runQuery(internal.model.subscriptions.hasActiveSubscriptionQuery, {
       userId,
     });
@@ -48,9 +46,7 @@ export const processInboundMessage = internalAction({
 
     if (!hasSubscription) {
       // Get user to extract phone for signup URL
-      // @ts-ignore - Query return type
       const user = await ctx.runQuery(internal.model.users.getUser, { userId });
-      // @ts-ignore - User type
       const signupUrl = Subscriptions.getSignupUrl(user?.phone);
 
       // Send signup message directly (we're already in an action)
@@ -69,14 +65,12 @@ export const processInboundMessage = internalAction({
     const hasCrisisTerms = CRISIS_TERMS.some((term) => lowerText.includes(term));
 
     // Get or create thread for this user via mutation
-    // @ts-ignore - Mutation return type
     const threadResult = await ctx.runMutation(internal.functions.inbound.getOrCreateThread, {
       userId,
     });
     const threadId: string = threadResult.threadId;
 
     // Save user message to thread
-    // @ts-ignore - saveMessage return type
     const { messageId: promptMessageId } = await saveMessage(ctx, components.agent, {
       threadId,
       prompt: text,

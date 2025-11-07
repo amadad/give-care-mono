@@ -8,6 +8,21 @@ export const metadata: Metadata = {
     title: 'Sign Up for GiveCare - Caregiver Support via Text',
     description: 'Get personalized caregiver support through text messages. Track your capacity, get matched help, and receive proactive check-ins.',
     type: 'website',
+    url: 'https://www.givecareapp.com/signup',
+    images: [
+      {
+        url: '/og.png',
+        width: 1200,
+        height: 630,
+        alt: 'GiveCare - Caregiver Support',
+      },
+    ],
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'Sign Up for GiveCare',
+    description: 'Get personalized caregiver support through text messages.',
+    images: ['/og.png'],
   },
 }
 

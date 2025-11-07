@@ -23,7 +23,7 @@ const CRISIS_TERMS = [
 /**
  * Generate response using Crisis Agent
  */
-// @ts-ignore - Action return type inference
+// @ts-expect-error - Action return type inference
 export const generateCrisisResponse = internalAction({
   args: {
     threadId: v.string(),
@@ -31,10 +31,10 @@ export const generateCrisisResponse = internalAction({
     userId: v.string(),
     channel: v.union(v.literal('sms'), v.literal('email'), v.literal('web')),
   },
-  // @ts-ignore - Handler return type inference
-  handler: async (ctx, { threadId, promptMessageId, userId, channel }) => {
+  // @ts-expect-error - Handler return type inference
+  handler: async (ctx, { threadId, userId, channel }) => {
     // Get user context
-    // @ts-ignore - Query return type
+    // @ts-expect-error - Query return type
     const user = await ctx.runQuery(api.functions.users.getByExternalId, {
       externalId: userId,
     });
@@ -44,7 +44,7 @@ export const generateCrisisResponse = internalAction({
     }
 
     // Run crisis agent
-    // @ts-ignore - Agent return type
+    // @ts-expect-error - Agent return type
     const result = await ctx.runAction(api.agents.crisis.runCrisisAgent, {
       input: {
         channel,
@@ -83,7 +83,7 @@ export const generateCrisisResponse = internalAction({
 /**
  * Generate response using Main Agent
  */
-// @ts-ignore - Action return type inference
+// @ts-expect-error - Action return type inference
 export const generateMainResponse = internalAction({
   args: {
     threadId: v.string(),
@@ -91,10 +91,10 @@ export const generateMainResponse = internalAction({
     userId: v.string(),
     channel: v.union(v.literal('sms'), v.literal('email'), v.literal('web')),
   },
-  // @ts-ignore - Handler return type inference
-  handler: async (ctx, { threadId, promptMessageId, userId, channel }) => {
+  // @ts-expect-error - Handler return type inference
+  handler: async (ctx, { threadId, userId, channel }) => {
     // Get user context
-    // @ts-ignore - Query return type
+    // @ts-expect-error - Query return type
     const user = await ctx.runQuery(api.functions.users.getByExternalId, {
       externalId: userId,
     });
@@ -104,7 +104,7 @@ export const generateMainResponse = internalAction({
     }
 
     // Run main agent
-    // @ts-ignore - Agent return type
+    // @ts-expect-error - Agent return type
     const result = await ctx.runAction(api.agents.main.runMainAgent, {
       input: {
         channel,
