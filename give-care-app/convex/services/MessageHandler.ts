@@ -453,6 +453,8 @@ export class MessageHandler {
         careRecipientName: updatedContext.careRecipientName ?? undefined,
         zipCode: updatedContext.zipCode ?? undefined,
         journeyPhase: updatedContext.journeyPhase ?? undefined,
+        onboardingAttempts: updatedContext.onboardingAttempts ?? undefined, // FIX: persist onboarding state
+        onboardingCooldownUntil: updatedContext.onboardingCooldownUntil ?? undefined, // FIX: persist cooldown
         assessmentInProgress: updatedContext.assessmentInProgress ?? undefined,
         assessmentType: updatedContext.assessmentType ?? undefined,
         assessmentCurrentQuestion: updatedContext.assessmentCurrentQuestion ?? undefined,
