@@ -354,11 +354,31 @@ export class MessageHandler {
       { userId: user._id }
     )
 
-    const recentMessages = conversationState?.recentMessages || user.recentMessages || []
+    let recentMessages = conversationState?.recentMessages || user.recentMessages || []
+    let source = conversationState?.recentMessages?.length
+      ? 'conversationState'
+      : user.recentMessages?.length
+        ? 'user (deprecated)'
+        : 'none'
+
+    // HOTFIX: If recentMessages is empty, fall back to querying conversations table
+    // This handles the migration case where users have existing conversation history
+    // in the conversations table but not yet in conversationState.recentMessages
+    if (recentMessages.length === 0) {
+      const conversationHistory = await this._ctx.runQuery(
+        internal.functions.conversationState.getRecentFromConversations,
+        { userId: user._id, limit: 20 }
+      )
+
+      if (conversationHistory.length > 0) {
+        recentMessages = conversationHistory
+        source = 'conversations (backfill)'
+      }
+    }
 
     logSafe('Context', 'Loaded conversation history', {
       messageCount: recentMessages.length,
-      source: conversationState ? 'conversationState' : 'user (fallback)',
+      source,
     })
 
     return {

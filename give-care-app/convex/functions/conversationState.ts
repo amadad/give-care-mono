@@ -18,3 +18,28 @@ export const getByUser = internalQuery({
     return state
   },
 })
+
+/**
+ * Get recent conversation history from conversations table
+ * Used as fallback when conversationState.recentMessages is empty (migration case)
+ */
+export const getRecentFromConversations = internalQuery({
+  args: {
+    userId: v.id('users'),
+    limit: v.optional(v.number()),
+  },
+  handler: async (ctx, { userId, limit = 20 }) => {
+    const messages = await ctx.db
+      .query('conversations')
+      .withIndex('by_user_time', (q) => q.eq('userId', userId))
+      .order('desc')
+      .take(limit)
+
+    // Reverse to get chronological order (oldest first)
+    return messages.reverse().map((m) => ({
+      role: m.role,
+      content: m.text,
+      timestamp: m.timestamp,
+    }))
+  },
+})
