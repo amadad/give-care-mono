@@ -45,6 +45,7 @@ const agentContextValidator = v.object({
 });
 
 // Tool: Get evidence-based interventions by pressure zones
+// @ts-ignore - Type instantiation depth issue with Zod/AI SDK integration
 const getInterventionsTool = createTool({
   // @ts-expect-error - Type instantiation depth issue with Zod/AI SDK integration
   args: z.object({

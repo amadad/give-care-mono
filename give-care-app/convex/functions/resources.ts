@@ -33,12 +33,12 @@ export const searchResources = action({
 
     if (!finalLocation && metadata) {
       const extracted = extractLocation(metadata as Record<string, unknown>);
-      if (extracted) {
-        finalLocation = extracted;
+      if (extracted && extracted.latitude !== undefined && extracted.longitude !== undefined) {
+        finalLocation = extracted as { address?: string; latitude: number; longitude: number };
       }
     }
 
-    if (!finalLocation || (!finalLocation.zipCode && !finalLocation.address && !finalLocation.latitude)) {
+    if (!finalLocation || (!('zipCode' in finalLocation) && !finalLocation.address && !finalLocation.latitude)) {
       return {
         error: 'I need your zip code to find nearby resources. What\'s your zip code?',
         text: '',
