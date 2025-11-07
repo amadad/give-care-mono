@@ -1,17 +1,31 @@
 {
-  "extends": "../tsconfig.json",
   "compilerOptions": {
+    "target": "ES2020",
+    "module": "ESNext",
+    "lib": ["ES2020"],
+    "moduleResolution": "bundler",
+    "resolveJsonModule": true,
+    "allowJs": true,
+    "strict": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "declaration": true,
+    "declarationMap": true,
+    "sourceMap": true,
     "rootDir": "./",
     "outDir": "./dist",
     "baseUrl": "./",
-    "resolveJsonModule": true,
     "paths": {
       "@harness/*": ["packages/*"],
       "@harness/app/*": ["apps/*"],
       "@harness/tests/*": ["tests/*"],
       "@harness/docs/*": ["docs/*"]
-    }
+    },
+    "types": ["node"],
+    "allowSyntheticDefaultImports": true,
+    "isolatedModules": true
   },
-  "include": ["packages", "apps", "tests", "docs"],
-  "exclude": ["node_modules", "dist"]
+  "include": ["packages/**/*", "apps/**/*", "tests/**/*", "docs/**/*"],
+  "exclude": ["node_modules", "dist", "_archive", "convex/_generated"]
 }
