@@ -90,16 +90,22 @@ export const getAllUsers = query({
   handler: async (ctx, args) => {
     const limit = Math.min(Math.max(args.limit, 1), 200)
 
-    let baseQuery = ctx.db.query('users')
-    if (args.journeyPhase) {
-      baseQuery = baseQuery.withIndex('by_journey', q => q.eq('journeyPhase', args.journeyPhase!))
-    } else if (args.burnoutBand) {
-      baseQuery = baseQuery.withIndex('by_burnout_band', q => q.eq('burnoutBand', args.burnoutBand!))
-    } else {
-      baseQuery = baseQuery.withIndex('by_created').order('desc')
-    }
-
-    const results = await baseQuery.paginate({ numItems: limit * 2, cursor: args.cursor || null })
+    // Build query based on filters (conditional index selection)
+    const results = args.journeyPhase
+      ? await ctx.db
+          .query('users')
+          .withIndex('by_journey', q => q.eq('journeyPhase', args.journeyPhase!))
+          .paginate({ numItems: limit * 2, cursor: args.cursor || null })
+      : args.burnoutBand
+        ? await ctx.db
+            .query('users')
+            .withIndex('by_burnout_band', q => q.eq('burnoutBand', args.burnoutBand!))
+            .paginate({ numItems: limit * 2, cursor: args.cursor || null })
+        : await ctx.db
+            .query('users')
+            .withIndex('by_created')
+            .order('desc')
+            .paginate({ numItems: limit * 2, cursor: args.cursor || null })
 
     let filtered = results.page as any[]
     if (args.burnoutBand && !args.journeyPhase) {
