@@ -86,10 +86,12 @@ export default function Footer() {
         <h6 className="footer-title">Legal</h6>
         <Link href="/terms" className="link link-hover">Terms of Service</Link>
         <Link href="/privacy" className="link link-hover">Privacy Policy</Link>
+        <Link href="/disclaimer" className="link link-hover">Medical Disclaimer</Link>
       </nav>
       <nav className="col-span-full mt-4">
-        <p className="text-xs text-base-content/60 max-w-2xl">
-          <strong>Medical Disclaimer:</strong> The information and assessments provided by GiveCare are for informational and educational purposes only and do not constitute medical advice, diagnosis, or treatment. Always seek the advice of your physician or other qualified health provider with any questions you may have regarding a medical condition. If you are experiencing a mental health crisis, please contact the 988 Suicide & Crisis Lifeline by dialing 988, or seek immediate medical attention.
+        <p className="text-xs text-base-content/60">
+          Not medical advice. Crisis? Call <strong>988</strong> or <strong>911</strong>.
+          <Link href="/disclaimer" className="link link-hover ml-2">Full disclaimer →</Link>
         </p>
       </nav>
     </footer>

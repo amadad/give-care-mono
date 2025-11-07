@@ -22,6 +22,7 @@ export function SignupFormConvex() {
   const phone = usePhoneFormat("")
   const [consentSms, setConsentSms] = useState(false)
   const [consentTerms, setConsentTerms] = useState(false)
+  const [consentDisclaimer, setConsentDisclaimer] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -35,9 +36,10 @@ export function SignupFormConvex() {
       phone.value.replace(/\D/g, "").length >= 10 &&
       consentSms &&
       consentTerms &&
+      consentDisclaimer &&
       !loading
     )
-  }, [name, email, phone.value, consentSms, consentTerms, loading])
+  }, [name, email, phone.value, consentSms, consentTerms, consentDisclaimer, loading])
 
   async function startCheckout(e: React.FormEvent) {
     e.preventDefault()
@@ -262,6 +264,20 @@ export function SignupFormConvex() {
             />
             <span className="text-sm font-light text-amber-900 leading-relaxed">
               I agree to the <a href="/terms" onClick={(e) => e.stopPropagation()} className="underline hover:text-amber-950 transition-colors">Terms of Service</a> and <a href="/privacy" onClick={(e) => e.stopPropagation()} className="underline hover:text-amber-950 transition-colors">Privacy Policy</a>.
+            </span>
+          </label>
+
+          <label htmlFor="consent-disclaimer" className="flex items-start gap-3 cursor-pointer">
+            <input
+              id="consent-disclaimer"
+              type="checkbox"
+              className="mt-1 w-5 h-5 rounded border-2 border-amber-300 text-amber-950 focus:ring-2 focus:ring-amber-700 focus:ring-offset-0 accent-amber-950"
+              checked={consentDisclaimer}
+              onChange={(e) => setConsentDisclaimer(e.target.checked)}
+              required
+            />
+            <span className="text-sm font-light text-amber-900 leading-relaxed">
+              I understand this service provides information only, not medical advice. For emergencies, I will call 988 or 911. <a href="/disclaimer" onClick={(e) => e.stopPropagation()} className="underline hover:text-amber-950 transition-colors">Read full disclaimer</a>.
             </span>
           </label>
         </div>
