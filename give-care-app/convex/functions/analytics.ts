@@ -14,13 +14,16 @@ import { v } from 'convex/values'
 export const getBurnoutDistribution = query({
   args: {},
   handler: async ctx => {
-    const profiles = await ctx.db.query('caregiverProfiles').collect()
+    const users = await ctx.db
+      .query('users')
+      .withIndex('by_burnout')
+      .collect()
 
     // Group by burnout score buckets (0-9, 10-19, ..., 90-100)
     const distribution = Array(10).fill(0)
-    profiles.forEach(p => {
-      if (p.burnoutScore !== undefined) {
-        const bucket = Math.min(9, Math.floor(p.burnoutScore / 10))
+    users.forEach(u => {
+      if (u.burnoutScore !== undefined) {
+        const bucket = Math.min(9, Math.floor((u.burnoutScore as number) / 10))
         distribution[bucket]++
       }
     })
@@ -39,13 +42,16 @@ export const getBurnoutDistribution = query({
 export const getUserJourneyFunnel = query({
   args: {},
   handler: async ctx => {
-    const profiles = await ctx.db.query('caregiverProfiles').collect()
+    const profiles = await ctx.db
+      .query('users')
+      .withIndex('by_journey')
+      .collect()
 
     // Count users by journey phase
     const phases = ['onboarding', 'active', 'maintenance', 'crisis', 'churned']
     const funnel = phases.map(phase => ({
       phase,
-      count: profiles.filter(p => p.journeyPhase === phase).length,
+      count: profiles.filter(p => (p as any).journeyPhase === phase).length,
     }))
 
     return funnel
@@ -143,7 +149,11 @@ export const getAgentPerformance = query({
 export const getSummaryPerformance = query({
   args: {},
   handler: async ctx => {
-    const conversationStates = await ctx.db.query('conversationState').collect()
+    // Read summary usage from denormalized users table
+    const users = await ctx.db
+      .query('users')
+      .withIndex('by_created')
+      .take(2000)
 
     type AggregatedStats = {
       count: number
@@ -157,11 +167,11 @@ export const getSummaryPerformance = query({
     let totalTokens = 0
     let totalUsageCount = 0
 
-    conversationStates.forEach(state => {
+    users.forEach(state => {
       const hasSummary =
-        typeof state.historicalSummary === 'string' && state.historicalSummary.length > 0
-      const version = state.historicalSummaryVersion || 'unversioned'
-      const usage = state.historicalSummaryTokenUsage
+        typeof (state as any).historicalSummary === 'string' && (state as any).historicalSummary.length > 0
+      const version = (state as any).historicalSummaryVersion || 'unversioned'
+      const usage = (state as any).historicalSummaryTokenUsage
 
       if (!hasSummary && !usage) {
         return
@@ -283,13 +293,10 @@ export const getRecentFeedback = query({
       .order('desc')
       .take(limit)
 
-    // Join with caregiverProfiles table to get user names
+    // Join with users table to get user names
     const enrichedFeedback = await Promise.all(
       feedback.map(async f => {
-        const profile = await ctx.db
-          .query('caregiverProfiles')
-          .withIndex('by_user', q => q.eq('userId', f.userId))
-          .first()
+        const user = await ctx.db.get(f.userId)
         return {
           _id: f._id,
           rating: f.rating,
@@ -297,7 +304,7 @@ export const getRecentFeedback = query({
           feedbackText: f.feedbackText,
           source: f.source,
           timestamp: f.timestamp,
-          userName: profile?.firstName || 'Unknown',
+          userName: (user as any)?.firstName || 'Unknown',
           timeAgo: getRelativeTime(f.timestamp),
         }
       })

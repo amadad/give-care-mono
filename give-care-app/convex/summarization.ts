@@ -20,8 +20,7 @@ import { internalMutation, internalQuery, internalAction } from './_generated/se
 import type { ActionCtx, QueryCtx } from './_generated/server'
 import { internal } from './_generated/api'
 import { v } from 'convex/values'
-import type { Doc, Id } from './_generated/dataModel'
-import { updateConversationState, batchGetEnrichedUsers } from './lib/userHelpers'
+import type { Id } from './_generated/dataModel'
 
 type ConversationMessage = {
   role: string
@@ -35,7 +34,7 @@ type TokenSavingsResult = {
   savingsPercent: number
 }
 
-type ConversationStateDoc = Doc<'conversationState'>
+type ConversationStateDoc = { historicalSummary?: string }
 
 /**
  * Split conversation history into recent (< 7 days) and historical (>= 7 days)
@@ -107,13 +106,14 @@ export const patchUserSummary = internalMutation({
     ),
   },
   handler: async (ctx, args) => {
-    await updateConversationState(ctx, args.userId, {
+    await ctx.db.patch(args.userId, {
       recentMessages: args.recentMessages,
       historicalSummary: args.historicalSummary,
       conversationStartDate: args.conversationStartDate,
       totalInteractionCount: args.totalInteractionCount,
       historicalSummaryVersion: args.historicalSummaryVersion,
       historicalSummaryTokenUsage: args.historicalSummaryTokenUsage,
+      updatedAt: Date.now(),
     })
   },
 })
@@ -123,15 +123,11 @@ export const patchUserSummary = internalMutation({
  */
 export const getActiveUsers = internalQuery({
   handler: async ctx => {
-    // Query caregiverProfiles for active users
-    const activeProfiles = await ctx.db
-      .query('caregiverProfiles')
+    const users = await ctx.db
+      .query('users')
       .withIndex('by_journey', q => q.eq('journeyPhase', 'active'))
-      .collect()
-
-    // Get enriched user data
-    const userIds = activeProfiles.map(p => p.userId)
-    return await batchGetEnrichedUsers(ctx, userIds)
+      .take(200)
+    return users
   },
 })
 
@@ -184,11 +180,9 @@ export const _getUser = internalQuery({
     ctx: QueryCtx,
     args: { userId: Id<'users'> }
   ): Promise<ConversationStateDoc | null> => {
-    const conversationState = await ctx.db
-      .query('conversationState')
-      .withIndex('by_user', (q: any) => q.eq('userId', args.userId))
-      .first()
-    return (conversationState as ConversationStateDoc | null) ?? null
+    const user = await ctx.db.get(args.userId)
+    if (!user) return null
+    return { historicalSummary: user.historicalSummary }
   },
 })
 

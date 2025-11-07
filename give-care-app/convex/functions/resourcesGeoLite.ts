@@ -298,13 +298,7 @@ export const getResourcesForUser = query({
     }
 
     // Proceed with existing logic - user is authorized
-    const [user, profile] = await Promise.all([
-      ctx.db.get(args.userId),
-      ctx.db
-        .query('caregiverProfiles')
-        .withIndex('by_user', (q: any) => q.eq('userId', args.userId))
-        .first(),
-    ])
+    const user = await ctx.db.get(args.userId)
     if (!user) return []
 
     // Get latest wellness score for pressure zones
@@ -315,8 +309,8 @@ export const getResourcesForUser = query({
       .first()
 
     return findResourcesGeoLiteImpl(ctx, {
-      zip: profile?.zipCode,
-      zones: score?.pressureZones || profile?.pressureZones,
+      zip: (user as any).zipCode,
+      zones: score?.pressureZones || (user as any).pressureZones,
       limit: args.limit ?? 3,
     })
   },

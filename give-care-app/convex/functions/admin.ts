@@ -8,7 +8,7 @@
 
 import { query, mutation } from '../_generated/server'
 import { v } from 'convex/values'
-import { batchGetEnrichedUsers, getEnrichedUser, updateCaregiverProfile } from '../lib/userHelpers'
+// Denormalized: use users table directly (no enrichment helpers)
 
 /**
  * Get system-wide metrics for dashboard home page
@@ -16,23 +16,25 @@ import { batchGetEnrichedUsers, getEnrichedUser, updateCaregiverProfile } from '
 export const getSystemMetrics = query({
   args: {},
   handler: async ctx => {
-    // Get all users with enriched data from joined tables
-    const plainUsers = await ctx.db.query('users').collect()
-    const userIds = plainUsers.map(u => u._id)
-    const users = await batchGetEnrichedUsers(ctx, userIds)
+    // Use bounded set of latest users for metrics
+    const users = await ctx.db
+      .query('users')
+      .withIndex('by_created')
+      .order('desc')
+      .take(1000)
 
     // Active users (contacted in last 7 days)
     const sevenDaysAgo = Date.now() - 7 * 24 * 60 * 60 * 1000
-    const activeUsers = users.filter(u => u.lastContactAt && u.lastContactAt > sevenDaysAgo)
+    const activeUsers = users.filter(u => (u as any).lastContactAt && (u as any).lastContactAt > sevenDaysAgo)
 
     // Crisis users (burnout >= 80)
-    const crisisUsers = users.filter(u => u.burnoutScore && u.burnoutScore >= 80)
+    const crisisUsers = users.filter(u => (u as any).burnoutScore && (u as any).burnoutScore >= 80)
 
     // Average burnout score
-    const usersWithScores = users.filter(u => u.burnoutScore !== undefined)
+    const usersWithScores = users.filter(u => (u as any).burnoutScore !== undefined)
     const avgBurnoutScore =
       usersWithScores.length > 0
-        ? usersWithScores.reduce((sum, u) => sum + (u.burnoutScore || 0), 0) /
+        ? usersWithScores.reduce((sum, u) => sum + ((u as any).burnoutScore || 0), 0) /
           usersWithScores.length
         : 0
 
@@ -58,16 +60,16 @@ export const getSystemMetrics = query({
       p95ResponseTime: Math.round(p95Latency),
       subscriptionBreakdown: {
         active: users.filter(
-          u => u.subscriptionStatus === 'active' || u.subscriptionStatus === 'trialing'
+          u => (u as any).subscriptionStatus === 'active' || (u as any).subscriptionStatus === 'trialing'
         ).length,
-        incomplete: users.filter(u => u.subscriptionStatus === 'incomplete').length,
+        incomplete: users.filter(u => (u as any).subscriptionStatus === 'incomplete').length,
         pastDue: users.filter(
-          u => u.subscriptionStatus === 'past_due' || u.subscriptionStatus === 'unpaid'
+          u => (u as any).subscriptionStatus === 'past_due' || (u as any).subscriptionStatus === 'unpaid'
         ).length,
         canceled: users.filter(
-          u => u.subscriptionStatus === 'canceled' || u.subscriptionStatus === 'incomplete_expired'
+          u => (u as any).subscriptionStatus === 'canceled' || (u as any).subscriptionStatus === 'incomplete_expired'
         ).length,
-        none: users.filter(u => !u.subscriptionStatus || u.subscriptionStatus === 'none').length,
+        none: users.filter(u => !(u as any).subscriptionStatus || (u as any).subscriptionStatus === 'none').length,
       },
     }
   },
@@ -88,38 +90,20 @@ export const getAllUsers = query({
   handler: async (ctx, args) => {
     const limit = Math.min(Math.max(args.limit, 1), 200)
 
-    // Query caregiverProfiles or subscriptions based on filters
-    // Priority: journeyPhase > burnoutBand > subscriptionStatus
-    let baseQuery
-
+    let baseQuery = ctx.db.query('users')
     if (args.journeyPhase) {
-      // Query caregiverProfiles with journeyPhase index
-      baseQuery = ctx.db
-        .query('caregiverProfiles')
-        .withIndex('by_journey', q => q.eq('journeyPhase', args.journeyPhase))
+      baseQuery = baseQuery.withIndex('by_journey', q => q.eq('journeyPhase', args.journeyPhase!))
     } else if (args.burnoutBand) {
-      // Query caregiverProfiles with burnoutBand index
-      baseQuery = ctx.db
-        .query('caregiverProfiles')
-        .withIndex('by_burnout_band', q => q.eq('burnoutBand', args.burnoutBand))
+      baseQuery = baseQuery.withIndex('by_burnout_band', q => q.eq('burnoutBand', args.burnoutBand!))
     } else {
-      // No index filter - query all caregiverProfiles
-      baseQuery = ctx.db.query('caregiverProfiles')
+      baseQuery = baseQuery.withIndex('by_created').order('desc')
     }
 
-    // Get profiles page
-    const profileResults = await baseQuery
-      .order('desc')
-      .paginate({ numItems: limit * 2, cursor: args.cursor || null }) // Fetch more to account for filtering
+    const results = await baseQuery.paginate({ numItems: limit * 2, cursor: args.cursor || null })
 
-    // Get userIds and fetch enriched users
-    const userIds = profileResults.page.map(p => p.userId)
-    const enrichedUsers = await batchGetEnrichedUsers(ctx, userIds)
-
-    // Apply additional filters
-    let filtered = enrichedUsers
+    let filtered = results.page as any[]
     if (args.burnoutBand && !args.journeyPhase) {
-      // Already filtered by index
+      // already filtered via index
     } else if (args.burnoutBand) {
       filtered = filtered.filter(u => u.burnoutBand === args.burnoutBand)
     }
@@ -127,23 +111,20 @@ export const getAllUsers = query({
       filtered = filtered.filter(u => u.subscriptionStatus === args.subscriptionStatus)
     }
 
-    // Apply search filter
     const searchTerm = args.search?.trim()
     if (searchTerm) {
-      const searchLower = searchTerm.toLowerCase()
+      const s = searchTerm.toLowerCase()
       filtered = filtered.filter(u => {
-        const nameMatches = u.firstName && u.firstName.toLowerCase().includes(searchLower)
-        const phoneMatches = u.phoneNumber && u.phoneNumber.includes(searchLower)
+        const nameMatches = u.firstName && (u.firstName as string).toLowerCase().includes(s)
+        const phoneMatches = u.phoneNumber && (u.phoneNumber as string).includes(searchTerm)
         const recipientMatches =
-          u.careRecipientName && u.careRecipientName.toLowerCase().includes(searchLower)
+          u.careRecipientName && (u.careRecipientName as string).toLowerCase().includes(s)
         return Boolean(nameMatches || phoneMatches || recipientMatches)
       })
     }
 
-    // Slice to limit
     const sliced = filtered.slice(0, limit)
 
-    // Map to response format
     const mapUser = (u: any) => ({
       _id: u._id,
       firstName: u.firstName || 'Unknown',
@@ -159,8 +140,8 @@ export const getAllUsers = query({
 
     return {
       users: sliced.map(mapUser),
-      continueCursor: profileResults.continueCursor,
-      isDone: profileResults.isDone || sliced.length < limit,
+      continueCursor: results.continueCursor,
+      isDone: results.isDone || sliced.length < limit,
     }
   },
 })
@@ -171,8 +152,7 @@ export const getAllUsers = query({
 export const getUserDetails = query({
   args: { userId: v.id('users') },
   handler: async (ctx, args) => {
-    // Get enriched user with all joined data
-    const user = await getEnrichedUser(ctx, args.userId)
+    const user = await ctx.db.get(args.userId)
     if (!user) {
       throw new Error('User not found')
     }
@@ -232,30 +212,29 @@ export const getUserDetails = query({
 export const getCrisisAlerts = query({
   args: {},
   handler: async ctx => {
-    // Users in crisis band (burnout >= 80) - query caregiverProfiles
-    const crisisProfiles = await ctx.db
-      .query('caregiverProfiles')
+    // Users in crisis band
+    const crisisUsers = await ctx.db
+      .query('users')
       .withIndex('by_burnout_band', q => q.eq('burnoutBand', 'crisis'))
       .collect()
-
-    // Get enriched users for crisis band
-    const crisisUserIds = crisisProfiles.map(p => p.userId)
-    const crisisUsers = await batchGetEnrichedUsers(ctx, crisisUserIds)
 
     // Users pending 24hr crisis follow-up (lastCrisisEventAt within last 7 days, crisisFollowupCount < 7)
     const sevenDaysAgo = Date.now() - 7 * 24 * 60 * 60 * 1000
 
-    // Get all users with enriched data
-    const plainUsers = await ctx.db.query('users').collect()
-    const allUserIds = plainUsers.map(u => u._id)
-    const allUsers = await batchGetEnrichedUsers(ctx, allUserIds)
-
-    const pendingFollowups = allUsers.filter(
-      u =>
-        u.lastCrisisEventAt &&
-        u.lastCrisisEventAt > sevenDaysAgo &&
-        (u.crisisFollowupCount || 0) < 7
-    )
+    const pendingFollowups = (await ctx.db
+      .query('users')
+      .withIndex('by_band_crisis', q => q.eq('burnoutBand', 'crisis'))
+      .filter(q =>
+        q.and(
+          q.neq(q.field('lastCrisisEventAt'), undefined),
+          q.gt(q.field('lastCrisisEventAt'), sevenDaysAgo),
+          q.or(
+            q.eq(q.field('crisisFollowupCount'), undefined),
+            q.lt(q.field('crisisFollowupCount'), 7)
+          )
+        )
+      )
+      .collect()) as any[]
 
     // Calculate next follow-up time for each
     const pendingWithTimers = pendingFollowups.map(u => {
@@ -275,7 +254,7 @@ export const getCrisisAlerts = query({
     })
 
     return {
-      crisisUsers: crisisUsers.map(u => ({
+      crisisUsers: crisisUsers.map((u: any) => ({
         _id: u._id,
         firstName: u.firstName || 'Unknown',
         phoneNumber: u.phoneNumber,
@@ -319,10 +298,8 @@ export const sendAdminMessage = mutation({
       timestamp: Date.now(),
     })
 
-    // Update last contact
-    await updateCaregiverProfile(ctx, args.userId, {
-      lastContactAt: Date.now(),
-    })
+    // Update last contact directly on users
+    await ctx.db.patch(args.userId, { lastContactAt: Date.now(), updatedAt: Date.now() })
 
     return { success: true }
   },
@@ -340,11 +317,12 @@ export const resetUserAssessment = mutation({
     }
 
     // Clear assessment state
-    await updateCaregiverProfile(ctx, args.userId, {
+    await ctx.db.patch(args.userId, {
       assessmentInProgress: false,
       assessmentType: undefined,
       assessmentCurrentQuestion: 0,
       assessmentSessionId: undefined,
+      updatedAt: Date.now(),
     })
 
     return { success: true }
@@ -413,8 +391,9 @@ export const getSystemHealth = query({
 
     // Count priority tier users (users with subscriptionStatus === "active")
     const activeSubscriptions = await ctx.db
-      .query('subscriptions')
-      .withIndex('by_status', q => q.eq('subscriptionStatus', 'active'))
+      .query('users')
+      .withIndex('by_journey', q => q.eq('journeyPhase', 'active'))
+      .filter(q => q.eq(q.field('subscriptionStatus'), 'active'))
       .collect()
 
     // OpenAI usage: Query conversations for token usage in last 24h

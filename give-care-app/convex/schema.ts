@@ -3,20 +3,11 @@ import { v } from 'convex/values'
 import { authTables } from '@convex-dev/auth/server'
 
 /**
- * NORMALIZED SCHEMA - Pre-launch refactor
+ * PHASE 1 Denormalized Schema
  *
- * Splits god-object users table into focused domain tables:
- * - users: Auth + identity only
- * - caregiverProfiles: Profile data (firstName, relationship, journey, burnout)
- * - subscriptions: Stripe billing
- * - conversationState: Message summarization
- * - assessmentSessions: Assessment state (already exists, enhanced)
- *
- * Benefits:
- * - Clearer separation of concerns
- * - Easier to query specific domains
- * - Better index organization
- * - Simpler to add fields per domain
+ * Users table now holds identity + caregiver profile + billing + conversation state.
+ * Legacy tables remain temporarily for migration/backfill and are marked for removal
+ * in PHASE 2 once data has been copied and reads are moved to the users table.
  */
 export default defineSchema({
   ...authTables,
@@ -37,16 +28,110 @@ export default defineSchema({
     // SMS user identifier (E.164 format)
     phoneNumber: v.optional(v.string()), // Keep in users for fast webhook lookup
 
+    // Profile & Journey (from caregiverProfiles)
+    firstName: v.optional(v.string()),
+    relationship: v.optional(v.string()),
+    careRecipientName: v.optional(v.string()),
+    zipCode: v.optional(v.string()),
+    languagePreference: v.optional(v.string()),
+    journeyPhase: v.optional(v.string()),
+
+    // Burnout (from caregiverProfiles)
+    burnoutScore: v.optional(v.number()),
+    burnoutBand: v.optional(v.string()),
+    burnoutConfidence: v.optional(v.number()),
+    pressureZones: v.optional(v.array(v.string())),
+    pressureZoneScores: v.optional(
+      v.object({
+        physical_health: v.optional(v.number()),
+        emotional_wellbeing: v.optional(v.number()),
+        financial_concerns: v.optional(v.number()),
+        time_management: v.optional(v.number()),
+        social_support: v.optional(v.number()),
+      })
+    ),
+
+    // Activity (from caregiverProfiles)
+    lastContactAt: v.optional(v.number()),
+    lastProactiveMessageAt: v.optional(v.number()),
+    lastCrisisEventAt: v.optional(v.number()),
+    crisisFollowupCount: v.optional(v.number()),
+    reactivationMessageCount: v.optional(v.number()),
+
+    // Onboarding & assessments (from caregiverProfiles)
+    onboardingAttempts: v.optional(v.record(v.string(), v.number())),
+    onboardingCooldownUntil: v.optional(v.number()),
+    assessmentInProgress: v.optional(v.boolean()),
+    assessmentType: v.optional(v.string()),
+    assessmentCurrentQuestion: v.optional(v.number()),
+    assessmentSessionId: v.optional(v.string()),
+
+    // Device & consent (from caregiverProfiles)
+    rcsCapable: v.optional(v.boolean()),
+    deviceType: v.optional(v.string()),
+    consentAt: v.optional(v.number()),
+
+    // Flexible app metadata (from caregiverProfiles)
+    appState: v.optional(
+      v.object({
+        lastActivity: v.optional(v.number()),
+        sessionCount: v.optional(v.number()),
+        metadata: v.optional(v.string()),
+      })
+    ),
+
+    // Subscription (from subscriptions)
+    stripeCustomerId: v.optional(v.string()),
+    stripeSubscriptionId: v.optional(v.string()),
+    subscriptionStatus: v.optional(v.string()),
+    canceledAt: v.optional(v.number()),
+    trialEndsAt: v.optional(v.number()),
+
+    // Conversation (from conversationState)
+    recentMessages: v.optional(
+      v.array(
+        v.object({
+          role: v.string(),
+          content: v.string(),
+          timestamp: v.number(),
+        })
+      )
+    ),
+    historicalSummary: v.optional(v.string()),
+    historicalSummaryVersion: v.optional(v.string()),
+    conversationStartDate: v.optional(v.number()),
+    totalInteractionCount: v.optional(v.number()),
+    historicalSummaryTokenUsage: v.optional(
+      v.object({
+        promptTokens: v.number(),
+        completionTokens: v.number(),
+        totalTokens: v.number(),
+        costUsd: v.number(),
+        recordedAt: v.number(),
+      })
+    ),
+
     // Timestamps
     createdAt: v.optional(v.number()),
     updatedAt: v.optional(v.number()),
   })
     .index('email', ['email']) // Admin login
     .index('by_phone', ['phoneNumber']) // SMS user lookup (CRITICAL: webhook performance)
-    .index('by_created', ['createdAt']),
+    .index('by_created', ['createdAt'])
+    .index('by_journey', ['journeyPhase'])
+    .index('by_burnout', ['burnoutScore'])
+    .index('by_burnout_band', ['burnoutBand'])
+    .index('by_last_contact', ['lastContactAt'])
+    .index('by_stripe_customer', ['stripeCustomerId'])
+    .index('by_stripe_subscription', ['stripeSubscriptionId'])
+    .index('by_journey_contact', ['journeyPhase', 'lastContactAt'])
+    .index('by_band_journey', ['burnoutBand', 'journeyPhase'])
+    // Composite index to support band + contact time filtering for scheduling
+    .index('by_band_contact', ['burnoutBand', 'lastContactAt'])
+    .index('by_band_crisis', ['burnoutBand', 'lastCrisisEventAt']),
 
   // ============================================================================
-  // CAREGIVER PROFILES - Profile, Journey & Burnout Data
+  // CAREGIVER PROFILES - Deprecated (will be removed after migration)
   // ============================================================================
   caregiverProfiles: defineTable({
     userId: v.id('users'),
@@ -120,10 +205,12 @@ export default defineSchema({
     .index('by_crisis_event', ['lastCrisisEventAt']) // Follow-up scheduling
     // Composite indexes for dashboard
     .index('by_journey_contact', ['journeyPhase', 'lastContactAt'])
-    .index('by_band_crisis', ['burnoutBand', 'lastCrisisEventAt']),
+    .index('by_band_crisis', ['burnoutBand', 'lastCrisisEventAt'])
+    // Composite index for query optimization (Issue 3)
+    .index('by_band_journey', ['burnoutBand', 'journeyPhase']),
 
   // ============================================================================
-  // SUBSCRIPTIONS - Stripe Billing
+  // SUBSCRIPTIONS - Deprecated (use users table directly)
   // ============================================================================
   subscriptions: defineTable({
     userId: v.id('users'),
@@ -147,7 +234,7 @@ export default defineSchema({
     .index('by_stripe_subscription', ['stripeSubscriptionId']), // Stripe webhook lookup
 
   // ============================================================================
-  // CONVERSATION STATE - Message Summarization
+  // CONVERSATION STATE - Deprecated (hydrated on users table)
   // ============================================================================
   conversationState: defineTable({
     userId: v.id('users'),
@@ -565,6 +652,7 @@ export default defineSchema({
     subscribedAt: v.number(),
     unsubscribed: v.boolean(),
     unsubscribedAt: v.optional(v.number()),
+    resubscribedAt: v.optional(v.number()),
     updatedAt: v.number(),
   })
     .index('by_email', ['email'])

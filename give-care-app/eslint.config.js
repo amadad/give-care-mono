@@ -1,5 +1,6 @@
 import js from "@eslint/js";
 import tseslint from "typescript-eslint";
+import convexPlugin from "@convex-dev/eslint-plugin";
 
 export default tseslint.config(
   {
@@ -16,12 +17,18 @@ export default tseslint.config(
     extends: [js.configs.recommended, ...tseslint.configs.recommended],
     languageOptions: {
       ecmaVersion: "latest",
-      sourceType: "module"
+      sourceType: "module",
+      parserOptions: {
+        // Enable type-aware linting for rules like no-floating-promises
+        projectService: true,
+        tsconfigRootDir: new URL('.', import.meta.url).pathname
+      }
     },
     rules: {
       "@typescript-eslint/no-explicit-any": "off",
       "@typescript-eslint/no-require-imports": "off",
       "@typescript-eslint/no-unused-vars": "off",
+      "@typescript-eslint/no-floating-promises": "warn",
       "no-unused-vars": [
         "warn",
         {
@@ -30,5 +37,6 @@ export default tseslint.config(
         }
       ]
     }
-  }
+  },
+  ...convexPlugin.configs.recommended
 );
