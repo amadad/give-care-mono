@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { handle } from '../../packages/harness';
-import { Inbound } from '../../packages/shared/types';
+import { handle } from '../../src/harness';
+import { Inbound } from '../../src/shared/types';
 
 describe('harness handle', () => {
   it('returns a placeholder stream for main agent', async () => {

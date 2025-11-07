@@ -1,5 +1,5 @@
-import { handle } from '../../packages/harness';
-import { Inbound } from '../../packages/shared/types';
+import { handle } from '../../src/harness';
+import { Inbound } from '../../src/shared/types';
 
 export const websocketHandler = async (event: { userId: string; text: string; meta?: Record<string, unknown> }) => {
   const inbound: Inbound = {

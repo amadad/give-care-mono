@@ -1,5 +1,5 @@
 import Stripe from 'stripe';
-import { runtime } from '../../packages/harness/runtime';
+import { runtime } from '../../src/harness/runtime';
 
 const stripeSecret = process.env.HARNESS_STRIPE_SECRET ?? process.env.STRIPE_SECRET_KEY;
 const webhookSecret = process.env.HARNESS_STRIPE_WEBHOOK_SECRET ?? process.env.STRIPE_WEBHOOK_SECRET;

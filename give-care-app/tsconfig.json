@@ -17,7 +17,7 @@
     "outDir": "./dist",
     "baseUrl": "./",
     "paths": {
-      "@harness/*": ["packages/*"],
+      "@harness/*": ["src/*"],
       "@harness/app/*": ["apps/*"],
       "@harness/tests/*": ["tests/*"],
       "@harness/docs/*": ["docs/*"]
@@ -26,6 +26,6 @@
     "allowSyntheticDefaultImports": true,
     "isolatedModules": true
   },
-  "include": ["packages/**/*", "apps/**/*", "tests/**/*", "docs/**/*"],
+  "include": ["src/**/*", "apps/**/*", "tests/**/*", "docs/**/*"],
   "exclude": ["node_modules", "dist", "_archive", "convex/_generated"]
 }

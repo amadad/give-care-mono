@@ -32,7 +32,7 @@ This release replaces the monolithic v0.8.2 implementation with a next-generatio
                         ↓
 ┌─────────────────────────────────────────────────────────┐
 │                   Harness Runtime                        │
-│       packages/harness (orchestrator, budgets)           │
+│       src/harness (orchestrator, budgets)           │
 └───────────┬──────────────────────────┬──────────────────┘
             ↓                          ↓
     ┌──────────────┐          ┌──────────────┐
@@ -58,7 +58,7 @@ This release replaces the monolithic v0.8.2 implementation with a next-generatio
 
 ### Two-Part Deployment
 
-**Runtime Code** (`packages/`, `apps/`):
+**Runtime Code** (`src/`, `apps/`):
 - Runs on edge (Cloudflare Workers, Vercel Edge Functions, Node.js)
 - Contains business logic, LLM execution, service integrations
 - Swappable providers (OpenAI → Anthropic, Convex → Supabase)
@@ -117,7 +117,7 @@ give-care-app/
 │   ├── edge-sms/             # Twilio SMS handler (Cloudflare Worker)
 │   └── edge-stripe/          # Stripe webhook handler
 │
-├── packages/                  # Runtime business logic (1,890 LOC)
+├── src/                  # Runtime business logic (1,890 LOC)
 │   ├── agents/               # Main, crisis, assessment agent wrappers
 │   ├── capabilities/         # 14 tool contracts + registry
 │   ├── drivers/              # Swappable provider interfaces
@@ -194,7 +194,7 @@ See `docs/CAPABILITIES.md` for complete reference.
 - Full conversation memory with `conversationId`
 - Tool proxying via capability runtime
 - Budget enforcement (max output tokens)
-- Swappable: Replace `packages/drivers/model/oai.driver.ts` for other providers
+- Swappable: Replace `src/drivers/model/oai.driver.ts` for other providers
 
 **Config**:
 - `HARNESS_OPENAI_API_KEY` - API key
@@ -291,9 +291,9 @@ See `docs/DEPLOYMENT.md` for complete guide.
 
 ### Adding New Capabilities
 
-1. Create capability definition in `packages/capabilities/`:
+1. Create capability definition in `src/capabilities/`:
 ```typescript
-// packages/capabilities/example.ts
+// src/capabilities/example.ts
 export const exampleCapability: CapabilityDefinition<InputSchema, OutputSchema> = {
   name: 'example.action',
   description: 'Does something useful',
@@ -307,7 +307,7 @@ export const exampleCapability: CapabilityDefinition<InputSchema, OutputSchema> 
 };
 ```
 
-2. Register in `packages/capabilities/registry.ts`:
+2. Register in `src/capabilities/registry.ts`:
 ```typescript
 import { exampleCapability } from './example.js';
 
@@ -322,12 +322,12 @@ const capabilities: CapabilityDefinition<any, any>[] = [
 ### Swapping Providers
 
 **Replace OpenAI with Anthropic**:
-1. Implement `ModelDriver` interface in `packages/drivers/model/anthropic.driver.ts`
-2. Update `packages/harness/runtime.ts` to use new driver
+1. Implement `ModelDriver` interface in `src/drivers/model/anthropic.driver.ts`
+2. Update `src/harness/runtime.ts` to use new driver
 
 **Replace Convex with Supabase**:
-1. Implement `Store` interface in `packages/drivers/store/supabase.store.ts`
-2. Update `packages/harness/runtime.ts` to use new driver
+1. Implement `Store` interface in `src/drivers/store/supabase.store.ts`
+2. Update `src/harness/runtime.ts` to use new driver
 
 All business logic remains unchanged.
 
@@ -365,7 +365,7 @@ pnpm test:contract     # Capability contracts
 
 ### v0.9.0 Harness
 - **Total**: 3,086 LOC
-- **Runtime** (`packages/`): 1,890 LOC
+- **Runtime** (`src/`): 1,890 LOC
 - **Backend** (`convex/`): 1,196 LOC
 - **Capabilities**: 14 (vs 8 in v0.8.2)
 - **Code reduction**: 86% (from 21,851 LOC)
