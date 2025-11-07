@@ -15,22 +15,18 @@ const messageArgs = v.object({
 
 export const recordInbound = mutation({
   args: {
-    token: v.string(),
     message: messageArgs,
   },
-  handler: async (ctx, { token, message }) => {
-    requireHarnessToken(token);
+  handler: async (ctx, { message }) => {
     await Messages.recordInbound(ctx, message);
   },
 });
 
 export const recordOutbound = mutation({
   args: {
-    token: v.string(),
     message: messageArgs,
   },
-  handler: async (ctx, { token, message }) => {
-    requireHarnessToken(token);
+  handler: async (ctx, { message }) => {
     await Messages.recordOutbound(ctx, message);
   },
 });

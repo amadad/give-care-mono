@@ -9,6 +9,18 @@ const QUESTIONS = {
     { id: 'support', prompt: 'Do you feel supported today?', type: 'scale', min: 0, max: 4 },
     { id: 'hope', prompt: 'How hopeful do you feel about the week ahead?', type: 'scale', min: 0, max: 4 },
   ],
+  bsfc_v1: [
+    { id: 'q1', prompt: 'My life satisfaction has suffered due to care', type: 'scale', min: 0, max: 3, zone: 'emotional' },
+    { id: 'q2', prompt: 'I feel physically strained', type: 'scale', min: 0, max: 3, zone: 'physical' },
+    { id: 'q3', prompt: 'Caregiving restricts my freedom', type: 'scale', min: 0, max: 3, zone: 'social' },
+    { id: 'q4', prompt: 'I have conflicts between caregiving and other duties', type: 'scale', min: 0, max: 3, zone: 'time' },
+    { id: 'q5', prompt: 'I worry about the person I care for', type: 'scale', min: 0, max: 3, zone: 'emotional' },
+    { id: 'q6', prompt: 'Caregiving exhausts me physically', type: 'scale', min: 0, max: 3, zone: 'physical' },
+    { id: 'q7', prompt: 'I feel trapped in my role as caregiver', type: 'scale', min: 0, max: 3, zone: 'social' },
+    { id: 'q8', prompt: 'Caregiving takes up most of my time', type: 'scale', min: 0, max: 3, zone: 'time' },
+    { id: 'q9', prompt: 'I am emotionally drained by caregiving', type: 'scale', min: 0, max: 3, zone: 'emotional' },
+    { id: 'q10', prompt: 'My health has suffered from caregiving', type: 'scale', min: 0, max: 3, zone: 'physical' },
+  ],
 } as const;
 
 type DefinitionId = keyof typeof QUESTIONS;
@@ -19,8 +31,39 @@ const getQuestions = (definitionId: string) => {
   return qs;
 };
 
-const scoreAnswers = (answers: Array<{ value: number }>) => {
+const scoreAnswers = (definitionId: string, answers: Array<{ questionId: string; value: number }>) => {
   const total = answers.reduce((sum, a) => sum + a.value, 0);
+
+  if (definitionId === 'bsfc_v1') {
+    const band = total >= 20 ? 'high' : total >= 10 ? 'medium' : 'low';
+
+    const questions = QUESTIONS.bsfc_v1;
+    const zoneScores: Record<string, number> = {
+      emotional: 0,
+      physical: 0,
+      social: 0,
+      time: 0,
+    };
+
+    answers.forEach((answer) => {
+      const question = questions.find(q => q.id === answer.questionId);
+      if (question && 'zone' in question) {
+        zoneScores[question.zone as string] = (zoneScores[question.zone as string] || 0) + answer.value;
+      }
+    });
+
+    const pressureZones = Object.entries(zoneScores)
+      .map(([zone, score]) => ({ zone, score, maxScore: 9 }))
+      .sort((a, b) => b.score - a.score);
+
+    return {
+      total,
+      band,
+      explanation: `Total score ${total}/30 indicates ${band} burden.`,
+      pressureZones,
+    };
+  }
+
   const band = total >= 15 ? 'high' : total >= 8 ? 'medium' : 'low';
   return {
     total,
@@ -72,7 +115,7 @@ export const recordAnswer = mutation({
     const nextIndex = currentIndex + 1;
 
     if (nextIndex >= questions.length) {
-      const score = scoreAnswers(updatedAnswers);
+      const score = scoreAnswers(definitionId, updatedAnswers);
       const assessmentId = await ctx.db.insert('assessments', {
         userId: session.userId,
         definitionId,

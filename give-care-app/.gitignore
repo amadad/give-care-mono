@@ -42,3 +42,6 @@ Thumbs.db
 # Admin frontend Convex generated
 admin-frontend/convex/_generated/
 _REF/admin-frontend/convex/_generated/
+convex/**/*.js
+convex/**/*.js.map
+!convex/convex.config.js

@@ -11,12 +11,12 @@ pnpm lint                   # ESLint check
 
 ## Tech Stack
 
-- **Framework**: Next.js 15.3.2 + React 19 + App Router
-- **Styling**: Tailwind CSS v4 + DaisyUI
+- **Framework**: Next.js 16.0.0 + React 19 + App Router
+- **Styling**: Tailwind CSS v4.1.7 + DaisyUI
 - **Animation**: Framer Motion
 - **Content**: MDX for blog posts
 - **Email**: Resend API
-- **Testing**: Jest + React Testing Library + Cypress
+- **Testing**: Vitest + Playwright
 
 ## Critical Patterns
 

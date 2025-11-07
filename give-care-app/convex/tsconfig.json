@@ -7,8 +7,9 @@
     "strict": true,
     "skipLibCheck": true,
     "allowSyntheticDefaultImports": true,
-    "isolatedModules": true
+    "isolatedModules": true,
+    "noEmit": true
   },
-  "include": ["./**/*.ts", "../src/shared/types.ts"],
+  "include": ["./**/*.ts"],
   "exclude": ["node_modules", "_generated"]
 }

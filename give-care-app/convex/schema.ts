@@ -105,6 +105,19 @@ export default defineSchema({
     .index('by_user_status', ['userId', 'status'])
     .index('by_user_definition', ['userId', 'definitionId']),
 
+  interventions: defineTable({
+    title: v.string(),
+    description: v.string(),
+    category: v.string(),
+    targetZones: v.array(v.string()),
+    evidenceLevel: v.string(),
+    duration: v.string(),
+    tags: v.array(v.string()),
+    content: v.string(),
+  })
+    .index('by_category', ['category'])
+    .index('by_evidence', ['evidenceLevel']),
+
   intervention_events: defineTable({
     userId: v.id('users'),
     interventionId: v.string(),

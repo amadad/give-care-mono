@@ -11,7 +11,6 @@ const budgetValidator = v.object({ maxInputTokens: v.number(), maxOutputTokens: 
 
 export const hydrate = mutation({
   args: {
-    token: v.string(),
     user: v.object({
       externalId: v.string(),
       channel: channelValidator,
@@ -19,15 +18,13 @@ export const hydrate = mutation({
       phone: v.optional(v.string()),
     }),
   },
-  handler: async (ctx, { token, user }) => {
-    requireHarnessToken(token);
+  handler: async (ctx, { user }) => {
     return ContextModel.hydrate(ctx, user);
   },
 });
 
 export const persist = mutation({
   args: {
-    token: v.string(),
     context: v.object({
       userId: v.string(),
       sessionId: v.string(),
@@ -41,8 +38,7 @@ export const persist = mutation({
       crisisFlags: v.optional(v.object({ active: v.boolean(), terms: v.array(v.string()) })),
     }),
   },
-  handler: async (ctx, { token, context }) => {
-    requireHarnessToken(token);
+  handler: async (ctx, { context }) => {
     await ContextModel.persist(ctx, context);
   },
 });

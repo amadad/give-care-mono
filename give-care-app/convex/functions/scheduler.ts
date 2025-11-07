@@ -6,7 +6,6 @@ import * as Triggers from '../model/triggers';
 
 export const enqueueOnce = mutation({
   args: {
-    token: v.string(),
     job: v.object({
       name: v.string(),
       payload: v.any(),
@@ -15,8 +14,7 @@ export const enqueueOnce = mutation({
       timezone: v.string(),
     }),
   },
-  handler: async (ctx, { token, job }) => {
-    requireHarnessToken(token);
+  handler: async (ctx, { job }) => {
     const triggerId = await Triggers.createTrigger(ctx, {
       userExternalId: job.userExternalId,
       rrule: `DTSTART:${job.runAt.replace(/[-:]/g, '').slice(0, 15)}\nRRULE:FREQ=DAILY;COUNT=1`,
@@ -31,7 +29,6 @@ export const enqueueOnce = mutation({
 
 export const createTrigger = mutation({
   args: {
-    token: v.string(),
     trigger: v.object({
       userExternalId: v.string(),
       rrule: v.string(),
@@ -40,8 +37,7 @@ export const createTrigger = mutation({
       payload: v.any(),
     }),
   },
-  handler: async (ctx, { token, trigger }) => {
-    requireHarnessToken(token);
+  handler: async (ctx, { trigger }) => {
     return Triggers.createTrigger(ctx, {
       ...trigger,
       type: 'recurring',
@@ -51,11 +47,9 @@ export const createTrigger = mutation({
 
 export const cancelTrigger = mutation({
   args: {
-    token: v.string(),
     triggerId: v.id('triggers'),
   },
-  handler: async (ctx, { token, triggerId }) => {
-    requireHarnessToken(token);
+  handler: async (ctx, { triggerId }) => {
     await Triggers.cancelTrigger(ctx, triggerId);
   },
 });

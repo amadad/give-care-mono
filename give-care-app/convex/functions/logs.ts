@@ -11,7 +11,6 @@ const budgetResultValidator = v.object({
 
 export const agentRun = mutation({
   args: {
-    token: v.string(),
     payload: v.object({
       externalId: v.string(),
       agent: v.string(),
@@ -21,15 +20,13 @@ export const agentRun = mutation({
       traceId: v.string(),
     }),
   },
-  handler: async (ctx, { token, payload }) => {
-    requireHarnessToken(token);
+  handler: async (ctx, { payload }) => {
     await Logs.logAgentRun(ctx, payload);
   },
 });
 
 export const guardrail = mutation({
   args: {
-    token: v.string(),
     payload: v.object({
       externalId: v.optional(v.string()),
       ruleId: v.string(),
@@ -38,8 +35,7 @@ export const guardrail = mutation({
       traceId: v.string(),
     }),
   },
-  handler: async (ctx, { token, payload }) => {
-    requireHarnessToken(token);
+  handler: async (ctx, { payload }) => {
     await Logs.logGuardrail(ctx, payload);
   },
 });

@@ -82,7 +82,6 @@ http.route({
       const traceId = `twilio-${messageSid}`;
 
       await ctx.runMutation(api.functions.messages.recordInbound, {
-        token: process.env.HARNESS_CONVEX_TOKEN!,
         message: {
           externalId: from,
           channel: 'sms',

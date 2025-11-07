@@ -18,7 +18,7 @@ AI-powered SMS caregiving platform (pnpm workspace)
 ```
 givecare/
 ├── give-care-app/       # Convex backend + Twilio SMS + admin dashboard
-├── give-care-site/      # Next.js 15 marketing site
+├── give-care-site/      # Next.js 16 marketing site
 ├── give-care-story/     # Next.js presentations
 └── give-care-etl/       # Cloudflare Workers resource pipeline
 ```
@@ -44,14 +44,15 @@ pnpm --filter give-care-story dev     # Presentations
 **Key Patterns**:
 - Files importing `@openai/agents` need `"use node"` directive
 - Use Convex validators, NOT Zod
-- System prompts are markdown files (`src/prompts/*.md`) with template variables
+- System prompts are in `convex/lib/prompts.ts` with template variables
 - Use `hasContextState()` guard before accessing context
+- No harness tokens required - Convex-native architecture
 
 **Docs**: See `give-care-app/docs/CLAUDE.md`
 
 ## give-care-site (Marketing)
 
-**Tech**: Next.js 15, Tailwind v4, DaisyUI, Framer Motion, MDX
+**Tech**: Next.js 16, Tailwind v4.1.7, DaisyUI, Framer Motion, MDX
 
 **Design System**:
 - Typography: `.heading-hero`, `.heading-section`

@@ -22,6 +22,6 @@
     "allowSyntheticDefaultImports": true,
     "isolatedModules": true
   },
-  "include": ["src/**/*", "apps/**/*", "tests/**/*", "docs/**/*", "*.config.ts"],
-  "exclude": ["node_modules", "dist", "_archive", "admin", "convex"]
+  "include": ["tests/**/*"],
+  "exclude": ["node_modules", "dist", "_archive", "admin", "convex", "src", "apps", "docs"]
 }
