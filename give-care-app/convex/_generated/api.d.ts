@@ -15,6 +15,7 @@ import type * as crons from "../crons.js";
 import type * as functions_admin from "../functions/admin.js";
 import type * as functions_alerts from "../functions/alerts.js";
 import type * as functions_analytics from "../functions/analytics.js";
+import type * as functions_assessmentResults from "../functions/assessmentResults.js";
 import type * as functions_assessments from "../functions/assessments.js";
 import type * as functions_billing from "../functions/billing.js";
 import type * as functions_context from "../functions/context.js";
@@ -22,6 +23,7 @@ import type * as functions_email from "../functions/email.js";
 import type * as functions_logs from "../functions/logs.js";
 import type * as functions_memory from "../functions/memory.js";
 import type * as functions_messages from "../functions/messages.js";
+import type * as functions_newsletterActions from "../functions/newsletterActions.js";
 import type * as functions_scheduler from "../functions/scheduler.js";
 import type * as functions_watchers from "../functions/watchers.js";
 import type * as functions_wellness from "../functions/wellness.js";
@@ -32,13 +34,13 @@ import type * as lib_memory from "../lib/memory.js";
 import type * as lib_policy from "../lib/policy.js";
 import type * as lib_prompts from "../lib/prompts.js";
 import type * as lib_types from "../lib/types.js";
-import type * as migrations_clearAllData from "../migrations/clearAllData.js";
 import type * as model_context from "../model/context.js";
 import type * as model_logs from "../model/logs.js";
 import type * as model_messages from "../model/messages.js";
 import type * as model_security from "../model/security.js";
 import type * as model_triggers from "../model/triggers.js";
 import type * as model_users from "../model/users.js";
+import type * as stripe from "../stripe.js";
 
 import type {
   ApiFromModules,
@@ -62,6 +64,7 @@ declare const fullApi: ApiFromModules<{
   "functions/admin": typeof functions_admin;
   "functions/alerts": typeof functions_alerts;
   "functions/analytics": typeof functions_analytics;
+  "functions/assessmentResults": typeof functions_assessmentResults;
   "functions/assessments": typeof functions_assessments;
   "functions/billing": typeof functions_billing;
   "functions/context": typeof functions_context;
@@ -69,6 +72,7 @@ declare const fullApi: ApiFromModules<{
   "functions/logs": typeof functions_logs;
   "functions/memory": typeof functions_memory;
   "functions/messages": typeof functions_messages;
+  "functions/newsletterActions": typeof functions_newsletterActions;
   "functions/scheduler": typeof functions_scheduler;
   "functions/watchers": typeof functions_watchers;
   "functions/wellness": typeof functions_wellness;
@@ -79,13 +83,13 @@ declare const fullApi: ApiFromModules<{
   "lib/policy": typeof lib_policy;
   "lib/prompts": typeof lib_prompts;
   "lib/types": typeof lib_types;
-  "migrations/clearAllData": typeof migrations_clearAllData;
   "model/context": typeof model_context;
   "model/logs": typeof model_logs;
   "model/messages": typeof model_messages;
   "model/security": typeof model_security;
   "model/triggers": typeof model_triggers;
   "model/users": typeof model_users;
+  stripe: typeof stripe;
 }>;
 declare const fullApiWithMounts: typeof fullApi;
 
