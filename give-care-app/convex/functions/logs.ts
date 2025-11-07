@@ -1,4 +1,4 @@
-import { mutation } from '../_generated/server';
+import { mutation, internalMutation } from '../_generated/server';
 import { v } from 'convex/values';
 import * as Logs from '../model/logs';
 import { requireHarnessToken } from '../model/security';
@@ -49,7 +49,7 @@ export const guardrail = mutation({
  *
  * This is an internal mutation called by the crisis agent.
  */
-export const logCrisisInteraction = mutation({
+export const logCrisisInteraction = internalMutation({
   args: {
     userId: v.string(),
     input: v.string(),

@@ -130,8 +130,7 @@ For ${careRecipient}, resources are available 24/7. You're not alone in this.`;
     const latencyMs = Date.now() - startTime;
 
     // Log crisis interaction for safety monitoring
-    // Note: This calls logCrisisInteraction in convex/functions/logs.ts
-    await ctx.runMutation(internal.functions.logs.logCrisisInteraction as any, {
+    await ctx.runMutation(internal.functions.logs.logCrisisInteraction, {
       userId: context.userId,
       input: input.text,
       chunks: chunks.map((c) => c.content),
