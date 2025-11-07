@@ -43,3 +43,43 @@ export const guardrail = mutation({
     await Logs.logGuardrail(ctx, payload);
   },
 });
+
+/**
+ * Log crisis interaction for safety monitoring
+ *
+ * This is an internal mutation called by the crisis agent.
+ */
+export const logCrisisInteraction = mutation({
+  args: {
+    userId: v.string(),
+    input: v.string(),
+    chunks: v.array(v.string()),
+    timestamp: v.number(),
+  },
+  handler: async (ctx, { userId, input, chunks, timestamp }) => {
+    // Get user ID from string (userId is externalId from agent context)
+    const user = await ctx.db
+      .query('users')
+      .withIndex('by_externalId', (q) => q.eq('externalId', userId))
+      .unique();
+
+    if (!user) {
+      console.warn('Crisis interaction logged for unknown user:', userId);
+      return;
+    }
+
+    // Log to agent_runs for monitoring
+    await ctx.db.insert('agent_runs', {
+      userId: user._id,
+      agent: 'crisis',
+      policyBundle: 'crisis_v1',
+      budgetResult: {
+        usedInputTokens: input.length,
+        usedOutputTokens: chunks.join('').length,
+        toolCalls: 0,
+      },
+      latencyMs: Date.now() - timestamp,
+      traceId: `crisis-${timestamp}`,
+    });
+  },
+});
