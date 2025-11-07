@@ -70,3 +70,40 @@ export async function verifyUserOwnership(
     throw new Error('Not authorized to access this user\'s data')
   }
 }
+
+/**
+ * Require an authenticated user.
+ * Throws if no identity is present.
+ */
+export async function requireAuth(ctx: AuthContext) {
+  const identity = await ctx.auth.getUserIdentity()
+  if (!identity || !identity.subject) {
+    throw new Error('User not authenticated')
+  }
+  return identity
+}
+
+/**
+ * Ensure the caller is an admin.
+ *
+ * Strategy:
+ * - Read ADMIN_USER_IDS (comma-separated) from environment and allow if identity.subject matches.
+ * - Additionally allow if the loaded user has an `role === "admin"` field (future-proofing).
+ *
+ * Note: Keep this fast and deterministic so it can be used in every admin handler.
+ */
+export async function ensureAdmin(ctx: AuthContext) {
+  const identity = await requireAuth(ctx)
+
+  // 1) Environment-configured superusers
+  const raw = (process.env.ADMIN_USER_IDS || '').trim()
+  const admins = raw.length > 0 ? new Set(raw.split(',').map(s => s.trim())) : new Set<string>()
+  if (admins.has(identity.subject)) return
+
+  // 2) Role-based fallback (optional)
+  const user = await ctx.db.get(identity.subject as unknown as Id<'users'>)
+  const role = (user as any)?.role
+  if (role === 'admin') return
+
+  throw new Error('Admin privileges required')
+}

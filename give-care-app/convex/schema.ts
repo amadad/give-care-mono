@@ -593,6 +593,7 @@ export default defineSchema({
   })
     .index('by_user', ['userId'])
     .index('by_user_time', ['userId', 'timestamp'])
+    .index('by_timestamp', ['timestamp'])
     .index('by_mode', ['mode'])
     .index('by_agent', ['agentName'])
     .index('by_service_tier', ['serviceTier'])
@@ -698,6 +699,7 @@ export default defineSchema({
   })
     .index('by_user', ['userId'])
     .index('by_next_occurrence', ['nextOccurrence', 'enabled'])
+    .index('by_enabled_next', ['enabled', 'nextOccurrence'])
     .index('by_type', ['type'])
     .index('by_enabled', ['enabled'])
     .index('by_user_type', ['userId', 'type']),
@@ -732,6 +734,7 @@ export default defineSchema({
     resolvedAt: v.optional(v.number()),
   })
     .index('by_user', ['userId'])
+    .index('by_user_type', ['userId', 'type'])
     .index('by_severity', ['severity'])
     .index('by_created', ['createdAt']),
 

@@ -5,6 +5,7 @@
 
 import { v } from 'convex/values'
 import { mutation, query } from '../_generated/server'
+import { ensureAdmin } from '../lib/auth'
 
 /**
  * Upsert email contact (create or update)
@@ -264,6 +265,7 @@ export const listAll = query({
     status: v.optional(v.string()),
   },
   handler: async (ctx, { limit, status }) => {
+    await ensureAdmin(ctx)
     const contacts = status
       ? await ctx.db
           .query('emailContacts')
@@ -285,6 +287,7 @@ export const listAll = query({
 export const getStats = query({
   args: {},
   handler: async (ctx) => {
+    await ensureAdmin(ctx)
     const allContacts = await ctx.db.query('emailContacts').collect()
 
     const stats = {

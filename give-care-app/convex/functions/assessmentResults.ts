@@ -5,7 +5,7 @@
 
 import { v } from 'convex/values'
 import { action, query, internalMutation } from '../_generated/server'
-import { internal, api } from '../_generated/api'
+import { api, internal } from '../_generated/api'
 
 // Handler function extracted to avoid circular reference
 async function submitAssessmentHandler(

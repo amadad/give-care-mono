@@ -52,7 +52,7 @@ interface MessageResult {
 }
 
 export class MessageHandler {
-  constructor(private ctx: ActionCtx) {}
+  constructor(private _ctx: ActionCtx) {}
 
   /**
    * Main message processing pipeline
@@ -175,27 +175,27 @@ export class MessageHandler {
     // Run all 5 rate limit checks in parallel
     const [spamCheck, smsCheck, globalCheck, openaiCheck, assessmentCheck] = await Promise.all([
       // 2a. Spam protection (20/hour per user)
-      rateLimiter.limit(this.ctx, 'spam', {
+      rateLimiter.limit(this._ctx, 'spam', {
         key: phoneNumber,
         config: RATE_LIMITS.spamProtection as any,
       }),
       // 2b. Per-user SMS limit (10/day per user)
-      rateLimiter.limit(this.ctx, 'sms-user', {
+      rateLimiter.limit(this._ctx, 'sms-user', {
         key: phoneNumber,
         config: RATE_LIMITS.smsPerUser as any,
       }),
       // 2c. Global SMS limit (1000/hour)
-      rateLimiter.limit(this.ctx, 'sms-global', {
+      rateLimiter.limit(this._ctx, 'sms-global', {
         key: 'global',
         config: RATE_LIMITS.smsGlobal as any,
       }),
       // 2d. OpenAI rate limit (100/min)
-      rateLimiter.limit(this.ctx, 'openai', {
+      rateLimiter.limit(this._ctx, 'openai', {
         key: 'global',
         config: RATE_LIMITS.openaiCalls as any,
       }),
       // 2e. Assessment rate limit (3/day per user)
-      rateLimiter.limit(this.ctx, 'assessment', {
+      rateLimiter.limit(this._ctx, 'assessment', {
         key: phoneNumber,
         config: RATE_LIMITS.assessmentPerUser as any,
       }),
@@ -232,7 +232,7 @@ export class MessageHandler {
   private async getUser(phoneNumber: string) {
     logSafe('GetUser', 'Fetching or creating user', { phone: phoneNumber })
 
-    const user = await this.ctx.runMutation(internal.functions.users.getOrCreateByPhone, {
+    const user = await this._ctx.runMutation(internal.functions.users.getOrCreateByPhone, {
       phoneNumber,
     })
 
@@ -282,7 +282,7 @@ export class MessageHandler {
       "Questions about our service? Visit givecareapp.com or text 'info' for details."
 
     // Log interaction for analytics
-    await this.ctx.runMutation(internal.functions.conversations.logMessage, {
+    await this._ctx.runMutation(internal.functions.conversations.logMessage, {
       userId: user._id,
       role: 'user',
       text: messageBody,
@@ -290,7 +290,7 @@ export class MessageHandler {
       timestamp,
     })
 
-    await this.ctx.runMutation(internal.functions.conversations.logMessage, {
+    await this._ctx.runMutation(internal.functions.conversations.logMessage, {
       userId: user._id,
       role: 'system',
       text: signupMessage,
@@ -333,7 +333,7 @@ export class MessageHandler {
     let assessmentResponses: Record<string, string | number> = {}
 
     if (user.assessmentInProgress && user.assessmentSessionId) {
-      const responses = await this.ctx.runQuery(
+      const responses = await this._ctx.runQuery(
         internal.functions.assessments.getSessionResponses,
         { sessionId: user.assessmentSessionId }
       )
@@ -443,7 +443,7 @@ export class MessageHandler {
     }
 
     // 7d. Persist messages + context in a single mutation
-    await this.ctx.runMutation(internal.messages.processIncomingMessage, {
+    await this._ctx.runMutation(internal.messages.processIncomingMessage, {
       userId: user._id,
       userMessage,
       agentMessage: agentResult.message,
@@ -480,7 +480,7 @@ export class MessageHandler {
     const definition = getAssessmentDefinition(context.assessmentType!)
     const totalQuestions = definition?.questions.length ?? 0
 
-    const sessionId = (await this.ctx.runMutation(
+    const sessionId = (await this._ctx.runMutation(
       internal.functions.assessments.insertAssessmentSession,
       {
         userId,
@@ -513,7 +513,7 @@ export class MessageHandler {
         ? calculateQuestionScore(question, currentResponses[questionId])
         : null
 
-      await this.ctx.runMutation(internal.functions.assessments.insertAssessmentResponse, {
+      await this._ctx.runMutation(internal.functions.assessments.insertAssessmentResponse, {
         sessionId: sessionId as any,
         userId: updatedContext.userId as any,
         questionId,
@@ -529,7 +529,7 @@ export class MessageHandler {
   private async completeAssessment(context: GiveCareContext): Promise<void> {
     const scoreData = calculateAssessmentScore(context.assessmentType!, context.assessmentResponses)
 
-    await this.ctx.runMutation(internal.functions.assessments.completeAssessmentSession, {
+    await this._ctx.runMutation(internal.functions.assessments.completeAssessmentSession, {
       sessionId: context.assessmentSessionId! as any,
       overallScore: scoreData.overall_score,
       domainScores: scoreData.subscores,
@@ -551,7 +551,7 @@ export class MessageHandler {
     const timestamp = Date.now()
 
     // Batch insert both messages in one mutation (50-75ms faster)
-    await this.ctx.runMutation(internal.functions.conversations.logMessages, {
+    await this._ctx.runMutation(internal.functions.conversations.logMessages, {
       messages: [
         // User message (FIXED: was storing agentResult.message twice)
         {
@@ -583,7 +583,7 @@ export class MessageHandler {
   }
 
   private async updateUserContext(userId: any, context: GiveCareContext): Promise<void> {
-    await this.ctx.runMutation(internal.functions.users.updateContextState, {
+    await this._ctx.runMutation(internal.functions.users.updateContextState, {
       userId,
       firstName: context.firstName || undefined,
       relationship: context.relationship || undefined,
@@ -608,7 +608,7 @@ export class MessageHandler {
    * FIX #4: Now includes onboardingCooldownUntil
    */
   private updateUserContextAsync(userId: any, context: GiveCareContext): void {
-    this.ctx
+    this._ctx
       .runMutation(internal.functions.users.updateContextState, {
         userId,
         firstName: context.firstName || undefined,
@@ -634,7 +634,7 @@ export class MessageHandler {
   }
 
   private async saveWellnessScore(userId: any, context: GiveCareContext): Promise<void> {
-    await this.ctx.runMutation(internal.functions.wellness.saveScore, {
+    await this._ctx.runMutation(internal.functions.wellness.saveScore, {
       userId,
       overallScore: context.burnoutScore!,
       band: context.burnoutBand || undefined,
@@ -649,7 +649,7 @@ export class MessageHandler {
    * Async version - fires and forgets (no await)
    */
   private saveWellnessScoreAsync(userId: any, context: GiveCareContext): void {
-    this.ctx
+    this._ctx
       .runMutation(internal.functions.wellness.saveScore, {
         userId,
         overallScore: context.burnoutScore!,
@@ -679,7 +679,7 @@ export class MessageHandler {
   ): Promise<void> {
     try {
       // Get last agent message for timing and context
-      const lastAgentMessage = await this.ctx.runQuery(
+      const lastAgentMessage = await this._ctx.runQuery(
         internal.functions.messages.getLastAgentMessage,
         { userId }
       )
@@ -729,7 +729,7 @@ export class MessageHandler {
 
       // Record all detected signals
       for (const { signal, value } of signals) {
-        await this.ctx.runMutation(internal.feedback.recordImplicitFeedback, {
+        await this._ctx.runMutation(internal.feedback.recordImplicitFeedback, {
           userId,
           conversationId: lastAgentMessage._id,
           signal,
@@ -752,7 +752,7 @@ export class MessageHandler {
   }
 
   private updateLastContactAsync(userId: any): void {
-    this.ctx
+    this._ctx
       .runMutation(internal.functions.users.updateLastContact, {
         userId,
       })
@@ -776,13 +776,13 @@ export class MessageHandler {
     if (!wasCrisis && nowCrisis) {
       logSafe('Crisis', 'User entered crisis state - scheduling follow-ups', { userId: user._id })
 
-      await this.ctx.runMutation(internal.functions.users.updateUser, {
+      await this._ctx.runMutation(internal.functions.users.updateUser, {
         userId: user._id,
         lastCrisisEventAt: Date.now(),
         crisisFollowupCount: 0,
       })
 
-      await this.ctx.runMutation(internal.functions.scheduling.scheduleCrisisFollowups, {
+      await this._ctx.runMutation(internal.functions.scheduling.scheduleCrisisFollowups, {
         userId: user._id,
       })
     }
@@ -794,7 +794,7 @@ export class MessageHandler {
     if (wasOnboarding && nowActive) {
       logSafe('Onboarding', 'User completed onboarding', { userId: user._id })
 
-      await this.ctx.runAction(internal.functions.scheduling.checkOnboardingAndNudge, {
+      await this._ctx.runAction(internal.functions.scheduling.checkOnboardingAndNudge, {
         userId: user._id as any,
         nudgeStage: 1, // Start with first nudge (48hr)
       })

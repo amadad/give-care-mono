@@ -1,6 +1,5 @@
 {
   "project": "give-care-app",
   "team": "givecare",
-  "prodUrl": "https://agreeable-lion-831.convex.cloud",
-  "functions": "convex/"
+  "prodUrl": "https://agreeable-lion-831.convex.cloud"
 }

@@ -8,6 +8,8 @@
 
 import { query, mutation } from '../_generated/server'
 import { v } from 'convex/values'
+import { ensureAdmin } from '../lib/auth'
+import * as AdminModel from '../model/admin'
 // Denormalized: use users table directly (no enrichment helpers)
 
 /**
@@ -16,62 +18,8 @@ import { v } from 'convex/values'
 export const getSystemMetrics = query({
   args: {},
   handler: async ctx => {
-    // Use bounded set of latest users for metrics
-    const users = await ctx.db
-      .query('users')
-      .withIndex('by_created')
-      .order('desc')
-      .take(1000)
-
-    // Active users (contacted in last 7 days)
-    const sevenDaysAgo = Date.now() - 7 * 24 * 60 * 60 * 1000
-    const activeUsers = users.filter(u => (u as any).lastContactAt && (u as any).lastContactAt > sevenDaysAgo)
-
-    // Crisis users (burnout >= 80)
-    const crisisUsers = users.filter(u => (u as any).burnoutScore && (u as any).burnoutScore >= 80)
-
-    // Average burnout score
-    const usersWithScores = users.filter(u => (u as any).burnoutScore !== undefined)
-    const avgBurnoutScore =
-      usersWithScores.length > 0
-        ? usersWithScores.reduce((sum, u) => sum + ((u as any).burnoutScore || 0), 0) /
-          usersWithScores.length
-        : 0
-
-    // Response time (p95) - get from recent conversations
-    const oneDayAgo = Date.now() - 24 * 60 * 60 * 1000
-    const recentConvos = await ctx.db
-      .query('conversations')
-      .filter(q => q.gte(q.field('timestamp'), oneDayAgo))
-      .collect()
-
-    const latencies = recentConvos
-      .filter(c => c.latency !== undefined)
-      .map(c => c.latency!)
-      .sort((a, b) => a - b)
-
-    const p95Latency = latencies.length > 0 ? latencies[Math.floor(latencies.length * 0.95)] : 0
-
-    return {
-      totalUsers: users.length,
-      activeUsers: activeUsers.length,
-      crisisAlerts: crisisUsers.length,
-      avgBurnoutScore: Math.round(avgBurnoutScore * 10) / 10,
-      p95ResponseTime: Math.round(p95Latency),
-      subscriptionBreakdown: {
-        active: users.filter(
-          u => (u as any).subscriptionStatus === 'active' || (u as any).subscriptionStatus === 'trialing'
-        ).length,
-        incomplete: users.filter(u => (u as any).subscriptionStatus === 'incomplete').length,
-        pastDue: users.filter(
-          u => (u as any).subscriptionStatus === 'past_due' || (u as any).subscriptionStatus === 'unpaid'
-        ).length,
-        canceled: users.filter(
-          u => (u as any).subscriptionStatus === 'canceled' || (u as any).subscriptionStatus === 'incomplete_expired'
-        ).length,
-        none: users.filter(u => !(u as any).subscriptionStatus || (u as any).subscriptionStatus === 'none').length,
-      },
-    }
+    await ensureAdmin(ctx)
+    return AdminModel.getSystemMetrics(ctx)
   },
 })
 
@@ -88,67 +36,8 @@ export const getAllUsers = query({
     cursor: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    const limit = Math.min(Math.max(args.limit, 1), 200)
-
-    // Build query based on filters (conditional index selection)
-    const results = args.journeyPhase
-      ? await ctx.db
-          .query('users')
-          .withIndex('by_journey', q => q.eq('journeyPhase', args.journeyPhase!))
-          .paginate({ numItems: limit * 2, cursor: args.cursor || null })
-      : args.burnoutBand
-        ? await ctx.db
-            .query('users')
-            .withIndex('by_burnout_band', q => q.eq('burnoutBand', args.burnoutBand!))
-            .paginate({ numItems: limit * 2, cursor: args.cursor || null })
-        : await ctx.db
-            .query('users')
-            .withIndex('by_created')
-            .order('desc')
-            .paginate({ numItems: limit * 2, cursor: args.cursor || null })
-
-    let filtered = results.page as any[]
-    if (args.burnoutBand && !args.journeyPhase) {
-      // already filtered via index
-    } else if (args.burnoutBand) {
-      filtered = filtered.filter(u => u.burnoutBand === args.burnoutBand)
-    }
-    if (args.subscriptionStatus) {
-      filtered = filtered.filter(u => u.subscriptionStatus === args.subscriptionStatus)
-    }
-
-    const searchTerm = args.search?.trim()
-    if (searchTerm) {
-      const s = searchTerm.toLowerCase()
-      filtered = filtered.filter(u => {
-        const nameMatches = u.firstName && (u.firstName as string).toLowerCase().includes(s)
-        const phoneMatches = u.phoneNumber && (u.phoneNumber as string).includes(searchTerm)
-        const recipientMatches =
-          u.careRecipientName && (u.careRecipientName as string).toLowerCase().includes(s)
-        return Boolean(nameMatches || phoneMatches || recipientMatches)
-      })
-    }
-
-    const sliced = filtered.slice(0, limit)
-
-    const mapUser = (u: any) => ({
-      _id: u._id,
-      firstName: u.firstName || 'Unknown',
-      relationship: u.relationship,
-      phoneNumber: u.phoneNumber,
-      burnoutScore: u.burnoutScore,
-      burnoutBand: u.burnoutBand,
-      journeyPhase: u.journeyPhase || 'onboarding',
-      subscriptionStatus: u.subscriptionStatus || 'none',
-      lastContactAt: u.lastContactAt,
-      createdAt: u.createdAt,
-    })
-
-    return {
-      users: sliced.map(mapUser),
-      continueCursor: results.continueCursor,
-      isDone: results.isDone || sliced.length < limit,
-    }
+    await ensureAdmin(ctx)
+    return AdminModel.getAllUsers(ctx, args)
   },
 })
 
@@ -289,6 +178,7 @@ export const sendAdminMessage = mutation({
     message: v.string(),
   },
   handler: async (ctx, args) => {
+    await ensureAdmin(ctx)
     const user = await ctx.db.get(args.userId)
     if (!user) {
       throw new Error('User not found')
@@ -317,6 +207,7 @@ export const sendAdminMessage = mutation({
 export const resetUserAssessment = mutation({
   args: { userId: v.id('users') },
   handler: async (ctx, args) => {
+    await ensureAdmin(ctx)
     const user = await ctx.db.get(args.userId)
     if (!user) {
       throw new Error('User not found')
@@ -344,6 +235,7 @@ export const getEmailFailures = query({
     retriedOnly: v.optional(v.boolean()),
   },
   handler: async (ctx, { limit, retriedOnly }) => {
+    await ensureAdmin(ctx)
     const maxLimit = Math.min(limit || 50, 200)
 
     // Build query based on filter
@@ -377,6 +269,7 @@ export const markEmailFailureRetried = mutation({
     failureId: v.id('emailFailures'),
   },
   handler: async (ctx, { failureId }) => {
+    await ensureAdmin(ctx)
     await ctx.db.patch(failureId, { retried: true })
     return { success: true }
   },
@@ -388,6 +281,7 @@ export const markEmailFailureRetried = mutation({
 export const getSystemHealth = query({
   args: {},
   handler: async ctx => {
+    await ensureAdmin(ctx)
     const now = Date.now()
     const oneDayAgo = now - 24 * 60 * 60 * 1000
 

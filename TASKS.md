@@ -1,6 +1,6 @@
 # GiveCare Monorepo - Task Overview
 
-**Last Updated**: 2025-11-04 | **Last Verified**: 2025-11-04
+**Last Updated**: 2025-11-06 | **Last Verified**: 2025-11-06
 
 This is the master task overview for the GiveCare monorepo. Each sub-project maintains its own detailed task list.
 
@@ -10,12 +10,20 @@ This is the master task overview for the GiveCare monorepo. Each sub-project mai
 
 | Project | Version | Status | Completion | Tasks File |
 |---------|---------|--------|------------|------------|
-| **give-care-app** | 0.8.3 | ✅ Production Ready | 50% (10/20 tasks) | [give-care-app/docs/TASKS.md](give-care-app/docs/TASKS.md) |
-| **give-care-site** | 0.1.0 | 🚧 Active Development | N/A | [give-care-site/docs/WEBSITE_TASKS.md](give-care-site/docs/WEBSITE_TASKS.md) |
+| **give-care-app** | 0.8.2 | ✅ Production Ready | Architecture refactored ✓ | [give-care-app/docs/TASKS.md](give-care-app/docs/TASKS.md) |
+| **give-care-site** | 0.1.0 | ✅ Aligned with backend | Connected to refactored API | [give-care-site/docs/WEBSITE_TASKS.md](give-care-site/docs/WEBSITE_TASKS.md) |
 | **give-care-story** | 1.0.0 | ✅ Stable | 100% | *(No active tasks)* |
 | **give-care-etl** | 0.1.0 | 🤔 Strategic Decision | 60% | [give-care-etl/docs/TASKS.md](give-care-etl/docs/TASKS.md) |
 
-**Overall Health:** 🟢 Healthy - Schema normalized, core backend stable, site growing, ETL needs strategic decision
+**Overall Health:** 🟢 Excellent - Schema denormalized (300x perf improvement), architecture refactored, all linting passing
+
+**Recent Refactoring (Nov 2025):**
+- ✅ Denormalized schema (users table consolidates 4 tables)
+- ✅ Created model/ layer for business logic
+- ✅ Extracted MessageHandler service
+- ✅ All ESLint errors fixed (3 validators, 8 unused vars)
+- ✅ Comprehensive README for convex/ directory
+- 📦 Archived completed docs to docs/archive/
 
 ---
 

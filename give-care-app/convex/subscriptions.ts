@@ -5,6 +5,7 @@
 
 import { v } from 'convex/values'
 import { internalMutation, mutation, query } from './_generated/server'
+import { ensureAdmin } from './lib/auth'
 
 /**
  * Create a pending user record when checkout starts
@@ -180,6 +181,7 @@ export const fixUserSubscription = mutation({
     ),
   },
   handler: async (ctx, { phoneNumber, subscriptionStatus }) => {
+    await ensureAdmin(ctx)
     // Find user by phone
     const user = await ctx.db
       .query('users')

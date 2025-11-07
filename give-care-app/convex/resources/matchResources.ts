@@ -14,6 +14,7 @@
 import { query } from '../_generated/server'
 import { v } from 'convex/values'
 import { Doc } from '../_generated/dataModel'
+import { verifyUserOwnership } from '../lib/auth'
 
 // ============================================================================
 // TYPE DEFINITIONS
@@ -44,6 +45,8 @@ export const matchResourcesForUser = query({
     limit: v.optional(v.number()),
   },
   handler: async (ctx, { userId, limit = 10 }): Promise<ScoredResource[]> => {
+    // Security: ensure caller owns the requested userId
+    await verifyUserOwnership(ctx, userId)
     // 1. Get user context
     const user = await ctx.db.get(userId)
     if (!user) throw new Error('User not found')
@@ -59,8 +62,12 @@ export const matchResourcesForUser = query({
     const userZip = (user as any).zipCode || ''
     const userZip3 = userZip.slice(0, 3)
 
-    // 2. Get all active resources
-    const allResources = await ctx.db.query('resources').collect()
+    // 2. Get active resources (bounded candidate set via index)
+    const allResources = await ctx.db
+      .query('resources')
+      .withIndex('by_verified', (q: any) => q.eq('verificationStatus', 'approved'))
+      .order('desc')
+      .take(500)
 
     // Filter out rejected resources
     const activeResources = allResources.filter(r => r.verificationStatus !== 'rejected')

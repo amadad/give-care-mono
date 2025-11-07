@@ -5,6 +5,7 @@
 
 import { v } from 'convex/values'
 import { mutation, query } from '../_generated/server'
+import { ensureAdmin } from '../lib/auth'
 
 /**
  * Subscribe to newsletter
@@ -139,9 +140,10 @@ export const listActive = query({
     limit: v.optional(v.number()),
   },
   handler: async (ctx, { limit }) => {
+    await ensureAdmin(ctx)
     const subscribers = await ctx.db
       .query('newsletterSubscribers')
-      .filter(q => q.eq(q.field('unsubscribed'), false))
+      .withIndex('by_subscribed', q => q.eq('unsubscribed', false))
       .order('desc')
       .take(limit || 100)
 

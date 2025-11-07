@@ -5,6 +5,7 @@
 
 import { mutation, query } from '../_generated/server'
 import { v } from 'convex/values'
+import { findResourcesInternal as findResourcesModel } from '../model/resources'
 import type { FilterBuilder, NamedTableInfo } from 'convex/server'
 import type { DataModel, Doc, Id } from '../_generated/dataModel'
 
@@ -410,7 +411,7 @@ export const findResources = query({
     bands: v.optional(v.array(v.string())),
     limit: v.optional(v.number()),
   },
-  handler: async (ctx, args) => findResourcesInternal(ctx, args),
+  handler: async (ctx, args) => findResourcesModel(ctx, args),
 })
 
 export const verifyResource = mutation({

@@ -11,9 +11,9 @@
  */
 
 import { internalAction } from './_generated/server'
-import { components } from './_generated/api'
 import { v } from 'convex/values'
-import { MessageHandler } from './services/MessageHandler'
+import { processIncomingSMS } from './actions/messageProcessing'
+import { sendSMS } from './actions/twilio'
 import { logSMS } from './utils/logger'
 
 /**
@@ -36,7 +36,6 @@ export const onIncomingMessage = internalAction({
     params: v.any(),
   },
   handler: async (ctx, args) => {
-    const handler = new MessageHandler(ctx)
 
     // HIPAA-compliant logging (redacts PII)
     logSMS('incoming', {
@@ -45,7 +44,7 @@ export const onIncomingMessage = internalAction({
       messageSid: args.messageSid,
     })
 
-    return handler.handle(args)
+    return processIncomingSMS(ctx, args)
   },
 })
 
@@ -59,14 +58,7 @@ export const sendOutboundSMS = internalAction({
     body: v.string(),
   },
   handler: async (ctx, { to, body }) => {
-    const result = await ctx.runAction(components.twilio.messages.create, {
-      to,
-      from: process.env.TWILIO_PHONE_NUMBER!,
-      body,
-      account_sid: process.env.TWILIO_ACCOUNT_SID!,
-      auth_token: process.env.TWILIO_AUTH_TOKEN!,
-      status_callback: '', // Optional webhook for delivery status
-    })
+    const result = await sendSMS(ctx, { to, body })
 
     // HIPAA-compliant logging (redacts PII)
     logSMS('outgoing', {

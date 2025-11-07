@@ -36,6 +36,7 @@ export const storeBatchJob = internalMutation({
  * Get all pending batch jobs (validating or in_progress)
  */
 export const getPendingBatches = internalQuery({
+  args: {},
   handler: async ctx => {
     const validating = await ctx.db
       .query('batchJobs')

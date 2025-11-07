@@ -8,15 +8,12 @@
  * @module
  */
 
+import type * as actions_messageProcessing from "../actions/messageProcessing.js";
+import type * as actions_twilio from "../actions/twilio.js";
 import type * as auth from "../auth.js";
 import type * as batchJobs from "../batchJobs.js";
-import type * as batchSummarization from "../batchSummarization.js";
 import type * as crons from "../crons.js";
-import type * as email_campaigns from "../email/campaigns.js";
-import type * as email_sequences from "../email/sequences.js";
 import type * as email_templates_AssessmentResults from "../email/templates/AssessmentResults.js";
-import type * as emailActions from "../emailActions.js";
-import type * as etl from "../etl.js";
 import type * as feedback from "../feedback.js";
 import type * as functions_admin from "../functions/admin.js";
 import type * as functions_analytics from "../functions/analytics.js";
@@ -47,12 +44,17 @@ import type * as lib_auth from "../lib/auth.js";
 import type * as lib_scoring from "../lib/scoring.js";
 import type * as messages from "../messages.js";
 import type * as migrations_denormalizeUsers from "../migrations/denormalizeUsers.js";
+import type * as model_admin from "../model/admin.js";
+import type * as model_analytics from "../model/analytics.js";
+import type * as model_conversations from "../model/conversations.js";
+import type * as model_resources from "../model/resources.js";
+import type * as model_triggers from "../model/triggers.js";
+import type * as model_users from "../model/users.js";
+import type * as model_wellness from "../model/wellness.js";
 import type * as resources_matchResources from "../resources/matchResources.js";
 import type * as services_MessageHandler from "../services/MessageHandler.js";
 import type * as stripe from "../stripe.js";
 import type * as subscriptions from "../subscriptions.js";
-import type * as summarization from "../summarization.js";
-import type * as summarizationActions from "../summarizationActions.js";
 import type * as triggers from "../triggers.js";
 import type * as twilio from "../twilio.js";
 import type * as utils_logger from "../utils/logger.js";
@@ -73,15 +75,12 @@ import type {
  * ```
  */
 declare const fullApi: ApiFromModules<{
+  "actions/messageProcessing": typeof actions_messageProcessing;
+  "actions/twilio": typeof actions_twilio;
   auth: typeof auth;
   batchJobs: typeof batchJobs;
-  batchSummarization: typeof batchSummarization;
   crons: typeof crons;
-  "email/campaigns": typeof email_campaigns;
-  "email/sequences": typeof email_sequences;
   "email/templates/AssessmentResults": typeof email_templates_AssessmentResults;
-  emailActions: typeof emailActions;
-  etl: typeof etl;
   feedback: typeof feedback;
   "functions/admin": typeof functions_admin;
   "functions/analytics": typeof functions_analytics;
@@ -112,12 +111,17 @@ declare const fullApi: ApiFromModules<{
   "lib/scoring": typeof lib_scoring;
   messages: typeof messages;
   "migrations/denormalizeUsers": typeof migrations_denormalizeUsers;
+  "model/admin": typeof model_admin;
+  "model/analytics": typeof model_analytics;
+  "model/conversations": typeof model_conversations;
+  "model/resources": typeof model_resources;
+  "model/triggers": typeof model_triggers;
+  "model/users": typeof model_users;
+  "model/wellness": typeof model_wellness;
   "resources/matchResources": typeof resources_matchResources;
   "services/MessageHandler": typeof services_MessageHandler;
   stripe: typeof stripe;
   subscriptions: typeof subscriptions;
-  summarization: typeof summarization;
-  summarizationActions: typeof summarizationActions;
   triggers: typeof triggers;
   twilio: typeof twilio;
   "utils/logger": typeof utils_logger;

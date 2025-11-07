@@ -7,6 +7,7 @@
 import { internalMutation, query } from '../_generated/server'
 import { v } from 'convex/values'
 import { verifyUserOwnership } from '../lib/auth'
+import * as Conversations from '../model/conversations'
 
 // MUTATIONS
 
@@ -39,7 +40,7 @@ export const logMessage = internalMutation({
     timestamp: v.number(),
   },
   handler: async (ctx, args) => {
-    await ctx.db.insert('conversations', args)
+    await Conversations.insert(ctx, args)
   },
 })
 
@@ -80,8 +81,7 @@ export const logMessages = internalMutation({
     ),
   },
   handler: async (ctx, { messages }) => {
-    // Batch insert all messages in parallel
-    await Promise.all(messages.map(msg => ctx.db.insert('conversations', msg)))
+    await Conversations.insertBatch(ctx, messages)
   },
 })
 
@@ -98,11 +98,7 @@ export const getRecentConversations = query({
 
     const limit = args.limit || 50
 
-    return await ctx.db
-      .query('conversations')
-      .withIndex('by_user_time', (q: any) => q.eq('userId', args.userId))
-      .order('desc')
-      .take(limit)
+    return await Conversations.recent(ctx, args.userId, limit)
   },
 })
 

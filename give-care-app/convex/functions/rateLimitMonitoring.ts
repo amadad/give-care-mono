@@ -25,6 +25,7 @@ import { v } from 'convex/values'
  * ```
  */
 export const getRateLimitStats = internalQuery({
+  args: {},
   handler: async _ctx => {
     // Note: This is a placeholder - actual implementation depends on
     // @convex-dev/rate-limiter API for usage queries
@@ -136,6 +137,7 @@ export const isUserRateLimited = internalQuery({
  * ```
  */
 export const getGlobalAlerts = internalQuery({
+  args: {},
   handler: async _ctx => {
     // Note: This is a placeholder - actual implementation depends on
     // @convex-dev/rate-limiter API

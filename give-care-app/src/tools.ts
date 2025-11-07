@@ -542,7 +542,7 @@ export const setWellnessSchedule = tool({
       // Import parseTime from convex/triggers.ts
       const { parseTime } = await import('../convex/triggers')
       time = parseTime(input.preferred_time)
-    } catch (_error) {
+    } catch {
       return `I couldn't understand the time "${input.preferred_time}". Please use format like "9:00 AM" or "14:30".`
     }
 
@@ -551,7 +551,7 @@ export const setWellnessSchedule = tool({
     try {
       const { buildRRule } = await import('../convex/triggers')
       rrule = buildRRule(input.frequency, time, input.days_of_week ?? undefined)
-    } catch (_error) {
+    } catch {
       return 'Error setting schedule. Please try again or contact support.'
     }
 
