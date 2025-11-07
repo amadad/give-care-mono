@@ -727,13 +727,12 @@ export class MessageHandler {
         signals.push({ signal: 'tool_success', value: 1.0 })
       }
 
-      // Record all detected signals
-      for (const { signal, value } of signals) {
-        await this._ctx.runMutation(internal.feedback.recordImplicitFeedback, {
+      // Record all detected signals in batch (avoids dangling promise warning)
+      if (signals.length > 0) {
+        await this._ctx.runMutation(internal.feedback.recordImplicitFeedbackBatch, {
           userId,
           conversationId: lastAgentMessage._id,
-          signal,
-          value,
+          signals,
           context: {
             agentResponse: lastAgentMessage.content,
             userMessage,
@@ -742,9 +741,8 @@ export class MessageHandler {
             sessionLength: undefined, // Will be calculated in mutation
           },
         })
+        logSafe('Feedback', 'Recorded implicit signals', { signalCount: signals.length, userId })
       }
-
-      logSafe('Feedback', 'Recorded implicit signals', { signalCount: signals.length, userId })
     } catch (error) {
       // Don't throw - this is background work
       logSafe('Background', 'Failed to track feedback', { error: String(error) })

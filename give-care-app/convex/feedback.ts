@@ -40,6 +40,47 @@ export const recordImplicitFeedback = internalMutation({
 })
 
 /**
+ * Record multiple implicit feedback signals in batch
+ * Avoids dangling promise warnings from multiple runMutation calls
+ */
+export const recordImplicitFeedbackBatch = internalMutation({
+  args: {
+    userId: v.id('users'),
+    conversationId: v.optional(v.id('conversations')),
+    signals: v.array(
+      v.object({
+        signal: v.string(),
+        value: v.number(),
+      })
+    ),
+    context: v.object({
+      agentResponse: v.optional(v.string()),
+      userMessage: v.optional(v.string()),
+      toolUsed: v.optional(v.string()),
+      timeSincePrevious: v.optional(v.number()),
+      sessionLength: v.optional(v.number()),
+    }),
+  },
+  handler: async (ctx, args) => {
+    const timestamp = Date.now()
+
+    // Insert all signals in parallel
+    await Promise.all(
+      args.signals.map(({ signal, value }) =>
+        ctx.db.insert('feedback', {
+          userId: args.userId,
+          conversationId: args.conversationId,
+          signal,
+          value,
+          context: args.context,
+          timestamp,
+        })
+      )
+    )
+  },
+})
+
+/**
  * Mark last agent message as helpful based on positive signal
  * Used when we detect gratitude, follow-up questions, or other positive indicators
  */
