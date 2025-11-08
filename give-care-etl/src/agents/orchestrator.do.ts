@@ -115,11 +115,11 @@ export class OrchestratorAgent extends DurableObject<Env> {
 
     this.discoveryAgent = new Agent({
       name: "Discovery Agent",
-      model: "gpt-5-mini",
+      model: "gpt-5-nano",
       instructions: "Find authoritative sources for caregiver resources. Use searchWeb to find sources, evaluateSource to score them, and rankSources to prioritize.",
       tools: discoveryTools,
       modelSettings: {
-        reasoning: { effort: "low" },
+        reasoning: { effort: "minimal" }, // Cost-optimized background processing
         text: { verbosity: "low" },
       },
     });
@@ -153,10 +153,10 @@ After extracting data, ALWAYS:
     // Initialize orchestrator with handoffs to specialist agents
     this.agent = new Agent({
       name: "Orchestrator",
-      model: "gpt-5-mini",
+      model: "gpt-5-nano",
       instructions: ORCHESTRATOR_INSTRUCTIONS,
       modelSettings: {
-        reasoning: { effort: "low" }, // Planning and coordination
+        reasoning: { effort: "minimal" }, // Cost-optimized background processing
         text: { verbosity: "low" },
       },
       handoffs: [
