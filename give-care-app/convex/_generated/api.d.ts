@@ -19,11 +19,13 @@ import type * as functions_assessmentResults from "../functions/assessmentResult
 import type * as functions_assessments from "../functions/assessments.js";
 import type * as functions_billing from "../functions/billing.js";
 import type * as functions_context from "../functions/context.js";
+import type * as functions_debugSubscriptions from "../functions/debugSubscriptions.js";
 import type * as functions_email from "../functions/email.js";
 import type * as functions_inbound from "../functions/inbound.js";
 import type * as functions_inboundActions from "../functions/inboundActions.js";
 import type * as functions_interventions from "../functions/interventions.js";
 import type * as functions_logs from "../functions/logs.js";
+import type * as functions_manualLinkSubscription from "../functions/manualLinkSubscription.js";
 import type * as functions_memory from "../functions/memory.js";
 import type * as functions_messages from "../functions/messages.js";
 import type * as functions_newsletterActions from "../functions/newsletterActions.js";
@@ -86,11 +88,13 @@ declare const fullApi: ApiFromModules<{
   "functions/assessments": typeof functions_assessments;
   "functions/billing": typeof functions_billing;
   "functions/context": typeof functions_context;
+  "functions/debugSubscriptions": typeof functions_debugSubscriptions;
   "functions/email": typeof functions_email;
   "functions/inbound": typeof functions_inbound;
   "functions/inboundActions": typeof functions_inboundActions;
   "functions/interventions": typeof functions_interventions;
   "functions/logs": typeof functions_logs;
+  "functions/manualLinkSubscription": typeof functions_manualLinkSubscription;
   "functions/memory": typeof functions_memory;
   "functions/messages": typeof functions_messages;
   "functions/newsletterActions": typeof functions_newsletterActions;

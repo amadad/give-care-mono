@@ -1,4 +1,4 @@
-import { internalQuery } from '../_generated/server';
+import { internalQuery, internalMutation } from '../_generated/server';
 import type { QueryCtx, MutationCtx } from '../_generated/server';
 import type { Id } from '../_generated/dataModel';
 import type { Channel } from '../lib/types';
@@ -20,6 +20,23 @@ export const getUser = internalQuery({
   args: { userId: v.id('users') },
   handler: async (ctx, { userId }) => {
     return ctx.db.get(userId);
+  },
+});
+
+/**
+ * Ensure user exists (internal mutation wrapper)
+ */
+export const ensureUserMutation = internalMutation({
+  args: {
+    externalId: v.string(),
+    channel: v.union(v.literal('sms'), v.literal('web')),
+    phone: v.optional(v.string()),
+    locale: v.optional(v.string()),
+    consent: v.optional(v.object({ emergency: v.boolean(), marketing: v.boolean() })),
+    metadata: v.optional(v.any()),
+  },
+  handler: async (ctx, params) => {
+    return ensureUser(ctx, params as EnsureUserParams);
   },
 });
 

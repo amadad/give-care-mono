@@ -1,6 +1,7 @@
 import { action } from './_generated/server';
 import { v } from 'convex/values';
 import Stripe from 'stripe';
+import { internal } from './_generated/api';
 
 /**
  * Create Stripe checkout session
@@ -26,6 +27,18 @@ export const createCheckoutSession = action({
     });
 
     try {
+      // Create or get user first so webhook can link subscription
+      const user = await ctx.runMutation(internal.model.users.ensureUserMutation, {
+        externalId: args.phoneNumber,
+        phone: args.phoneNumber,
+        channel: 'sms' as const,
+        locale: 'en-US',
+        metadata: {
+          email: args.email,
+          name: args.fullName,
+        },
+      });
+
       // Create checkout session
       const session = await stripe.checkout.sessions.create({
         mode: 'subscription',
@@ -37,6 +50,7 @@ export const createCheckoutSession = action({
         ],
         customer_email: args.email,
         metadata: {
+          userId: args.phoneNumber, // ← Pass externalId (phoneNumber) so webhook can find user
           fullName: args.fullName,
           phoneNumber: args.phoneNumber,
         },

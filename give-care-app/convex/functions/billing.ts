@@ -1,4 +1,4 @@
-import { mutation } from '../_generated/server';
+import { mutation, query } from '../_generated/server';
 import type { MutationCtx } from '../_generated/server';
 import { v } from 'convex/values';
 import * as Users from '../model/users';
@@ -141,6 +141,18 @@ export const refreshEntitlements = mutation({
     const plan = sub?.planId ?? 'free';
     const entitlements = PLAN_ENTITLEMENTS[plan] ?? PLAN_ENTITLEMENTS.free;
     return { plan, entitlements, validUntil: sub ? new Date(sub.currentPeriodEnd).toISOString() : undefined };
+  },
+});
+
+export const debugBillingEvents = query({
+  args: {},
+  handler: async (ctx) => {
+    const events = await ctx.db
+      .query('billing_events')
+      .order('desc')
+      .take(20);
+    const subscriptions = await ctx.db.query('subscriptions').collect();
+    return { events, subscriptions };
   },
 });
 

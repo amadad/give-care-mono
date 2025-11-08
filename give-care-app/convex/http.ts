@@ -79,7 +79,13 @@ http.route({
       try {
         event = stripe.webhooks.constructEvent(body, signature, webhookSecret);
       } catch (err) {
-        console.error('Stripe signature verification failed:', err);
+        console.error('[stripe-webhook] Signature verification failed:', {
+          error: err instanceof Error ? err.message : String(err),
+          hasSecret: !!webhookSecret,
+          secretPrefix: webhookSecret?.substring(0, 10),
+          hasSignature: !!signature,
+          bodyLength: body.length,
+        });
         return new Response('Invalid signature', { status: 403 });
       }
 
