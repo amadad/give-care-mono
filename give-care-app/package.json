@@ -8,7 +8,7 @@
   "scripts": {
     "dev": "convex dev",
     "deploy": "convex deploy",
-    "codegen": "convex codegen",
+    "codegen": "convex codegen --typecheck enable --once",
     "test": "vitest",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",

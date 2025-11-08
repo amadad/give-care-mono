@@ -28,12 +28,11 @@ interface AssessmentResultsProps {
 }
 
 export default function AssessmentResults({
-  email,
   score,
   band,
   interpretation,
   pressureZones = [],
-}: AssessmentResultsProps) {
+}: Omit<AssessmentResultsProps, 'email'>) {
   return (
     <Html>
       <Head />

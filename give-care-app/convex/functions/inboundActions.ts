@@ -1,11 +1,5 @@
 "use node";
 
-/**
- * Inbound Message Actions (Node.js)
- *
- * Handles async agent processing and Twilio SMS sending.
- */
-
 import { internalAction } from '../_generated/server';
 import { internal, api } from '../_generated/api';
 import { v } from 'convex/values';
@@ -20,9 +14,6 @@ const CRISIS_TERMS = [
   'hurt myself',
 ];
 
-/**
- * Generate response using Crisis Agent
- */
 // @ts-expect-error - Action return type inference
 export const generateCrisisResponse = internalAction({
   args: {

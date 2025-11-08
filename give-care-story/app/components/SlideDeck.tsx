@@ -1,9 +1,7 @@
 "use client";
 
-import { useState, useEffect, Suspense } from "react";
+import { useState,  Suspense } from "react";
 import { Loader2 } from "lucide-react";
-import { Slide } from "./Slide";
-import { useRouter, useSearchParams } from "next/navigation";
 
 interface SlideDeckProps {
   slides: React.ReactElement[];

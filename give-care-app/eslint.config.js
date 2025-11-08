@@ -9,7 +9,8 @@ export default tseslint.config(
       "convex/_generated/**",
       "dist/**",
       "node_modules/**",
-      "admin/vitest.config.ts"
+      "admin/vitest.config.ts",
+      "vitest.config.ts"
     ]
   },
   {

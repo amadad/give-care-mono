@@ -6,7 +6,6 @@ export default function Slide8() {
   // Focus on the advocacy gap - those needing support vs. professional advocates available
   const totalNeedingSupport = 129_000_000 + 53_000_000 + 32_900_000; // Chronic disease + caregivers + inpatient discharges (removing overlaps conceptually)
   const professionalAdvocates = 1_040 + 2_000 + 11_600; // BCPA + Independent + Hospital reps
-  const communitySupport = 63_400; // CHWs
   
   const advocacyGapData = [
     { 
@@ -25,8 +24,8 @@ export default function Slide8() {
 
   const RADIAN = Math.PI / 180;
   const renderCustomizedLabel = ({
-    cx, cy, midAngle, innerRadius, outerRadius, percent, value
-  }: any) => {
+    cx, cy, midAngle, innerRadius, outerRadius, percent
+  }: {cx: number; cy: number; midAngle: number; innerRadius: number; outerRadius: number; percent: number}) => {
     const radius = innerRadius + (outerRadius - innerRadius) * 0.5;
     const x = cx + radius * Math.cos(-midAngle * RADIAN);
     const y = cy + radius * Math.sin(-midAngle * RADIAN);
@@ -77,8 +76,8 @@ export default function Slide8() {
                     <Cell key={`cell-${index}`} fill={entry.color} />
                   ))}
                 </Pie>
-                <Tooltip 
-                  formatter={(value: any) => [value.toLocaleString(), 'People']}
+                <Tooltip
+                  formatter={(value: number) => [value.toLocaleString(), 'People']}
                   contentStyle={{ 
                     backgroundColor: 'rgba(255,255,255,0.95)', 
                     border: '1px solid #D97706',

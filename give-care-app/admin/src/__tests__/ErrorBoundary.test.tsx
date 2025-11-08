@@ -186,7 +186,7 @@ describe('ErrorBoundary route integration', () => {
     const ThrowInFirst = () => <ThrowError shouldThrow={true} />
     const SafeSecond = () => <div>Safe content</div>
 
-    const { container } = render(
+    render(
       <div>
         <ErrorBoundary>
           <ThrowInFirst />

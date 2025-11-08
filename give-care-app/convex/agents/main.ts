@@ -46,21 +46,21 @@ const agentContextValidator = v.object({
 });
 
 // Tool: Search for local caregiving resources using Google Maps
-// @ts-ignore - Type instantiation depth issue with Zod/AI SDK integration
+// @ts-expect-error - Type instantiation depth issue with Zod/AI SDK integration
 const searchResourcesTool = createTool({
   args: z.object({
     query: z.string().describe('Natural language query for caregiving resources (e.g., "respite care near me", "support groups")'),
     category: z.string().optional().describe('Optional category: respite, support, daycare, homecare, medical, community, meals, transport, hospice, memory'),
   }),
   description: 'Search for local caregiving resources using Google Maps. Returns nearby services like respite care, support groups, adult day care, home health agencies, and community resources with addresses, hours, and reviews.',
-  // @ts-ignore - ToolCtx type and return type inference
+  // @ts-expect-error - ToolCtx type and return type inference
   handler: async (ctx, args: { query: string; category?: string }) => {
     // Get user metadata to extract location
-    // @ts-ignore - metadata property exists at runtime
+    // @ts-expect-error - metadata property exists at runtime
     const contextData = ctx.metadata as { context?: { metadata?: Record<string, unknown> } };
     const userMetadata = contextData?.context?.metadata || {};
 
-    // @ts-ignore - runAction return type
+    // @ts-expect-error - runAction return type
     const result = await ctx.runAction(api.functions.resources.searchResources, {
       query: args.query,
       metadata: userMetadata,
@@ -81,13 +81,13 @@ const searchResourcesTool = createTool({
   },
 });
 
-// @ts-ignore - Agent type inference with tools
+// @ts-expect-error - Agent type inference with tools
 const mainAgent = new Agent(components.agent, {
   name: 'Caregiver Support',
   // @ts-expect-error - LanguageModelV1/V2 type mismatch between AI SDK versions
   languageModel: openai.chat('gpt-5-nano'),
   instructions: 'You are a compassionate AI caregiver assistant providing empathetic support and practical advice.',
-  // @ts-ignore - Tool array type inference
+  // @ts-expect-error - Tool array type inference
   tools: [searchResourcesTool],
   maxSteps: 3, // Limit tool call iterations for faster responses
 });
@@ -101,7 +101,7 @@ const mainAgent = new Agent(components.agent, {
  * @param context - User context including profile
  * @returns Stream of response chunks
  */
-// @ts-ignore - Action return type inference
+// @ts-expect-error - Action return type inference
 export const runMainAgent = action({
   args: {
     input: v.object({
@@ -112,7 +112,7 @@ export const runMainAgent = action({
     context: agentContextValidator,
     threadId: v.optional(v.string()),
   },
-  // @ts-ignore - Handler return type inference
+  // @ts-expect-error - Handler return type inference
   handler: async (ctx, { input, context, threadId }) => {
     const startTime = Date.now();
 
@@ -161,7 +161,7 @@ export const runMainAgent = action({
       };
 
       if (threadId) {
-        // @ts-ignore - Agent thread type inference
+        // @ts-expect-error - Agent thread type inference
         const threadResult = await mainAgent.continueThread(ctx, {
           threadId,
           userId: context.userId,
@@ -170,7 +170,7 @@ export const runMainAgent = action({
         thread = threadResult.thread;
         newThreadId = threadId;
       } else {
-        // @ts-ignore - Agent thread type inference
+        // @ts-expect-error - Agent thread type inference
         const threadResult = await mainAgent.createThread(ctx, {
           userId: context.userId,
           metadata: threadMetadata,
@@ -179,7 +179,7 @@ export const runMainAgent = action({
         newThreadId = threadResult.threadId;
       }
 
-      // @ts-ignore - Thread response type inference
+      // @ts-expect-error - Thread response type inference
       const result = await thread.generateText({
         prompt: input.text,
         system: systemPrompt, // Override default instructions

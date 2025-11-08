@@ -7,7 +7,7 @@ export interface ComponentTree {
   previewText: string;
   components: Array<{
     type: string;
-    props: any;
+    props: Record<string, unknown>;
   }>;
 }
 
@@ -32,7 +32,7 @@ export async function renderEmailFromTree(tree: ComponentTree): Promise<string> 
   } = EmailComponents;
 
   // Component type map
-  const componentMap: Record<string, any> = {
+  const componentMap: Record<string, React.ComponentType<Record<string, unknown>>> = {
     EmailSection,
     ValidationBlock,
     ScoreCard,

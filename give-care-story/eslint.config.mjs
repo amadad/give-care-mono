@@ -2,7 +2,6 @@
 
 import eslint from '@eslint/js';
 import tseslint from 'typescript-eslint';
-import convexPlugin from "@convex-dev/eslint-plugin";
 
 export default tseslint.config(
   {
@@ -10,14 +9,9 @@ export default tseslint.config(
       '.next/**',
       'out/**',
       'node_modules/**',
-      '.contentlayer/**',
-      'convex/_generated/**',
       '*.config.*',
-      'lighthouserc.js',
-      'types/**/*.d.ts'
     ],
   },
   eslint.configs.recommended,
   ...tseslint.configs.recommended,
-  ...convexPlugin.configs.recommended,
 );

@@ -4,14 +4,7 @@ import { api, internal } from './_generated/api';
 
 const http = httpRouter();
 
-/**
- * Stripe Webhook Handler
- *
- * Receives Stripe webhook events and processes them.
- *
- * TODO: Add Stripe signature verification using STRIPE_WEBHOOK_SECRET
- * See: https://stripe.com/docs/webhooks/signatures
- */
+// Stripe webhook - TODO: Add signature verification (STRIPE_WEBHOOK_SECRET)
 http.route({
   path: '/webhooks/stripe',
   method: 'POST',
@@ -24,12 +17,6 @@ http.route({
         data?: { object?: unknown };
         [key: string]: unknown;
       };
-
-      // TODO: Verify Stripe signature
-      // const signature = request.headers.get('stripe-signature');
-      // if (!signature || !verifyStripeSignature(body, signature)) {
-      //   return new Response('Invalid signature', { status: 401 });
-      // }
 
       await ctx.runMutation(api.functions.billing.applyStripeEvent, {
         id: event.id,

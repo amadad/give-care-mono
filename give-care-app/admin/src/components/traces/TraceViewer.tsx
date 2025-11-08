@@ -57,7 +57,7 @@ type ExecutionTrace = {
 
 interface TraceViewerProps {
   trace: ExecutionTrace
-  conversationId: string
+  _conversationId: string
 }
 
 const getSpanIcon = (type: string) => {
@@ -124,7 +124,7 @@ const getStatusIcon = (status: string) => {
   }
 }
 
-export function TraceViewer({ trace, conversationId }: TraceViewerProps) {
+export function TraceViewer({ trace, conversationId: _conversationId }: TraceViewerProps) {
   const [expandedSpans, setExpandedSpans] = useState<Set<string>>(new Set())
 
   const toggleSpan = (spanId: string) => {
@@ -223,7 +223,7 @@ export function TraceViewer({ trace, conversationId }: TraceViewerProps) {
 
         {/* Linear Span Timeline */}
         <div className="space-y-2">
-          {trace.spans.map((span, index) => {
+          {trace.spans.map((span, _index) => {
             const isExpanded = expandedSpans.has(span.id)
             const error = getSpanError(span.id)
             const timePercentage = getTimePercentage(span.durationMs)

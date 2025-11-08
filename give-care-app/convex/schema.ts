@@ -70,7 +70,9 @@ export default defineSchema({
     lastAssessment: v.optional(lastAssessmentValidator),
     crisisFlags: v.optional(crisisFlagsValidator),
     lastSeen: v.number(),
-  }).index('by_user_channel', ['userId', 'channel']),
+  })
+    .index('by_user_channel', ['userId', 'channel'])
+    .index('by_lastSeen', ['lastSeen']), // For active user metrics
 
   messages: defineTable({
     userId: v.id('users'),

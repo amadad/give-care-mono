@@ -28,7 +28,7 @@ type ConversationEntry = {
 };
 
 const DAY_MS = 86_400_000;
-const WEEK_MS = DAY_MS * 7;
+const _WEEK_MS = DAY_MS * 7;
 
 const loadSessionForUser = async (ctx: QueryCtx, user: Doc<'users'>) => {
   // Skip users without a channel
@@ -103,7 +103,7 @@ const percentile = (values: number[], target: number) => {
   return sorted[rank];
 };
 
-const computeSubscriptionBreakdown = (subscriptions: Doc<'subscriptions'>[], totalUsers: number) => {
+const _computeSubscriptionBreakdown = (subscriptions: Doc<'subscriptions'>[], totalUsers: number) => {
   const breakdown = {
     active: 0,
     incomplete: 0,

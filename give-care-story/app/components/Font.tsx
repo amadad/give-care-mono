@@ -6,13 +6,18 @@ interface FontProps {
   size?: number;
 }
 
+interface CharDefinition {
+  width: number;
+  render: (color: string) => JSX.Element;
+}
+
 export function Font({
   text = "ANTIWORK",
   color = "#000000",
   size = 176,
 }: FontProps) {
   // Character definitions using SVG and width
-  const charDefinitions: any = {
+  const charDefinitions: Record<string, CharDefinition> = {
     A: {
       width: 212,
       render: (color: string) => (

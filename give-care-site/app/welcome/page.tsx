@@ -1,14 +1,12 @@
 'use client';
 
-import { Suspense, useEffect, useState } from 'react';
+import { Suspense, useEffect } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Link from "next/link";
 
 function WelcomeContent() {
   const searchParams = useSearchParams();
   const sessionId = searchParams.get('session_id');
-  const [phoneNumber, setPhoneNumber] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     // Fetch session details to get phone number

@@ -1,5 +1,5 @@
 import { ReactNode } from "react";
-import { useTheme } from "next-themes";
+// import { useTheme } from "next-themes";
 
 interface SlideProps {
   id: number;

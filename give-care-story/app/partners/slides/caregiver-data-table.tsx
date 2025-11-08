@@ -6,12 +6,12 @@ import {
 } from "../../components/ui/chart";
 import { SlideLayout, CenteredContent, SlideTitle } from "../../components/slides";
 
-const CustomTooltip = ({ active, payload, label }: any) => {
+const CustomTooltip = ({ active, payload, label }: {active?: boolean; payload?: Array<{color: string; value: number; name: string}>; label?: string}) => {
   if (active && payload && payload.length) {
     return (
       <div className="bg-white border border-amber-200 rounded-lg p-3 shadow-lg">
         <p className="font-heading text-sm text-amber-900 mb-2">{label}</p>
-        {payload.map((entry: any, index: number) => (
+        {payload.map((entry, index: number) => (
           <div key={index} className="flex items-center gap-2">
             <div 
               className="w-3 h-3 rounded-sm" 

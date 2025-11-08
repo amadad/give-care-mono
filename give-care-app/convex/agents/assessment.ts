@@ -45,9 +45,8 @@ const agentContextValidator = v.object({
 });
 
 // Tool: Get evidence-based interventions by pressure zones
-// @ts-ignore - Type instantiation depth issue with Zod/AI SDK integration
+// @ts-expect-error - Type instantiation depth issue with Zod/AI SDK integration
 const getInterventionsTool = createTool({
-  // @ts-expect-error - Type instantiation depth issue with Zod/AI SDK integration
   args: z.object({
     zones: z.array(z.string()).describe('Pressure zones from BSFC assessment'),
     minEvidenceLevel: z.string().optional().describe('Minimum evidence level (default: moderate)'),

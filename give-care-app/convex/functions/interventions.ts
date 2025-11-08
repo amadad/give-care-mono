@@ -1,12 +1,7 @@
 import { query, mutation } from '../_generated/server';
 import { v } from 'convex/values';
 
-/**
- * Get interventions filtered by target zones and evidence level
- *
- * Used by assessment agent to recommend evidence-based interventions
- * based on user's pressure zones from BSFC assessment
- */
+// Get interventions by BSFC pressure zones for assessment agent
 export const getByZones = query({
   args: {
     zones: v.array(v.string()),
@@ -17,31 +12,22 @@ export const getByZones = query({
     const evidenceOrder = { high: 3, moderate: 2, low: 1 };
     const minLevel = minEvidenceLevel ? evidenceOrder[minEvidenceLevel] : 1;
 
-    // Get all interventions matching any of the target zones
     // Safe to use .collect() here: interventions table is small (~20 entries, bounded by seed data)
     const allInterventions = await ctx.db
       .query('interventions')
       .collect();
 
-    // Filter by zones and evidence level
     const matching = allInterventions
       .filter(intervention => {
-        // Check if intervention targets any of the requested zones
         const hasMatchingZone = intervention.targetZones.some(zone => zones.includes(zone));
-
-        // Check evidence level threshold
         const interventionLevel = evidenceOrder[intervention.evidenceLevel as keyof typeof evidenceOrder] || 0;
         const meetsEvidence = interventionLevel >= minLevel;
-
         return hasMatchingZone && meetsEvidence;
       })
-      // Sort by evidence level (high first), then by number of matching zones
       .sort((a, b) => {
         const aLevel = evidenceOrder[a.evidenceLevel as keyof typeof evidenceOrder] || 0;
         const bLevel = evidenceOrder[b.evidenceLevel as keyof typeof evidenceOrder] || 0;
         if (aLevel !== bLevel) return bLevel - aLevel;
-
-        // Secondary sort: more matching zones first
         const aMatches = a.targetZones.filter(z => zones.includes(z)).length;
         const bMatches = b.targetZones.filter(z => zones.includes(z)).length;
         return bMatches - aMatches;
@@ -158,10 +144,13 @@ export const getUserHistory = query({
 
     if (!user) return [];
 
+    // User event history: using .take(100) to bound results per user
+    // Most users will have <100 events; for power users, show most recent
     const events = await ctx.db
       .query('intervention_events')
       .withIndex('by_user', (q) => q.eq('userId', user._id))
-      .collect();
+      .order('desc')
+      .take(100);
 
     return events;
   },

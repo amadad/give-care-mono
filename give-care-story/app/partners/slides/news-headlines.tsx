@@ -1,7 +1,7 @@
 "use client"
 
 import Image from "next/image"
-import { SlideLayout, SlideTitle } from "../../components/slides"
+import { SlideLayout } from "../../components/slides"
 
 export default function NewsHeadlines() {
   return (

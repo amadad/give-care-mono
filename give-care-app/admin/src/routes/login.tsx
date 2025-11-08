@@ -33,7 +33,7 @@ function LoginPage() {
       })
 
       // Redirect to dashboard on success
-      navigate({ to: '/' })
+      void navigate({ to: '/' })
     } catch (err: any) {
       console.error("Auth error:", err)
       setError(err.message || "Authentication failed. Please try again.")

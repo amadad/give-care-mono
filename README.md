@@ -44,6 +44,39 @@ cd give-care-site && pnpm dev
 cd give-care-story && pnpm dev
 ```
 
+### Convex Type Generation
+
+The backend uses Convex for database and serverless functions. After any changes to `convex/schema.ts` or `convex/functions/*.ts`, regenerate types:
+
+```bash
+cd give-care-app
+pnpm codegen
+```
+
+**When to run codegen:**
+- After modifying `convex/schema.ts` (database schema)
+- After adding/modifying functions in `convex/functions/`
+- After adding/modifying internal functions in `convex/internal/`
+- When TypeScript errors about missing `_generated` types
+- Before committing Convex changes
+
+**Important:**
+- Always commit `convex/_generated/*` files to git
+- The marketing site (give-care-site) imports these types
+- Admin dashboard prebuild automatically runs codegen
+
+**Troubleshooting:**
+```bash
+# If types seem stale
+rm -rf convex/_generated
+pnpm codegen
+
+# Verify types are up to date
+npx tsc --noEmit
+```
+
+See [give-care-app/docs/convex.md](./give-care-app/docs/convex.md) for complete Convex development guidelines.
+
 ## 📦 Project Structure
 
 ```

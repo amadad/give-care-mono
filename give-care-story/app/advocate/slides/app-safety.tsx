@@ -1,7 +1,6 @@
 "use client"
 
 import dynamic from "next/dynamic"
-import { useEffect } from "react"
 
 const Mermaid = dynamic<{ chart: string }>(
   () => import("../../components/ui/mermaid").then((mod) => mod.default),

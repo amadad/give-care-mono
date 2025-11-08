@@ -10,12 +10,12 @@ import {
   CommandItem,
   CommandList,
 } from '@/components/ui/command'
-import { Search, User, LayoutDashboard, Users, AlertTriangle, BarChart3, Activity, GitBranch } from 'lucide-react'
+import { User, LayoutDashboard, Users, AlertTriangle, BarChart3, Activity, GitBranch } from 'lucide-react'
 import { useDebounce } from '@/hooks/useDebounce'
 
 interface SearchCommandProps {
   open: boolean
-  onOpenChange: (open: boolean) => void
+  onOpenChange: (_open: boolean) => void
 }
 
 export function SearchCommand({ open, onOpenChange }: SearchCommandProps) {

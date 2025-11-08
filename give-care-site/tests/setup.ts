@@ -23,7 +23,7 @@ vi.mock('next/navigation', () => ({
 
 // Mock Next.js Image
 vi.mock('next/image', () => ({
-  default: (props: any) => props,
+  default: (props: Record<string, unknown>) => props,
 }))
 
 // Mock environment variables

@@ -14,6 +14,7 @@ const router = createRouter({ routeTree })
 
 // Register types for TypeScript
 declare module '@tanstack/react-router' {
+  // eslint-disable-next-line no-unused-vars
   interface Register {
     router: typeof router
   }

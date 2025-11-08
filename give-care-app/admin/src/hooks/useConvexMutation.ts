@@ -3,12 +3,12 @@ import { useMutation } from 'convex/react'
 import { FunctionReference } from 'convex/server'
 
 interface UseConvexMutationOptions<TResult> {
-  onSuccess?: (result: TResult) => void
-  onError?: (error: Error) => void
+  onSuccess?: (_result: TResult) => void
+  onError?: (_error: Error) => void
 }
 
 interface UseConvexMutationResult<TArgs, TResult> {
-  mutate: (args: TArgs) => Promise<TResult>
+  mutate: (_args: TArgs) => Promise<TResult>
   isLoading: boolean
   error: Error | null
 }

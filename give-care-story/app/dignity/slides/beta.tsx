@@ -5,8 +5,6 @@ import { Pie, PieChart, Cell } from "recharts"
 import {
   ChartConfig,
   ChartContainer,
-  ChartLegend,
-  ChartLegendContent,
 } from "@/app/components/ui/chart"
 
 const chartData = [
@@ -76,7 +74,7 @@ export default function Slide11() {
                 outerRadius="80%"
                 startAngle={90}
                 endAngle={-270}
-                label={({ name, percent }) => `${(percent * 100).toFixed(0)}%`}
+                label={({ percent }) => `${(percent * 100).toFixed(0)}%`}
                 fontSize={18}
                 labelLine={false}
                 isAnimationActive={true}

@@ -1,5 +1,3 @@
-import Image from "next/image";
-import { useRouter } from 'next/navigation';
 import { SlideLayout, CenteredContent, SlideTitle, SlideBody } from "../../components/slides";
 
 interface StatCard {
