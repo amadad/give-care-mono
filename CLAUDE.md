@@ -17,7 +17,8 @@ AI-powered SMS caregiving platform (pnpm workspace)
 
 ```
 givecare/
-├── give-care-app/       # Convex backend + Twilio SMS + admin dashboard
+├── give-care-app/       # Convex backend + Twilio SMS
+├── give-care-admin/     # Admin dashboard (Vite + React)
 ├── give-care-site/      # Next.js 16 marketing site
 ├── give-care-story/     # Next.js presentations
 └── give-care-etl/       # Cloudflare Workers resource pipeline
@@ -26,12 +27,13 @@ givecare/
 ## Quick Start
 
 ```bash
-pnpm install                           # Install all workspaces
+pnpm install                                # Install all workspaces
 
 # Dev servers
-pnpm --filter give-care-app dev       # Backend (generates types first!)
-pnpm --filter give-care-site dev      # Marketing site
-pnpm --filter give-care-story dev     # Presentations
+pnpm --filter give-care-app dev            # Backend (generates types first!)
+pnpm --filter give-care-admin-dashboard dev # Admin dashboard
+pnpm --filter give-care-site dev           # Marketing site
+pnpm --filter give-care-story dev          # Presentations
 ```
 
 ## give-care-app (Backend)
@@ -49,6 +51,22 @@ pnpm --filter give-care-story dev     # Presentations
 - No harness tokens required - Convex-native architecture
 
 **Docs**: See `give-care-app/docs/CLAUDE.md`
+
+## give-care-admin (Admin Dashboard)
+
+**Tech**: Vite, React 19, TanStack Router, Convex React, Tailwind CSS 4, shadcn/ui
+
+**Architecture**: Frontend-only dashboard consuming Convex backend
+
+**Key Patterns**:
+- Imports Convex types from `give-care-app/convex/_generated/`
+- Uses `@convex-dev/auth` for authentication
+- TanStack Router for file-based routing
+- shadcn/ui components for UI
+
+**Build**: CI/CD handled by `scripts/setup-convex.js` prebuild
+
+**Docs**: See `give-care-admin/README.md`
 
 ## give-care-site (Marketing)
 
@@ -92,11 +110,13 @@ pnpm --filter give-care-story dev     # Presentations
 See `.env.example` in each project. Never commit secrets.
 
 **give-care-app**: `CONVEX_DEPLOYMENT`, `OPENAI_API_KEY`, `TWILIO_*`, `STRIPE_SECRET_KEY`
+**give-care-admin**: `VITE_CONVEX_URL`
 **give-care-site**: `NEXT_PUBLIC_CONVEX_URL`, `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY`, `RESEND_API_KEY`
 
 ## Project-Specific Docs
 
 - `give-care-app/docs/` - Architecture, taxonomy, development guides
+- `give-care-admin/README.md` - Admin dashboard setup and development
 - `give-care-site/CLAUDE.md` - Component patterns, design system
 - `give-care-story/CLAUDE.md` - Presentation guidelines
 - `give-care-etl/CLAUDE.md` - ETL pipeline architecture
