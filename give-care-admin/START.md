@@ -9,7 +9,7 @@ All code generated! You can see it working in **3 simple steps**.
 ### Step 1: Run Setup Script
 
 ```bash
-cd /Users/amadad/Projects/givecare/give-care-app/admin
+cd /Users/amadad/Projects/givecare/give-care-admin
 ./SETUP.sh
 ```
 
@@ -46,7 +46,7 @@ npx convex dev
 
 **Terminal 2** - Vite:
 ```bash
-cd /Users/amadad/Projects/givecare/give-care-app/admin
+cd /Users/amadad/Projects/givecare/give-care-admin
 npm run dev
 ```
 
@@ -121,7 +121,7 @@ admin/
 │   │       └── AgentPerformance.tsx      Agent stats
 │   └── lib/
 │       └── utils.ts                      Helpers
-├── convex/ → ../convex (symlink)         Backend functions
+├── convex/_generated/ → ../give-care-app/convex/_generated (via alias)  Backend types
 ├── package.json                          Dependencies
 ├── vite.config.ts                        Vite config
 ├── tsconfig.json                         TypeScript config
@@ -173,36 +173,28 @@ admin/
 
 Once local dev works:
 
-### 1. Push to GitHub
+### 1. Deploy on Cloudflare Pages
 
-```bash
-cd /Users/amadad/Projects/givecare/give-care-app/admin
-git init
-git add .
-git commit -m "Initial admin dashboard"
-git remote add origin https://github.com/YOUR_USERNAME/give-care-admin-dashboard.git
-git push -u origin main
-```
-
-### 2. Deploy on Cloudflare
+The admin dashboard is part of the give-care-mono monorepo.
 
 1. Go to https://dash.cloudflare.com → Pages
 2. "Create application" → "Connect to Git"
-3. Select your repo
+3. Select `give-care-mono` repository
 4. Build settings:
-   - **Build command**: `npm run build`
-   - **Build output directory**: `dist`
+   - **Build command**: `pnpm install && pnpm --filter give-care-admin-dashboard build`
+   - **Build output directory**: `give-care-admin/dist`
+   - **Root directory**: `/` (monorepo root)
    - **Environment variable**: `VITE_CONVEX_URL` = `https://YOUR_DEPLOYMENT.convex.cloud`
 5. "Save and Deploy"
 
-### 3. Custom Domain
+### 2. Custom Domain
 
 1. Pages → Custom domains → "Set up a custom domain"
-2. Enter: `admin.givecare.app`
+2. Enter: `admin.givecareapp.com`
 3. Cloudflare will auto-configure DNS (if domain on Cloudflare)
 4. SSL certificate provisioned automatically
 
-**Done!** Your dashboard will be live at `https://admin.givecare.app`
+**Done!** Your dashboard will be live at `https://admin.givecareapp.com`
 
 ---
 
@@ -227,7 +219,7 @@ git push -u origin main
 
 **Ready to see it?** Run:
 ```bash
-cd /Users/amadad/Projects/givecare/give-care-app/admin
+cd /Users/amadad/Projects/givecare/give-care-admin
 ./SETUP.sh
 ```
 

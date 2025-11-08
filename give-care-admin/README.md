@@ -17,7 +17,7 @@ Real-time admin dashboard for GiveCare built with:
 ### 1. Navigate to Project
 
 ```bash
-cd /Users/amadad/Projects/givecare/give-care-app/admin
+cd /Users/amadad/Projects/givecare/give-care-admin
 ```
 
 ### 2. Install Dependencies
@@ -82,7 +82,7 @@ Create `.env.local`:
 
 ```bash
 # Get Convex URL from:
-# cd ../give-care-type && npx convex dashboard
+# cd ../give-care-app && npx convex dashboard
 # Copy deployment URL (e.g., https://YOUR_DEPLOYMENT.convex.cloud)
 
 VITE_CONVEX_URL=https://YOUR_DEPLOYMENT.convex.cloud
@@ -91,13 +91,13 @@ VITE_CONVEX_URL=https://YOUR_DEPLOYMENT.convex.cloud
 ### 6. Start Development Server
 
 ```bash
-# In one terminal: Start Convex (from give-care-type)
-cd /Users/amadad/Projects/givecare/give-care-type
+# In one terminal: Start Convex backend
+cd /Users/amadad/Projects/givecare/give-care-app
 npx convex dev
 
-# In another terminal: Start Vite
-cd /Users/amadad/Projects/givecare/give-care-app/admin
-npm run dev
+# In another terminal: Start Vite dev server
+cd /Users/amadad/Projects/givecare/give-care-admin
+pnpm dev
 ```
 
 Open http://localhost:5173
@@ -129,7 +129,7 @@ admin/
 │   │       └── MetricCard.tsx        # ✅ KPI cards
 │   └── lib/
 │       └── utils.ts                  # ✅ Helper functions
-├── convex/                           # Symlink to ../give-care-type/convex
+├── convex/_generated/                # Imported from ../give-care-app/convex/_generated
 ├── public/
 ├── index.html
 ├── vite.config.ts
@@ -164,21 +164,21 @@ admin/
    - Search by name/phone
    - Pagination
 
-2. **User Detail** (`src/routes/users/$userId.tsx`)
+2. **User Detail** (`src/routes/users/$userId.tsx`) ✅ Complete
    - Wellness chart (Recharts)
    - Conversation history
    - Assessment history
 
-3. **Crisis Management** (`src/routes/crisis.tsx`)
+3. **Crisis Management** (`src/routes/crisis.tsx`) ✅ Complete
    - Crisis alerts (burnout ≥80)
    - Pending follow-ups with timers
 
-4. **Analytics** (`src/routes/analytics.tsx`)
+4. **Analytics** (`src/routes/analytics.tsx`) ✅ Complete
    - Tab 1: Usage (burnout histogram, user funnel, SMS trends)
    - Tab 2: Quality (eval scores, feedback table)
    - Tab 3: Performance (agent latency)
 
-5. **System Health** (`src/routes/system.tsx`)
+5. **System Health** (`src/routes/system.tsx`) ✅ Complete
    - Rate limiter status
    - API usage
    - Database performance
@@ -317,35 +317,24 @@ Tell me "continue generating code" and I'll create:
 
 ## Deployment (Cloudflare Pages)
 
-Once local dev works:
+The admin dashboard is part of the givecare monorepo and deploys from the root.
 
-1. **Initialize Git**:
-```bash
-git init
-git add .
-git commit -m "Initial admin dashboard"
-```
-
-2. **Push to GitHub**:
-```bash
-# Create new repo on GitHub first
-git remote add origin https://github.com/YOUR_USERNAME/give-care-admin-dashboard.git
-git push -u origin main
-```
-
-3. **Deploy to Cloudflare Pages**:
-   - Go to https://dash.cloudflare.com
-   - Pages → Create application → Connect to Git
-   - Select your repo
+1. **Configure Cloudflare Pages Project**:
+   - Go to https://dash.cloudflare.com → Pages
+   - Create application → Connect to Git
+   - Select `give-care-mono` repository
    - Build settings:
-     - Build command: `npm run build`
-     - Build output directory: `dist`
-     - Environment variables: `VITE_CONVEX_URL`
+     - **Framework preset**: None (Vite)
+     - **Build command**: `pnpm install && pnpm --filter give-care-admin-dashboard build`
+     - **Build output directory**: `give-care-admin/dist`
+     - **Root directory**: `/` (leave empty for monorepo root)
+     - **Environment variables**:
+       - `VITE_CONVEX_URL` = `https://YOUR_DEPLOYMENT.convex.cloud`
    - Deploy!
 
-4. **Custom Domain**:
+2. **Custom Domain**:
    - Pages → Custom domains → Set up domain
-   - Add `admin.givecare.app`
+   - Add `admin.givecareapp.com`
    - Configure DNS (automatic if domain on Cloudflare)
 
 ---
@@ -356,7 +345,7 @@ git push -u origin main
 - **Solution**: Run `npx shadcn@latest add button`
 
 **Problem**: Convex types not found
-- **Solution**: Create symlink: `ln -s ../give-care-type/convex ./convex`
+- **Solution**: Ensure vite.config.ts alias points to: `../give-care-app/convex/_generated`
 
 **Problem**: Import alias '@/' not working
 - **Solution**: Check vite.config.ts has alias configured

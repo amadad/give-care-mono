@@ -4,11 +4,12 @@ AI-powered SMS/RCS caregiving support platform built with TypeScript, Convex, an
 
 ## 🏗️ Architecture
 
-This monorepo contains 4 core applications:
+This monorepo contains 5 core applications:
 
 | App | Description | Tech Stack | Status |
 |-----|-------------|------------|--------|
-| **give-care-app** | Multi-agent SMS backend + admin dashboard | TypeScript, Convex, OpenAI Agents SDK | ✅ Production (v0.8.2) |
+| **give-care-app** | Multi-agent SMS backend | TypeScript, Convex, OpenAI Agents SDK | ✅ Production (v0.8.2) |
+| **give-care-admin** | Real-time admin dashboard | Vite, React 19, TanStack Router | ✅ Stable |
 | **give-care-site** | Marketing website | Next.js 15, Tailwind CSS v4 | 🚧 Active development |
 | **give-care-story** | Presentation system | Next.js 15, Framer Motion | ✅ Stable (v1.0.0) |
 | **give-care-etl** | Resource discovery ETL pipeline | Cloudflare Workers, OpenAI Agents SDK | 🚧 In progress (v0.1.0) |
@@ -34,8 +35,11 @@ pnpm install
 ### Development
 
 ```bash
-# Backend + Admin Dashboard
+# Backend
 cd give-care-app && npx convex dev
+
+# Admin Dashboard
+cd give-care-admin && pnpm dev
 
 # Marketing Website
 cd give-care-site && pnpm dev
@@ -62,8 +66,8 @@ pnpm codegen
 
 **Important:**
 - Always commit `convex/_generated/*` files to git
-- The marketing site (give-care-site) imports these types
-- Admin dashboard prebuild automatically runs codegen
+- The marketing site (give-care-site) and admin dashboard (give-care-admin) import these types
+- Admin dashboard prebuild automatically runs codegen if types are missing
 
 **Troubleshooting:**
 ```bash
@@ -81,21 +85,23 @@ See [give-care-app/docs/convex.md](./give-care-app/docs/convex.md) for complete 
 
 ```
 givecare/
-├── give-care-app/          # Backend + admin (531 MB)
-│   ├── src/                 # Multi-agent system
-│   ├── convex/             # Serverless database
-│   ├── admin-frontend/     # Admin dashboard
-│   ├── tests/              # 179 passing tests
-│   └── docs/               # Comprehensive documentation
-├── give-care-site/         # Marketing (1.8 GB)
+├── give-care-app/          # Backend (Convex + Twilio)
+│   ├── convex/             # Serverless functions & schema
+│   ├── tests/              # 235+ passing tests
+│   └── docs/               # Architecture documentation
+├── give-care-admin/        # Admin dashboard (Vite + React)
+│   ├── src/routes/         # TanStack Router pages
+│   ├── src/components/     # UI components (shadcn/ui)
+│   └── scripts/            # Build scripts
+├── give-care-site/         # Marketing website (Next.js)
 │   ├── app/                # Next.js App Router
 │   ├── components/         # UI components
 │   └── content/            # MDX blog posts
-├── give-care-story/        # Presentations (989 MB)
-│   ├── app/                # Next.js App Router
+├── give-care-story/        # Presentations (Next.js)
+│   ├── app/                # Slide decks
 │   └── components/slides/  # Slide component library
-├── give-care-etl/          # ETL pipeline
-│   ├── src/agents/         # 5 specialized agents
+├── give-care-etl/          # Resource discovery pipeline
+│   ├── src/agents/         # 5 specialized AI agents
 │   └── src/schemas/        # Zod validation schemas
 ├── package.json            # Workspace root
 └── pnpm-workspace.yaml     # Workspace config
@@ -115,7 +121,7 @@ givecare/
 - 4 clinical assessments (EMA, CWBS, REACH-II, SDOH)
 - Composite burnout scoring (0-100)
 - 5 pressure zones with 20 interventions
-- Admin dashboard at https://dash.givecareapp.com
+- Real-time metrics API for admin dashboard
 
 ### give-care-site (Marketing)
 - **Next.js 15.3.2** - React framework with App Router
@@ -123,6 +129,14 @@ givecare/
 - **MDX** - Markdown + JSX for blog content
 - **Framer Motion** - Animations
 - **Vitest + Playwright** - Testing
+
+### give-care-admin (Admin Dashboard)
+- **Vite 5** - Fast frontend build tool
+- **React 19** - Latest React with concurrent features
+- **TanStack Router** - Type-safe file-based routing
+- **shadcn/ui** - Accessible component library
+- **Recharts** - Analytics visualizations
+- **Convex React** - Real-time data subscriptions
 
 ### give-care-story (Presentations)
 - **Next.js 15.1** - Static slide generation
@@ -188,9 +202,10 @@ pnpm --recursive test               # Test all projects
 
 ### Development
 ```bash
-pnpm --filter give-care-app dev     # Backend dev server
-pnpm --filter give-care-site dev    # Marketing dev server
-pnpm --filter give-care-story dev   # Presentation dev server
+pnpm --filter give-care-app dev              # Backend dev server
+pnpm --filter give-care-admin-dashboard dev  # Admin dashboard dev server
+pnpm --filter give-care-site dev             # Marketing dev server
+pnpm --filter give-care-story dev            # Presentation dev server
 ```
 
 ### Cleaning
@@ -210,6 +225,9 @@ Each project requires its own `.env.local` file (never committed):
 - `TWILIO_ACCOUNT_SID` / `TWILIO_AUTH_TOKEN` - Twilio credentials
 - `STRIPE_SECRET_KEY` - Stripe secret key
 
+**give-care-admin**:
+- `VITE_CONVEX_URL` - Convex deployment URL (e.g., https://xxx.convex.cloud)
+
 **give-care-site**:
 - `NEXT_PUBLIC_CONVEX_URL` - Convex URL (public)
 - `NEXT_PUBLIC_SUPABASE_URL` / `NEXT_PUBLIC_SUPABASE_ANON_KEY` - Supabase
@@ -223,6 +241,7 @@ See `.env.example` in each project directory.
 | Project | Version | Tests | Status |
 |---------|---------|-------|--------|
 | give-care-app | 0.8.2 | 235+ passing | ✅ Production |
+| give-care-admin | 0.1.0 | In progress | ✅ Stable |
 | give-care-site | 0.1.0 | Active dev | 🚧 Development |
 | give-care-story | 1.0.0 | N/A | ✅ Stable |
 | give-care-etl | 0.1.0 | In progress | 🚧 Development |
@@ -257,7 +276,7 @@ See `.env.example` in each project directory.
 
 ## 🔗 Links
 
-- **Admin Dashboard**: https://dash.givecareapp.com
+- **Admin Dashboard**: https://admin.givecareapp.com (Cloudflare Pages)
 - **Marketing Site**: TBD
 - **Convex Console**: https://dashboard.convex.dev
 
@@ -267,4 +286,4 @@ Proprietary - GiveCare Platform
 
 ---
 
-**Last Updated**: 2025-10-14 (Monorepo consolidation to 3 apps)
+**Last Updated**: 2025-11-08 (Admin dashboard moved to root level)
