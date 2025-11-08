@@ -165,9 +165,6 @@ importers:
       convex:
         specifier: ^1.11.0
         version: 1.28.2(react@19.2.0)
-      luxon:
-        specifier: ^3.4.4
-        version: 3.7.2
       resend:
         specifier: ^4.0.0
         version: 4.8.0(react-dom@19.2.0(react@19.2.0))(react@19.2.0)
@@ -177,9 +174,6 @@ importers:
       stripe:
         specifier: ^14.10.0
         version: 14.25.0
-      yaml:
-        specifier: ^2.5.1
-        version: 2.8.1
       zod:
         specifier: ^3.25.40
         version: 3.25.76
@@ -211,6 +205,15 @@ importers:
       vitest:
         specifier: ^2.1.9
         version: 2.1.9(@types/node@22.18.12)(@vitest/ui@2.1.9)(happy-dom@20.0.10)(jsdom@26.1.0)(lightningcss@1.30.2)(terser@5.44.0)
+
+  give-care-app/convex:
+    dependencies:
+      convex:
+        specifier: ^1.11.0
+        version: 1.28.2(react@19.2.0)
+      rrule:
+        specifier: ^2.8.1
+        version: 2.8.1
 
   give-care-etl:
     dependencies:
@@ -5501,10 +5504,6 @@ packages:
     resolution: {integrity: sha512-CJZKq2g8Y8yN4Aq002GahSXbG2JpFv9kXwyiOAMvUBv7pxeOFHUWKB0mO7MiY4ZVFCV4aNjv2BJFq/z3DgKPQg==}
     peerDependencies:
       react: ^16.5.1 || ^17.0.0 || ^18.0.0 || ^19.0.0
-
-  luxon@3.7.2:
-    resolution: {integrity: sha512-vtEhXh/gNjI9Yg1u4jX/0YVPMvxzHuGgCm6tC5kZyb08yjGWGnqAjGJvcXbqQR2P3MyMEFnRbpcdFS6PBcLqew==}
-    engines: {node: '>=12'}
 
   lz-string@1.5.0:
     resolution: {integrity: sha512-h5bgJWpxJNswbU7qCrV0tIKQCaS3blPDrqKWx+QxzuzL1zGUzij9XCWLrSLsJPu5t+eWA/ycetzYAO5IOMcWAQ==}
@@ -12956,8 +12955,6 @@ snapshots:
   lucide-react@0.513.0(react@19.2.0):
     dependencies:
       react: 19.2.0
-
-  luxon@3.7.2: {}
 
   lz-string@1.5.0: {}
 
