@@ -13,8 +13,8 @@ export default defineConfig({
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),
-      // Use parent convex directory (shared backend)
-      'convex/_generated': path.resolve(__dirname, '../convex/_generated')
+      // Use give-care-app convex directory (shared backend)
+      'convex/_generated': path.resolve(__dirname, '../give-care-app/convex/_generated')
     }
   },
   build: {

@@ -56,17 +56,17 @@ VITE_CONVEX_URL=${convexUrl}
   console.log(`   VITE_CONVEX_URL=${convexUrl}`);
   console.log('');
 
-  // Also create parent .env.local for codegen
-  const parentEnvPath = join(__dirname, '..', '..', '.env.local');
-  writeFileSync(parentEnvPath, envContent, 'utf-8');
-  console.log('✅ Created parent .env.local for codegen');
+  // Also create .env.local in give-care-app for codegen
+  const appEnvPath = join(__dirname, '..', '..', 'give-care-app', '.env.local');
+  writeFileSync(appEnvPath, envContent, 'utf-8');
+  console.log('✅ Created give-care-app .env.local for codegen');
   console.log('');
 
   // Check if Convex types exist, run codegen only if needed/possible
   const { existsSync } = await import('fs');
   const { execSync } = await import('child_process');
-  const adminDir = join(__dirname, '..'); // give-care-app/admin
-  const appDir = join(adminDir, '..'); // give-care-app
+  const adminDir = join(__dirname, '..'); // give-care-admin
+  const appDir = join(__dirname, '..', '..', 'give-care-app'); // give-care-app (sibling)
   const typesPath = join(appDir, 'convex', '_generated', 'api.d.ts');
 
   if (existsSync(typesPath)) {

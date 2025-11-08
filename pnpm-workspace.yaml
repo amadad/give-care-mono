@@ -1,7 +1,7 @@
 packages:
   # Core applications
   - 'give-care-app'                    # TypeScript/Convex backend
-  - 'give-care-app/admin'              # Admin dashboard (Vite + React)
+  - 'give-care-admin'                  # Admin dashboard (Vite + React)
   - 'give-care-site'                   # Marketing website
   - 'give-care-story'                  # Presentation system
   - 'give-care-etl'                    # Resource discovery ETL pipeline

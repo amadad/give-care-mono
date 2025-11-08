@@ -15,7 +15,7 @@ export default defineConfig({
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),
-      'convex/_generated': path.resolve(__dirname, '../convex/_generated'),
+      'convex/_generated': path.resolve(__dirname, '../give-care-app/convex/_generated'),
     },
   },
 })

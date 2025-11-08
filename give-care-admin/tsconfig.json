@@ -18,9 +18,9 @@
     "noFallthroughCasesInSwitch": true,
     "paths": {
       "@/*": ["./src/*"],
-      "convex/_generated/*": ["../convex/_generated/*"]
+      "convex/_generated/*": ["../give-care-app/convex/_generated/*"]
     }
   },
-  "include": ["src", "../convex/_generated"],
+  "include": ["src", "../give-care-app/convex/_generated"],
   "references": [{ "path": "./tsconfig.node.json" }]
 }
