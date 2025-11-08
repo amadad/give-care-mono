@@ -56,7 +56,7 @@ http.route({
   method: 'POST',
   handler: httpAction(async (ctx, request) => {
     const stripeSecretKey = process.env.STRIPE_SECRET_KEY;
-    const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
+    const webhookSecret = process.env.STRIPE_WEBHOOKS_SECRET;
 
     if (!stripeSecretKey || !webhookSecret) {
       console.error('Missing Stripe configuration');
