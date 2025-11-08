@@ -1,6 +1,6 @@
 # Changelog - GiveCare App
 
-## [1.4.0] - 2025-01-08
+## [1.4.0] - 2025-11-08
 
 ### ✨ Agent Prompts: Production-Quality Trauma-Informed Communication
 
