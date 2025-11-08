@@ -52,7 +52,6 @@ export default defineSchema({
     consent: v.optional(consentValidator),
     address: v.optional(addressValidator),
     metadata: v.optional(v.any()),
-    createdByHarness: v.optional(v.boolean()),
   })
     .index('by_externalId', ['externalId'])
     .index('by_phone', ['phone']),
