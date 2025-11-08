@@ -12,16 +12,10 @@
     "forceConsistentCasingInFileNames": true,
     "noEmit": true,
     "baseUrl": "./",
-    "paths": {
-      "@harness/*": ["src/*"],
-      "@harness/app/*": ["apps/*"],
-      "@harness/tests/*": ["tests/*"],
-      "@harness/docs/*": ["docs/*"]
-    },
     "types": ["node"],
     "allowSyntheticDefaultImports": true,
     "isolatedModules": true
   },
   "include": ["tests/**/*"],
-  "exclude": ["node_modules", "dist", "_archive", "admin", "convex", "src", "apps", "docs"]
+  "exclude": ["node_modules", "dist", "_archive", "convex"]
 }
