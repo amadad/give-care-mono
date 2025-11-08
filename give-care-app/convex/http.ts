@@ -1,27 +1,77 @@
 import { httpRouter } from 'convex/server';
 import { httpAction } from './_generated/server';
 import { api, internal } from './_generated/api';
+import Stripe from 'stripe';
+import { createHmac } from 'crypto';
+
+/**
+ * Verify Twilio webhook signature
+ * See: https://www.twilio.com/docs/usage/webhooks/webhooks-security
+ */
+function verifyTwilioSignature(
+  url: string,
+  params: Record<string, string>,
+  signature: string,
+  authToken: string
+): boolean {
+  // Sort parameters alphabetically and concatenate with URL
+  const sortedKeys = Object.keys(params).sort();
+  let data = url;
+  for (const key of sortedKeys) {
+    data += key + params[key];
+  }
+
+  // Create HMAC-SHA1 signature
+  const hmac = createHmac('sha1', authToken);
+  hmac.update(data, 'utf-8');
+  const expectedSignature = hmac.digest('base64');
+
+  return expectedSignature === signature;
+}
 
 const http = httpRouter();
 
-// Stripe webhook - TODO: Add signature verification (STRIPE_WEBHOOK_SECRET)
+/**
+ * Stripe Webhook Handler
+ *
+ * Verifies webhook signature and processes Stripe events
+ */
 http.route({
   path: '/webhooks/stripe',
   method: 'POST',
   handler: httpAction(async (ctx, request) => {
-    try {
-      const body = await request.json();
-      const event = body as {
-        id: string;
-        type: string;
-        data?: { object?: unknown };
-        [key: string]: unknown;
-      };
+    const stripeSecretKey = process.env.STRIPE_SECRET_KEY;
+    const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
 
+    if (!stripeSecretKey || !webhookSecret) {
+      console.error('Missing Stripe configuration');
+      return new Response('Server configuration error', { status: 500 });
+    }
+
+    try {
+      const stripe = new Stripe(stripeSecretKey, { apiVersion: '2024-11-20.acacia' });
+      const signature = request.headers.get('stripe-signature');
+      const body = await request.text();
+
+      if (!signature) {
+        console.error('Missing Stripe signature');
+        return new Response('Missing signature', { status: 400 });
+      }
+
+      // Verify webhook signature
+      let event: Stripe.Event;
+      try {
+        event = stripe.webhooks.constructEvent(body, signature, webhookSecret);
+      } catch (err) {
+        console.error('Stripe signature verification failed:', err);
+        return new Response('Invalid signature', { status: 403 });
+      }
+
+      // Process verified event
       await ctx.runMutation(api.functions.billing.applyStripeEvent, {
         id: event.id,
         type: event.type,
-        payload: event,
+        payload: event as unknown as Record<string, unknown>,
       });
 
       return new Response(JSON.stringify({ received: true }), {
@@ -39,17 +89,30 @@ http.route({
  * Twilio SMS Webhook Handler
  *
  * Receives inbound SMS messages from Twilio and processes them.
- *
  * Twilio sends data as application/x-www-form-urlencoded
  *
- * TODO: Add Twilio signature verification using TWILIO_AUTH_TOKEN
  * See: https://www.twilio.com/docs/usage/webhooks/webhooks-security
  */
 http.route({
   path: '/webhooks/twilio/sms',
   method: 'POST',
   handler: httpAction(async (ctx, request) => {
+    const twilioAuthToken = process.env.TWILIO_AUTH_TOKEN;
+
+    if (!twilioAuthToken) {
+      console.error('Missing Twilio auth token');
+      return new Response('Server configuration error', { status: 500 });
+    }
+
     try {
+      const signature = request.headers.get('x-twilio-signature');
+      const url = request.url;
+
+      if (!signature) {
+        console.error('Missing Twilio signature');
+        return new Response('Missing signature', { status: 400 });
+      }
+
       const formData = await request.formData();
 
       const from = formData.get('From') as string;
@@ -60,11 +123,18 @@ http.route({
         return new Response('Missing required fields', { status: 400 });
       }
 
-      // TODO: Verify Twilio signature
-      // const signature = request.headers.get('x-twilio-signature');
-      // if (!signature || !verifyTwilioSignature(request.url, formData, signature)) {
-      //   return new Response('Invalid signature', { status: 401 });
-      // }
+      // Verify Twilio signature
+      const params: Record<string, string> = {};
+      formData.forEach((value, key) => {
+        params[key] = value as string;
+      });
+
+      const isValid = verifyTwilioSignature(url, params, signature, twilioAuthToken);
+
+      if (!isValid) {
+        console.error('Twilio signature verification failed');
+        return new Response('Invalid signature', { status: 403 });
+      }
 
       const traceId = `twilio-${messageSid}`;
 
