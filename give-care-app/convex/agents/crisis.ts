@@ -18,6 +18,8 @@ import { v } from 'convex/values';
 import { Agent } from '@convex-dev/agent';
 import { openai } from '@ai-sdk/openai';
 import { CRISIS_PROMPT, renderPrompt } from '../lib/prompts';
+import { sharedAgentConfig } from '../lib/usage';
+import { buildWellnessInfo } from '../lib/profile';
 
 const channelValidator = v.union(
   v.literal('sms'),
@@ -50,6 +52,9 @@ const crisisAgent = new Agent(components.agent, {
   }),
   instructions: 'You are a compassionate crisis support assistant for caregivers providing immediate support resources.',
   maxSteps: 1, // No tool calls needed for crisis - prioritize speed
+
+  // Usage tracking for billing and monitoring
+  ...sharedAgentConfig,
 });
 
 /**
@@ -82,9 +87,18 @@ export const runCrisisAgent = action({
     const profile = (metadata.profile as Record<string, unknown> | undefined) ?? {};
     const userName = (profile.firstName as string) ?? 'friend';
     const careRecipient = (profile.careRecipientName as string) ?? 'loved one';
+    const journeyPhase = (metadata.journeyPhase as string) ?? 'crisis';
+
+    // Build wellness info using helper
+    const wellnessInfo = buildWellnessInfo(metadata);
 
     try {
-      const systemPrompt = renderPrompt(CRISIS_PROMPT, { userName, careRecipient });
+      const systemPrompt = renderPrompt(CRISIS_PROMPT, {
+        userName,
+        careRecipient,
+        journeyPhase,
+        wellnessInfo
+      });
 
       let newThreadId: string;
       let thread;

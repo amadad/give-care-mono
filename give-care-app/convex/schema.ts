@@ -305,4 +305,52 @@ export default defineSchema({
     cursor: v.optional(v.id('users')),
     lastRun: v.number(),
   }).index('by_watcher', ['watcherName']),
+
+  // LLM Usage tracking for billing and monitoring
+  llm_usage: defineTable({
+    userId: v.optional(v.id('users')),
+    agentName: v.optional(v.string()),
+    threadId: v.optional(v.string()),
+    model: v.string(),
+    provider: v.string(),
+
+    // Token usage stats
+    promptTokens: v.number(),
+    completionTokens: v.number(),
+    totalTokens: v.number(),
+
+    // Cost tracking (in cents)
+    estimatedCost: v.optional(v.number()),
+
+    // Billing period for aggregation
+    billingPeriod: v.string(), // YYYY-MM format
+
+    // Provider-specific metadata
+    providerMetadata: v.optional(v.any()),
+
+    // Trace for debugging
+    traceId: v.optional(v.string()),
+  })
+    .index('by_user_period', ['userId', 'billingPeriod'])
+    .index('by_period', ['billingPeriod'])
+    .index('by_trace', ['traceId']),
+
+  // Aggregated usage for invoicing
+  usage_invoices: defineTable({
+    userId: v.id('users'),
+    billingPeriod: v.string(), // YYYY-MM format
+    totalTokens: v.number(),
+    totalCost: v.number(), // in cents
+    status: v.union(
+      v.literal('pending'),
+      v.literal('paid'),
+      v.literal('failed'),
+      v.literal('waived')
+    ),
+    stripeInvoiceId: v.optional(v.string()),
+    breakdown: v.object({
+      byAgent: v.optional(v.any()),
+      byModel: v.optional(v.any()),
+    }),
+  }).index('by_user_period', ['userId', 'billingPeriod']),
 });

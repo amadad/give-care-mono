@@ -20,6 +20,7 @@ import { Agent, createTool } from '@convex-dev/agent';
 import { openai } from '@ai-sdk/openai';
 import { ASSESSMENT_PROMPT, renderPrompt } from '../lib/prompts';
 import { z } from 'zod';
+import { sharedAgentConfig } from '../lib/usage';
 
 const channelValidator = v.union(
   v.literal('sms'),
@@ -91,6 +92,9 @@ const assessmentAgent: any = new Agent(components.agent, {
     'You are a burnout assessment specialist who provides personalized, compassionate interpretations and actionable intervention suggestions. Use the getInterventions tool to recommend evidence-based interventions matching the user\'s pressure zones.',
   tools: { getInterventions: getInterventionsTool },
   maxSteps: 2, // Limit tool calls for faster responses
+
+  // Usage tracking for billing and monitoring
+  ...sharedAgentConfig,
 });
 
 /**
@@ -144,13 +148,21 @@ export const runAssessmentAgent: any = action({
         band = 'high';
       }
 
+      // Extract assessment context for the prompt
+      // Note: This agent processes completed assessments, not in-progress ones
+      // These variables support both use cases
+      const assessmentName = (metadata.assessmentDefinitionId as string) ?? 'burnout assessment';
+      const assessmentType = assessmentName;
+      const questionNumber = String(answers.length);
+      const responsesCount = String(answers.length);
+
       const systemPrompt = renderPrompt(ASSESSMENT_PROMPT, {
         userName,
         careRecipient,
-        totalScore: total.toFixed(1),
-        avgScore: avgScore.toFixed(1),
-        band,
-        pressureZone,
+        assessmentName,
+        assessmentType,
+        questionNumber,
+        responsesCount,
       });
 
       let newThreadId: string;

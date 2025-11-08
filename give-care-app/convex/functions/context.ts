@@ -73,3 +73,34 @@ export const getConversationSummary = query({
     };
   },
 });
+
+/**
+ * Record important memory about a user
+ *
+ * Part of working memory system for building context over time
+ */
+export const recordMemory = mutation({
+  args: {
+    userId: v.string(),
+    category: v.string(),
+    content: v.string(),
+    importance: v.number(),
+  },
+  handler: async (ctx, args) => {
+    const user = await Users.getByExternalId(ctx, args.userId);
+    if (!user) {
+      throw new Error('User not found');
+    }
+
+    await ctx.db.insert('memories', {
+      userId: user._id,
+      externalId: args.userId,
+      category: args.category,
+      content: args.content,
+      importance: args.importance,
+      embedding: undefined,
+      lastAccessedAt: Date.now(),
+      accessCount: 0,
+    });
+  },
+});

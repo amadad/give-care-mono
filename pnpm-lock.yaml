@@ -156,6 +156,15 @@ importers:
       '@convex-dev/agent':
         specifier: ^0.2.12
         version: 0.2.12(@ai-sdk/provider-utils@3.0.16(zod@3.25.76))(ai@5.0.89(zod@3.25.76))(convex-helpers@0.1.104(@standard-schema/spec@1.0.0)(convex@1.28.2(react@19.2.0))(react@19.2.0)(typescript@5.8.3)(zod@3.25.76))(convex@1.28.2(react@19.2.0))(react@19.2.0)
+      '@convex-dev/rag':
+        specifier: ^0.5.4
+        version: 0.5.4(@convex-dev/workpool@0.2.19(convex-helpers@0.1.104(@standard-schema/spec@1.0.0)(convex@1.28.2(react@19.2.0))(react@19.2.0)(typescript@5.8.3)(zod@3.25.76))(convex@1.28.2(react@19.2.0)))(convex-helpers@0.1.104(@standard-schema/spec@1.0.0)(convex@1.28.2(react@19.2.0))(react@19.2.0)(typescript@5.8.3)(zod@3.25.76))(convex@1.28.2(react@19.2.0))(zod@3.25.76)
+      '@convex-dev/rate-limiter':
+        specifier: ^0.2.14
+        version: 0.2.14(convex@1.28.2(react@19.2.0))(react@19.2.0)
+      '@convex-dev/workflow':
+        specifier: ^0.2.7
+        version: 0.2.7(@convex-dev/workpool@0.2.19(convex-helpers@0.1.104(@standard-schema/spec@1.0.0)(convex@1.28.2(react@19.2.0))(react@19.2.0)(typescript@5.8.3)(zod@3.25.76))(convex@1.28.2(react@19.2.0)))(convex-helpers@0.1.104(@standard-schema/spec@1.0.0)(convex@1.28.2(react@19.2.0))(react@19.2.0)(typescript@5.8.3)(zod@3.25.76))(convex@1.28.2(react@19.2.0))
       '@google/genai':
         specifier: ^1.27.0
         version: 1.27.0(@modelcontextprotocol/sdk@1.20.2)
@@ -782,6 +791,35 @@ packages:
 
   '@convex-dev/eslint-plugin@1.0.0':
     resolution: {integrity: sha512-ublJRBKcLCioNaf1ylkCHD2KzAqWE2RIQ6DA/UgXAXQW5qg4vZSWY8wy+EK11yJkSSxcGfFXDWaE1+cHaWJvNA==}
+
+  '@convex-dev/rag@0.5.4':
+    resolution: {integrity: sha512-2fBKIimiXJGqNLBftv+bBmqA6E4e1eH01zAG2rnT3ZQlE1BfF/2OU4wYHrqyON2FUFHGtoHG8WIsO8Q0KVpMhg==}
+    peerDependencies:
+      '@convex-dev/workpool': ^0.2.14
+      convex: ^1.24.8
+      convex-helpers: ^0.1.94
+
+  '@convex-dev/rate-limiter@0.2.14':
+    resolution: {integrity: sha512-6dQ2ceHFcU8HVXT0QdcgWXCahasMcjne/bWvLZ6qyyk5gZDP4JtjZyidy9HflAOCo1Nc428pgrROnbQBM0QPCQ==}
+    peerDependencies:
+      convex: '>=1.17.0 <1.35.0'
+      react: ^18.2.0 || ^19.0.0
+    peerDependenciesMeta:
+      react:
+        optional: true
+
+  '@convex-dev/workflow@0.2.7':
+    resolution: {integrity: sha512-BUVJBKSMEuHNztFBlcmCdlsRwdPqLn2iv72teTrHlkMVKvQj1EhBIflT7asjWBrVy3JUgWiVdUbl58xv5+kXSQ==}
+    peerDependencies:
+      '@convex-dev/workpool': ^0.2.18
+      convex: '>=1.25.0 <1.35.0'
+      convex-helpers: ^0.1.99
+
+  '@convex-dev/workpool@0.2.19':
+    resolution: {integrity: sha512-U2KwYnsKILyxW1baWEhDv+ZtnL5FZbYFxBT5owQ0Lw/kseiudMZraA4clH+/6gowHSahWpkq4wndhcOfpfhuOA==}
+    peerDependencies:
+      convex: '>=1.25.0 <1.35.0'
+      convex-helpers: ^0.1.94
 
   '@cspotcode/source-map-support@0.8.1':
     resolution: {integrity: sha512-IchNf6dN4tHoMFIn/7OE8LWZ19Y6q/67Bmf6vnGREv8RSbBVb9LPJxEcnwrcwX6ixSvaiGoomAUvu4YSxXrVgw==}
@@ -3575,6 +3613,9 @@ packages:
   astring@1.9.0:
     resolution: {integrity: sha512-LElXdjswlqjWrPpJFg1Fx4wpkOCxj1TDHlSV4PlaRxHGWko024xICaa97ZkMfs6DRKlCguiAI+rbXv5GWwXIkg==}
     hasBin: true
+
+  async-channel@0.2.0:
+    resolution: {integrity: sha512-BJyjI/sfKlyijaBt2hbOSxT28xGNtLR0QLzAKO1Hlnv5BULY7sAoYoTPW3lfr1ZIC7y+FxabxO9T8GXpyoofGg==}
 
   async-function@1.0.0:
     resolution: {integrity: sha512-hsU18Ae8CDTR6Kgu9DYf0EbCr/a5iGL0rytQDobUcdpYOKokk8LEjVphnXkDkgpi0wYVsqrXuP0bZxJaTqdgoA==}
@@ -7819,6 +7860,33 @@ snapshots:
       - supports-color
       - typescript
 
+  '@convex-dev/rag@0.5.4(@convex-dev/workpool@0.2.19(convex-helpers@0.1.104(@standard-schema/spec@1.0.0)(convex@1.28.2(react@19.2.0))(react@19.2.0)(typescript@5.8.3)(zod@3.25.76))(convex@1.28.2(react@19.2.0)))(convex-helpers@0.1.104(@standard-schema/spec@1.0.0)(convex@1.28.2(react@19.2.0))(react@19.2.0)(typescript@5.8.3)(zod@3.25.76))(convex@1.28.2(react@19.2.0))(zod@3.25.76)':
+    dependencies:
+      '@convex-dev/workpool': 0.2.19(convex-helpers@0.1.104(@standard-schema/spec@1.0.0)(convex@1.28.2(react@19.2.0))(react@19.2.0)(typescript@5.8.3)(zod@3.25.76))(convex@1.28.2(react@19.2.0))
+      ai: 5.0.89(zod@3.25.76)
+      convex: 1.28.2(react@19.2.0)
+      convex-helpers: 0.1.104(@standard-schema/spec@1.0.0)(convex@1.28.2(react@19.2.0))(react@19.2.0)(typescript@5.8.3)(zod@3.25.76)
+    transitivePeerDependencies:
+      - zod
+
+  '@convex-dev/rate-limiter@0.2.14(convex@1.28.2(react@19.2.0))(react@19.2.0)':
+    dependencies:
+      convex: 1.28.2(react@19.2.0)
+    optionalDependencies:
+      react: 19.2.0
+
+  '@convex-dev/workflow@0.2.7(@convex-dev/workpool@0.2.19(convex-helpers@0.1.104(@standard-schema/spec@1.0.0)(convex@1.28.2(react@19.2.0))(react@19.2.0)(typescript@5.8.3)(zod@3.25.76))(convex@1.28.2(react@19.2.0)))(convex-helpers@0.1.104(@standard-schema/spec@1.0.0)(convex@1.28.2(react@19.2.0))(react@19.2.0)(typescript@5.8.3)(zod@3.25.76))(convex@1.28.2(react@19.2.0))':
+    dependencies:
+      '@convex-dev/workpool': 0.2.19(convex-helpers@0.1.104(@standard-schema/spec@1.0.0)(convex@1.28.2(react@19.2.0))(react@19.2.0)(typescript@5.8.3)(zod@3.25.76))(convex@1.28.2(react@19.2.0))
+      async-channel: 0.2.0
+      convex: 1.28.2(react@19.2.0)
+      convex-helpers: 0.1.104(@standard-schema/spec@1.0.0)(convex@1.28.2(react@19.2.0))(react@19.2.0)(typescript@5.8.3)(zod@3.25.76)
+
+  '@convex-dev/workpool@0.2.19(convex-helpers@0.1.104(@standard-schema/spec@1.0.0)(convex@1.28.2(react@19.2.0))(react@19.2.0)(typescript@5.8.3)(zod@3.25.76))(convex@1.28.2(react@19.2.0))':
+    dependencies:
+      convex: 1.28.2(react@19.2.0)
+      convex-helpers: 0.1.104(@standard-schema/spec@1.0.0)(convex@1.28.2(react@19.2.0))(react@19.2.0)(typescript@5.8.3)(zod@3.25.76)
+
   '@cspotcode/source-map-support@0.8.1':
     dependencies:
       '@jridgewell/trace-mapping': 0.3.9
@@ -10502,6 +10570,8 @@ snapshots:
       tslib: 2.8.1
 
   astring@1.9.0: {}
+
+  async-channel@0.2.0: {}
 
   async-function@1.0.0: {}
 

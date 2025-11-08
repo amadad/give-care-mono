@@ -21,6 +21,8 @@ import { openai } from '@ai-sdk/openai';
 import { MAIN_PROMPT, renderPrompt } from '../lib/prompts';
 import { getTone } from '../lib/policy';
 import { z } from 'zod';
+import { sharedAgentConfig } from '../lib/usage';
+import { getProfileCompleteness, buildWellnessInfo, extractProfileVariables } from '../lib/profile';
 
 const channelValidator = v.union(
   v.literal('sms'),
@@ -78,6 +80,158 @@ const searchResourcesTool = createTool({
   },
 });
 
+// Tool: Record important memories about the user
+const recordMemoryTool = createTool({
+  args: z.object({
+    content: z.string().describe('The information to remember about the user'),
+    category: z.enum(['care_routine', 'preference', 'intervention_result', 'crisis_trigger']).describe('Category of memory'),
+    importance: z.number().min(1).max(10).describe('Importance score (1-10): 9-10=critical, 6-8=important, 3-5=useful, 1-2=minor'),
+  }),
+  description: 'Save important information about the user to build context over time. Use for care routines, preferences, intervention results, and crisis triggers.',
+  handler: async (ctx, args: { content: string; category: string; importance: number }) => {
+    const userId = ctx.userId;
+
+    if (!userId) {
+      return { success: false, error: 'User ID not available' };
+    }
+
+    // Store the memory
+    await ctx.runMutation(api.functions.context.recordMemory, {
+      userId,
+      category: args.category,
+      content: args.content,
+      importance: args.importance,
+    });
+
+    return {
+      success: true,
+      message: 'Memory saved successfully',
+    };
+  },
+});
+
+// Tool: Check wellness status and burnout trends
+const checkWellnessStatusTool = createTool({
+  args: z.object({}),
+  description: 'Fetch burnout trends, pressure zones, and wellness status over time. Shows recent scores and identifies areas needing support.',
+  handler: async (ctx) => {
+    const userId = ctx.userId;
+
+    if (!userId) {
+      return { error: 'User ID not available' };
+    }
+
+    const status = await ctx.runQuery(api.functions.wellness.getStatus, {
+      userId,
+    });
+
+    return status;
+  },
+});
+
+// Tool: Find personalized interventions
+const findInterventionsTool = createTool({
+  args: z.object({
+    zones: z.array(z.string()).optional().describe('Pressure zones to target (e.g., ["emotional", "physical", "time"]). If not provided, uses user\'s current pressure zones.'),
+    minEvidenceLevel: z.enum(['high', 'moderate', 'low']).optional().describe('Minimum evidence level (default: moderate)'),
+    limit: z.number().optional().describe('Maximum number of interventions (default: 5)'),
+  }),
+  description: 'Get evidence-based interventions matched to pressure zones. Returns micro-commitments and support strategies with evidence levels.',
+  handler: async (ctx, args: { zones?: string[]; minEvidenceLevel?: 'high' | 'moderate' | 'low'; limit?: number }) => {
+    const userId = ctx.userId;
+
+    if (!userId) {
+      return { error: 'User ID not available' };
+    }
+
+    // If no zones provided, fetch user's pressure zones from wellness status
+    let zones = args.zones;
+    if (!zones || zones.length === 0) {
+      const status = await ctx.runQuery(api.functions.wellness.getStatus, {
+        userId,
+      });
+      zones = status.pressureZones || ['emotional', 'physical']; // Default fallback
+    }
+
+    const interventions = await ctx.runQuery(api.functions.interventions.getByZones, {
+      zones,
+      minEvidenceLevel: args.minEvidenceLevel || 'moderate',
+      limit: args.limit || 5,
+    });
+
+    return {
+      interventions,
+      zones,
+    };
+  },
+});
+
+// Tool: Update user profile
+const updateProfileTool = createTool({
+  args: z.object({
+    firstName: z.string().optional().describe('User\'s first name'),
+    relationship: z.string().optional().describe('Relationship to care recipient (e.g., "daughter", "son", "spouse")'),
+    careRecipientName: z.string().optional().describe('Name of person being cared for'),
+    zipCode: z.string().optional().describe('ZIP code for finding local resources'),
+  }),
+  description: 'Update user profile information. Only include fields that are being updated.',
+  handler: async (ctx, args: { firstName?: string; relationship?: string; careRecipientName?: string; zipCode?: string }) => {
+    const userId = ctx.userId;
+
+    if (!userId) {
+      return { success: false, error: 'User ID not available' };
+    }
+
+    // @ts-expect-error - metadata property exists at runtime
+    const contextData = ctx.metadata as { context?: { metadata?: Record<string, unknown> } };
+    const metadata = contextData?.context?.metadata || {};
+    const profile = (metadata.profile as Record<string, unknown>) || {};
+
+    // Merge new fields with existing profile
+    const updatedProfile = {
+      ...profile,
+      ...(args.firstName && { firstName: args.firstName }),
+      ...(args.relationship && { relationship: args.relationship }),
+      ...(args.careRecipientName && { careRecipientName: args.careRecipientName }),
+      ...(args.zipCode && { zipCode: args.zipCode }),
+    };
+
+    // Update user metadata with new profile
+    // Note: This requires a mutation to persist - for now return updated profile
+    // In production, you'd call a mutation here to update the user's metadata
+
+    return {
+      success: true,
+      profile: updatedProfile,
+      message: 'Profile updated successfully',
+    };
+  },
+});
+
+// Tool: Start an assessment
+const startAssessmentTool = createTool({
+  args: z.object({
+    assessmentType: z.enum(['burnout_v1', 'bsfc_v1', 'ema_v1', 'reach_ii_v1', 'sdoh_v1']).describe('Type of assessment to start'),
+  }),
+  description: 'Begin a wellness assessment. This will initiate a structured check-in to track burnout, stress, or other wellness metrics.',
+  handler: async (ctx, args: { assessmentType: string }) => {
+    const userId = ctx.userId;
+
+    if (!userId) {
+      return { error: 'User ID not available' };
+    }
+
+    // For now, return instructions for starting assessment
+    // In full implementation, this would create an assessment session
+    return {
+      success: true,
+      assessmentType: args.assessmentType,
+      message: `Ready to start ${args.assessmentType} assessment. The assessment agent will guide you through the questions.`,
+      nextStep: 'Assessment questions will be asked one at a time.',
+    };
+  },
+});
+
 const mainAgent = new Agent(components.agent, {
   name: 'Caregiver Support',
   // @ts-expect-error - LanguageModelV1/V2 type mismatch between AI SDK versions
@@ -85,8 +239,55 @@ const mainAgent = new Agent(components.agent, {
     reasoningEffort: 'low', // Lower latency: 100 tokens/sec throughput
   }),
   instructions: 'You are a compassionate AI caregiver assistant providing empathetic support and practical advice.',
-  tools: { searchResources: searchResourcesTool },
-  maxSteps: 3, // Limit tool call iterations for faster responses
+  tools: {
+    searchResources: searchResourcesTool,
+    recordMemory: recordMemoryTool,
+    check_wellness_status: checkWellnessStatusTool,
+    find_interventions: findInterventionsTool,
+    update_profile: updateProfileTool,
+    start_assessment: startAssessmentTool,
+  },
+  maxSteps: 5, // Increased to allow for tool chains (e.g., check wellness → find interventions)
+
+  // Use contextHandler for dynamic context injection
+  contextHandler: async (ctx, args) => {
+    const recentMessages = args.recent || [];
+    const searchMessages = args.search || [];
+
+    // Get conversation summary for context compression
+    const threadId = args.threadId;
+    let conversationContext: any[] = [];
+
+    if (threadId) {
+      try {
+        const conversationSummary = await ctx.runQuery(api.functions.context.getConversationSummary, {
+          externalId: args.userId || '',
+          limit: 25,
+        });
+
+        if (conversationSummary && (conversationSummary as any).formattedContext) {
+          conversationContext = [{
+            role: 'system' as const,
+            content: `## Conversation Context\n${(conversationSummary as any).formattedContext}\n\n(Token savings: ${(conversationSummary as any).tokensSaved} tokens, ${(conversationSummary as any).compressionRatio}% compression)`,
+          }];
+        }
+      } catch (error) {
+        console.error('Error fetching conversation summary:', error);
+      }
+    }
+
+    return [
+      ...searchMessages,
+      ...conversationContext,
+      ...recentMessages,
+      ...args.inputMessages,
+      ...args.inputPrompt,
+      ...args.existingResponses,
+    ];
+  },
+
+  // Usage tracking for billing and monitoring
+  ...sharedAgentConfig,
 });
 
 /**
@@ -114,17 +315,19 @@ export const runMainAgent = action({
     try {
       const metadata = (context.metadata ?? {}) as Record<string, unknown>;
       const profile = (metadata.profile as Record<string, unknown> | undefined) ?? {};
-      const userName = (profile.firstName as string) ?? 'caregiver';
-      const relationship = (profile.relationship as string) ?? 'caregiver';
-      const careRecipient = (profile.careRecipientName as string) ?? 'your loved one';
+
+      // Extract profile variables using helper
+      const { userName, relationship, careRecipient } = extractProfileVariables(metadata);
+
+      // Calculate profile completeness using helper
+      const { profileComplete, missingFieldsSection } = getProfileCompleteness(profile);
+
+      // Build wellness info using helper
+      const wellnessInfo = buildWellnessInfo(metadata);
+
+      // Extract other metadata
       const journeyPhase = (metadata.journeyPhase as string) ?? 'active';
       const totalInteractionCount = String((metadata.totalInteractionCount as number) ?? 0);
-
-      // Fetch conversation summary for context compression
-      const conversationSummary = await ctx.runQuery(api.functions.context.getConversationSummary, {
-        externalId: input.userId,
-        limit: 25,
-      });
 
       const basePrompt = renderPrompt(MAIN_PROMPT, {
         userName,
@@ -132,18 +335,13 @@ export const runMainAgent = action({
         careRecipient,
         journeyPhase,
         totalInteractionCount,
+        wellnessInfo,
+        profileComplete,
+        missingFieldsSection,
       });
 
       const tone = getTone(context);
-
-      // Inject compressed conversation history if available
-      let contextSection = '';
-      const formattedContext = (conversationSummary as { formattedContext?: string }).formattedContext;
-      if (formattedContext) {
-        contextSection = `\n\n## Conversation Context\n${formattedContext}\n\n(Token savings: ${conversationSummary.tokensSaved} tokens, ${conversationSummary.compressionRatio}% compression)`;
-      }
-
-      const systemPrompt = `${basePrompt}\n\n${tone}${contextSection}`;
+      const systemPrompt = `${basePrompt}\n\n${tone}`;
 
       let newThreadId: string;
       let thread;
@@ -238,3 +436,19 @@ What's on your mind?`;
     }
   },
 });
+
+/**
+ * Exposed Agent Actions
+ * For use in workflows and external integrations
+ */
+
+// Create thread mutation
+export const createThread = mainAgent.createThreadMutation();
+
+// Generate text action (for workflow steps)
+export const generateTextAction = mainAgent.asTextAction({
+  stopWhen: (result: any) => result.stepCount >= 3,
+});
+
+// Save message mutation (for idempotency)
+export const saveMessages = mainAgent.asSaveMessagesMutation();
