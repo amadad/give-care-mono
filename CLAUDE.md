@@ -52,6 +52,56 @@ pnpm --filter give-care-story dev          # Presentations
 
 **Docs**: See `give-care-app/docs/CLAUDE.md`
 
+### Simulation Testing Loop
+
+**Purpose:** Recursive real-test verification against ARCHITECTURE.md + PRODUCT.md
+**Mode:** Fix-as-you-go OR document-then-fix
+**No Mocks:** Real Convex environment only
+
+**Protocol:**
+1. **Run** simulation test in `tests/simulation/`
+2. **Compare** failure to `ARCHITECTURE.md` (expected behavior)
+3. **Classify** issue:
+   - Code bug (implementation ≠ spec)
+   - Test bug (test ≠ spec)
+   - Spec gap (undefined behavior)
+   - Edge case (new scenario)
+4. **Fix** in identified file OR document in issue list
+5. **Re-run** test
+6. **Repeat** until all pass ✅
+
+**Commands:**
+```bash
+npm test -- simulation              # Run all simulation tests
+npm test -- context.simulation      # Run specific feature
+npm test -- --watch simulation      # Fix-as-you-go mode
+```
+
+**Verify Against Specs:**
+```typescript
+// Reference ARCHITECTURE.md in every test
+it('should record memory with importance', async () => {
+  // ARCHITECTURE.md: "recordMemory saves to memories table with category"
+  const result = await ctx.runMutation(api.functions.context.recordMemory, args);
+  expect(result).toMatchArchitectureSpec();
+});
+```
+
+**Edge Cases to Test:**
+- Missing data (undefined, null)
+- Boundary values (0, -1, MAX_INT)
+- Race conditions (concurrent ops)
+- Invalid input (wrong type, out of range)
+- Missing dependencies (user doesn't exist)
+
+**Success Criteria:**
+- ✅ All tests pass
+- ✅ Behavior matches ARCHITECTURE.md
+- ✅ Edge cases documented
+- ✅ No mocks used
+
+See `tests/simulation/README.md` for full details.
+
 ## give-care-admin (Admin Dashboard)
 
 **Tech**: Vite, React 19, TanStack Router, Convex React, Tailwind CSS 4, shadcn/ui

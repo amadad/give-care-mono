@@ -1,121 +1,84 @@
-# Simulation Testing Framework
+# Simulation Tests
 
-## Overview
+**Purpose:** Real Convex environment tests - no mocks
+**Compare:** Results vs ARCHITECTURE.md + PRODUCT.md
+**Goal:** Find edge cases, verify specs, recursive fix
 
-Simulation tests run through realistic user journeys, detect failures, and generate reports to guide fixes.
-
-## Architecture
-
-```
-tests/simulation/
-├── scenarios/          # Journey definitions
-│   ├── onboarding.ts
-│   ├── crisis.ts
-│   ├── assessment.ts
-│   └── recurring-user.ts
-├── fixtures/           # Test data generators
-│   ├── users.ts
-│   ├── messages.ts
-│   └── triggers.ts
-├── runner.ts           # Simulation orchestrator
-├── analyzer.ts         # Output analysis & validation
-└── reports/            # Test run outputs (gitignored)
-```
-
-## Concepts
-
-### 1. Scenario-Based Testing
-Define realistic user journeys as sequences of actions:
-```typescript
-const crisisScenario = {
-  name: 'Crisis Detection & Response',
-  steps: [
-    { action: 'sendMessage', text: 'I want to end it all' },
-    { expect: 'crisisDetected', value: true },
-    { expect: 'response', contains: '988' },
-  ]
-}
-```
-
-### 2. Property-Based Testing
-Generate random inputs to find edge cases:
-```typescript
-fc.assert(
-  fc.property(fc.date(), fc.integer(1, 365), (start, days) => {
-    const trigger = createDailyTrigger(start, days);
-    return trigger.occurrences.length === days;
-  })
-)
-```
-
-### 3. Chaos Testing
-Inject failures to test resilience:
-- Network timeouts
-- Rate limit hits
-- Database unavailable
-- OpenAI API errors
-
-### 4. Output Analysis
-Tests collect traces and validate:
-- Response times (P50, P95, P99)
-- Error rates
-- Token usage
-- Crisis detection accuracy
-
-## Running Simulations
+## Quick Start
 
 ```bash
-# Run all scenarios
-pnpm test:simulate
+# Run all simulation tests
+npm test -- simulation
 
-# Run specific scenario
-pnpm test:simulate --scenario=crisis
+# Run specific feature
+npm test -- context.simulation
+npm test -- agents.simulation
 
-# Run with chaos injection
-pnpm test:simulate --chaos
-
-# Generate coverage report
-pnpm test:simulate --coverage
+# Watch mode (fix-as-you-go)
+npm test -- --watch simulation
 ```
 
-## Auto-Fixing Capabilities
+## What These Test
 
-### What Can Auto-Fix:
-1. **Snapshot Updates** - Response format changes
-2. **Baseline Adjustments** - Performance regression thresholds
-3. **Schema Migrations** - Database structure changes
+- Real Convex database operations
+- Real agent.generateText() calls
+- Real tool executions
+- Real SMS workflows
+- Edge cases and failure modes
 
-### What Requires Manual Fix:
-1. **Logic Bugs** - Wrong crisis detection
-2. **Security Issues** - Auth bypasses
-3. **Business Logic** - Incorrect scoring
+## No Mocks
 
-## Example Simulation Output
+```typescript
+// ❌ Don't do this
+vi.mock('convex/functions/context');
 
-```
-Scenario: Crisis Detection & Response
-──────────────────────────────────────
-✓ Step 1: Send crisis message (12ms)
-✓ Step 2: Crisis detected (true)
-✓ Step 3: Response contains 988 hotline
-✓ Step 4: Alert created (severity: critical)
-✗ Step 5: SMS sent within 5s (actual: 7.2s)
-
-Performance:
-  P50: 145ms
-  P95: 892ms
-  P99: 1.2s
-
-Recommendations:
-  - Investigate SMS delay (exceeded 5s SLA)
-  - Consider caching crisis responses
+// ✅ Do this
+const result = await ctx.runMutation(api.functions.context.recordMemory, {
+  userId: testUser._id,
+  category: 'care_routine',
+  content: 'Morning routine at 9am',
+  importance: 8
+});
 ```
 
-## Convex Testing Strategy
+## Verify Against Specs
 
-Convex provides testing utilities:
-- `ConvexTestingHelper` - Run mutations/queries in test mode
-- Deterministic IDs for reproducible tests
-- Isolated test databases
+Every test should reference:
+- **ARCHITECTURE.md** - Expected behavior
+- **PRODUCT.md** - Feature requirements
 
-See: https://docs.convex.dev/production/testing
+Example:
+```typescript
+// ARCHITECTURE.md says: "recordMemory saves to memories table with category"
+
+it('should record memory with importance', async () => {
+  const result = await ctx.runMutation(api.functions.context.recordMemory, args);
+  
+  const memory = await ctx.db.query('memories')
+    .filter(q => q.eq(q.field('userId'), user._id))
+    .first();
+  
+  expect(memory).toBeDefined();
+  expect(memory.category).toBe('care_routine');
+  expect(memory.importance).toBe(8);
+});
+```
+
+## Loop Protocol
+
+See CLAUDE.md for full protocol:
+
+1. Run simulation test
+2. Compare failure to ARCHITECTURE.md
+3. Classify: Code bug | Test bug | Spec gap | Edge case
+4. Fix or document
+5. Re-run
+6. Repeat until all pass ✅
+
+## Success Criteria
+
+- ✅ All tests pass
+- ✅ Behavior matches ARCHITECTURE.md
+- ✅ Edge cases documented
+- ✅ No mocks used
+- ✅ Real Convex environment
