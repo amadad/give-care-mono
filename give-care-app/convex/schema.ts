@@ -52,7 +52,6 @@ export default defineSchema({
     createdAt: v.optional(v.number()),
     updatedAt: v.optional(v.number()),
     phoneNumber: v.optional(v.string()), // DEPRECATED: Use 'phone' instead
-    createdByHarness: v.optional(v.boolean()), // DEPRECATED: Legacy test field
   })
     .index('by_externalId', ['externalId'])
     .index('by_phone', ['phone']),
