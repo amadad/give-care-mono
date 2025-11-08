@@ -56,7 +56,7 @@ export const getMessageFileParts = internalAction({
     fileIds: v.array(v.string()),
   },
   handler: async (ctx, args) => {
-    const parts = [];
+    const parts: any[] = [];
 
     for (const fileId of args.fileIds) {
       const { filePart, imagePart } = await getFile(ctx, components.agent, fileId);
