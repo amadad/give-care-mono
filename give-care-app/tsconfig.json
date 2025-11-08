@@ -12,10 +12,13 @@
     "forceConsistentCasingInFileNames": true,
     "noEmit": true,
     "baseUrl": "./",
+    "paths": {
+      "~/*": ["convex/*"]
+    },
     "types": ["node"],
     "allowSyntheticDefaultImports": true,
     "isolatedModules": true
   },
-  "include": ["tests/**/*"],
-  "exclude": ["node_modules", "dist", "_archive", "convex"]
+  "include": ["tests/**/*", "convex/**/*"],
+  "exclude": ["node_modules", "dist", "_archive"]
 }

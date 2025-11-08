@@ -41,6 +41,7 @@ export interface UserFixture {
       careRecipientName: string;
     };
     journeyPhase: string;
+    [key: string]: unknown; // Allow additional metadata properties
   };
 }
 
