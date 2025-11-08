@@ -1,6 +1,6 @@
 'use client';
 
-import AnimatedChat from "../components/AnimatedChat";
+import AnimatedChat from "../../components/AnimatedChat";
 import Image from "next/image";
 import Link from "next/link";
 
