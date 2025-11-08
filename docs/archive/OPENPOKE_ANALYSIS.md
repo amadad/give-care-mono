@@ -1,7 +1,9 @@
 # OpenPoke Architecture Analysis for GiveCare
 
-**Date**: 2025-11-05 (Revised)
+**Date**: 2025-11-05 (Revised), Updated 2025-11-07
 **Purpose**: Identify applicable patterns from OpenPoke; document what's already built vs future opportunities
+
+**2025-11-07 Update**: Corrected "Markdown System Prompts" status from ✅ to ❌ (not yet implemented - still TypeScript template strings with TODOs in code)
 
 ---
 
@@ -10,11 +12,12 @@
 **Status Check**: GiveCare has already implemented **most** of the valuable patterns from OpenPoke:
 - ✅ RRULE-based per-user trigger scheduling
 - ✅ Engagement/wellness watchers with alerting
-- ✅ Service layer (MessageHandler)
+- ✅ Model layer architecture (convex/model/)
 - ✅ Working memory with vector search
-- ✅ Markdown system prompts (completed today)
+- ❌ Markdown system prompts (still TODO, currently TypeScript template strings)
 
 **Remaining Opportunities**:
+- Markdown system prompts (move from TypeScript to .md files)
 - Batch manager for parallel tool execution
 - Async tool execution for long-running operations
 - Agent directory structure (only if scaling beyond 5 agents)
@@ -65,26 +68,26 @@
 - Admin dashboard integration
 - Proactive SMS check-ins
 
-### 3. Service Layer Architecture ✅
+### 3. Model Layer Architecture ✅
 
-**Status**: Fully implemented (v0.8.x)
+**Status**: Fully implemented (v0.8.x+)
 
 **Implementation**:
-- Primary: `MessageHandler` service (convex/services/MessageHandler.ts, 800+ lines)
+- Location: `convex/model/` directory (6 modules)
+- Modules: `context.ts`, `logs.ts`, `messages.ts`, `subscriptions.ts`, `triggers.ts`, `users.ts`
+- Pattern: Data access layer abstracting database operations
 - Clear separation of concerns:
-  1. Webhook validation (Twilio signature)
-  2. Rate limiting (5 layers)
-  3. Authentication (user lookup/creation)
-  4. Authorization (subscription check)
-  5. Context building (async hydration)
-  6. Agent execution
-  7. Persistence (assessments, conversations, wellness, feedback)
-  8. Scheduling (crisis follow-ups, onboarding nudges)
+  1. Database queries abstracted from business logic
+  2. Type-safe context building
+  3. Reusable user/subscription/message helpers
+  4. Consistent error handling
+  5. Follows Convex playbook principles
 
 **Benefits Delivered**:
-- Testable (can mock ctx)
-- Maintainable (clear responsibilities)
-- Reusable (extracted from twilio.ts)
+- Testable (can mock database context)
+- Maintainable (single responsibility per module)
+- Reusable (shared across functions and agents)
+- Convex-native (no external service layer needed)
 
 ### 4. Working Memory System ✅
 
@@ -107,21 +110,26 @@
 - Vector similarity search
 - Automatic embedding generation
 
-### 5. Markdown System Prompts ✅
+### 5. Markdown System Prompts ❌
 
-**Status**: Completed 2025-11-05 (TDD approach)
+**Status**: NOT IMPLEMENTED (marked as TODO in code)
 
-**Implementation**:
-- Files: `src/prompts/main_agent.md`, `crisis_agent.md`, `assessment_agent.md`
-- Loader: `src/prompts/loader.ts`
+**Current Implementation**:
+- Prompts stored as template strings in `convex/lib/prompts.ts`
 - Template variables: `{{userName}}`, `{{careRecipient}}`, etc.
-- Tests: 20/20 passing (tests/promptLoader.test.ts)
+- Render function: `renderPrompt()` in `prompts.ts`
+- Tests: `tests/prompts.test.ts` (part of 52 passing tests)
 
-**Benefits**:
-- 59% code reduction (instructions.ts: 382 → 157 lines)
-- Better readability (markdown formatting)
-- Easier version control (clear git diffs)
-- Non-technical editing (stakeholders can review)
+**TODO Comments in Code** (`convex/lib/prompts.ts`):
+- Line 4: "NOTE: In Phase 3, prompts will be moved from src/prompts/ to convex/prompts/"
+- Line 29: "TODO: Move to database or convex/prompts/ directory"
+- Line 48: "TODO: Move to database or convex/prompts/ directory"
+
+**Future Implementation Path**:
+- Create `convex/prompts/*.md` files
+- Move prompt content from TypeScript strings to markdown
+- Update loader to read markdown files
+- Maintain template variable substitution
 
 ### 6. Conversation Management ✅
 
@@ -334,11 +342,12 @@ src/
 **GiveCare has already implemented the most valuable OpenPoke patterns**:
 - ✅ Per-user RRULE scheduling
 - ✅ Background monitoring (engagement/wellness)
-- ✅ Service layer architecture
+- ✅ Model layer architecture (convex/model/)
 - ✅ Working memory with vector search
-- ✅ Markdown system prompts
+- ❌ Markdown system prompts (TODO - currently TypeScript template strings)
 
-**Remaining opportunities are marginal**:
+**Remaining opportunities**:
+- Markdown prompts: Move to .md files for better version control and stakeholder review (marked as TODO in code)
 - Batch manager: Useful for parallel operations, but may not be needed if current performance is acceptable
 - Async execution: Better UX for long operations, but increases SMS costs
 - Directory structure: Only needed if scaling significantly
@@ -359,10 +368,12 @@ src/
 - `server/services/conversation/log.py` (8.2KB)
 - `server/services/gmail/importance_watcher.py` (8.8KB)
 
-**GiveCare Current Implementation**:
-- `give-care-app/convex/schema.ts` (triggers, memories, alerts tables)
-- `give-care-app/convex/triggers.ts` (RRULE processor)
-- `give-care-app/convex/watchers.ts` (engagement/wellness monitoring)
-- `give-care-app/convex/services/MessageHandler.ts` (800+ line service)
-- `give-care-app/src/prompts/*.md` (markdown system prompts)
-- `give-care-app/src/tools.ts` (set_wellness_schedule, record_memory tools)
+**GiveCare Current Implementation** (as of 2025-11-07):
+- `give-care-app/convex/schema.ts` (28 tables: triggers, memories, alerts, metrics, etc.)
+- `give-care-app/convex/crons.ts` (3 scheduled jobs: triggers, engagement, metrics)
+- `give-care-app/convex/functions/scheduler.ts` (RRULE trigger processor)
+- `give-care-app/convex/functions/watchers.ts` (engagement/wellness monitoring)
+- `give-care-app/convex/model/` (6 modules: context, logs, messages, subscriptions, triggers, users)
+- `give-care-app/convex/lib/prompts.ts` (TypeScript template strings - TODO: move to .md files)
+- `give-care-app/convex/internal/metrics.ts` (materialized metrics aggregation)
+- `give-care-app/tests/` (5 test files: 52 passing tests)

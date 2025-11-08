@@ -2,6 +2,7 @@ import { mutation } from '../_generated/server';
 import type { MutationCtx } from '../_generated/server';
 import { v } from 'convex/values';
 import * as Users from '../model/users';
+import { internal } from '../_generated/api';
 
 const PLAN_ENTITLEMENTS: Record<string, string[]> = {
   free: ['assessments'],
@@ -42,6 +43,10 @@ export const applyStripeEvent = mutation({
     const currentPeriodEnd = payload?.data?.object?.current_period_end ?? Date.now();
     const externalUserId = payload?.metadata?.userId ?? payload?.data?.object?.metadata?.userId;
 
+    // Extract phone number and name from checkout.session.completed metadata
+    const phoneNumber = payload?.data?.object?.metadata?.phoneNumber;
+    const fullName = payload?.data?.object?.metadata?.fullName;
+
     let user = null;
     if (externalUserId) {
       user = await Users.getByExternalId(ctx, externalUserId);
@@ -76,6 +81,19 @@ export const applyStripeEvent = mutation({
         await applyEntitlements(ctx, user.externalId, planId, currentPeriodEnd);
       }
     }
+
+    // Send welcome SMS for checkout.session.completed
+    if (type === 'checkout.session.completed' && phoneNumber) {
+      console.log('[billing] Scheduling welcome SMS for checkout:', { phoneNumber, fullName });
+      await ctx.scheduler.runAfter(
+        5000, // 5 second delay to ensure subscription is fully set up
+        internal.internal.onboarding.sendWelcomeSms,
+        {
+          phoneNumber,
+          fullName: fullName ?? 'there',
+        }
+      );
+    }
   },
 });
 
@@ -98,3 +116,4 @@ export const refreshEntitlements = mutation({
     return { plan, entitlements, validUntil: sub ? new Date(sub.currentPeriodEnd).toISOString() : undefined };
   },
 });
+

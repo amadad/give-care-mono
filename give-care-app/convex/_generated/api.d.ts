@@ -34,6 +34,7 @@ import type * as functions_watchers from "../functions/watchers.js";
 import type * as functions_wellness from "../functions/wellness.js";
 import type * as http from "../http.js";
 import type * as internal_metrics from "../internal/metrics.js";
+import type * as internal_onboarding from "../internal/onboarding.js";
 import type * as internal_scheduler from "../internal/scheduler.js";
 import type * as internal_seed from "../internal/seed.js";
 import type * as lib_billing from "../lib/billing.js";
@@ -93,6 +94,7 @@ declare const fullApi: ApiFromModules<{
   "functions/wellness": typeof functions_wellness;
   http: typeof http;
   "internal/metrics": typeof internal_metrics;
+  "internal/onboarding": typeof internal_onboarding;
   "internal/scheduler": typeof internal_scheduler;
   "internal/seed": typeof internal_seed;
   "lib/billing": typeof lib_billing;

@@ -33,7 +33,7 @@
 - **Passive feedback**: 6 signal types, zero user burden, continuous learning
 
 ### Resource Matching
-- **Evidence-based interventions**: 20 strategies matched to pressure zones
+- **Evidence-based interventions**: 16 strategies matched to pressure zones
 - **Local resource search**: Semantic search + geocoding
 - **Knowledge base**: 290+ curated resources with embedding search
 
@@ -53,7 +53,7 @@
 ## Marketing Site (give-care-site)
 
 ### Public-Facing
-- **Next.js 15**: App router, RSC, static export
+- **Next.js 16**: App router, RSC, static export
 - **Public assessment**: CWBS tool for lead gen → newsletter signup
 - **Checkout flow**: Stripe integration with promo codes
 - **Content pages**: /how-it-works, /about, /partners, /press
@@ -70,15 +70,18 @@
 ## Tech Stack
 
 ### Backend (give-care-app)
-- **Convex**: Serverless DB + functions + real-time subscriptions
-- **OpenAI Agents SDK**: Multi-agent orchestration
+- **Convex**: Serverless DB (28 tables) + functions (57 exports) + real-time subscriptions
+- **@convex-dev/agent**: Multi-agent orchestration using Convex Agent Component
 - **Twilio**: SMS delivery
 - **Stripe**: Payment processing
-- **Markdown Prompts**: System prompts in markdown with template variables
-- **Vitest**: 235 passing tests (TDD approach)
+- **Model layer**: Data access abstraction (`convex/model/` - 6 modules)
+- **Materialized metrics**: Pre-aggregated analytics (4 tables, cron-updated)
+- **Scheduled jobs**: 3 cron jobs (triggers every 5min, engagement every 6h, metrics daily)
+- **Vitest**: 52 passing tests across 5 test files
+- **Codebase**: 105 TypeScript files
 
 ### Frontend (give-care-site)
-- **Next.js 15**: SSR + SSG
+- **Next.js 16**: SSR + SSG
 - **Tailwind v4**: DaisyUI components
 - **Framer Motion**: Animations
 - **Resend**: Email delivery
@@ -106,7 +109,7 @@
 
 ### Business
 - Cost: $1.52/user at 10K scale
-- Test coverage: 235 passing tests
+- Test coverage: 52 passing tests (5 test files: assessments, billing, prompts, scheduler, summarization)
 - Zero PII leaks (HIPAA compliant)
 
 ---
