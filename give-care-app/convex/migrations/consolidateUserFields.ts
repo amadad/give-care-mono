@@ -13,6 +13,7 @@
 import { internalMutation } from '../_generated/server';
 
 export const consolidateUserFields = internalMutation({
+  args: {},
   handler: async (ctx) => {
     console.log('Starting user fields migration...');
 

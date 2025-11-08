@@ -157,7 +157,7 @@ describe('Resource Search', () => {
         widgetToken: 'abc123token',
       };
 
-      const responseWithoutToken = {
+      const responseWithoutToken: { text: string; sources: never[]; widgetToken?: string } = {
         text: 'Results...',
         sources: [],
       };

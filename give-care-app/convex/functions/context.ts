@@ -1,4 +1,4 @@
-import { mutation, query } from '../_generated/server';
+import { mutation, internalQuery } from '../_generated/server';
 import { v } from 'convex/values';
 import * as ContextModel from '../model/context';
 import { summarizeConversation, formatForContext } from '../lib/summarization';
@@ -49,7 +49,7 @@ export const persist = mutation({
  *
  * Returns compressed conversation history with 60-80% token savings
  */
-export const getConversationSummary = query({
+export const getConversationSummary = internalQuery({
   args: {
     externalId: v.string(),
     limit: v.optional(v.number()),

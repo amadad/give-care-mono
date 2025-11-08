@@ -50,7 +50,6 @@ export const ensureUser = async (ctx: MutationCtx, params: EnsureUserParams) => 
     locale: params.locale ?? DEFAULT_LOCALE,
     consent: params.consent,
     metadata: params.metadata,
-    createdByHarness: true,
   });
   const user = await ctx.db.get(userId);
   if (!user) {

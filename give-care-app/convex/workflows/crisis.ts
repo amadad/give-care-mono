@@ -1,5 +1,3 @@
-"use node";
-
 /**
  * Crisis Escalation Workflow
  *
@@ -34,9 +32,14 @@ export const crisisEscalation = workflow.define({
     crisisTerms: v.array(v.string()),
     severity: v.union(v.literal('high'), v.literal('medium'), v.literal('low')),
   },
-  handler: async (step, args) => {
+  handler: async (step, args): Promise<{
+    success: boolean;
+    crisisEventId: any;
+    responseText: string;
+    emergencyContactNotified: boolean;
+  }> => {
     // Step 1: Log the crisis event immediately
-    const crisisEventId = await step.runMutation(internal.workflows.crisisSteps.logCrisisEvent, {
+    const crisisEventId: any = await step.runMutation(internal.workflows.crisisSteps.logCrisisEvent, {
       userId: args.userId,
       severity: args.severity,
       terms: args.crisisTerms,
@@ -46,7 +49,7 @@ export const crisisEscalation = workflow.define({
     console.log(`Crisis event logged: ${crisisEventId}`);
 
     // Step 2: Generate crisis response using the crisis agent
-    const response = await step.runAction(internal.workflows.crisisSteps.generateCrisisResponse, {
+    const response: any = await step.runAction(internal.workflows.crisisSteps.generateCrisisResponse, {
       userId: args.userId,
       threadId: args.threadId,
       messageText: args.messageText,
@@ -57,7 +60,7 @@ export const crisisEscalation = workflow.define({
 
     // Step 3: Check if emergency contact notification is needed (high severity)
     if (args.severity === 'high') {
-      const notificationResult = await step.runAction(
+      const notificationResult: any = await step.runAction(
         internal.workflows.crisisSteps.notifyEmergencyContact,
         {
           userId: args.userId,
@@ -89,15 +92,6 @@ export const crisisEscalation = workflow.define({
       emergencyContactNotified: args.severity === 'high',
     };
   },
-  config: {
-    // Retry configuration for reliability
-    maxAttempts: 3,
-    backoff: {
-      type: 'exponential',
-      initialDelayMs: 1000,
-      maxDelayMs: 30000,
-    },
-  },
 });
 
 /**
@@ -109,9 +103,12 @@ export const crisisFollowUp = workflow.define({
     userId: v.id('users'),
     crisisEventId: v.id('alerts'),
   },
-  handler: async (step, args) => {
+  handler: async (step, args): Promise<{
+    success: boolean;
+    followUpSent: boolean;
+  }> => {
     // Step 1: Check if user has had any recent interactions
-    const recentActivity = await step.runQuery(
+    const recentActivity: any = await step.runQuery(
       internal.workflows.crisisSteps.checkRecentActivity,
       {
         userId: args.userId,

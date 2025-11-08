@@ -44,13 +44,13 @@ export const metadata: Metadata = {
   openGraph: {
     type: "website",
     locale: "en_US",
-    url: "https://givecareapp.com",
+    url: "https://www.givecareapp.com",
     siteName: "GiveCare",
     title: "GiveCare - Personalized Caregiver Support",
     description: "Personalized guidance, emotional support, and practical resources for caregivers - all through simple text messages.",
     images: [
       {
-        url: "/og.png",
+        url: "https://www.givecareapp.com/og.png",
         width: 1200,
         height: 630,
         alt: "GiveCare - Personalized Caregiver Support"
@@ -61,13 +61,13 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: "GiveCare - Personalized Caregiver Support",
     description: "Personalized guidance, emotional support, and practical resources for caregivers - all through simple text messages.",
-    images: ["/og.png"]
+    images: ["https://www.givecareapp.com/og.png"]
   },
   icons: {
     icon: "/favicon.ico",
     shortcut: "/favicon.ico"
   },
-  metadataBase: new URL("https://givecareapp.com"),
+  metadataBase: new URL("https://www.givecareapp.com"),
   robots: {
     index: true,
     follow: true,
@@ -82,9 +82,9 @@ export const metadata: Metadata = {
     },
   },
   alternates: {
-    canonical: "https://givecareapp.com",
+    canonical: "https://www.givecareapp.com",
     languages: {
-      "en": "https://givecareapp.com"
+      "en": "https://www.givecareapp.com"
     }
   },
 };
@@ -101,7 +101,7 @@ export default function RootLayout({
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         <link rel="preconnect" href="https://www.googletagmanager.com" />
-        <link rel="canonical" href="https://givecareapp.com" />
+        <link rel="canonical" href="https://www.givecareapp.com" />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         {/* Analytics - only in production */}
         {process.env.NODE_ENV === 'production' && process.env.NEXT_PUBLIC_GA_ID && (
@@ -148,8 +148,8 @@ export default function RootLayout({
               "@context": "https://schema.org",
               "@type": "Organization",
               "name": "GiveCare",
-              "url": "https://givecareapp.com",
-              "logo": "https://givecareapp.com/logo-2.svg",
+              "url": "https://www.givecareapp.com",
+              "logo": "https://www.givecareapp.com/logo-2.svg",
               "description": "GiveCare provides personalized guidance, emotional support, and practical resources for caregivers - all through simple text messages.",
               "sameAs": [
                 "https://x.com/givecareapp",

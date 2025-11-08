@@ -2,18 +2,17 @@ import { httpRouter } from 'convex/server';
 import { httpAction } from './_generated/server';
 import { api, internal } from './_generated/api';
 import Stripe from 'stripe';
-import { createHmac } from 'crypto';
 
 /**
- * Verify Twilio webhook signature
+ * Verify Twilio webhook signature using Web Crypto API (edge-compatible)
  * See: https://www.twilio.com/docs/usage/webhooks/webhooks-security
  */
-function verifyTwilioSignature(
+async function verifyTwilioSignature(
   url: string,
   params: Record<string, string>,
   signature: string,
   authToken: string
-): boolean {
+): Promise<boolean> {
   // Sort parameters alphabetically and concatenate with URL
   const sortedKeys = Object.keys(params).sort();
   let data = url;
@@ -21,10 +20,26 @@ function verifyTwilioSignature(
     data += key + params[key];
   }
 
-  // Create HMAC-SHA1 signature
-  const hmac = createHmac('sha1', authToken);
-  hmac.update(data, 'utf-8');
-  const expectedSignature = hmac.digest('base64');
+  // Create HMAC-SHA1 signature using Web Crypto API
+  const encoder = new TextEncoder();
+  const key = await crypto.subtle.importKey(
+    'raw',
+    encoder.encode(authToken),
+    { name: 'HMAC', hash: 'SHA-1' },
+    false,
+    ['sign']
+  );
+
+  const signatureBytes = await crypto.subtle.sign(
+    'HMAC',
+    key,
+    encoder.encode(data)
+  );
+
+  // Convert to base64
+  const expectedSignature = btoa(
+    String.fromCharCode(...new Uint8Array(signatureBytes))
+  );
 
   return expectedSignature === signature;
 }
@@ -130,7 +145,7 @@ http.route({
         params[key] = value as string;
       });
 
-      const isValid = verifyTwilioSignature(url, params, signature, twilioAuthToken);
+      const isValid = await verifyTwilioSignature(url, params, signature, twilioAuthToken);
 
       if (!isValid) {
         console.error('Twilio signature verification failed');

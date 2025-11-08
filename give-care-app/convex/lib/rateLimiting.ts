@@ -1,5 +1,8 @@
-import { RateLimiter, MINUTE, HOUR, DAY } from '@convex-dev/rate-limiter';
+import { RateLimiter, MINUTE, HOUR } from '@convex-dev/rate-limiter';
 import { components } from '../_generated/api';
+
+// DAY constant not exported from rate-limiter, calculate it
+const DAY = 24 * HOUR;
 
 /**
  * Rate limiter configuration for GiveCare

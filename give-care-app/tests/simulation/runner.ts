@@ -356,7 +356,7 @@ export class SimulationRunner {
    */
   private generateRecommendations(
     steps: StepResult[],
-    failures: string[]
+    _failures: string[]
   ): string[] {
     const recommendations: string[] = [];
 

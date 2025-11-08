@@ -98,7 +98,7 @@ export const vacuumUnusedFiles = internalMutation({
   },
   handler: async (ctx, args) => {
     const daysAgo = args.olderThanDays || 30;
-    const cutoffTime = Date.now() - daysAgo * 24 * 60 * 60 * 1000;
+    const _cutoffTime = Date.now() - daysAgo * 24 * 60 * 60 * 1000;
 
     console.log(`[File Vacuum] Starting cleanup for files older than ${daysAgo} days`);
 

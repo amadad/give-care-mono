@@ -35,9 +35,11 @@
   },
   "devDependencies": {
     "@convex-dev/eslint-plugin": "^1.0.0",
+    "@edge-runtime/vm": "^5.0.0",
     "@eslint/js": "^9.0.0",
     "@types/luxon": "^3.4.2",
     "@types/node": "^22.0.0",
+    "convex-test": "^0.0.38",
     "eslint": "^9.0.0",
     "fast-check": "^4.3.0",
     "prettier": "^3.0.0",

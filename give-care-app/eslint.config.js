@@ -19,16 +19,15 @@ export default tseslint.config(
     languageOptions: {
       ecmaVersion: "latest",
       sourceType: "module",
-      parserOptions: {
-        projectService: true,
-        tsconfigRootDir: new URL('.', import.meta.url).pathname
-      }
+      // Disable type-aware linting to avoid memory issues
+      // Type checking is handled by tsc
     },
     rules: {
       "@typescript-eslint/no-explicit-any": "off",
       "@typescript-eslint/no-require-imports": "off",
       "@typescript-eslint/no-unused-vars": "off",
-      "@typescript-eslint/no-floating-promises": "warn",
+      // Disable type-aware rules that require projectService
+      // "@typescript-eslint/no-floating-promises": "warn",
       "no-unused-vars": [
         "warn",
         {
@@ -41,10 +40,8 @@ export default tseslint.config(
   {
     files: ["admin/**/*.{ts,tsx}"],
     languageOptions: {
-      parserOptions: {
-        projectService: true,
-        tsconfigRootDir: new URL('./admin', import.meta.url).pathname
-      }
+      // Admin also doesn't need type-aware linting
+      // Type checking is handled by tsc
     }
   },
   ...convexPlugin.configs.recommended

@@ -8,13 +8,14 @@
 
 import { describe, it, expect } from 'vitest';
 import { convexTest } from 'convex-test';
-import { api } from '../convex/_generated/api';
-import schema from '../convex/schema';
+import { api } from '../../convex/_generated/api';
+import schema from '../../convex/schema';
+import { modules } from '../../convex/test.setup';
 
 describe('Context Simulation Tests', () => {
   it('should hydrate user session from externalId', async () => {
     // ARCHITECTURE.md: "Conversation Management - hydrate loads/creates user session"
-    const t = convexTest(schema);
+    const t = convexTest(schema, modules);
 
     const result = await t.mutation(api.functions.context.hydrate, {
       user: {
@@ -32,7 +33,7 @@ describe('Context Simulation Tests', () => {
 
   it('should persist context metadata', async () => {
     // ARCHITECTURE.md: "Context Management - persist saves session state"
-    const t = convexTest(schema);
+    const t = convexTest(schema, modules);
 
     // First hydrate to create session
     const hydrated = await t.mutation(api.functions.context.hydrate, {
@@ -64,20 +65,20 @@ describe('Context Simulation Tests', () => {
     });
 
     // Verify persisted
-    const session = await t.query(api.functions.context.hydrate, {
+    const session = await t.mutation(api.functions.context.hydrate, {
       user: {
         externalId: 'sim_test_user_2',
         channel: 'sms',
       },
     });
 
-    expect(session.metadata.profile.firstName).toBe('Alice');
-    expect(session.metadata.journeyPhase).toBe('active');
+    expect((session.metadata as any).profile.firstName).toBe('Alice');
+    expect((session.metadata as any).journeyPhase).toBe('active');
   });
 
   it('should record memory with importance score', async () => {
     // ARCHITECTURE.md: "Working Memory System - recordMemory stores categorized memories"
-    const t = convexTest(schema);
+    const t = convexTest(schema, modules);
 
     const hydrated = await t.mutation(api.functions.context.hydrate, {
       user: {
@@ -115,7 +116,7 @@ describe('Context Simulation Tests', () => {
   it('should handle edge case: recordMemory for non-existent user', async () => {
     // Edge case: Memory recorded before user fully created
     // Expected: Should use externalId and backfill userId later
-    const t = convexTest(schema);
+    const t = convexTest(schema, modules);
 
     // Try to record memory without hydrating user first
     await expect(
@@ -128,13 +129,12 @@ describe('Context Simulation Tests', () => {
     ).rejects.toThrow('User not found');
 
     // This test documents the current behavior
-    // TODO: Consider supporting externalId directly for early memories
   });
 
   it('should handle edge case: concurrent session creation', async () => {
     // Edge case: Two hydrate calls at exact same time
     // Expected: Should not create duplicate sessions
-    const t = convexTest(schema);
+    const t = convexTest(schema, modules);
 
     const [session1, session2] = await Promise.all([
       t.mutation(api.functions.context.hydrate, {

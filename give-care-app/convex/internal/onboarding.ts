@@ -51,7 +51,7 @@ export const sendWelcomeSms = internalAction({
         return { success: false, error };
       }
 
-      const data = await response.json();
+      const data: any = await response.json();
       console.log('[onboarding] Welcome SMS sent:', { sid: data.sid, to: phoneNumber });
 
       return { success: true, sid: data.sid };

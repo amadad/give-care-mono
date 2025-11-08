@@ -137,15 +137,15 @@ export const runAssessmentAgent: any = action({
 
       const total = answers.reduce((sum, val) => sum + val, 0);
       const avgScore = total / answers.length;
-      const pressureZone = (metadata.pressureZone as string) ?? 'work';
+      const _pressureZone = (metadata.pressureZone as string) ?? 'work';
 
-      let band: string;
+      let _band: string;
       if (avgScore < 2) {
-        band = 'low';
+        _band = 'low';
       } else if (avgScore < 3.5) {
-        band = 'moderate';
+        _band = 'moderate';
       } else {
-        band = 'high';
+        _band = 'high';
       }
 
       // Extract assessment context for the prompt

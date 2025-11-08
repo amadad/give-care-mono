@@ -1,8 +1,7 @@
 import { v } from 'convex/values';
 import { internalMutation } from '../_generated/server';
-import type { GenericActionCtx } from 'convex/server';
+import { internal } from '../_generated/api';
 import type { Config, UsageHandler } from '@convex-dev/agent';
-import type { DataModel } from '../_generated/dataModel';
 
 /**
  * Get billing period in YYYY-MM format
@@ -43,7 +42,7 @@ export const insertLLMUsage = internalMutation({
  * Shared usage handler for all agents
  * Tracks token usage and costs for billing and monitoring
  */
-export const usageHandler: UsageHandler = async (ctx: GenericActionCtx<DataModel>, args) => {
+export const usageHandler: UsageHandler = async (ctx, args) => {
   if (!args.usage) {
     console.debug('No usage data provided');
     return;
@@ -51,8 +50,8 @@ export const usageHandler: UsageHandler = async (ctx: GenericActionCtx<DataModel
 
   const { usage, userId, threadId, agentName, model, provider, providerMetadata } = args;
 
-  await ctx.runMutation(insertLLMUsage, {
-    userId,
+  await ctx.runMutation(internal.lib.usage.insertLLMUsage, {
+    userId: userId as any, // Type compatibility with agent framework
     agentName,
     threadId,
     model,

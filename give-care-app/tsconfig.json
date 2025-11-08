@@ -15,7 +15,7 @@
     "paths": {
       "~/*": ["convex/*"]
     },
-    "types": ["node"],
+    "types": ["node", "vite/client"],
     "allowSyntheticDefaultImports": true,
     "isolatedModules": true
   },

@@ -1,5 +1,3 @@
-"use node";
-
 /**
  * Main Agent - Convex-native implementation using Agent Component
  *
@@ -260,7 +258,7 @@ const mainAgent = new Agent(components.agent, {
 
     if (threadId) {
       try {
-        const conversationSummary = await ctx.runQuery(api.functions.context.getConversationSummary, {
+        const conversationSummary = await ctx.runQuery(internal.functions.context.getConversationSummary, {
           externalId: args.userId || '',
           limit: 25,
         });

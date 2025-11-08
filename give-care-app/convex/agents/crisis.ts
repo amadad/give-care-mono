@@ -12,7 +12,7 @@
  * - Manages persistent threads with automatic message history
  */
 
-import { action } from '../_generated/server';
+import { action, internalAction } from '../_generated/server';
 import { internal, components } from '../_generated/api';
 import { v } from 'convex/values';
 import { Agent } from '@convex-dev/agent';
@@ -66,7 +66,7 @@ const crisisAgent = new Agent(components.agent, {
  * @param context - User context including crisis flags
  * @returns Stream of response chunks
  */
-export const runCrisisAgent = action({
+export const runCrisisAgent = internalAction({
   args: {
     input: v.object({
       channel: channelValidator,

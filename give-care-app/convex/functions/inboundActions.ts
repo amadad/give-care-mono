@@ -32,7 +32,7 @@ export const generateCrisisResponse = internalAction({
     }
 
     // Run crisis agent
-    const result: any = await ctx.runAction(api.agents.crisis.runCrisisAgent, {
+    const result: any = await ctx.runAction(internal.agents.crisis.runCrisisAgent, {
       input: {
         channel,
         text: '', // Text already in thread via promptMessageId
@@ -188,7 +188,7 @@ export const sendSmsResponse = internalAction({
         return;
       }
 
-      const data = await response.json();
+      const data: any = await response.json();
 
       // Record outbound message
       await ctx.runMutation(api.functions.messages.recordOutbound, {
