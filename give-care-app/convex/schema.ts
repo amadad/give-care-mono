@@ -38,20 +38,20 @@ const crisisFlagsValidator = v.object({
 
 export default defineSchema({
   users: defineTable({
-    // Old fields (from pre-refactor schema)
-    createdAt: v.optional(v.number()),
-    updatedAt: v.optional(v.number()),
-    email: v.optional(v.string()),
-    name: v.optional(v.string()),
-    phoneNumber: v.optional(v.string()),
-    // New fields
+    // Core fields
     externalId: v.optional(v.string()),
     phone: v.optional(v.string()),
+    email: v.optional(v.string()),
+    name: v.optional(v.string()),
     channel: v.optional(v.union(v.literal('sms'), v.literal('web'))),
     locale: v.optional(v.string()),
     consent: v.optional(consentValidator),
     address: v.optional(addressValidator),
     metadata: v.optional(v.any()),
+    // Legacy fields (kept for backward compatibility during migration)
+    createdAt: v.optional(v.number()),
+    updatedAt: v.optional(v.number()),
+    phoneNumber: v.optional(v.string()), // DEPRECATED: Use 'phone' instead
   })
     .index('by_externalId', ['externalId'])
     .index('by_phone', ['phone']),
