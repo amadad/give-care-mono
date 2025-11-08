@@ -54,7 +54,7 @@ const searchResourcesTool = createTool({
     category: z.string().optional().describe('Optional category: respite, support, daycare, homecare, medical, community, meals, transport, hospice, memory'),
   }),
   description: 'Search for local caregiving resources using Google Maps. Returns nearby services like respite care, support groups, adult day care, home health agencies, and community resources with addresses, hours, and reviews.',
-  handler: async (ctx, args: { query: string; category?: string }) => {
+  handler: async (ctx, args: { query: string; category?: string }): Promise<{ error?: string; suggestion?: string; resources?: string; sources?: any[]; widgetToken?: string }> => {
     // Get user metadata to extract location
     // @ts-expect-error - metadata property exists at runtime
     const contextData = ctx.metadata as { context?: { metadata?: Record<string, unknown> } };
@@ -88,7 +88,7 @@ const recordMemoryTool = createTool({
     importance: z.number().min(1).max(10).describe('Importance score (1-10): 9-10=critical, 6-8=important, 3-5=useful, 1-2=minor'),
   }),
   description: 'Save important information about the user to build context over time. Use for care routines, preferences, intervention results, and crisis triggers.',
-  handler: async (ctx, args: { content: string; category: string; importance: number }) => {
+  handler: async (ctx, args: { content: string; category: string; importance: number }): Promise<{ success: boolean; error?: string; message?: string }> => {
     const userId = ctx.userId;
 
     if (!userId) {
@@ -114,7 +114,7 @@ const recordMemoryTool = createTool({
 const checkWellnessStatusTool = createTool({
   args: z.object({}),
   description: 'Fetch burnout trends, pressure zones, and wellness status over time. Shows recent scores and identifies areas needing support.',
-  handler: async (ctx) => {
+  handler: async (ctx): Promise<any> => {
     const userId = ctx.userId;
 
     if (!userId) {
@@ -137,7 +137,7 @@ const findInterventionsTool = createTool({
     limit: z.number().optional().describe('Maximum number of interventions (default: 5)'),
   }),
   description: 'Get evidence-based interventions matched to pressure zones. Returns micro-commitments and support strategies with evidence levels.',
-  handler: async (ctx, args: { zones?: string[]; minEvidenceLevel?: 'high' | 'moderate' | 'low'; limit?: number }) => {
+  handler: async (ctx, args: { zones?: string[]; minEvidenceLevel?: 'high' | 'moderate' | 'low'; limit?: number }): Promise<{ error?: string; interventions?: any[]; zones?: string[] }> => {
     const userId = ctx.userId;
 
     if (!userId) {
@@ -175,7 +175,7 @@ const updateProfileTool = createTool({
     zipCode: z.string().optional().describe('ZIP code for finding local resources'),
   }),
   description: 'Update user profile information. Only include fields that are being updated.',
-  handler: async (ctx, args: { firstName?: string; relationship?: string; careRecipientName?: string; zipCode?: string }) => {
+  handler: async (ctx, args: { firstName?: string; relationship?: string; careRecipientName?: string; zipCode?: string }): Promise<{ success: boolean; error?: string; profile?: Record<string, unknown>; message?: string }> => {
     const userId = ctx.userId;
 
     if (!userId) {
@@ -214,7 +214,7 @@ const startAssessmentTool = createTool({
     assessmentType: z.enum(['burnout_v1', 'bsfc_v1', 'ema_v1', 'reach_ii_v1', 'sdoh_v1']).describe('Type of assessment to start'),
   }),
   description: 'Begin a wellness assessment. This will initiate a structured check-in to track burnout, stress, or other wellness metrics.',
-  handler: async (ctx, args: { assessmentType: string }) => {
+  handler: async (ctx, args: { assessmentType: string }): Promise<{ error?: string; success?: boolean; assessmentType?: string; message?: string; nextStep?: string }> => {
     const userId = ctx.userId;
 
     if (!userId) {

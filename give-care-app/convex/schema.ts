@@ -314,13 +314,8 @@ export default defineSchema({
     model: v.string(),
     provider: v.string(),
 
-    // Token usage stats
-    promptTokens: v.number(),
-    completionTokens: v.number(),
-    totalTokens: v.number(),
-
-    // Cost tracking (in cents)
-    estimatedCost: v.optional(v.number()),
+    // Raw usage object from AI SDK (contains promptTokens, completionTokens, etc.)
+    usage: v.any(),
 
     // Billing period for aggregation
     billingPeriod: v.string(), // YYYY-MM format
