@@ -74,10 +74,10 @@ http.route({
         return new Response('Missing signature', { status: 400 });
       }
 
-      // Verify webhook signature
+      // Verify webhook signature (use async version for Web Crypto compatibility)
       let event: Stripe.Event;
       try {
-        event = stripe.webhooks.constructEvent(body, signature, webhookSecret);
+        event = await stripe.webhooks.constructEventAsync(body, signature, webhookSecret);
       } catch (err) {
         console.error('[stripe-webhook] Signature verification failed:', {
           error: err instanceof Error ? err.message : String(err),
