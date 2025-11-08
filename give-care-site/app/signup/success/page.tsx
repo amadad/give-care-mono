@@ -71,8 +71,8 @@ export default function SuccessPage() {
 
               <p className="text-sm text-amber-950/50">
                 Need help? Contact us at{' '}
-                <a href="mailto:support@givecare.ai" className="text-primary hover:underline">
-                  support@givecare.ai
+                <a href="mailto:support@givecareapp.com" className="text-primary hover:underline">
+                  support@givecareapp.com
                 </a>
               </p>
             </div>

@@ -31,6 +31,8 @@ export const applyStripeEvent = mutation({
     payload: v.any(),
   },
   handler: async (ctx, { id, type, payload }) => {
+    console.log('[billing] Processing Stripe event:', { id, type });
+
     const existing = await ctx.db
       .query('billing_events')
       .withIndex('by_event', (q) => q.eq('stripeEventId', id))
@@ -46,6 +48,14 @@ export const applyStripeEvent = mutation({
     // Extract phone number and name from checkout.session.completed metadata
     const phoneNumber = payload?.data?.object?.metadata?.phoneNumber;
     const fullName = payload?.data?.object?.metadata?.fullName;
+
+    console.log('[billing] Extracted metadata:', {
+      type,
+      hasMetadata: !!payload?.data?.object?.metadata,
+      phoneNumber,
+      fullName,
+      allMetadata: payload?.data?.object?.metadata
+    });
 
     // Extract billing address from customer_details (checkout.session.completed)
     const billingAddress = payload?.data?.object?.customer_details?.address;
