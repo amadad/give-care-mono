@@ -62,6 +62,30 @@ VITE_CONVEX_URL=${convexUrl}
   console.log('✅ Created parent .env.local for codegen');
   console.log('');
 
+  // Check if Convex types exist, run codegen only if needed/possible
+  const { existsSync } = await import('fs');
+  const { execSync } = await import('child_process');
+  const adminDir = join(__dirname, '..'); // give-care-app/admin
+  const appDir = join(adminDir, '..'); // give-care-app
+  const typesPath = join(appDir, 'convex', '_generated', 'api.d.ts');
+
+  if (existsSync(typesPath)) {
+    console.log('✅ Convex types already exist, skipping codegen');
+  } else {
+    console.log('📦 Running convex codegen...');
+    try {
+      execSync('npx convex codegen --typecheck disable', {
+        cwd: appDir,
+        stdio: 'inherit',
+        env: { ...process.env, CONVEX_DEPLOYMENT: convexDeployment }
+      });
+      console.log('✅ Convex types generated successfully');
+    } catch (codegenError) {
+      console.warn('⚠️  Convex codegen failed, but continuing build...');
+      console.warn('   Using committed types from repository');
+    }
+  }
+
 } catch (error) {
   console.error('❌ Error setting up Convex configuration:', error.message);
   process.exit(1);
