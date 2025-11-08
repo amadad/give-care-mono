@@ -83,23 +83,74 @@ Required:
 
 ---
 
+## Deployments: DEV vs PROD ⚠️
+
+**CRITICAL:** Always verify which deployment you're targeting.
+
+### Environments
+
+| Environment | Deployment | URL | Use Case |
+|------------|------------|-----|----------|
+| **DEV** | `dev:agreeable-lion-831` | https://agreeable-lion-831.convex.cloud | Local development, testing |
+| **PROD** | `prod:doting-tortoise-411` | https://doting-tortoise-411.convex.cloud | Live users, webhooks |
+
+### Deployment Commands
+
+```bash
+# Deploy to PROD (ALWAYS use this for production changes)
+CONVEX_DEPLOYMENT=prod:doting-tortoise-411 npx convex deploy --yes
+
+# Deploy to DEV (default from .env.local)
+npx convex dev
+```
+
+### Common Mistake ⚠️
+
+**Issue:** Deploying code to DEV but webhooks/users are on PROD.
+
+**Symptoms:**
+- New functions don't appear when running queries
+- Webhook events process but subscriptions not created
+- Users exist in PROD but code changes only in DEV
+
+**Solution:** ALWAYS use `CONVEX_DEPLOYMENT=prod:doting-tortoise-411` for production deployments.
+
+### Verify Current Deployment
+
+```bash
+# Check which deployment .env.local points to
+cat .env.local | grep CONVEX_DEPLOYMENT
+
+# Should show: CONVEX_DEPLOYMENT=dev:agreeable-lion-831 (for local dev)
+# Production uses: CONVEX_DEPLOYMENT=prod:doting-tortoise-411
+```
+
+---
+
 ## Monitoring
 
 ```bash
-# View logs
+# View PROD logs (use --prod flag)
 npx convex logs --prod --history 100
 
-# Check health
+# View DEV logs (default)
+npx convex logs --history 100
+
+# Check health (PROD)
 curl https://doting-tortoise-411.convex.site/health
 
-# View functions
-env CONVEX_DEPLOYMENT=prod:doting-tortoise-411 \
-  npx convex function-spec | grep -c identifier
+# Run queries on PROD (use --prod flag)
+npx convex run --prod functions/billing:refreshEntitlements '{"userId":"+15551234567"}'
+
+# View PROD functions
+npx convex function-spec --prod | grep -c identifier
 # Expected: 41
 
-# View tables
-env CONVEX_DEPLOYMENT=prod:doting-tortoise-411 \
-  npx convex data
+# View PROD tables
+npx convex data --prod
+
+# View PROD specific table
+npx convex data --prod users
 ```
 
 ---

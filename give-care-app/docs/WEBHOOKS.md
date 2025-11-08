@@ -112,6 +112,46 @@ No authentication required.
 - View Stripe dashboard → Webhooks → Recent events
 - Check Convex logs for processing errors
 
+### Subscription Created in Stripe But Not in Convex
+**Symptoms:**
+- Stripe shows active subscription
+- User received welcome SMS
+- `refreshEntitlements` returns `plan: "free"`
+- Webhook returns HTTP 200 but no subscription in database
+
+**Root Causes:**
+1. **Event deduplication**: Webhook processed event before phoneNumber fallback was added, event now exists in `billing_events` table preventing reprocessing
+2. **User lookup failure**: Original webhook couldn't find user (no userId or phoneNumber in metadata), skipped subscription creation
+3. **DEV vs PROD deployment**: Code deployed to DEV but production webhooks hitting PROD deployment
+
+**Diagnosis:**
+```bash
+# Check if billing event exists but no subscription
+npx convex run --prod functions/billing:debugBillingEvents
+
+# Check if user has subscription
+npx convex run --prod functions/debugSubscriptions:getSubscriptionsByPhone '{"phoneNumber":"+15551234567"}'
+
+# Check entitlements
+npx convex data --prod entitlements
+```
+
+**Fix:** Manually link subscription using billing event data
+```bash
+# Get subscription details from Stripe dashboard or billing_events
+# Then run manual link with correct deployment:
+npx convex run --prod functions/manualLinkSubscription:linkSubscription '{
+  "phoneNumber": "+15551234567",
+  "stripeCustomerId": "cus_XXXXX",
+  "planId": "price_XXXXX",
+  "currentPeriodEnd": 1234567890000
+}'
+
+# Verify fix
+npx convex run --prod functions/billing:refreshEntitlements '{"userId":"+15551234567"}'
+npx convex data --prod entitlements
+```
+
 ---
 
 ## Environment Variable Checklist
