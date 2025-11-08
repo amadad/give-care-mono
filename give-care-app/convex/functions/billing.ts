@@ -71,6 +71,9 @@ export const applyStripeEvent = mutation({
     let user: Awaited<ReturnType<typeof Users.getByExternalId>> = null;
     if (externalUserId) {
       user = await Users.getByExternalId(ctx, externalUserId);
+    } else if (phoneNumber) {
+      // Fallback: try phone number if userId not in metadata (old checkouts)
+      user = await Users.getByExternalId(ctx, phoneNumber);
     } else if (customerId) {
       const sub = await ctx.db
         .query('subscriptions')
