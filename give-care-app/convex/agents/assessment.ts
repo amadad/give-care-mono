@@ -85,7 +85,7 @@ const assessmentAgent: any = new Agent(components.agent, {
   name: 'Assessment Specialist',
   // @ts-expect-error - LanguageModelV1/V2 type mismatch between AI SDK versions
   languageModel: openai.chat('gpt-5-mini', {
-    reasoning: { effort: 'minimal' }, // Lower latency configuration
+    reasoningEffort: 'minimal', // Lower latency configuration
     serviceTier: 'priority', // Priority tier: 99% SLA at >80 tokens/sec
   }),
   instructions:

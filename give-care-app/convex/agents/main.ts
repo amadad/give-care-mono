@@ -82,7 +82,7 @@ const mainAgent = new Agent(components.agent, {
   name: 'Caregiver Support',
   // @ts-expect-error - LanguageModelV1/V2 type mismatch between AI SDK versions
   languageModel: openai.chat('gpt-5-nano', {
-    reasoning: { effort: 'minimal' }, // Lower latency: 100 tokens/sec throughput
+    reasoningEffort: 'minimal', // Lower latency: 100 tokens/sec throughput
   }),
   instructions: 'You are a compassionate AI caregiver assistant providing empathetic support and practical advice.',
   tools: { searchResources: searchResourcesTool },
