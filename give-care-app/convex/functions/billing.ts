@@ -47,7 +47,7 @@ export const applyStripeEvent = mutation({
     const phoneNumber = payload?.data?.object?.metadata?.phoneNumber;
     const fullName = payload?.data?.object?.metadata?.fullName;
 
-    let user = null;
+    let user: Awaited<ReturnType<typeof Users.getByExternalId>> = null;
     if (externalUserId) {
       user = await Users.getByExternalId(ctx, externalUserId);
     } else if (customerId) {

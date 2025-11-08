@@ -118,7 +118,7 @@ export function TraceViewerDemo() {
         </p>
       </div>
 
-      <TraceViewer trace={mockTrace} conversationId="conv-xyz789" />
+      <TraceViewer trace={mockTrace} _conversationId="conv-xyz789" />
     </div>
   )
 }

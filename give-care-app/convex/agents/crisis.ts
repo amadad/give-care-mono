@@ -46,7 +46,7 @@ const crisisAgent = new Agent(components.agent, {
   name: 'Crisis Support',
   // @ts-expect-error - LanguageModelV1/V2 type mismatch between AI SDK versions
   languageModel: openai.chat('gpt-5-nano', {
-    reasoningEffort: 'minimal', // Maximum throughput: 100 tokens/sec
+    reasoningEffort: 'low', // Maximum throughput: 100 tokens/sec
   }),
   instructions: 'You are a compassionate crisis support assistant for caregivers providing immediate support resources.',
   maxSteps: 1, // No tool calls needed for crisis - prioritize speed

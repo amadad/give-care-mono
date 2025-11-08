@@ -14,7 +14,6 @@ const CRISIS_TERMS = [
   'hurt myself',
 ];
 
-// @ts-expect-error - Action return type inference
 export const generateCrisisResponse = internalAction({
   args: {
     threadId: v.string(),
@@ -22,11 +21,9 @@ export const generateCrisisResponse = internalAction({
     userId: v.string(),
     channel: v.union(v.literal('sms'), v.literal('email'), v.literal('web')),
   },
-  // @ts-expect-error - Handler return type inference
-  handler: async (ctx, { threadId, userId, channel }) => {
+  handler: async (ctx, { threadId, userId, channel }): Promise<any> => {
     // Get user context
-    // @ts-expect-error - Query return type
-    const user = await ctx.runQuery(api.functions.users.getByExternalId, {
+    const user: any = await ctx.runQuery(api.functions.users.getByExternalId, {
       externalId: userId,
     });
     if (!user) {
@@ -35,8 +32,7 @@ export const generateCrisisResponse = internalAction({
     }
 
     // Run crisis agent
-    // @ts-expect-error - Agent return type
-    const result = await ctx.runAction(api.agents.crisis.runCrisisAgent, {
+    const result: any = await ctx.runAction(api.agents.crisis.runCrisisAgent, {
       input: {
         channel,
         text: '', // Text already in thread via promptMessageId
@@ -74,7 +70,6 @@ export const generateCrisisResponse = internalAction({
 /**
  * Generate response using Main Agent
  */
-// @ts-expect-error - Action return type inference
 export const generateMainResponse = internalAction({
   args: {
     threadId: v.string(),
@@ -82,11 +77,9 @@ export const generateMainResponse = internalAction({
     userId: v.string(),
     channel: v.union(v.literal('sms'), v.literal('email'), v.literal('web')),
   },
-  // @ts-expect-error - Handler return type inference
-  handler: async (ctx, { threadId, userId, channel }) => {
+  handler: async (ctx, { threadId, userId, channel }): Promise<any> => {
     // Get user context
-    // @ts-expect-error - Query return type
-    const user = await ctx.runQuery(api.functions.users.getByExternalId, {
+    const user: any = await ctx.runQuery(api.functions.users.getByExternalId, {
       externalId: userId,
     });
     if (!user) {
@@ -95,8 +88,7 @@ export const generateMainResponse = internalAction({
     }
 
     // Run main agent
-    // @ts-expect-error - Agent return type
-    const result = await ctx.runAction(api.agents.main.runMainAgent, {
+    const result: any = await ctx.runAction(api.agents.main.runMainAgent, {
       input: {
         channel,
         text: '', // Text already in thread via promptMessageId

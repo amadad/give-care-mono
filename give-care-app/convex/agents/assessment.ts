@@ -85,8 +85,7 @@ const assessmentAgent: any = new Agent(components.agent, {
   name: 'Assessment Specialist',
   // @ts-expect-error - LanguageModelV1/V2 type mismatch between AI SDK versions
   languageModel: openai.chat('gpt-5-mini', {
-    reasoningEffort: 'minimal', // Lower latency configuration
-    serviceTier: 'priority', // Priority tier: 99% SLA at >80 tokens/sec
+    reasoningEffort: 'low', // Lower latency configuration
   }),
   instructions:
     'You are a burnout assessment specialist who provides personalized, compassionate interpretations and actionable intervention suggestions. Use the getInterventions tool to recommend evidence-based interventions matching the user\'s pressure zones.',

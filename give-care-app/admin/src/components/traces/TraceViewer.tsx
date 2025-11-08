@@ -124,7 +124,7 @@ const getStatusIcon = (status: string) => {
   }
 }
 
-export function TraceViewer({ trace, conversationId: _conversationId }: TraceViewerProps) {
+export function TraceViewer({ trace, _conversationId }: TraceViewerProps) {
   const [expandedSpans, setExpandedSpans] = useState<Set<string>>(new Set())
 
   const toggleSpan = (spanId: string) => {

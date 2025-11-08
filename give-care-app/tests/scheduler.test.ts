@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { RRule } from 'rrule';
+import { RRule, rrulestr } from 'rrule';
 
 describe('Scheduler - Trigger Logic', () => {
   describe('RRule Parsing and Generation', () => {
@@ -16,7 +16,6 @@ describe('Scheduler - Trigger Logic', () => {
     });
 
     it('creates valid recurring daily trigger', () => {
-      const rruleString = 'FREQ=DAILY;INTERVAL=1';
       const rule = new RRule({
         freq: RRule.DAILY,
         interval: 1,
@@ -80,17 +79,35 @@ describe('Scheduler - Trigger Logic', () => {
   });
 
   describe('Next Run Calculation', () => {
-    const calculateNextRun = (rruleString: string, after: Date): Date | null => {
-      try {
-        const rule = RRule.fromString(rruleString);
-        return rule.after(after, false); // false = exclusive
-      } catch {
-        return null;
-      }
+    // Helper matching production implementation (triggers.ts:15-18)
+    const nextRunFromRule = (rrule: string, from: Date): number | null => {
+      const rule = rrulestr(rrule);
+      return rule.after(from, true)?.getTime() ?? null;
     };
 
+    it('calculates next run from rrule string (production implementation)', () => {
+      const rruleString = 'DTSTART:20240101T090000\nRRULE:FREQ=DAILY;INTERVAL=1';
+      const after = new Date('2024-01-01T10:00:00');
+
+      const nextRun = nextRunFromRule(rruleString, after);
+
+      expect(nextRun).toBeDefined();
+      expect(nextRun).toBeGreaterThan(after.getTime());
+
+      const nextDate = new Date(nextRun!);
+      expect(nextDate.toISOString()).toContain('2024-01-02');
+    });
+
+    it('returns null for one-off trigger after execution', () => {
+      const rruleString = 'DTSTART:20240101T090000\nRRULE:FREQ=DAILY;COUNT=1';
+      const after = new Date('2024-01-02T00:00:00'); // After the single occurrence
+
+      const nextRun = nextRunFromRule(rruleString, after);
+
+      expect(nextRun).toBeNull(); // No more occurrences
+    });
+
     it('calculates next daily occurrence', () => {
-      const rruleString = 'FREQ=DAILY;INTERVAL=1';
       const rule = new RRule({
         freq: RRule.DAILY,
         interval: 1,

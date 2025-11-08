@@ -32,7 +32,7 @@ export async function renderEmailFromTree(tree: ComponentTree): Promise<string> 
   } = EmailComponents;
 
   // Component type map
-  const componentMap: Record<string, React.ComponentType<any>> = {
+  const componentMap: Record<string, React.ComponentType<Record<string, unknown>>> = {
     EmailSection,
     ValidationBlock,
     ScoreCard,
