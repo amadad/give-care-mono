@@ -47,6 +47,17 @@ export const applyStripeEvent = mutation({
     const phoneNumber = payload?.data?.object?.metadata?.phoneNumber;
     const fullName = payload?.data?.object?.metadata?.fullName;
 
+    // Extract billing address from customer_details (checkout.session.completed)
+    const billingAddress = payload?.data?.object?.customer_details?.address;
+    const address = billingAddress ? {
+      line1: billingAddress.line1,
+      line2: billingAddress.line2 || undefined,
+      city: billingAddress.city,
+      state: billingAddress.state,
+      postalCode: billingAddress.postal_code,
+      country: billingAddress.country,
+    } : undefined;
+
     let user: Awaited<ReturnType<typeof Users.getByExternalId>> = null;
     if (externalUserId) {
       user = await Users.getByExternalId(ctx, externalUserId);
@@ -80,6 +91,12 @@ export const applyStripeEvent = mutation({
       if (user.externalId) {
         await applyEntitlements(ctx, user.externalId, planId, currentPeriodEnd);
       }
+    }
+
+    // Update user with billing address from checkout.session.completed
+    if (type === 'checkout.session.completed' && userId && address) {
+      console.log('[billing] Updating user with billing address:', { userId, address });
+      await ctx.db.patch(userId, { address });
     }
 
     // Send welcome SMS for checkout.session.completed

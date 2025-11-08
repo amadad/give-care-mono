@@ -17,6 +17,15 @@ const consentValidator = v.object({
   marketing: v.boolean(),
 });
 
+const addressValidator = v.object({
+  line1: v.optional(v.string()),
+  line2: v.optional(v.string()),
+  city: v.optional(v.string()),
+  state: v.optional(v.string()),
+  postalCode: v.optional(v.string()),
+  country: v.optional(v.string()),
+});
+
 const lastAssessmentValidator = v.object({
   definitionId: v.string(),
   score: v.number(),
@@ -41,6 +50,7 @@ export default defineSchema({
     channel: v.optional(v.union(v.literal('sms'), v.literal('web'))),
     locale: v.optional(v.string()),
     consent: v.optional(consentValidator),
+    address: v.optional(addressValidator),
     metadata: v.optional(v.any()),
     createdByHarness: v.optional(v.boolean()),
   })
