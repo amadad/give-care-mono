@@ -8,7 +8,7 @@ interface FontProps {
 
 interface CharDefinition {
   width: number;
-  render: (color: string) => JSX.Element;
+  render: (color: string) => React.JSX.Element;
 }
 
 export function Font({

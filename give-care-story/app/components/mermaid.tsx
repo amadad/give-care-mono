@@ -10,7 +10,7 @@ function sanitizeSVG(svg: string): string {
     .replace(/on[a-zA-Z]+\s*=\s*'[^']*'/g, "")
     .replace(/on[a-zA-Z]+\s*=\s*[^\s>]+/g, "")
 }
-import {  useRef } from "react"
+import { useRef, useEffect } from "react"
 
 mermaid.initialize({
   startOnLoad: true,

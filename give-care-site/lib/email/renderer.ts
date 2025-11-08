@@ -32,7 +32,8 @@ export async function renderEmailFromTree(tree: ComponentTree): Promise<string> 
   } = EmailComponents;
 
   // Component type map
-  const componentMap: Record<string, React.ComponentType<Record<string, unknown>>> = {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const componentMap: Record<string, React.ComponentType<any>> = {
     EmailSection,
     ValidationBlock,
     ScoreCard,

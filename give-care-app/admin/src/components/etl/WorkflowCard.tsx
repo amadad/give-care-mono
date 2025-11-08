@@ -20,10 +20,12 @@ interface WorkflowCardProps {
 
 export function WorkflowCard({ workflow }: WorkflowCardProps) {
   const [isExpanded, setIsExpanded] = useState(false)
-  const workflowDetails = useQuery(
-    api.etl.getWorkflow,
-    isExpanded ? { sessionId: workflow.sessionId } : 'skip'
-  )
+  // TODO: Implement api.etl.getWorkflow in Convex backend
+  // const workflowDetails = useQuery(
+  //   api.etl.getWorkflow,
+  //   isExpanded ? { sessionId: workflow.sessionId } : 'skip'
+  // )
+  const workflowDetails: any = null
 
   const startedAt = new Date(workflow.startedAt)
   const duration = workflow.durationMs

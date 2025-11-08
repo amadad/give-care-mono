@@ -21,9 +21,17 @@ export const Route = createFileRoute('/etl')({
 })
 
 function ETLDashboard() {
-  const stats = useQuery(api.etl.getDashboardStats)
-  const workflows = useQuery(api.etl.listWorkflows, { limit: 10 })
-  const qaQueue = useQuery(api.etl.getQAQueue, { limit: 20 })
+  // TODO: Implement ETL functions in Convex backend
+  // const stats = useQuery(api.etl.getDashboardStats)
+  // const workflows = useQuery(api.etl.listWorkflows, { limit: 10 })
+  // const qaQueue = useQuery(api.etl.getQAQueue, { limit: 20 })
+  const stats = {
+    workflows: { total: 0, running: 0, completed: 0, failed: 0 },
+    records: { sources: 0, extracted: 0, validated: 0 },
+    qa: { pending: 0, approved: 0 }
+  }
+  const workflows: any[] = []
+  const qaQueue: any[] = []
   const [isTriggering, setIsTriggering] = useState(false)
 
   const handleTriggerWorkflow = async () => {
@@ -62,10 +70,6 @@ function ETLDashboard() {
     } finally {
       setIsTriggering(false)
     }
-  }
-
-  if (stats === undefined || workflows === undefined || qaQueue === undefined) {
-    return <LoadingSkeleton />
   }
 
   return (

@@ -14,10 +14,10 @@ describe('useConvexMutation', () => {
   })
 
   it('should return mutation function and loading state', () => {
-    const mockMutation = vi.fn()
+    const mockMutation = Object.assign(vi.fn(), { withOptimisticUpdate: vi.fn() })
     const mockApi = { test: { action: 'test.action' } }
 
-    vi.mocked(useMutation).mockReturnValue(mockMutation)
+    vi.mocked(useMutation).mockReturnValue(mockMutation as any)
 
     const { result } = renderHook(() =>
       useConvexMutation(mockApi.test.action as any)
@@ -32,12 +32,15 @@ describe('useConvexMutation', () => {
   })
 
   it('should set loading state during mutation', async () => {
-    const mockMutation = vi.fn().mockImplementation(() =>
-      new Promise(resolve => setTimeout(() => resolve('success'), 100))
+    const mockMutation = Object.assign(
+      vi.fn().mockImplementation(() =>
+        new Promise(resolve => setTimeout(() => resolve('success'), 100))
+      ),
+      { withOptimisticUpdate: vi.fn() }
     )
     const mockApi = { test: { action: 'test.action' } }
 
-    vi.mocked(useMutation).mockReturnValue(mockMutation)
+    vi.mocked(useMutation).mockReturnValue(mockMutation as any)
 
     const { result } = renderHook(() =>
       useConvexMutation(mockApi.test.action as any)
@@ -58,10 +61,10 @@ describe('useConvexMutation', () => {
 
   it('should handle successful mutation', async () => {
     const mockResult = { id: '123', status: 'success' }
-    const mockMutation = vi.fn().mockResolvedValue(mockResult)
+    const mockMutation = Object.assign(vi.fn().mockResolvedValue(mockResult), { withOptimisticUpdate: vi.fn() })
     const mockApi = { test: { action: 'test.action' } }
 
-    vi.mocked(useMutation).mockReturnValue(mockMutation)
+    vi.mocked(useMutation).mockReturnValue(mockMutation as any)
 
     const { result } = renderHook(() =>
       useConvexMutation(mockApi.test.action as any)
@@ -76,10 +79,10 @@ describe('useConvexMutation', () => {
 
   it('should handle mutation error', async () => {
     const mockError = new Error('Mutation failed')
-    const mockMutation = vi.fn().mockRejectedValue(mockError)
+    const mockMutation = Object.assign(vi.fn().mockRejectedValue(mockError), { withOptimisticUpdate: vi.fn() })
     const mockApi = { test: { action: 'test.action' } }
 
-    vi.mocked(useMutation).mockReturnValue(mockMutation)
+    vi.mocked(useMutation).mockReturnValue(mockMutation as any)
 
     const { result } = renderHook(() =>
       useConvexMutation(mockApi.test.action as any)
@@ -95,11 +98,11 @@ describe('useConvexMutation', () => {
 
   it('should accept optional onSuccess callback', async () => {
     const mockResult = { id: '123' }
-    const mockMutation = vi.fn().mockResolvedValue(mockResult)
+    const mockMutation = Object.assign(vi.fn().mockResolvedValue(mockResult), { withOptimisticUpdate: vi.fn() })
     const onSuccess = vi.fn()
     const mockApi = { test: { action: 'test.action' } }
 
-    vi.mocked(useMutation).mockReturnValue(mockMutation)
+    vi.mocked(useMutation).mockReturnValue(mockMutation as any)
 
     const { result } = renderHook(() =>
       useConvexMutation(mockApi.test.action as any, { onSuccess })
@@ -113,11 +116,11 @@ describe('useConvexMutation', () => {
 
   it('should accept optional onError callback', async () => {
     const mockError = new Error('Failed')
-    const mockMutation = vi.fn().mockRejectedValue(mockError)
+    const mockMutation = Object.assign(vi.fn().mockRejectedValue(mockError), { withOptimisticUpdate: vi.fn() })
     const onError = vi.fn()
     const mockApi = { test: { action: 'test.action' } }
 
-    vi.mocked(useMutation).mockReturnValue(mockMutation)
+    vi.mocked(useMutation).mockReturnValue(mockMutation as any)
 
     const { result } = renderHook(() =>
       useConvexMutation(mockApi.test.action as any, { onError })
@@ -131,12 +134,15 @@ describe('useConvexMutation', () => {
 
   it('should reset error state on new mutation', async () => {
     const mockError = new Error('First error')
-    const mockMutation = vi.fn()
-      .mockRejectedValueOnce(mockError)
-      .mockResolvedValueOnce({ success: true })
+    const mockMutation = Object.assign(
+      vi.fn()
+        .mockRejectedValueOnce(mockError)
+        .mockResolvedValueOnce({ success: true }),
+      { withOptimisticUpdate: vi.fn() }
+    )
     const mockApi = { test: { action: 'test.action' } }
 
-    vi.mocked(useMutation).mockReturnValue(mockMutation)
+    vi.mocked(useMutation).mockReturnValue(mockMutation as any)
 
     const { result } = renderHook(() =>
       useConvexMutation(mockApi.test.action as any)
@@ -156,11 +162,11 @@ describe('useConvexMutation', () => {
   })
 
   it('should pass arguments to underlying mutation', async () => {
-    const mockMutation = vi.fn().mockResolvedValue({})
+    const mockMutation = Object.assign(vi.fn().mockResolvedValue({}), { withOptimisticUpdate: vi.fn() })
     const mockApi = { test: { action: 'test.action' } }
     const args = { userId: '123', action: 'update', data: { name: 'Test' } }
 
-    vi.mocked(useMutation).mockReturnValue(mockMutation)
+    vi.mocked(useMutation).mockReturnValue(mockMutation as any)
 
     const { result } = renderHook(() =>
       useConvexMutation(mockApi.test.action as any)
