@@ -49,7 +49,8 @@ http.route({
     }
 
     try {
-      const stripe = new Stripe(stripeSecretKey, { apiVersion: '2024-11-20.acacia' });
+      // Using Stripe preview API version for latest features
+      const stripe = new Stripe(stripeSecretKey, { apiVersion: '2025-10-29.clover' as any });
       const signature = request.headers.get('stripe-signature');
       const body = await request.text();
 
