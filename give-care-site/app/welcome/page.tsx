@@ -13,7 +13,6 @@ function WelcomeContent() {
     if (sessionId) {
       // For now, we'll skip the Stripe API call and just show a generic message
       // In the future, you could call Stripe API to get the actual phone number
-      setLoading(false);
     }
   }, [sessionId]);
 

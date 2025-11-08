@@ -45,11 +45,10 @@ const agentContextValidator = v.object({
 });
 
 // Tool: Get evidence-based interventions by pressure zones
-// @ts-expect-error - Type instantiation depth issue with Zod/AI SDK integration
 const getInterventionsTool = createTool({
   args: z.object({
     zones: z.array(z.string()).describe('Pressure zones from BSFC assessment'),
-    minEvidenceLevel: z.string().optional().describe('Minimum evidence level (default: moderate)'),
+    minEvidenceLevel: z.enum(['high', 'moderate', 'low']).optional().describe('Minimum evidence level (default: moderate)'),
     limit: z.number().optional().describe('Max number of interventions (default: 5)'),
   }),
   description: 'Lookup evidence-based caregiver interventions matching pressure zones. Use this to provide specific, research-backed recommendations.',
