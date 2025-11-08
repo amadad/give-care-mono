@@ -37,7 +37,10 @@ export const applyStripeEvent = mutation({
       .query('billing_events')
       .withIndex('by_event', (q) => q.eq('stripeEventId', id))
       .unique();
-    if (existing) return;
+    if (existing) {
+      console.log('[billing] Event already processed:', id);
+      return;
+    }
 
     const customerId = payload?.data?.object?.customer ?? payload?.customer;
     const planId = payload?.data?.object?.plan?.id ?? payload?.plan_id ?? 'free';
@@ -158,4 +161,3 @@ export const debugBillingEvents = query({
     return { events, subscriptions };
   },
 });
-
