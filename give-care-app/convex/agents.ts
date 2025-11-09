@@ -236,7 +236,7 @@ const startAssessmentTool = createTool({
 
 const mainAgent = new Agent(components.agent, {
   name: 'Caregiver Support',
-  languageModel: openai('gpt-5-nano'),
+  languageModel: openai.responses('gpt-5-nano'),
   instructions: 'You are a compassionate AI caregiver assistant providing empathetic support and practical advice.',
   tools: {
     searchResources: searchResourcesTool,
@@ -372,6 +372,7 @@ export const runMainAgent = action({
           openai: {
             reasoningEffort: 'low', // Fast responses for general conversation
             textVerbosity: 'low', // Concise, shorter responses
+            serviceTier: 'auto', // Let OpenAI optimize for load
           },
         },
       });
@@ -449,7 +450,7 @@ export const generateTextAction = mainAgent.asTextAction({
 
 const crisisAgent = new Agent(components.agent, {
   name: 'Crisis Support',
-  languageModel: openai('gpt-5-nano'),
+  languageModel: openai.responses('gpt-5-nano'),
   instructions: 'You are a compassionate crisis support assistant for caregivers providing immediate support resources.',
   maxSteps: 1, // No tool calls needed for crisis - prioritize speed
 
@@ -516,6 +517,7 @@ export const runCrisisAgent = internalAction({
           openai: {
             reasoningEffort: 'minimal', // Maximum speed for crisis response
             textVerbosity: 'low', // Concise, direct crisis support
+            serviceTier: 'auto', // Prioritize speed for crisis
           },
         },
       });
@@ -619,7 +621,7 @@ const getInterventionsTool = createTool({
 
 const assessmentAgent: any = new Agent(components.agent, {
   name: 'Assessment Specialist',
-  languageModel: openai('gpt-5-mini'),
+  languageModel: openai.responses('gpt-5-mini'),
   instructions:
     'You are a burnout assessment specialist who provides personalized, compassionate interpretations and actionable intervention suggestions. Use the getInterventions tool to recommend evidence-based interventions matching the user\'s pressure zones.',
   tools: { getInterventions: getInterventionsTool },
@@ -711,8 +713,9 @@ export const runAssessmentAgent: any = action({
         system: systemPrompt, // Override default instructions with assessment-specific context
         providerOptions: {
           openai: {
-            reasoningEffort: 'low', // Balanced speed for clinical interpretations
-            textVerbosity: 'low', // Focused, actionable recommendations
+            reasoningEffort: 'medium', // Thoughtful clinical analysis
+            textVerbosity: 'medium', // Detailed, actionable recommendations
+            serviceTier: 'flex', // 50% cheaper, can tolerate latency for analysis
           },
         },
       });

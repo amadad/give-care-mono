@@ -4,6 +4,8 @@
 
 ### Fixed
 
+- **Twilio Webhook Buffer Error** (`convex/http.ts:39-42`): Fixed `ReferenceError: Buffer is not defined` in Twilio signature verification by replacing Node.js Buffer API with Web-compatible base64 encoding. The `verifyTwilioSignature` function was attempting to use Buffer without the `"use node"` directive, causing webhook failures. Now uses `btoa()` with Uint8Array conversion for edge-compatible execution. Webhook at `/webhooks/twilio/sms` now processes incoming SMS without runtime errors
+- **GPT-5 Provider Configuration** (`convex/agents.ts:239, 452, 622`): Fixed `AI_UnsupportedModelVersionError` by migrating all agents from Chat API (`openai()`) to Responses API (`openai.responses()`). AI SDK 5 requires v2 model specification for GPT-5 models (gpt-5-nano, gpt-5-mini), which is only available through the Responses API provider. Updated Main Agent, Crisis Agent, and Assessment Agent to use correct provider syntax
 - **Namespace Violations** (`convex/agents.ts`, `convex/inbound.ts`, `convex/http.ts`, `convex/billing.ts`, `convex/crons.ts`, multiple domain files): Corrected 25+ incorrect namespace calls across 9 files following Convex refactor. Fixed critical runtime errors where `internal.internal.*` and `api.internal.*` were used instead of proper `api.domains.*` and `internal.domains.*` paths. Updated cron jobs to use `internal.domains.*` for internal functions. Changed agent references from `internal.agents.*` to `api.agents.*` for public actions. Fixed scheduler calls to use bare `internal.*` for re-exported actions. All functions now use correct namespaces: public functions via `api.*`, internal functions via `internal.*`, with proper domain paths. Deployed successfully twice with full namespace validation
 - **Channel Type Incomplete** (`convex/lib/types.ts`, `convex/schema.ts`): Added missing `'email'` to Channel type union. Updated type definition from `'sms' | 'web'` to `'sms' | 'email' | 'web'` to match actual usage. Fixed schema validators in 4 tables (users, sessions, messages, agent_runs) to include email channel support. Resolved 5 TypeScript errors where email channel was incompatible with existing type definitions
 - **Type Safety Issues** (multiple files): Fixed 7 type safety violations discovered during validation. Added explicit `string[]` type to zones variable in agents.ts to prevent undefined errors. Fixed CRISIS_TERMS readonly array issue by spreading into mutable array. Updated LocationContext interface to include zipCode property. Fixed metadata property access in lib/usage.ts by casting args. Reduced TypeScript errors from 27 to 20 (74% reduction in critical errors)
@@ -22,14 +24,10 @@
 ### Changed
 
 - **Integration Documentation** (`docs/CONVEX_INTEGRATION.md`): Created comprehensive 200-line guide documenting the refactored Convex architecture. Includes file organization rules (actions/ vs domains/ vs lib/), namespace calling conventions (api.* vs internal.*), real examples from production code, common mistakes to avoid, and migration checklist. Serves as reference for maintaining proper architecture boundaries
-- **Response Performance Optimization**: Added `textVerbosity: 'low'` to all agents for faster, more concise responses:
-  - **Main Agent** (`convex/agents/main.ts`): Shorter, focused general conversation responses
-  - **Crisis Agent** (`convex/agents/crisis.ts`): Direct, concise emergency support
-  - **Assessment Agent** (`convex/agents/assessment.ts`): Actionable, targeted clinical recommendations
-- **Reasoning Effort Configuration**: Configured optimized reasoning levels for each agent type via `providerOptions.openai.reasoningEffort`:
-  - **Main Agent** (`convex/agents/main.ts`): Set to `low` for balanced speed and quality in general caregiving conversations
-  - **Crisis Agent** (`convex/agents/crisis.ts`): Set to `minimal` for maximum speed in emergency support scenarios
-  - **Assessment Agent** (`convex/agents/assessment.ts`): Set to `low` for balanced clinical interpretations and intervention suggestions
+- **GPT-5 Provider Settings**: Optimized reasoning effort, text verbosity, and service tier for each agent use case:
+  - **Main Agent** (`convex/agents.ts:371-376`): `reasoningEffort: 'low'`, `textVerbosity: 'low'`, `serviceTier: 'auto'` for balanced speed in SMS conversations
+  - **Crisis Agent** (`convex/agents.ts:516-521`): `reasoningEffort: 'minimal'`, `textVerbosity: 'low'`, `serviceTier: 'auto'` for maximum speed in emergency scenarios
+  - **Assessment Agent** (`convex/agents.ts:712-717`): `reasoningEffort: 'medium'`, `textVerbosity: 'medium'`, `serviceTier: 'flex'` for thoughtful clinical analysis with 50% cost savings (flex tier tolerates latency)
 - **Convex Domain Refactor** (`convex/domains/*`, `convex/internal.ts`, `convex/actions/*`, `convex/billing.ts`): Split the 2.3k-line `internal.ts`/`internal.actions.ts` pair into focused domain modules (metrics, scheduler, users, messages, wellness, interventions, analytics, admin, logs, etc.) and a Node-only `actions/` layer for Stripe, Twilio, and Resend. Added `internal/index.ts` barrel so `api.internal.*` is still the only server surface, moved Twilio/Resend/Stripe SDK usage behind `"use node"` files, and kept `public.ts` as the sole browser-callable entry point. Documentation now reflects the new structure.
 
 ### Code Quality
