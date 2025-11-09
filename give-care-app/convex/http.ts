@@ -36,10 +36,10 @@ async function verifyTwilioSignature(
     encoder.encode(data)
   );
 
-  // Convert to base64 using Buffer (Node.js)
-  const expectedSignature = Buffer
-    .from(new Uint8Array(signatureBytes))
-    .toString('base64');
+  // Convert to base64 using Web-compatible API
+  const bytes = new Uint8Array(signatureBytes);
+  const binaryString = Array.from(bytes, byte => String.fromCharCode(byte)).join('');
+  const expectedSignature = btoa(binaryString);
 
   return expectedSignature === signature;
 }
