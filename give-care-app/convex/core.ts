@@ -7,13 +7,15 @@
  * This file contains NO public exports - all public functions go through public.ts or internal.ts.
  */
 
-import { internalQuery, internalMutation } from './_generated/server';
+import { internalQuery, internalMutation, query, mutation } from './_generated/server';
 import type { QueryCtx, MutationCtx } from './_generated/server';
 import type { Id } from './_generated/dataModel';
 import type { Doc } from './_generated/dataModel';
 import type { HydratedContext, Budget, Channel } from './lib/types';
 import { v } from 'convex/values';
 import { rrulestr } from 'rrule';
+import { components } from './_generated/api';
+import { createThread } from '@convex-dev/agent';
 
 // ============================================================================
 // USERS
@@ -27,6 +29,17 @@ export const getByExternalId = async (ctx: QueryCtx | MutationCtx, externalId: s
     .withIndex('by_externalId', (q) => q.eq('externalId', externalId))
     .unique();
 };
+
+/**
+ * Get user by external ID (query wrapper)
+ * Moved from domains/users.ts
+ */
+export const getByExternalIdQuery = query({
+  args: { externalId: v.string() },
+  handler: async (ctx, { externalId }) => {
+    return getByExternalId(ctx, externalId);
+  },
+});
 
 /**
  * Get user by ID (internal query wrapper)
@@ -266,6 +279,37 @@ const record = async (ctx: MutationCtx, payload: BaseMessage, direction: 'inboun
 export const recordInbound = (ctx: MutationCtx, payload: BaseMessage) => record(ctx, payload, 'inbound');
 export const recordOutbound = (ctx: MutationCtx, payload: BaseMessage) => record(ctx, payload, 'outbound');
 
+/**
+ * Message validators and mutation wrappers
+ * Moved from domains/messages.ts
+ */
+const messageArgs = v.object({
+  externalId: v.string(),
+  channel: v.union(v.literal('sms'), v.literal('email'), v.literal('web')),
+  text: v.string(),
+  meta: v.optional(v.any()),
+  traceId: v.string(),
+  redactionFlags: v.optional(v.array(v.string())),
+});
+
+export const recordInboundMutation = mutation({
+  args: {
+    message: messageArgs,
+  },
+  handler: async (ctx, { message }) => {
+    return recordInbound(ctx, message);
+  },
+});
+
+export const recordOutboundMutation = mutation({
+  args: {
+    message: messageArgs,
+  },
+  handler: async (ctx, { message }) => {
+    return recordOutbound(ctx, message);
+  },
+});
+
 // ============================================================================
 // SUBSCRIPTIONS
 // ============================================================================
@@ -415,3 +459,48 @@ export const advanceTrigger = async (ctx: MutationCtx, trigger: Doc<'triggers'>)
   await ctx.db.patch(trigger._id, { nextRun: next });
   return next;
 };
+
+// ============================================================================
+// EMAIL
+// ============================================================================
+
+/**
+ * Log email delivery
+ * Moved from domains/email.ts
+ */
+export const logDelivery = mutation({
+  args: {
+    userId: v.optional(v.string()),
+    to: v.string(),
+    subject: v.string(),
+    status: v.string(),
+    traceId: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const user = args.userId ? await getByExternalId(ctx, args.userId) : null;
+    await ctx.db.insert('emails', {
+      userId: user?._id ?? undefined,
+      to: args.to,
+      subject: args.subject,
+      status: args.status,
+      traceId: args.traceId,
+    });
+  },
+});
+
+// ============================================================================
+// THREADS
+// ============================================================================
+
+/**
+ * Create Agent Component thread
+ * Moved from domains/threads.ts
+ */
+export const createComponentThread = internalMutation({
+  args: { userId: v.id('users') },
+  handler: async (ctx, { userId }) => {
+    return createThread(ctx, components.agent, {
+      userId: userId as string,
+    });
+  },
+});

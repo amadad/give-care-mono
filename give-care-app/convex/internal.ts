@@ -9,10 +9,6 @@
 export * from './domains/metrics';
 export * from './domains/scheduler';
 export * from './domains/interventions';
-export * from './domains/threads';
-export * from './domains/messages';
-export * from './domains/users';
-export * from './domains/email';
 export * from './domains/alerts';
 export * from './domains/wellness';
 export * from './domains/memories';
@@ -22,6 +18,15 @@ export * from './domains/subscriptions';
 export * from './domains/assessments';
 export * from './domains/analytics';
 export * from './domains/admin';
+
+// Exports from core.ts (moved from thin wrapper domains)
+export {
+  getByExternalIdQuery as getByExternalId,
+  recordInboundMutation as recordInbound,
+  recordOutboundMutation as recordOutbound,
+  logDelivery,
+  createComponentThread,
+} from './core';
 
 export { sendWelcomeSms } from './actions/sms.actions';
 export { newsletterSignup } from './actions/newsletter.actions';

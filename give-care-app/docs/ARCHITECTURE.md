@@ -23,11 +23,12 @@
 ```
 convex/
 ├── actions/         # Node-only side effects (Stripe, Twilio, Resend)
-├── agents/          # AI agent implementations (3 agents)
-├── domains/         # Internal-only queries & mutations organized by domain
-├── internal/        # Barrel that re-exports domains for api.internal.*
+├── agents.ts        # AI agent implementations (3 agents)
+├── core.ts          # Core model helpers (users, sessions, messages, etc.)
+├── domains/         # Internal-only queries & mutations (12 domain files)
+├── internal.ts      # Barrel that re-exports domains + core for api.internal.*
 ├── lib/             # Business logic utilities
-├── workflows/       # Durable workflows (crisis escalation)
+├── workflows.ts     # Durable workflows (crisis escalation, onboarding)
 ├── schema.ts        # Database schema (24 tables)
 ├── http.ts          # Webhook router (Twilio, Stripe)
 └── crons.ts         # Scheduled jobs (metrics, triggers)
@@ -45,12 +46,12 @@ convex/
 
 Domain files group related queries/mutations so `internal/index.ts` can re-export a tidy barrel (`api.internal.*`). Each file stays <300 LOC and only imports `lib/*` or `core.ts`.
 
+**Note:** Thin wrapper files (`users.ts`, `messages.ts`, `threads.ts`, `email.ts`) have been removed in favor of direct exports from `core.ts` (v1.5.0 refactor).
+
 | File | Focus | Notes | Key exports |
 |------|-------|-------|-------------|
 | `metrics.ts` | Daily/subscription/journey aggregations | Cron-friendly internal mutations | `aggregateDailyMetrics`, `computeDailyMetrics`, `computeSubscriptionMetrics` |
 | `scheduler.ts` | Trigger lifecycle & batching | Mutations only insert alerts; cron advances work | `enqueueOnce`, `createTrigger`, `processBatchInternal` |
-| `users.ts` | User/session lookups | Thin wrappers over `Core` | `getByExternalId` |
-| `messages.ts` | Message persistence | Calls `Core.recordInbound/outbound` | `recordInbound`, `recordOutbound` |
 | `wellness.ts` | Recent score summaries | Used by agents for context | `getStatus` |
 | `interventions.ts` | Evidence-based content | Seed + lookup + history tracking | `seedInterventions`, `getByZones`, `recordEvent` |
 | `logs.ts` | Agent + guardrail telemetry | Keeps agent_run/guardrail tables scoped here | `agentRun`, `logAgentRunInternal`, `logCrisisInteraction` |
@@ -62,9 +63,13 @@ Domain files group related queries/mutations so `internal/index.ts` can re-expor
 | `subscriptions.ts` | Manual subscription fixes | Applies PLAN_ENTITLEMENTS consistently | `linkSubscription` |
 | `assessments.ts` | Session orchestration + scoring | Domain config for EMA/BSFC/SDOH | `start`, `recordAnswer` |
 
-Supporting files (`email.ts`, `threads.ts`, etc.) host single-purpose helpers that stay reusable across domains.
+**Moved to `core.ts`** (re-exported via `internal.ts` for backward compatibility):
+- `getByExternalId` - User lookups by external ID
+- `recordInbound` / `recordOutbound` - Message persistence
+- `logDelivery` - Email delivery logging
+- `createComponentThread` - Agent Component thread creation
 
-Node-only side effects (Stripe/Twilio/Resend) now live under `convex/actions/*.actions.ts` and are re-exported through `internal.ts` after passing the `"use node"` boundary.
+Node-only side effects (Stripe/Twilio/Resend) live under `convex/actions/*.actions.ts` and are re-exported through `internal.ts` after passing the `"use node"` boundary.
 
 ### `convex/lib/` - Business Logic Utilities
 

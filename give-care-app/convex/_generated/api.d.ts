@@ -98,6 +98,56 @@ export declare const api: {
       any
     >;
   };
+  core: {
+    getByExternalIdQuery: FunctionReference<
+      "query",
+      "public",
+      { externalId: string },
+      any
+    >;
+    logDelivery: FunctionReference<
+      "mutation",
+      "public",
+      {
+        status: string;
+        subject: string;
+        to: string;
+        traceId: string;
+        userId?: string;
+      },
+      any
+    >;
+    recordInboundMutation: FunctionReference<
+      "mutation",
+      "public",
+      {
+        message: {
+          channel: "sms" | "email" | "web";
+          externalId: string;
+          meta?: any;
+          redactionFlags?: Array<string>;
+          text: string;
+          traceId: string;
+        };
+      },
+      any
+    >;
+    recordOutboundMutation: FunctionReference<
+      "mutation",
+      "public",
+      {
+        message: {
+          channel: "sms" | "email" | "web";
+          externalId: string;
+          meta?: any;
+          redactionFlags?: Array<string>;
+          text: string;
+          traceId: string;
+        };
+      },
+      any
+    >;
+  };
   domains: {
     admin: {
       getAllSubscriptions: FunctionReference<"query", "public", {}, any>;
@@ -390,14 +440,6 @@ export declare const api: {
           planId: string;
           stripeCustomerId: string;
         },
-        any
-      >;
-    };
-    users: {
-      getByExternalId: FunctionReference<
-        "query",
-        "public",
-        { externalId: string },
         any
       >;
     };
@@ -996,6 +1038,12 @@ export declare const internal: {
     >;
   };
   core: {
+    createComponentThread: FunctionReference<
+      "mutation",
+      "internal",
+      { userId: Id<"users"> },
+      any
+    >;
     ensureUserMutation: FunctionReference<
       "mutation",
       "internal",
@@ -1101,14 +1149,6 @@ export declare const internal: {
         "mutation",
         "internal",
         { batchSize: number },
-        any
-      >;
-    };
-    threads: {
-      createComponentThread: FunctionReference<
-        "mutation",
-        "internal",
-        { userId: Id<"users"> },
         any
       >;
     };
@@ -1289,6 +1329,14 @@ export declare const internal: {
         any
       >;
     };
+  };
+  public: {
+    retrieveMemories: FunctionReference<
+      "query",
+      "internal",
+      { limit?: number; query: string; userId: string },
+      any
+    >;
   };
   workflows: {
     crisisEscalation: FunctionReference<"mutation", "internal", any, any>;
