@@ -20,6 +20,7 @@
     "format": "prettier --write \"**/*.{ts,tsx,js,json,md}\""
   },
   "dependencies": {
+    "@ai-sdk/openai": "^2.0.0",
     "@convex-dev/agent": "^0.2.12",
     "@convex-dev/rag": "^0.5.4",
     "@convex-dev/rate-limiter": "^0.2.14",
