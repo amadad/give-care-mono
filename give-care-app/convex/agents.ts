@@ -1,28 +1,26 @@
 "use node";
 
 /**
- * Main Agent - Convex-native implementation using Agent Component
+ * Agents - Consolidated agent implementations
  *
- * Handles general caregiving conversations and support.
- *
- * This agent:
- * - Provides empathetic support for caregivers
- * - Offers practical advice and resources
- * - Helps manage caregiver burnout
- * - Routes to specialized agents when needed
- * - Manages persistent threads with automatic message history
+ * Merges agents/main.ts, agents/crisis.ts, and agents/assessment.ts
+ * All agents use Agent Component with "use node" runtime.
  */
 
-import { action } from '../_generated/server';
-import { api, internal, components } from '../_generated/api';
+import { action, internalAction } from './_generated/server';
+import { internal, components } from './_generated/api';
 import { v } from 'convex/values';
 import { Agent, createTool } from '@convex-dev/agent';
 import { openai } from '@ai-sdk/openai';
-import { MAIN_PROMPT, renderPrompt } from '../lib/prompts';
-import { getTone } from '../lib/policy';
+import { MAIN_PROMPT, CRISIS_PROMPT, ASSESSMENT_PROMPT, renderPrompt } from './lib/prompts';
+import { getTone } from './lib/policy';
 import { z } from 'zod';
-import { sharedAgentConfig } from '../lib/usage';
-import { getProfileCompleteness, buildWellnessInfo, extractProfileVariables } from '../lib/profile';
+import { sharedAgentConfig } from './lib/usage';
+import { getProfileCompleteness, buildWellnessInfo, extractProfileVariables } from './lib/profile';
+
+// ============================================================================
+// SHARED VALIDATORS
+// ============================================================================
 
 const channelValidator = v.union(
   v.literal('sms'),
@@ -47,6 +45,10 @@ const agentContextValidator = v.object({
   metadata: v.optional(v.any()),
 });
 
+// ============================================================================
+// MAIN AGENT - General caregiving support
+// ============================================================================
+
 // Tool: Search for local caregiving resources using Google Maps
 const searchResourcesTool = createTool({
   args: z.object({
@@ -60,7 +62,7 @@ const searchResourcesTool = createTool({
     const contextData = ctx.metadata as { context?: { metadata?: Record<string, unknown> } };
     const userMetadata = contextData?.context?.metadata || {};
 
-    const result = await ctx.runAction(internal.functions.resources.searchResources, {
+    const result = await ctx.runAction(internal.resources.searchResources, {
       query: args.query,
       metadata: userMetadata,
     });
@@ -96,7 +98,7 @@ const recordMemoryTool = createTool({
     }
 
     // Store the memory
-    await ctx.runMutation(internal.functions.context.recordMemory, {
+    await ctx.runMutation(internal.public.recordMemory, {
       userId,
       category: args.category,
       content: args.content,
@@ -121,7 +123,7 @@ const checkWellnessStatusTool = createTool({
       return { error: 'User ID not available' };
     }
 
-    const status = await ctx.runQuery(internal.functions.wellness.getStatus, {
+    const status = await ctx.runQuery(internal.wellness.getStatus, {
       userId,
     });
 
@@ -147,13 +149,13 @@ const findInterventionsTool = createTool({
     // If no zones provided, fetch user's pressure zones from wellness status
     let zones = args.zones;
     if (!zones || zones.length === 0) {
-      const status = await ctx.runQuery(internal.functions.wellness.getStatus, {
+      const status = await ctx.runQuery(internal.wellness.getStatus, {
         userId,
       });
       zones = status.pressureZones || ['emotional', 'physical']; // Default fallback
     }
 
-    const interventions = await ctx.runQuery(internal.functions.interventions.getByZones, {
+    const interventions = await ctx.runQuery(internal.interventions.getByZones, {
       zones,
       minEvidenceLevel: args.minEvidenceLevel || 'moderate',
       limit: args.limit || 5,
@@ -257,7 +259,7 @@ const mainAgent = new Agent(components.agent, {
 
     if (threadId) {
       try {
-        const conversationSummary = await ctx.runQuery(internal.functions.context.getConversationSummary, {
+        const conversationSummary = await ctx.runQuery(internal.public.getConversationSummary, {
           externalId: args.userId || '',
           limit: 25,
         });
@@ -291,10 +293,6 @@ const mainAgent = new Agent(components.agent, {
  * Main Agent Action
  *
  * Runs general caregiving conversation workflow using Convex Agent Component.
- *
- * @param input - User message and channel
- * @param context - User context including profile
- * @returns Stream of response chunks
  */
 export const runMainAgent = action({
   args: {
@@ -381,7 +379,7 @@ export const runMainAgent = action({
       const responseText: string = result.text;
       const latencyMs = Date.now() - startTime;
 
-      await ctx.runMutation(internal.functions.logs.logAgentRunInternal, {
+      await ctx.runMutation(internal.logs.logAgentRunInternal, {
         userId: context.userId,
         agent: 'main',
         policyBundle: 'default_v1',
@@ -419,7 +417,7 @@ What's on your mind?`;
 
       const latencyMs = Date.now() - startTime;
 
-      await ctx.runMutation(internal.functions.logs.logAgentRunInternal, {
+      await ctx.runMutation(internal.logs.logAgentRunInternal, {
         userId: context.userId,
         agent: 'main',
         policyBundle: 'default_v1',
@@ -440,12 +438,329 @@ What's on your mind?`;
   },
 });
 
-/**
- * Exposed Agent Actions
- * For use in workflows and external integrations
- */
-
 // Generate text action (for workflow steps)
 export const generateTextAction = mainAgent.asTextAction({
   stopWhen: (result: any) => result.stepCount >= 3,
+});
+
+// ============================================================================
+// CRISIS AGENT - Immediate crisis support
+// ============================================================================
+
+const crisisAgent = new Agent(components.agent, {
+  name: 'Crisis Support',
+  languageModel: openai('gpt-5-nano'),
+  instructions: 'You are a compassionate crisis support assistant for caregivers providing immediate support resources.',
+  maxSteps: 1, // No tool calls needed for crisis - prioritize speed
+
+  // Usage tracking for billing and monitoring
+  ...sharedAgentConfig,
+});
+
+/**
+ * Crisis Agent Action
+ *
+ * Runs crisis detection and response workflow using Convex Agent Component.
+ */
+export const runCrisisAgent = internalAction({
+  args: {
+    input: v.object({
+      channel: channelValidator,
+      text: v.string(),
+      userId: v.string(),
+    }),
+    context: agentContextValidator,
+    threadId: v.optional(v.string()),
+  },
+  handler: async (ctx, { input, context, threadId }) => {
+    const startTime = Date.now();
+
+    if (!context.crisisFlags?.active) {
+      throw new Error('Crisis agent requires active crisis flags');
+    }
+
+    const metadata = (context.metadata ?? {}) as Record<string, unknown>;
+    const profile = (metadata.profile as Record<string, unknown> | undefined) ?? {};
+    const userName = (profile.firstName as string) ?? 'friend';
+    const careRecipient = (profile.careRecipientName as string) ?? 'loved one';
+    const journeyPhase = (metadata.journeyPhase as string) ?? 'crisis';
+
+    // Build wellness info using helper
+    const wellnessInfo = buildWellnessInfo(metadata);
+
+    try {
+      const systemPrompt = renderPrompt(CRISIS_PROMPT, {
+        userName,
+        careRecipient,
+        journeyPhase,
+        wellnessInfo
+      });
+
+      let newThreadId: string;
+      let thread;
+
+      if (threadId) {
+        const threadResult = await crisisAgent.continueThread(ctx, { threadId, userId: context.userId });
+        thread = threadResult.thread;
+        newThreadId = threadId;
+      } else {
+        const threadResult = await crisisAgent.createThread(ctx, { userId: context.userId });
+        thread = threadResult.thread;
+        newThreadId = threadResult.threadId;
+      }
+
+      const result = await thread.generateText({
+        prompt: input.text,
+        system: systemPrompt, // Override default instructions
+        providerOptions: {
+          openai: {
+            reasoningEffort: 'minimal', // Maximum speed for crisis response
+            textVerbosity: 'low', // Concise, direct crisis support
+          },
+        },
+      });
+
+      const responseText = result.text;
+      const latencyMs = Date.now() - startTime;
+
+      await ctx.runMutation(internal.logs.logCrisisInteraction, {
+        userId: context.userId,
+        input: input.text,
+        chunks: [responseText],
+        timestamp: Date.now(),
+      });
+
+      return {
+        chunks: [{ type: 'text', content: responseText }],
+        latencyMs,
+        threadId: newThreadId,
+      };
+    } catch (error) {
+      console.error('Crisis agent error:', error);
+
+      const fallbackResponse = `I hear that you're going through a very difficult time.
+
+If you're experiencing a crisis, please reach out for immediate help:
+- Call 988 (Suicide & Crisis Lifeline)
+- Text HOME to 741741 (Crisis Text Line)
+- Call 911 if you are in immediate danger
+
+For ${careRecipient}, resources are available 24/7. You're not alone in this.`;
+
+      await ctx.runMutation(internal.logs.logCrisisInteraction, {
+        userId: context.userId,
+        input: input.text,
+        chunks: [fallbackResponse],
+        timestamp: Date.now(),
+      });
+
+      return {
+        chunks: [{ type: 'error', content: fallbackResponse, meta: { error: String(error) } }],
+        latencyMs: Date.now() - startTime,
+      };
+    }
+  },
+});
+
+/**
+ * Check if crisis agent should be invoked
+ *
+ * This is a helper query that can be called before routing to agents.
+ */
+export const shouldInvokeCrisisAgent = action({
+  args: {
+    context: agentContextValidator,
+  },
+  handler: async (_ctx, { context }) => {
+    return Boolean(context.crisisFlags?.active);
+  },
+});
+
+// ============================================================================
+// ASSESSMENT AGENT - Burnout assessments and interventions
+// ============================================================================
+
+// Tool: Get evidence-based interventions by pressure zones
+const getInterventionsTool = createTool({
+  args: z.object({
+    zones: z.array(z.string()).describe('Pressure zones from BSFC assessment'),
+    minEvidenceLevel: z.enum(['high', 'moderate', 'low']).optional().describe('Minimum evidence level (default: moderate)'),
+    limit: z.number().optional().describe('Max number of interventions (default: 5)'),
+  }),
+  description: 'Lookup evidence-based caregiver interventions matching pressure zones. Use this to provide specific, research-backed recommendations.',
+  handler: async (ctx, args: { zones: string[]; minEvidenceLevel?: 'high' | 'moderate' | 'low'; limit?: number }) => {
+    const interventions: Array<{
+      title: string;
+      category: string;
+      targetZones: string[];
+      evidenceLevel: string;
+      duration: string;
+      description: string;
+      content: string;
+    }> = await ctx.runQuery(internal.interventions.getByZones, {
+      zones: args.zones,
+      minEvidenceLevel: args.minEvidenceLevel || 'moderate',
+      limit: args.limit || 5,
+    });
+
+    return {
+      interventions: interventions.map((i: any) => ({
+        title: i.title,
+        category: i.category,
+        targetZones: i.targetZones,
+        evidenceLevel: i.evidenceLevel,
+        duration: i.duration,
+        description: i.description,
+        content: i.content,
+      })),
+    };
+  },
+});
+
+const assessmentAgent: any = new Agent(components.agent, {
+  name: 'Assessment Specialist',
+  languageModel: openai('gpt-5-mini'),
+  instructions:
+    'You are a burnout assessment specialist who provides personalized, compassionate interpretations and actionable intervention suggestions. Use the getInterventions tool to recommend evidence-based interventions matching the user\'s pressure zones.',
+  tools: { getInterventions: getInterventionsTool },
+  maxSteps: 2, // Limit tool calls for faster responses
+
+  // Usage tracking for billing and monitoring
+  ...sharedAgentConfig,
+});
+
+/**
+ * Assessment Agent Action
+ *
+ * Processes assessment answers and provides results with interventions.
+ */
+export const runAssessmentAgent: any = action({
+  args: {
+    input: v.object({
+      channel: channelValidator,
+      text: v.string(),
+      userId: v.string(),
+    }),
+    context: agentContextValidator,
+    threadId: v.optional(v.string()),
+  },
+  handler: async (ctx, { input, context, threadId }): Promise<any> => {
+    const startTime = Date.now();
+
+    try {
+      const metadata = (context.metadata ?? {}) as Record<string, unknown>;
+      const answers = (metadata.assessmentAnswers as number[]) ?? [];
+
+      if (answers.length === 0) {
+        const errorMessage = 'No assessment answers found. Please complete an assessment first.';
+        return {
+          chunks: [{ type: 'error', content: errorMessage }],
+          latencyMs: Date.now() - startTime,
+        };
+      }
+
+      const profile = (metadata.profile as Record<string, unknown> | undefined) ?? {};
+      const userName = (profile.firstName as string) ?? 'caregiver';
+      const careRecipient = (profile.careRecipientName as string) ?? 'your loved one';
+
+      const total = answers.reduce((sum, val) => sum + val, 0);
+      const avgScore = total / answers.length;
+      const _pressureZone = (metadata.pressureZone as string) ?? 'work';
+
+      let _band: string;
+      if (avgScore < 2) {
+        _band = 'low';
+      } else if (avgScore < 3.5) {
+        _band = 'moderate';
+      } else {
+        _band = 'high';
+      }
+
+      // Extract assessment context for the prompt
+      // Note: This agent processes completed assessments, not in-progress ones
+      // These variables support both use cases
+      const assessmentName = (metadata.assessmentDefinitionId as string) ?? 'burnout assessment';
+      const assessmentType = assessmentName;
+      const questionNumber = String(answers.length);
+      const responsesCount = String(answers.length);
+
+      const systemPrompt = renderPrompt(ASSESSMENT_PROMPT, {
+        userName,
+        careRecipient,
+        assessmentName,
+        assessmentType,
+        questionNumber,
+        responsesCount,
+      });
+
+      let newThreadId: string;
+      let thread: any;
+
+      if (threadId) {
+        const threadResult: any = await assessmentAgent.continueThread(ctx, { threadId, userId: context.userId });
+        thread = threadResult.thread;
+        newThreadId = threadId;
+      } else {
+        const threadResult: any = await assessmentAgent.createThread(ctx, { userId: context.userId });
+        thread = threadResult.thread;
+        newThreadId = threadResult.threadId;
+      }
+
+      const result: any = await thread.generateText({
+        prompt: input.text || 'Please interpret my burnout assessment results and suggest interventions.',
+        system: systemPrompt, // Override default instructions with assessment-specific context
+        providerOptions: {
+          openai: {
+            reasoningEffort: 'low', // Balanced speed for clinical interpretations
+            textVerbosity: 'low', // Focused, actionable recommendations
+          },
+        },
+      });
+
+      const responseText: string = result.text;
+      const latencyMs = Date.now() - startTime;
+
+      await ctx.runMutation(internal.logs.logAgentRunInternal, {
+        userId: context.userId,
+        agent: 'assessment',
+        policyBundle: 'assessment_v1',
+        budgetResult: {
+          usedInputTokens: input.text.length,
+          usedOutputTokens: responseText.length,
+          toolCalls: 0,
+        },
+        latencyMs,
+        traceId: `assessment-${Date.now()}`,
+      });
+
+      return {
+        chunks: [{ type: 'text', content: responseText }],
+        latencyMs,
+        threadId: newThreadId,
+      };
+    } catch (error) {
+      console.error('Assessment agent error:', error);
+
+      const errorMessage = 'I apologize, but I encountered an error processing your assessment. Please try again.';
+      const latencyMs = Date.now() - startTime;
+
+      await ctx.runMutation(internal.logs.logAgentRunInternal, {
+        userId: context.userId,
+        agent: 'assessment',
+        policyBundle: 'assessment_v1',
+        budgetResult: {
+          usedInputTokens: input.text.length,
+          usedOutputTokens: errorMessage.length,
+          toolCalls: 0,
+        },
+        latencyMs,
+        traceId: `assessment-${Date.now()}`,
+      });
+
+      return {
+        chunks: [{ type: 'error', content: errorMessage, meta: { error: String(error) } }],
+        latencyMs,
+      };
+    }
+  },
 });

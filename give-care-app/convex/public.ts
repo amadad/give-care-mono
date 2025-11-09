@@ -1,8 +1,20 @@
-import { mutation, internalQuery } from '../_generated/server';
+/**
+ * Public API Surface
+ *
+ * This file defines the ONLY functions callable from the browser/frontend.
+ * All exports here must have validators and proper access control.
+ *
+ * Server-side code should use internal.* instead.
+ */
+
+import { mutation, internalQuery } from './_generated/server';
 import { v } from 'convex/values';
-import * as ContextModel from '../model/context';
-import { summarizeConversation, formatForContext } from '../lib/summarization';
-import * as Users from '../model/users';
+import * as Core from './core';
+import { summarizeConversation, formatForContext } from './lib/summarization';
+
+// ============================================================================
+// VALIDATORS
+// ============================================================================
 
 export const channelValidator = v.union(v.literal('sms'), v.literal('web'));
 
@@ -10,6 +22,15 @@ const consentValidator = v.object({ emergency: v.boolean(), marketing: v.boolean
 const promptHistoryValidator = v.array(v.object({ fieldId: v.string(), text: v.string() }));
 const budgetValidator = v.object({ maxInputTokens: v.number(), maxOutputTokens: v.number(), maxTools: v.number() });
 
+// ============================================================================
+// CONTEXT - Hydration & Persistence
+// ============================================================================
+
+/**
+ * Hydrate user context from storage
+ *
+ * Called by frontend to load user session state
+ */
 export const hydrate = mutation({
   args: {
     user: v.object({
@@ -20,10 +41,15 @@ export const hydrate = mutation({
     }),
   },
   handler: async (ctx, { user }) => {
-    return ContextModel.hydrate(ctx, user);
+    return Core.hydrate(ctx, user);
   },
 });
 
+/**
+ * Persist user context back to storage
+ *
+ * Called by frontend to save user session state
+ */
 export const persist = mutation({
   args: {
     context: v.object({
@@ -40,7 +66,7 @@ export const persist = mutation({
     }),
   },
   handler: async (ctx, { context }) => {
-    await ContextModel.persist(ctx, context);
+    await Core.persist(ctx, context);
   },
 });
 
@@ -55,7 +81,7 @@ export const getConversationSummary = internalQuery({
     limit: v.optional(v.number()),
   },
   handler: async (ctx, { externalId, limit = 25 }) => {
-    const user = await Users.getByExternalId(ctx, externalId);
+    const user = await Core.getByExternalId(ctx, externalId);
     if (!user) {
       return {
         recentMessages: [],
@@ -87,7 +113,7 @@ export const recordMemory = mutation({
     importance: v.number(),
   },
   handler: async (ctx, args) => {
-    const user = await Users.getByExternalId(ctx, args.userId);
+    const user = await Core.getByExternalId(ctx, args.userId);
     if (!user) {
       throw new Error('User not found');
     }
@@ -104,3 +130,11 @@ export const recordMemory = mutation({
     });
   },
 });
+
+// ============================================================================
+// PLACEHOLDER: Other public exports will be added here
+// ============================================================================
+
+// TODO: Add assessment exports
+// TODO: Add billing exports
+// TODO: Add resource search exports (if public-facing)
