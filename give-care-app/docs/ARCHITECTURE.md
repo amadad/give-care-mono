@@ -106,6 +106,8 @@ convex/
 SMS → Twilio → http.ts:handleInboundSMS → context.hydrate → agent.generateText → SMS response
 ```
 
+- `convex/functions/inbound.ts` stores the agent component `threadId` on `users.metadata.componentThreadId` so crisis and main agents continue within the same Convex Agent thread.
+
 ### 2. Wellness Assessments
 
 **What:** 4 validated assessments (EMA, BSFC, REACH-II, SDOH) - 57 questions total

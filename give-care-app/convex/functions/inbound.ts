@@ -5,10 +5,12 @@
  * Called automatically when a new inbound message is received via webhook.
  */
 
-import { internalAction, internalMutation } from '../_generated/server';
+import { internalAction } from '../_generated/server';
+import type { ActionCtx, MutationCtx } from '../_generated/server';
+import type { Doc, Id } from '../_generated/dataModel';
 import { internal, components } from '../_generated/api';
 import { v } from 'convex/values';
-import { saveMessage } from '@convex-dev/agent';
+import { createThread } from '@convex-dev/agent';
 import * as Subscriptions from '../model/subscriptions';
 
 const CRISIS_TERMS = [
@@ -20,6 +22,73 @@ const CRISIS_TERMS = [
   'give up',
   'hurt myself',
 ];
+
+type UserDoc = Doc<'users'>;
+type UserMetadata = Record<string, unknown> & { componentThreadId?: string };
+
+const sanitizeUserMetadata = (metadata: UserDoc['metadata']): UserMetadata => {
+  if (metadata && typeof metadata === 'object') {
+    return { ...(metadata as Record<string, unknown>) } as UserMetadata;
+  }
+  return {};
+};
+
+const fetchThreadIfPresent = async (ctx: ActionCtx, threadId?: string): Promise<string | undefined> => {
+  if (!threadId) return undefined;
+  try {
+    const thread = await ctx.runQuery(components.agent.threads.getThread, { threadId });
+    return thread ? threadId : undefined;
+  } catch (error) {
+    console.warn('[inbound] Stored component thread lookup failed', { threadId, error });
+    return undefined;
+  }
+};
+
+const fetchLatestComponentThread = async (ctx: ActionCtx, userId: Id<'users'>): Promise<string | undefined> => {
+  const result = await ctx.runQuery(components.agent.threads.listThreadsByUserId, {
+    userId: userId as string,
+    order: 'desc',
+    paginationOpts: { cursor: null, numItems: 1 },
+  });
+  return result.page.at(0)?._id;
+};
+
+const persistThreadIdIfNeeded = async (
+  ctx: ActionCtx,
+  userId: Id<'users'>,
+  metadata: UserMetadata,
+  nextThreadId: string
+) => {
+  if (metadata.componentThreadId === nextThreadId) {
+    return;
+  }
+  const nextMetadata: UserMetadata = { ...metadata, componentThreadId: nextThreadId };
+  await ctx.runMutation(internal.model.users.updateUserMetadata, {
+    userId,
+    metadata: nextMetadata,
+  });
+};
+
+const ensureComponentThreadId = async (ctx: ActionCtx, user: UserDoc): Promise<string> => {
+  const metadata = sanitizeUserMetadata(user.metadata);
+  const storedThreadId = await fetchThreadIfPresent(ctx, metadata.componentThreadId);
+  if (storedThreadId) {
+    return storedThreadId;
+  }
+
+  const latestThreadId = await fetchLatestComponentThread(ctx, user._id);
+  if (latestThreadId) {
+    await persistThreadIdIfNeeded(ctx, user._id, metadata, latestThreadId);
+    return latestThreadId;
+  }
+
+  // ActionCtx exposes runMutation, so casting keeps createThread helper happy.
+  const createdThreadId = await createThread(ctx as unknown as MutationCtx, components.agent, {
+    userId: user._id as string,
+  });
+  await persistThreadIdIfNeeded(ctx, user._id, metadata, createdThreadId);
+  return createdThreadId;
+};
 
 /**
  * Process a new inbound message and route to appropriate agent
@@ -44,16 +113,19 @@ export const processInboundMessage = internalAction({
     });
     console.log('[inbound] Subscription check', { userId, hasSubscription });
 
+    const user = await ctx.runQuery(internal.model.users.getUser, { userId });
+    if (!user) {
+      throw new Error(`User ${userId} not found during inbound processing`);
+    }
+
     if (!hasSubscription) {
-      // Get user to extract phone for signup URL
-      const user = await ctx.runQuery(internal.model.users.getUser, { userId });
-      const signupUrl = Subscriptions.getSignupUrl(user?.phone);
+      const signupUrl = Subscriptions.getSignupUrl(user.phone);
 
       // Send signup message directly (we're already in an action)
       await ctx.runAction(internal.functions.inboundActions.sendSignupMessage, {
         userId: externalId,
         channel,
-        phone: user?.phone,
+        phone: user.phone,
         signupUrl,
       });
 
@@ -64,24 +136,15 @@ export const processInboundMessage = internalAction({
     const lowerText = text.toLowerCase();
     const hasCrisisTerms = CRISIS_TERMS.some((term) => lowerText.includes(term));
 
-    // Get or create thread for this user via mutation
-    const threadResult = await ctx.runMutation(internal.functions.inbound.getOrCreateThread, {
-      userId,
-    });
-    const threadId: string = threadResult.threadId;
-
-    // Save user message to thread
-    const { messageId: promptMessageId } = await saveMessage(ctx, components.agent, {
-      threadId,
-      prompt: text,
-    });
+    const threadId = await ensureComponentThreadId(ctx, user);
 
     // Route to appropriate agent based on context
+    // Note: Agents automatically save the user message via generateText()
     if (hasCrisisTerms) {
       // High priority - run crisis agent immediately
       await ctx.runAction(internal.functions.inboundActions.generateCrisisResponse, {
         threadId,
-        promptMessageId,
+        text,
         userId: externalId,
         channel,
       });
@@ -89,37 +152,12 @@ export const processInboundMessage = internalAction({
       // Normal priority - run main agent
       await ctx.runAction(internal.functions.inboundActions.generateMainResponse, {
         threadId,
-        promptMessageId,
+        text,
         userId: externalId,
         channel,
       });
     }
 
     return { threadId, agent: hasCrisisTerms ? 'crisis' : 'main' };
-  },
-});
-
-/**
- * Get or create thread for user (mutation helper)
- */
-export const getOrCreateThread = internalMutation({
-  args: { userId: v.id('users') },
-  handler: async (ctx, { userId }) => {
-    const existingThread = await ctx.db
-      .query('threads')
-      .withIndex('by_userId', (q) => q.eq('userId', userId))
-      .order('desc')
-      .first();
-
-    if (existingThread) {
-      return { threadId: existingThread._id as string };
-    }
-
-    const newThreadId = await ctx.db.insert('threads', {
-      userId,
-      metadata: {},
-    });
-
-    return { threadId: newThreadId as string };
   },
 });

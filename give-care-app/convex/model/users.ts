@@ -111,6 +111,20 @@ export const ensureSession = async (ctx: MutationCtx, params: EnsureSessionParam
   return session;
 };
 
+/**
+ * Update user metadata blob (used for storing agent-specific state like component threads).
+ */
+export const updateUserMetadata = internalMutation({
+  args: {
+    userId: v.id('users'),
+    metadata: v.any(),
+  },
+  handler: async (ctx, { userId, metadata }) => {
+    await ctx.db.patch(userId, { metadata });
+    return ctx.db.get(userId);
+  },
+});
+
 export const getSessionByExternalId = async (
   ctx: QueryCtx | MutationCtx,
   params: { externalId: string; channel: Channel }

@@ -17,11 +17,11 @@ const CRISIS_TERMS = [
 export const generateCrisisResponse = internalAction({
   args: {
     threadId: v.string(),
-    promptMessageId: v.string(),
+    text: v.string(),
     userId: v.string(),
     channel: v.union(v.literal('sms'), v.literal('email'), v.literal('web')),
   },
-  handler: async (ctx, { threadId, userId, channel }): Promise<any> => {
+  handler: async (ctx, { threadId, text, userId, channel }): Promise<any> => {
     // Get user context
     const user: any = await ctx.runQuery(api.functions.users.getByExternalId, {
       externalId: userId,
@@ -35,7 +35,7 @@ export const generateCrisisResponse = internalAction({
     const result: any = await ctx.runAction(internal.agents.crisis.runCrisisAgent, {
       input: {
         channel,
-        text: '', // Text already in thread via promptMessageId
+        text,
         userId,
       },
       context: {
@@ -73,11 +73,11 @@ export const generateCrisisResponse = internalAction({
 export const generateMainResponse = internalAction({
   args: {
     threadId: v.string(),
-    promptMessageId: v.string(),
+    text: v.string(),
     userId: v.string(),
     channel: v.union(v.literal('sms'), v.literal('email'), v.literal('web')),
   },
-  handler: async (ctx, { threadId, userId, channel }): Promise<any> => {
+  handler: async (ctx, { threadId, text, userId, channel }): Promise<any> => {
     // Get user context
     const user: any = await ctx.runQuery(api.functions.users.getByExternalId, {
       externalId: userId,
@@ -91,7 +91,7 @@ export const generateMainResponse = internalAction({
     const result: any = await ctx.runAction(api.agents.main.runMainAgent, {
       input: {
         channel,
-        text: '', // Text already in thread via promptMessageId
+        text,
         userId,
       },
       context: {

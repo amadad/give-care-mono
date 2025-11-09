@@ -34,19 +34,19 @@ export const computeDailyMetrics = internalMutation({
     // Count users using pagination (no .collect())
     let totalUsers = 0;
     let newUsersToday = 0;
-    let userCursor: Id<'users'> | undefined = undefined;
+    let userCursor: string | null = null;
 
     while (true) {
       const batch = await ctx.db
         .query('users')
         .order('desc')
-        .paginate({ cursor: userCursor ? userCursor.toString() : null, numItems: BATCH_SIZE });
+        .paginate({ cursor: userCursor, numItems: BATCH_SIZE });
 
       totalUsers += batch.page.length;
       newUsersToday += batch.page.filter(u => u._creationTime >= dayAgo).length;
 
       if (!batch.continueCursor) break;
-      userCursor = batch.page[batch.page.length - 1]._id;
+      userCursor = batch.continueCursor;
     }
 
     // Active users via indexed sessions query

@@ -1,5 +1,8 @@
 # GiveCare Monorepo
 
+Use subagents to kick off user requests
+Parallelize subagents for non-overlapping requests
+
 ## Code Quality Rules
 - No emojis in PRs/commits
 - Git: `git add [specific-files]` never `git add .`

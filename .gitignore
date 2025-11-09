@@ -56,7 +56,9 @@ _archive_git_histories/
 *.swp
 *.swo
 .cursor/
-.claude/
+.claude/*
+!.claude/skills/
+.claude/skills/.DS_Store
 .mcp.json
 .env.local
 .cursorrules

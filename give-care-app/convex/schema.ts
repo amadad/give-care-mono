@@ -56,6 +56,7 @@ export default defineSchema({
     .index('by_externalId', ['externalId'])
     .index('by_phone', ['phone']),
 
+  // DEPRECATED: Agent component manages conversation threads internally (v1.4.1)
   threads: defineTable({
     userId: v.id('users'),
     metadata: v.optional(v.any()),
