@@ -6,22 +6,12 @@
  */
 
 import { internalAction } from '../_generated/server';
-import type { ActionCtx, MutationCtx } from '../_generated/server';
+import type { ActionCtx } from '../_generated/server';
 import type { Doc, Id } from '../_generated/dataModel';
 import { internal, components } from '../_generated/api';
 import { v } from 'convex/values';
-import { createThread } from '@convex-dev/agent';
 import * as Subscriptions from '../model/subscriptions';
-
-const CRISIS_TERMS = [
-  'suicide',
-  'kill myself',
-  'end it',
-  'want to die',
-  'no point',
-  'give up',
-  'hurt myself',
-];
+import { CRISIS_TERMS } from '../lib/constants';
 
 type UserDoc = Doc<'users'>;
 type UserMetadata = Record<string, unknown> & { componentThreadId?: string };
@@ -33,11 +23,13 @@ const sanitizeUserMetadata = (metadata: UserDoc['metadata']): UserMetadata => {
   return {};
 };
 
-const fetchThreadIfPresent = async (ctx: ActionCtx, threadId?: string): Promise<string | undefined> => {
+const fetchThreadIfPresent = async (ctx: ActionCtx, userId: Id<'users'>, threadId?: string): Promise<string | undefined> => {
   if (!threadId) return undefined;
   try {
     const thread = await ctx.runQuery(components.agent.threads.getThread, { threadId });
-    return thread ? threadId : undefined;
+    // Verify thread ownership to prevent cross-user contamination
+    if (!thread || thread.userId !== (userId as string)) return undefined;
+    return threadId;
   } catch (error) {
     console.warn('[inbound] Stored component thread lookup failed', { threadId, error });
     return undefined;
@@ -71,7 +63,7 @@ const persistThreadIdIfNeeded = async (
 
 const ensureComponentThreadId = async (ctx: ActionCtx, user: UserDoc): Promise<string> => {
   const metadata = sanitizeUserMetadata(user.metadata);
-  const storedThreadId = await fetchThreadIfPresent(ctx, metadata.componentThreadId);
+  const storedThreadId = await fetchThreadIfPresent(ctx, user._id, metadata.componentThreadId);
   if (storedThreadId) {
     return storedThreadId;
   }
@@ -82,9 +74,9 @@ const ensureComponentThreadId = async (ctx: ActionCtx, user: UserDoc): Promise<s
     return latestThreadId;
   }
 
-  // ActionCtx exposes runMutation, so casting keeps createThread helper happy.
-  const createdThreadId = await createThread(ctx as unknown as MutationCtx, components.agent, {
-    userId: user._id as string,
+  // Use internal mutation wrapper (Convex best practice: avoid ActionCtx→MutationCtx casts)
+  const createdThreadId = await ctx.runMutation(internal.internal.threads.createComponentThread, {
+    userId: user._id,
   });
   await persistThreadIdIfNeeded(ctx, user._id, metadata, createdThreadId);
   return createdThreadId;

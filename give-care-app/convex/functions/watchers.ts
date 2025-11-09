@@ -1,8 +1,7 @@
 import { internalMutation } from '../_generated/server';
 import type { MutationCtx } from '../_generated/server';
 import * as Users from '../model/users';
-
-const CRISIS_TERMS = ['suicide', 'kill myself', 'end it'];
+import { CRISIS_TERMS } from '../lib/constants';
 
 const insertAlert = async (
   ctx: MutationCtx,

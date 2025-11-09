@@ -3,16 +3,7 @@
 import { internalAction } from '../_generated/server';
 import { internal, api } from '../_generated/api';
 import { v } from 'convex/values';
-
-const CRISIS_TERMS = [
-  'suicide',
-  'kill myself',
-  'end it',
-  'want to die',
-  'no point',
-  'give up',
-  'hurt myself',
-];
+import { CRISIS_TERMS } from '../lib/constants';
 
 export const generateCrisisResponse = internalAction({
   args: {

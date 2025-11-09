@@ -5,12 +5,17 @@
 ### Fixed
 
 - **Agent Thread Management** (`convex/functions/inbound.ts`): Replaced the app-specific `threads` table helper with the official Agent component thread APIs. The inbound processor now reuses the component threadId stored on each user, creates a new component thread via `createThread` when missing, and saves the threadId through `updateUserMetadata` so crisis/main agents always run inside the same conversation history.
+- **Thread Ownership Security** (`convex/functions/inbound.ts`): Added ownership validation in `fetchThreadIfPresent` to prevent cross-user thread contamination when stored threadId is stale or malicious.
 - **Agent Message Handling** (`convex/functions/inbound.ts`, `convex/functions/inboundActions.ts`): Removed manual `saveMessage()` call that was causing `v.id("threads")` validation errors. Agents now receive the actual message text and automatically save messages via `generateText()`, fixing both the validation error and the empty text bug.
 - **Metrics Cursor Parsing** (`convex/internal/metrics.ts`): Fixed "Failed to parse cursor" error in `computeDailyMetrics` by correcting cursor type from `Id<'users'>` to `string | null` and using `batch.continueCursor` instead of manually extracting the last item's ID.
+- **Unsafe Context Cast** (`convex/functions/inbound.ts`, `convex/internal/threads.ts`): Removed unsafe `ActionCtx → MutationCtx` cast by creating proper internal mutation wrapper for thread creation (Convex best practice).
+- **In-Memory Cache Anti-Pattern** (`convex/lib/memory.ts`): Deleted broken in-memory cache that violated Convex's stateless function model. Cache state was lost on cold starts. Use DB-backed `functions/memory.ts` or official Action Cache component instead.
 
 ### Added
 
 - **Metadata Mutation** (`convex/model/users.ts`): Introduced `updateUserMetadata` to persist agent-owned metadata (e.g., component threadId) without duplicating write logic across actions.
+- **Thread Mutation Wrapper** (`convex/internal/threads.ts`): Created `createComponentThread` internal mutation to safely create Agent Component threads from actions without unsafe context casts.
+- **Centralized Constants** (`convex/lib/constants.ts`): Consolidated `CRISIS_TERMS` definition to prevent drift across modules (`inbound.ts`, `inboundActions.ts`, `watchers.ts`).
 
 ### Documentation
 
