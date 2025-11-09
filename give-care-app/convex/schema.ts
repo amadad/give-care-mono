@@ -43,7 +43,7 @@ export default defineSchema({
     phone: v.optional(v.string()),
     email: v.optional(v.string()),
     name: v.optional(v.string()),
-    channel: v.optional(v.union(v.literal('sms'), v.literal('web'))),
+    channel: v.optional(v.union(v.literal('sms'), v.literal('email'), v.literal('web'))),
     locale: v.optional(v.string()),
     consent: v.optional(consentValidator),
     address: v.optional(addressValidator),
@@ -70,7 +70,7 @@ export default defineSchema({
 
   sessions: defineTable({
     userId: v.id('users'),
-    channel: v.union(v.literal('sms'), v.literal('web')),
+    channel: v.union(v.literal('sms'), v.literal('email'), v.literal('web')),
     locale: v.string(),
     policyBundle: v.string(),
     budget: budgetValidator,
@@ -86,7 +86,7 @@ export default defineSchema({
 
   messages: defineTable({
     userId: v.id('users'),
-    channel: v.union(v.literal('sms'), v.literal('web')),
+    channel: v.union(v.literal('sms'), v.literal('email'), v.literal('web')),
     direction: v.union(v.literal('inbound'), v.literal('outbound')),
     text: v.string(),
     meta: v.optional(v.any()),

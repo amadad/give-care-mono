@@ -22,10 +22,11 @@
 
 ```
 convex/
-├── agents/           # AI agent implementations (3 agents)
-├── functions/        # Public API (queries, mutations, actions)
+├── actions/         # Node-only side effects (Stripe, Twilio, Resend)
+├── agents/          # AI agent implementations (3 agents)
+├── domains/         # Internal-only queries & mutations organized by domain
+├── internal/        # Barrel that re-exports domains for api.internal.*
 ├── lib/             # Business logic utilities
-├── model/           # Data access layer
 ├── workflows/       # Durable workflows (crisis escalation)
 ├── schema.ts        # Database schema (24 tables)
 ├── http.ts          # Webhook router (Twilio, Stripe)
@@ -40,21 +41,30 @@ convex/
 | `crisis.ts` | Crisis intervention agent | Detect crisis terms, provide 988/741741/911 resources | Safety-critical responses | Users in crisis |
 | `assessment.ts` | Assessment results interpreter | Analyze scores, recommend interventions | Personalize support strategies | Users completing assessments |
 
-### `convex/functions/` - Public API Layer
+### `convex/domains/` - Internal API Surface
 
-| File | What | Why | Key Functions |
-|------|------|-----|---------------|
-| `context.ts` | User session hydration/persistence | Maintain conversation state | `hydrate`, `persist`, `recordMemory`, `getConversationSummary` |
-| `assessments.ts` | Assessment definitions & scoring | Track caregiver wellness | `recordAnswer`, `getSession`, `completeSession` |
-| `interventions.ts` | Evidence-based support strategies | Match interventions to pressure zones | `getByZones`, `getByCategory` |
-| `resources.ts` | Local resource search (Google Maps) | Connect caregivers to local services | `searchResources`, `getRecommendations` |
-| `wellness.ts` | Burnout tracking & trends | Monitor caregiver health over time | `getStatus`, `getLatestScore`, `trend` |
-| `users.ts` | User profile management | Store caregiver info | `getByExternalId` |
-| `messages.ts` | Conversation history | Thread-based message storage | `getForThread`, `getRecent` |
-| `alerts.ts` | Crisis event logging | Track high-risk situations | `create`, `getRecent`, `resolve` |
-| `email.ts` | Email notifications | Log outbound mail + crisis alerts | `logDelivery`, `sendCrisisAlert` |
-| `admin.ts` | Admin dashboard queries | System monitoring | `getMetrics`, `getAllUsers`, `getSystemHealth` |
-| `billing.ts` | Stripe subscription management | Premium features | `createCheckout`, `handleWebhook`, `cancelSubscription` |
+Domain files group related queries/mutations so `internal/index.ts` can re-export a tidy barrel (`api.internal.*`). Each file stays <300 LOC and only imports `lib/*` or `core.ts`.
+
+| File | Focus | Notes | Key exports |
+|------|-------|-------|-------------|
+| `metrics.ts` | Daily/subscription/journey aggregations | Cron-friendly internal mutations | `aggregateDailyMetrics`, `computeDailyMetrics`, `computeSubscriptionMetrics` |
+| `scheduler.ts` | Trigger lifecycle & batching | Mutations only insert alerts; cron advances work | `enqueueOnce`, `createTrigger`, `processBatchInternal` |
+| `users.ts` | User/session lookups | Thin wrappers over `Core` | `getByExternalId` |
+| `messages.ts` | Message persistence | Calls `Core.recordInbound/outbound` | `recordInbound`, `recordOutbound` |
+| `wellness.ts` | Recent score summaries | Used by agents for context | `getStatus` |
+| `interventions.ts` | Evidence-based content | Seed + lookup + history tracking | `seedInterventions`, `getByZones`, `recordEvent` |
+| `logs.ts` | Agent + guardrail telemetry | Keeps agent_run/guardrail tables scoped here | `agentRun`, `logAgentRunInternal`, `logCrisisInteraction` |
+| `analytics.ts` | Dashboard rollups | Materialized metrics readers only | `getBurnoutDistribution`, `getDailyMetrics`, `getSummaryPerformance` |
+| `admin.ts` | Admin portal data | Fan-out queries with helper utilities | `getMetrics`, `getAllUsers`, `getSystemHealth` |
+| `alerts.ts` | Alert queue ops | Limited to list + mark | `listPending`, `markProcessed` |
+| `memories.ts` | Working memory | Uses Convex validators, default `minImportance=7` | `record`, `retrieveImportant` |
+| `watchers.ts` | Engagement sweeps | Inserts alerts instead of acting directly | `runEngagementChecks` |
+| `subscriptions.ts` | Manual subscription fixes | Applies PLAN_ENTITLEMENTS consistently | `linkSubscription` |
+| `assessments.ts` | Session orchestration + scoring | Domain config for EMA/BSFC/SDOH | `start`, `recordAnswer` |
+
+Supporting files (`email.ts`, `threads.ts`, etc.) host single-purpose helpers that stay reusable across domains.
+
+Node-only side effects (Stripe/Twilio/Resend) now live under `convex/actions/*.actions.ts` and are re-exported through `internal.ts` after passing the `"use node"` boundary.
 
 ### `convex/lib/` - Business Logic Utilities
 

@@ -227,21 +227,22 @@ export const searchResources = action({
     query: v.string(),
     location: v.optional(
       v.object({
-        latitude: v.number(),
-        longitude: v.number(),
+        zipCode: v.optional(v.string()),
         address: v.optional(v.string()),
+        latitude: v.optional(v.number()),
+        longitude: v.optional(v.number()),
       })
     ),
     metadata: v.optional(v.any()),
   },
   handler: async (ctx, { query, location, metadata }) => {
     // Extract location from params or user metadata
-    let finalLocation = location;
+    let finalLocation: LocationContext | undefined = location;
 
     if (!finalLocation && metadata) {
       const extracted = extractLocation(metadata as Record<string, unknown>);
       if (extracted) {
-        finalLocation = extracted as any;
+        finalLocation = extracted;
       }
     }
 

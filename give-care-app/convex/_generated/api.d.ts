@@ -98,17 +98,526 @@ export declare const api: {
       any
     >;
   };
+  domains: {
+    admin: {
+      getAllSubscriptions: FunctionReference<"query", "public", {}, any>;
+      getAllUsers: FunctionReference<
+        "query",
+        "public",
+        {
+          burnoutBand?: string;
+          journeyPhase?: string;
+          limit?: number;
+          search?: string;
+          subscriptionStatus?: string;
+        },
+        any
+      >;
+      getBillingEvents: FunctionReference<"query", "public", {}, any>;
+      getCrisisAlerts: FunctionReference<"query", "public", {}, any>;
+      getMetrics: FunctionReference<"query", "public", {}, any>;
+      getSubscriptionsByPhone: FunctionReference<
+        "query",
+        "public",
+        { phoneNumber: string },
+        any
+      >;
+      getSystemHealth: FunctionReference<"query", "public", {}, any>;
+      getUserDetails: FunctionReference<
+        "query",
+        "public",
+        { userId: Id<"users"> },
+        any
+      >;
+    };
+    alerts: {
+      listPending: FunctionReference<"query", "public", { limit: number }, any>;
+      markProcessed: FunctionReference<
+        "mutation",
+        "public",
+        {
+          alertId: Id<"alerts">;
+          result: { deliveredVia: "sms" | "email"; metadata?: any };
+        },
+        any
+      >;
+    };
+    analytics: {
+      getAgentPerformance: FunctionReference<
+        "query",
+        "public",
+        { days: number },
+        any
+      >;
+      getBurnoutDistribution: FunctionReference<"query", "public", {}, any>;
+      getDailyMetrics: FunctionReference<
+        "query",
+        "public",
+        { days: number },
+        any
+      >;
+      getQualityMetrics: FunctionReference<
+        "query",
+        "public",
+        { days: number },
+        any
+      >;
+      getRecentFeedback: FunctionReference<
+        "query",
+        "public",
+        { limit: number },
+        any
+      >;
+      getSummaryPerformance: FunctionReference<"query", "public", {}, any>;
+      getUserJourneyFunnel: FunctionReference<"query", "public", {}, any>;
+    };
+    assessments: {
+      recordAnswer: FunctionReference<
+        "mutation",
+        "public",
+        {
+          definitionId: string;
+          questionId: string;
+          sessionId: Id<"assessment_sessions">;
+          value: number;
+        },
+        any
+      >;
+      start: FunctionReference<
+        "mutation",
+        "public",
+        { definitionId: string; userId: string },
+        any
+      >;
+    };
+    email: {
+      logDelivery: FunctionReference<
+        "mutation",
+        "public",
+        {
+          status: string;
+          subject: string;
+          to: string;
+          traceId: string;
+          userId?: string;
+        },
+        any
+      >;
+    };
+    interventions: {
+      getByCategory: FunctionReference<
+        "query",
+        "public",
+        { category: string; limit?: number },
+        any
+      >;
+      getByZones: FunctionReference<
+        "query",
+        "public",
+        {
+          limit?: number;
+          minEvidenceLevel?: "high" | "moderate" | "low";
+          zones: Array<string>;
+        },
+        any
+      >;
+      getCategories: FunctionReference<"query", "public", {}, any>;
+      getUserHistory: FunctionReference<
+        "query",
+        "public",
+        { userId: string },
+        any
+      >;
+      recordEvent: FunctionReference<
+        "mutation",
+        "public",
+        {
+          interventionId: Id<"interventions">;
+          metadata?: any;
+          status: "viewed" | "started" | "completed";
+          userId: string;
+        },
+        any
+      >;
+      search: FunctionReference<
+        "query",
+        "public",
+        { limit?: number; query: string },
+        any
+      >;
+    };
+    logs: {
+      agentRun: FunctionReference<
+        "mutation",
+        "public",
+        {
+          payload: {
+            agent: string;
+            budgetResult: {
+              toolCalls: number;
+              usedInputTokens: number;
+              usedOutputTokens: number;
+            };
+            externalId: string;
+            latencyMs: number;
+            policyBundle: string;
+            traceId: string;
+          };
+        },
+        any
+      >;
+      guardrail: FunctionReference<
+        "mutation",
+        "public",
+        {
+          payload: {
+            action: string;
+            context?: any;
+            externalId?: string;
+            ruleId: string;
+            traceId: string;
+          };
+        },
+        any
+      >;
+    };
+    memories: {
+      record: FunctionReference<
+        "mutation",
+        "public",
+        {
+          category: string;
+          content: string;
+          importance: number;
+          userId: string;
+        },
+        any
+      >;
+      retrieve: FunctionReference<
+        "query",
+        "public",
+        { limit?: number; userId: string },
+        any
+      >;
+      retrieveByCategory: FunctionReference<
+        "query",
+        "public",
+        { category: string; limit?: number; userId: string },
+        any
+      >;
+      retrieveImportant: FunctionReference<
+        "query",
+        "public",
+        { limit?: number; minImportance?: number; userId: string },
+        any
+      >;
+    };
+    messages: {
+      recordInbound: FunctionReference<
+        "mutation",
+        "public",
+        {
+          message: {
+            channel: "sms" | "email" | "web";
+            externalId: string;
+            meta?: any;
+            redactionFlags?: Array<string>;
+            text: string;
+            traceId: string;
+          };
+        },
+        any
+      >;
+      recordOutbound: FunctionReference<
+        "mutation",
+        "public",
+        {
+          message: {
+            channel: "sms" | "email" | "web";
+            externalId: string;
+            meta?: any;
+            redactionFlags?: Array<string>;
+            text: string;
+            traceId: string;
+          };
+        },
+        any
+      >;
+    };
+    scheduler: {
+      cancelTrigger: FunctionReference<
+        "mutation",
+        "public",
+        { triggerId: Id<"triggers"> },
+        any
+      >;
+      createTrigger: FunctionReference<
+        "mutation",
+        "public",
+        {
+          trigger: {
+            nextRun: string;
+            payload: any;
+            rrule: string;
+            timezone: string;
+            userExternalId: string;
+          };
+        },
+        any
+      >;
+      enqueueOnce: FunctionReference<
+        "mutation",
+        "public",
+        {
+          job: {
+            name: string;
+            payload: any;
+            runAt: string;
+            timezone: string;
+            userExternalId: string;
+          };
+        },
+        any
+      >;
+    };
+    subscriptions: {
+      linkSubscription: FunctionReference<
+        "mutation",
+        "public",
+        {
+          currentPeriodEnd: number;
+          phoneNumber: string;
+          planId: string;
+          stripeCustomerId: string;
+        },
+        any
+      >;
+    };
+    users: {
+      getByExternalId: FunctionReference<
+        "query",
+        "public",
+        { externalId: string },
+        any
+      >;
+    };
+    wellness: {
+      getStatus: FunctionReference<"query", "public", { userId: string }, any>;
+    };
+  };
   internal: {
-    newsletterSignup: FunctionReference<
-      "action",
+    agentRun: FunctionReference<
+      "mutation",
       "public",
-      { email: string },
+      {
+        payload: {
+          agent: string;
+          budgetResult: {
+            toolCalls: number;
+            usedInputTokens: number;
+            usedOutputTokens: number;
+          };
+          externalId: string;
+          latencyMs: number;
+          policyBundle: string;
+          traceId: string;
+        };
+      },
       any
     >;
-    submit: FunctionReference<
-      "action",
+    cancelTrigger: FunctionReference<
+      "mutation",
       "public",
-      { email: string; pressureZones: any; responses: Array<number> },
+      { triggerId: Id<"triggers"> },
+      any
+    >;
+    createTrigger: FunctionReference<
+      "mutation",
+      "public",
+      {
+        trigger: {
+          nextRun: string;
+          payload: any;
+          rrule: string;
+          timezone: string;
+          userExternalId: string;
+        };
+      },
+      any
+    >;
+    enqueueOnce: FunctionReference<
+      "mutation",
+      "public",
+      {
+        job: {
+          name: string;
+          payload: any;
+          runAt: string;
+          timezone: string;
+          userExternalId: string;
+        };
+      },
+      any
+    >;
+    getAgentPerformance: FunctionReference<
+      "query",
+      "public",
+      { days: number },
+      any
+    >;
+    getAllSubscriptions: FunctionReference<"query", "public", {}, any>;
+    getAllUsers: FunctionReference<
+      "query",
+      "public",
+      {
+        burnoutBand?: string;
+        journeyPhase?: string;
+        limit?: number;
+        search?: string;
+        subscriptionStatus?: string;
+      },
+      any
+    >;
+    getBillingEvents: FunctionReference<"query", "public", {}, any>;
+    getBurnoutDistribution: FunctionReference<"query", "public", {}, any>;
+    getByCategory: FunctionReference<
+      "query",
+      "public",
+      { category: string; limit?: number },
+      any
+    >;
+    getByExternalId: FunctionReference<
+      "query",
+      "public",
+      { externalId: string },
+      any
+    >;
+    getByZones: FunctionReference<
+      "query",
+      "public",
+      {
+        limit?: number;
+        minEvidenceLevel?: "high" | "moderate" | "low";
+        zones: Array<string>;
+      },
+      any
+    >;
+    getCategories: FunctionReference<"query", "public", {}, any>;
+    getCrisisAlerts: FunctionReference<"query", "public", {}, any>;
+    getDailyMetrics: FunctionReference<
+      "query",
+      "public",
+      { days: number },
+      any
+    >;
+    getMetrics: FunctionReference<"query", "public", {}, any>;
+    getQualityMetrics: FunctionReference<
+      "query",
+      "public",
+      { days: number },
+      any
+    >;
+    getRecentFeedback: FunctionReference<
+      "query",
+      "public",
+      { limit: number },
+      any
+    >;
+    getStatus: FunctionReference<"query", "public", { userId: string }, any>;
+    getSubscriptionsByPhone: FunctionReference<
+      "query",
+      "public",
+      { phoneNumber: string },
+      any
+    >;
+    getSummaryPerformance: FunctionReference<"query", "public", {}, any>;
+    getSystemHealth: FunctionReference<"query", "public", {}, any>;
+    getUserDetails: FunctionReference<
+      "query",
+      "public",
+      { userId: Id<"users"> },
+      any
+    >;
+    getUserHistory: FunctionReference<
+      "query",
+      "public",
+      { userId: string },
+      any
+    >;
+    getUserJourneyFunnel: FunctionReference<"query", "public", {}, any>;
+    guardrail: FunctionReference<
+      "mutation",
+      "public",
+      {
+        payload: {
+          action: string;
+          context?: any;
+          externalId?: string;
+          ruleId: string;
+          traceId: string;
+        };
+      },
+      any
+    >;
+    linkSubscription: FunctionReference<
+      "mutation",
+      "public",
+      {
+        currentPeriodEnd: number;
+        phoneNumber: string;
+        planId: string;
+        stripeCustomerId: string;
+      },
+      any
+    >;
+    listPending: FunctionReference<"query", "public", { limit: number }, any>;
+    logDelivery: FunctionReference<
+      "mutation",
+      "public",
+      {
+        status: string;
+        subject: string;
+        to: string;
+        traceId: string;
+        userId?: string;
+      },
+      any
+    >;
+    markProcessed: FunctionReference<
+      "mutation",
+      "public",
+      {
+        alertId: Id<"alerts">;
+        result: { deliveredVia: "sms" | "email"; metadata?: any };
+      },
+      any
+    >;
+    record: FunctionReference<
+      "mutation",
+      "public",
+      { category: string; content: string; importance: number; userId: string },
+      any
+    >;
+    recordAnswer: FunctionReference<
+      "mutation",
+      "public",
+      {
+        definitionId: string;
+        questionId: string;
+        sessionId: Id<"assessment_sessions">;
+        value: number;
+      },
+      any
+    >;
+    recordEvent: FunctionReference<
+      "mutation",
+      "public",
+      {
+        interventionId: Id<"interventions">;
+        metadata?: any;
+        status: "viewed" | "started" | "completed";
+        userId: string;
+      },
       any
     >;
     recordInbound: FunctionReference<
@@ -141,75 +650,6 @@ export declare const api: {
       },
       any
     >;
-    getByExternalId: FunctionReference<
-      "query",
-      "public",
-      { externalId: string },
-      any
-    >;
-    logDelivery: FunctionReference<
-      "mutation",
-      "public",
-      {
-        status: string;
-        subject: string;
-        to: string;
-        traceId: string;
-        userId?: string;
-      },
-      any
-    >;
-    listPending: FunctionReference<"query", "public", { limit: number }, any>;
-    markProcessed: FunctionReference<
-      "mutation",
-      "public",
-      {
-        alertId: Id<"alerts">;
-        result: { deliveredVia: "sms" | "email"; metadata?: any };
-      },
-      any
-    >;
-    getStatus: FunctionReference<"query", "public", { userId: string }, any>;
-    enqueueOnce: FunctionReference<
-      "mutation",
-      "public",
-      {
-        job: {
-          name: string;
-          payload: any;
-          runAt: string;
-          timezone: string;
-          userExternalId: string;
-        };
-      },
-      any
-    >;
-    createTrigger: FunctionReference<
-      "mutation",
-      "public",
-      {
-        trigger: {
-          nextRun: string;
-          payload: any;
-          rrule: string;
-          timezone: string;
-          userExternalId: string;
-        };
-      },
-      any
-    >;
-    cancelTrigger: FunctionReference<
-      "mutation",
-      "public",
-      { triggerId: Id<"triggers"> },
-      any
-    >;
-    record: FunctionReference<
-      "mutation",
-      "public",
-      { category: string; content: string; importance: number; userId: string },
-      any
-    >;
     retrieve: FunctionReference<
       "query",
       "public",
@@ -228,88 +668,10 @@ export declare const api: {
       { limit?: number; minImportance?: number; userId: string },
       any
     >;
-    agentRun: FunctionReference<
-      "mutation",
-      "public",
-      {
-        payload: {
-          agent: string;
-          budgetResult: {
-            toolCalls: number;
-            usedInputTokens: number;
-            usedOutputTokens: number;
-          };
-          externalId: string;
-          latencyMs: number;
-          policyBundle: string;
-          traceId: string;
-        };
-      },
-      any
-    >;
-    guardrail: FunctionReference<
-      "mutation",
-      "public",
-      {
-        payload: {
-          action: string;
-          context?: any;
-          externalId?: string;
-          ruleId: string;
-          traceId: string;
-        };
-      },
-      any
-    >;
-    getByZones: FunctionReference<
-      "query",
-      "public",
-      {
-        limit?: number;
-        minEvidenceLevel?: "high" | "moderate" | "low";
-        zones: Array<string>;
-      },
-      any
-    >;
-    getByCategory: FunctionReference<
-      "query",
-      "public",
-      { category: string; limit?: number },
-      any
-    >;
     search: FunctionReference<
       "query",
       "public",
       { limit?: number; query: string },
-      any
-    >;
-    getCategories: FunctionReference<"query", "public", {}, any>;
-    recordEvent: FunctionReference<
-      "mutation",
-      "public",
-      {
-        interventionId: Id<"interventions">;
-        metadata?: any;
-        status: "viewed" | "started" | "completed";
-        userId: string;
-      },
-      any
-    >;
-    getUserHistory: FunctionReference<
-      "query",
-      "public",
-      { userId: string },
-      any
-    >;
-    linkSubscription: FunctionReference<
-      "mutation",
-      "public",
-      {
-        currentPeriodEnd: number;
-        phoneNumber: string;
-        planId: string;
-        stripeCustomerId: string;
-      },
       any
     >;
     start: FunctionReference<
@@ -318,74 +680,18 @@ export declare const api: {
       { definitionId: string; userId: string },
       any
     >;
-    recordAnswer: FunctionReference<
-      "mutation",
+    newsletterSignup: FunctionReference<
+      "action",
       "public",
-      {
-        definitionId: string;
-        questionId: string;
-        sessionId: Id<"assessment_sessions">;
-        value: number;
-      },
+      { email: string },
       any
     >;
-    getBurnoutDistribution: FunctionReference<"query", "public", {}, any>;
-    getUserJourneyFunnel: FunctionReference<"query", "public", {}, any>;
-    getDailyMetrics: FunctionReference<
-      "query",
+    submit: FunctionReference<
+      "action",
       "public",
-      { days: number },
+      { email: string; pressureZones: any; responses: Array<number> },
       any
     >;
-    getQualityMetrics: FunctionReference<
-      "query",
-      "public",
-      { days: number },
-      any
-    >;
-    getRecentFeedback: FunctionReference<
-      "query",
-      "public",
-      { limit: number },
-      any
-    >;
-    getAgentPerformance: FunctionReference<
-      "query",
-      "public",
-      { days: number },
-      any
-    >;
-    getSummaryPerformance: FunctionReference<"query", "public", {}, any>;
-    getMetrics: FunctionReference<"query", "public", {}, any>;
-    getAllUsers: FunctionReference<
-      "query",
-      "public",
-      {
-        burnoutBand?: string;
-        cursor?: string;
-        journeyPhase?: string;
-        limit?: number;
-        search?: string;
-        subscriptionStatus?: string;
-      },
-      any
-    >;
-    getUserDetails: FunctionReference<
-      "query",
-      "public",
-      { userId: Id<"users"> },
-      any
-    >;
-    getSystemHealth: FunctionReference<"query", "public", {}, any>;
-    getCrisisAlerts: FunctionReference<"query", "public", {}, any>;
-    getAllSubscriptions: FunctionReference<"query", "public", {}, any>;
-    getSubscriptionsByPhone: FunctionReference<
-      "query",
-      "public",
-      { phoneNumber: string },
-      any
-    >;
-    getBillingEvents: FunctionReference<"query", "public", {}, any>;
   };
   public: {
     hydrate: FunctionReference<
@@ -437,7 +743,12 @@ export declare const api: {
       "action",
       "public",
       {
-        location?: { address?: string; latitude: number; longitude: number };
+        location?: {
+          address?: string;
+          latitude?: number;
+          longitude?: number;
+          zipCode?: string;
+        };
         metadata?: any;
         query: string;
       },
@@ -717,6 +1028,94 @@ export declare const internal: {
       any
     >;
   };
+  domains: {
+    interventions: {
+      seedInterventions: FunctionReference<"mutation", "internal", {}, any>;
+    };
+    logs: {
+      logAgentRunInternal: FunctionReference<
+        "mutation",
+        "internal",
+        {
+          agent: string;
+          budgetResult: {
+            toolCalls: number;
+            usedInputTokens: number;
+            usedOutputTokens: number;
+          };
+          latencyMs: number;
+          policyBundle: string;
+          traceId: string;
+          userId: string;
+        },
+        any
+      >;
+      logCrisisInteraction: FunctionReference<
+        "mutation",
+        "internal",
+        {
+          chunks: Array<string>;
+          input: string;
+          timestamp: number;
+          userId: string;
+        },
+        any
+      >;
+    };
+    metrics: {
+      aggregateDailyMetrics: FunctionReference<"action", "internal", {}, any>;
+      computeBurnoutDistribution: FunctionReference<
+        "mutation",
+        "internal",
+        {},
+        any
+      >;
+      computeDailyMetrics: FunctionReference<
+        "mutation",
+        "internal",
+        { date: string },
+        any
+      >;
+      computeJourneyFunnel: FunctionReference<"mutation", "internal", {}, any>;
+      computeSubscriptionMetrics: FunctionReference<
+        "mutation",
+        "internal",
+        {},
+        any
+      >;
+    };
+    scheduler: {
+      advanceTriggerMutation: FunctionReference<
+        "mutation",
+        "internal",
+        { triggerId: Id<"triggers"> },
+        any
+      >;
+      internalProcessDueTriggers: FunctionReference<
+        "action",
+        "internal",
+        { batchSize?: number },
+        any
+      >;
+      processBatchInternal: FunctionReference<
+        "mutation",
+        "internal",
+        { batchSize: number },
+        any
+      >;
+    };
+    threads: {
+      createComponentThread: FunctionReference<
+        "mutation",
+        "internal",
+        { userId: Id<"users"> },
+        any
+      >;
+    };
+    watchers: {
+      runEngagementChecks: FunctionReference<"mutation", "internal", {}, any>;
+    };
+  };
   inbound: {
     generateCrisisResponse: FunctionReference<
       "action",
@@ -771,66 +1170,42 @@ export declare const internal: {
     >;
   };
   internal: {
-    sendWelcomeSms: FunctionReference<
-      "action",
-      "internal",
-      { fullName: string; phoneNumber: string },
-      any
-    >;
-    aggregateDailyMetrics: FunctionReference<"action", "internal", {}, any>;
-    computeDailyMetrics: FunctionReference<
-      "mutation",
-      "internal",
-      { date: string },
-      any
-    >;
-    computeSubscriptionMetrics: FunctionReference<
-      "mutation",
-      "internal",
-      {},
-      any
-    >;
-    computeJourneyFunnel: FunctionReference<"mutation", "internal", {}, any>;
-    computeBurnoutDistribution: FunctionReference<
-      "mutation",
-      "internal",
-      {},
-      any
-    >;
     advanceTriggerMutation: FunctionReference<
       "mutation",
       "internal",
       { triggerId: Id<"triggers"> },
       any
     >;
-    seedInterventions: FunctionReference<"mutation", "internal", {}, any>;
+    aggregateDailyMetrics: FunctionReference<"action", "internal", {}, any>;
+    computeBurnoutDistribution: FunctionReference<
+      "mutation",
+      "internal",
+      {},
+      any
+    >;
+    computeDailyMetrics: FunctionReference<
+      "mutation",
+      "internal",
+      { date: string },
+      any
+    >;
+    computeJourneyFunnel: FunctionReference<"mutation", "internal", {}, any>;
+    computeSubscriptionMetrics: FunctionReference<
+      "mutation",
+      "internal",
+      {},
+      any
+    >;
     createComponentThread: FunctionReference<
       "mutation",
       "internal",
       { userId: Id<"users"> },
       any
     >;
-    processBatchInternal: FunctionReference<
-      "mutation",
-      "internal",
-      { batchSize: number },
-      any
-    >;
     internalProcessDueTriggers: FunctionReference<
       "action",
       "internal",
       { batchSize?: number },
-      any
-    >;
-    logCrisisInteraction: FunctionReference<
-      "mutation",
-      "internal",
-      {
-        chunks: Array<string>;
-        input: string;
-        timestamp: number;
-        userId: string;
-      },
       any
     >;
     logAgentRunInternal: FunctionReference<
@@ -850,7 +1225,31 @@ export declare const internal: {
       },
       any
     >;
+    logCrisisInteraction: FunctionReference<
+      "mutation",
+      "internal",
+      {
+        chunks: Array<string>;
+        input: string;
+        timestamp: number;
+        userId: string;
+      },
+      any
+    >;
+    processBatchInternal: FunctionReference<
+      "mutation",
+      "internal",
+      { batchSize: number },
+      any
+    >;
     runEngagementChecks: FunctionReference<"mutation", "internal", {}, any>;
+    seedInterventions: FunctionReference<"mutation", "internal", {}, any>;
+    sendWelcomeSms: FunctionReference<
+      "action",
+      "internal",
+      { fullName: string; phoneNumber: string },
+      any
+    >;
   };
   lib: {
     files: {

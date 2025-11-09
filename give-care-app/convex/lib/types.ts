@@ -3,7 +3,7 @@
  */
 
 // Channel type (migrated from src/shared/types.ts)
-export type Channel = 'sms' | 'web';
+export type Channel = 'sms' | 'email' | 'web';
 
 // Budget type (migrated from src/shared/types.ts)
 export type Budget = {

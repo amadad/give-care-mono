@@ -16,7 +16,7 @@
 import { internalAction } from './_generated/server';
 import type { ActionCtx } from './_generated/server';
 import type { Doc, Id } from './_generated/dataModel';
-import { internal, components } from './_generated/api';
+import { internal, components, api } from './_generated/api';
 import { v } from 'convex/values';
 import * as Core from './core';
 import { CRISIS_TERMS } from './lib/constants';
@@ -91,7 +91,7 @@ const ensureComponentThreadId = async (ctx: ActionCtx, user: UserDoc): Promise<s
   }
 
   // Use internal mutation wrapper (Convex best practice: avoid ActionCtx→MutationCtx casts)
-  const createdThreadId = await ctx.runMutation(internal.internal.createComponentThread, {
+  const createdThreadId = await ctx.runMutation(internal.domains.threads.createComponentThread, {
     userId: user._id,
   });
   await persistThreadIdIfNeeded(ctx, user._id, metadata, createdThreadId);
@@ -219,7 +219,7 @@ export const generateCrisisResponse = internalAction({
         },
         crisisFlags: {
           active: true,
-          terms: CRISIS_TERMS,
+          terms: [...CRISIS_TERMS],
         },
         metadata: {
           ...user.metadata,
@@ -266,7 +266,7 @@ export const generateMainResponse = internalAction({
     const externalId = user.externalId || user.phone;
 
     // Run main agent
-    const result: any = await ctx.runAction(internal.agents.runMainAgent, {
+    const result: any = await ctx.runAction(api.agents.runMainAgent, {
       input: {
         channel,
         text,
@@ -374,7 +374,7 @@ export const sendSmsResponse = internalAction({
       const data: any = await response.json();
 
       // Record outbound message
-      await ctx.runMutation(internal.internal.recordOutbound, {
+      await ctx.runMutation(api.domains.messages.recordOutbound, {
         message: {
           externalId: userId,
           channel: 'sms',

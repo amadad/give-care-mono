@@ -376,7 +376,7 @@ export type DataModel = {
   };
   messages: {
     document: {
-      channel: "sms" | "web";
+      channel: "sms" | "email" | "web";
       direction: "inbound" | "outbound";
       meta?: any;
       redactionFlags: Array<string>;
@@ -592,7 +592,7 @@ export type DataModel = {
         maxOutputTokens: number;
         maxTools: number;
       };
-      channel: "sms" | "web";
+      channel: "sms" | "email" | "web";
       consent: { emergency: boolean; marketing: boolean };
       crisisFlags?: { active: boolean; terms: Array<string> };
       lastAssessment?: { definitionId: string; score: number };
@@ -798,7 +798,7 @@ export type DataModel = {
         postalCode?: string;
         state?: string;
       };
-      channel?: "sms" | "web";
+      channel?: "sms" | "email" | "web";
       consent?: { emergency: boolean; marketing: boolean };
       createdAt?: number;
       email?: string;

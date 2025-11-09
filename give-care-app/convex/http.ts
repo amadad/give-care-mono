@@ -90,7 +90,7 @@ http.route({
       }
 
       // Process verified event
-      await ctx.runMutation(internal.billing.applyStripeEvent, {
+      await ctx.runMutation(api.billing.applyStripeEvent, {
         id: event.id,
         type: event.type,
         payload: event as unknown as Record<string, unknown>,
@@ -161,7 +161,7 @@ http.route({
       const traceId = `twilio-${messageSid}`;
 
       // Record the inbound message (phone number is extracted from 'from' field)
-      const messageRecord = await ctx.runMutation(internal.internal.recordInbound, {
+      const messageRecord = await ctx.runMutation(api.domains.messages.recordInbound, {
         message: {
           externalId: from,
           channel: 'sms',

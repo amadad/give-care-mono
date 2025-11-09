@@ -1,26 +1,26 @@
 import { cronJobs } from 'convex/server';
-import { api } from './_generated/api';
+import { internal } from './_generated/api';
 
 const crons = cronJobs();
 
 crons.interval(
   'process-scheduled-triggers',
   { minutes: 5 },
-  api.internal.internalProcessDueTriggers,
+  internal.domains.scheduler.internalProcessDueTriggers,
   { batchSize: 50 }
 );
 
 crons.interval(
   'engagement-watchers',
   { hours: 6 },
-  api.internal.runEngagementChecks,
+  internal.domains.watchers.runEngagementChecks,
   {}
 );
 
 crons.daily(
   'aggregate-daily-metrics',
   { hourUTC: 2, minuteUTC: 0 },
-  api.internal.aggregateDailyMetrics,
+  internal.domains.metrics.aggregateDailyMetrics,
   {}
 );
 

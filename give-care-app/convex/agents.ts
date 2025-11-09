@@ -8,7 +8,7 @@
  */
 
 import { action, internalAction } from './_generated/server';
-import { internal, components } from './_generated/api';
+import { internal, components, api } from './_generated/api';
 import { v } from 'convex/values';
 import { Agent, createTool } from '@convex-dev/agent';
 import { openai } from '@ai-sdk/openai';
@@ -62,7 +62,7 @@ const searchResourcesTool = createTool({
     const contextData = ctx.metadata as { context?: { metadata?: Record<string, unknown> } };
     const userMetadata = contextData?.context?.metadata || {};
 
-    const result = await ctx.runAction(internal.resources.searchResources, {
+    const result = await ctx.runAction(api.resources.searchResources, {
       query: args.query,
       metadata: userMetadata,
     });
@@ -98,7 +98,7 @@ const recordMemoryTool = createTool({
     }
 
     // Store the memory
-    await ctx.runMutation(internal.public.recordMemory, {
+    await ctx.runMutation(api.public.recordMemory, {
       userId,
       category: args.category,
       content: args.content,
@@ -123,7 +123,7 @@ const checkWellnessStatusTool = createTool({
       return { error: 'User ID not available' };
     }
 
-    const status = await ctx.runQuery(internal.internal.getStatus, {
+    const status = await ctx.runQuery(api.domains.wellness.getStatus, {
       userId,
     });
 
@@ -147,15 +147,15 @@ const findInterventionsTool = createTool({
     }
 
     // If no zones provided, fetch user's pressure zones from wellness status
-    let zones = args.zones;
-    if (!zones || zones.length === 0) {
-      const status = await ctx.runQuery(internal.internal.getStatus, {
+    let zones: string[] = args.zones || [];
+    if (zones.length === 0) {
+      const status = await ctx.runQuery(api.domains.wellness.getStatus, {
         userId,
       });
       zones = status.pressureZones || ['emotional', 'physical']; // Default fallback
     }
 
-    const interventions = await ctx.runQuery(internal.internal.getByZones, {
+    const interventions = await ctx.runQuery(api.domains.interventions.getByZones, {
       zones,
       minEvidenceLevel: args.minEvidenceLevel || 'moderate',
       limit: args.limit || 5,
@@ -379,7 +379,7 @@ export const runMainAgent = action({
       const responseText: string = result.text;
       const latencyMs = Date.now() - startTime;
 
-      await ctx.runMutation(internal.internal.logAgentRunInternal, {
+      await ctx.runMutation(internal.domains.logs.logAgentRunInternal, {
         userId: context.userId,
         agent: 'main',
         policyBundle: 'default_v1',
@@ -417,7 +417,7 @@ What's on your mind?`;
 
       const latencyMs = Date.now() - startTime;
 
-      await ctx.runMutation(internal.internal.logAgentRunInternal, {
+      await ctx.runMutation(internal.domains.logs.logAgentRunInternal, {
         userId: context.userId,
         agent: 'main',
         policyBundle: 'default_v1',
@@ -523,7 +523,7 @@ export const runCrisisAgent = internalAction({
       const responseText = result.text;
       const latencyMs = Date.now() - startTime;
 
-      await ctx.runMutation(internal.internal.logCrisisInteraction, {
+      await ctx.runMutation(internal.domains.logs.logCrisisInteraction, {
         userId: context.userId,
         input: input.text,
         chunks: [responseText],
@@ -547,7 +547,7 @@ If you're experiencing a crisis, please reach out for immediate help:
 
 For ${careRecipient}, resources are available 24/7. You're not alone in this.`;
 
-      await ctx.runMutation(internal.internal.logCrisisInteraction, {
+      await ctx.runMutation(internal.domains.logs.logCrisisInteraction, {
         userId: context.userId,
         input: input.text,
         chunks: [fallbackResponse],
@@ -597,7 +597,7 @@ const getInterventionsTool = createTool({
       duration: string;
       description: string;
       content: string;
-    }> = await ctx.runQuery(internal.internal.getByZones, {
+    }> = await ctx.runQuery(api.domains.interventions.getByZones, {
       zones: args.zones,
       minEvidenceLevel: args.minEvidenceLevel || 'moderate',
       limit: args.limit || 5,
@@ -720,7 +720,7 @@ export const runAssessmentAgent: any = action({
       const responseText: string = result.text;
       const latencyMs = Date.now() - startTime;
 
-      await ctx.runMutation(internal.internal.logAgentRunInternal, {
+      await ctx.runMutation(internal.domains.logs.logAgentRunInternal, {
         userId: context.userId,
         agent: 'assessment',
         policyBundle: 'assessment_v1',
@@ -744,7 +744,7 @@ export const runAssessmentAgent: any = action({
       const errorMessage = 'I apologize, but I encountered an error processing your assessment. Please try again.';
       const latencyMs = Date.now() - startTime;
 
-      await ctx.runMutation(internal.internal.logAgentRunInternal, {
+      await ctx.runMutation(internal.domains.logs.logAgentRunInternal, {
         userId: context.userId,
         agent: 'assessment',
         policyBundle: 'assessment_v1',
