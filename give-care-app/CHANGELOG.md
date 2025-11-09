@@ -1,11 +1,21 @@
 # Changelog - GiveCare App
 
-## [Unreleased] - 2025-11-08
+## [Unreleased] - 2025-11-09
 
 ### Fixed
 
+- **GPT-5 Model Compatibility** (`convex/agents/main.ts`, `convex/agents/crisis.ts`, `convex/agents/assessment.ts`): Migrated from Chat API to Responses API for GPT-5 models. Changed `openai.chat('gpt-5-nano')` to `openai('gpt-5-nano')` to use AI SDK 5's default Responses API, which supports GPT-5 model specification v2 and enables chain-of-thought passing between turns
+- **AI SDK Version Conflict** (`package.json`): Removed explicit `@ai-sdk/openai@1.3.24` dependency that was incompatible with GPT-5. Now relies on `@convex-dev/agent@0.2.12`'s peer dependency of `@ai-sdk/openai@2.0.64`, which includes GPT-5 support
+- **Agent Response Type Handling** (`convex/functions/inboundActions.ts`): Fixed validation error when agents fail by extracting text from response chunks (`result.chunks?.[0]?.content`) instead of expecting deprecated `result.text` property. Prevents cascading failures when model errors occur
 - **Missing "use node" Directive** (`convex/agents/main.ts`): Added required directive for AI SDK compatibility. All agent files now correctly use Node.js runtime for `@ai-sdk/openai` package
 - **Illegal Mutation Exports in Node Runtime** (`convex/agents/main.ts`): Removed `createThread` and `saveMessages` mutation exports from "use node" file. Only actions can be exported from Node.js runtime files per Convex requirements
+
+### Changed
+
+- **Reasoning Effort Configuration**: Configured optimized reasoning levels for each agent type via `providerOptions.openai.reasoningEffort`:
+  - **Main Agent** (`convex/agents/main.ts`): Set to `low` for balanced speed and quality in general caregiving conversations
+  - **Crisis Agent** (`convex/agents/crisis.ts`): Set to `minimal` for maximum speed in emergency support scenarios
+  - **Assessment Agent** (`convex/agents/assessment.ts`): Set to `low` for balanced clinical interpretations and intervention suggestions
 
 ### Code Quality
 

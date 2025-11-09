@@ -84,10 +84,7 @@ const getInterventionsTool = createTool({
 
 const assessmentAgent: any = new Agent(components.agent, {
   name: 'Assessment Specialist',
-  // @ts-expect-error - LanguageModelV1/V2 type mismatch between AI SDK versions
-  languageModel: openai.chat('gpt-5-mini', {
-    reasoningEffort: 'low', // Lower latency configuration
-  }),
+  languageModel: openai('gpt-5-mini'),
   instructions:
     'You are a burnout assessment specialist who provides personalized, compassionate interpretations and actionable intervention suggestions. Use the getInterventions tool to recommend evidence-based interventions matching the user\'s pressure zones.',
   tools: { getInterventions: getInterventionsTool },
@@ -181,6 +178,11 @@ export const runAssessmentAgent: any = action({
       const result: any = await thread.generateText({
         prompt: input.text || 'Please interpret my burnout assessment results and suggest interventions.',
         system: systemPrompt, // Override default instructions with assessment-specific context
+        providerOptions: {
+          openai: {
+            reasoningEffort: 'low', // Balanced speed for clinical interpretations
+          },
+        },
       });
 
       const responseText: string = result.text;

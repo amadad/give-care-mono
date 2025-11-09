@@ -234,10 +234,7 @@ const startAssessmentTool = createTool({
 
 const mainAgent = new Agent(components.agent, {
   name: 'Caregiver Support',
-  // @ts-expect-error - LanguageModelV1/V2 type mismatch between AI SDK versions
-  languageModel: openai.chat('gpt-5-nano', {
-    reasoningEffort: 'low', // Lower latency: 100 tokens/sec throughput
-  }),
+  languageModel: openai('gpt-5-nano'),
   instructions: 'You are a compassionate AI caregiver assistant providing empathetic support and practical advice.',
   tools: {
     searchResources: searchResourcesTool,
@@ -373,6 +370,11 @@ export const runMainAgent = action({
       const result = await thread.generateText({
         prompt: input.text,
         system: systemPrompt, // Override default instructions
+        providerOptions: {
+          openai: {
+            reasoningEffort: 'low', // Fast responses for general conversation
+          },
+        },
       });
 
       const responseText: string = result.text;

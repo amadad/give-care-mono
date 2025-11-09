@@ -47,9 +47,10 @@ export const generateCrisisResponse = internalAction({
 
     // Send SMS response
     if (channel === 'sms' && user.phone) {
+      const responseText = result.chunks?.[0]?.content || 'Unable to generate response';
       await ctx.runAction(internal.functions.inboundActions.sendSmsResponse, {
         to: user.phone,
-        text: result.text,
+        text: responseText,
         userId,
       });
     }
@@ -100,9 +101,10 @@ export const generateMainResponse = internalAction({
 
     // Send SMS response
     if (channel === 'sms' && user.phone) {
+      const responseText = result.chunks?.[0]?.content || 'Unable to generate response';
       await ctx.runAction(internal.functions.inboundActions.sendSmsResponse, {
         to: user.phone,
-        text: result.text,
+        text: responseText,
         userId,
       });
     }

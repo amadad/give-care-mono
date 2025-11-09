@@ -46,10 +46,7 @@ const agentContextValidator = v.object({
 
 const crisisAgent = new Agent(components.agent, {
   name: 'Crisis Support',
-  // @ts-expect-error - LanguageModelV1/V2 type mismatch between AI SDK versions
-  languageModel: openai.chat('gpt-5-nano', {
-    reasoningEffort: 'low', // Maximum throughput: 100 tokens/sec
-  }),
+  languageModel: openai('gpt-5-nano'),
   instructions: 'You are a compassionate crisis support assistant for caregivers providing immediate support resources.',
   maxSteps: 1, // No tool calls needed for crisis - prioritize speed
 
@@ -116,6 +113,11 @@ export const runCrisisAgent = internalAction({
       const result = await thread.generateText({
         prompt: input.text,
         system: systemPrompt, // Override default instructions
+        providerOptions: {
+          openai: {
+            reasoningEffort: 'minimal', // Maximum speed for crisis response
+          },
+        },
       });
 
       const responseText = result.text;
