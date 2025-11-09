@@ -1290,14 +1290,6 @@ export declare const internal: {
       >;
     };
   };
-  public: {
-    getConversationSummary: FunctionReference<
-      "query",
-      "internal",
-      { externalId: string; limit?: number },
-      any
-    >;
-  };
   workflows: {
     crisisEscalation: FunctionReference<"mutation", "internal", any, any>;
     crisisFollowUp: FunctionReference<"mutation", "internal", any, any>;

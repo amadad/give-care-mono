@@ -248,54 +248,8 @@ const mainAgent = new Agent(components.agent, {
   },
   maxSteps: 5, // Increased to allow for tool chains (e.g., check wellness → find interventions)
 
-  // Use contextHandler for dynamic context injection
-  contextHandler: async (ctx, args) => {
-    console.log('[contextHandler] Available args:', Object.keys(args));
-    console.log('[contextHandler] userId:', args.userId);
-    console.log('[contextHandler] threadId:', args.threadId);
-    console.log('[contextHandler] metadata:', args.metadata);
-
-    const recentMessages = args.recent || [];
-    const searchMessages = args.search || [];
-
-    // Get conversation summary for context compression
-    const threadId = args.threadId;
-    let conversationContext: any[] = [];
-
-    if (threadId && args.userId) {
-      try {
-        console.log('[contextHandler] Fetching conversation summary for:', args.userId);
-        const conversationSummary = await ctx.runQuery(internal.public.getConversationSummary, {
-          externalId: args.userId || '',
-          limit: 25,
-        });
-
-        console.log('[contextHandler] Summary result:', {
-          hasFormattedContext: !!(conversationSummary as any)?.formattedContext,
-          totalMessages: (conversationSummary as any)?.totalMessages,
-          tokensSaved: (conversationSummary as any)?.tokensSaved,
-        });
-
-        if (conversationSummary && (conversationSummary as any).formattedContext) {
-          conversationContext = [{
-            role: 'system' as const,
-            content: `## Conversation Context\n${(conversationSummary as any).formattedContext}\n\n(Token savings: ${(conversationSummary as any).tokensSaved} tokens, ${(conversationSummary as any).compressionRatio}% compression)`,
-          }];
-        }
-      } catch (error) {
-        console.error('Error fetching conversation summary:', error);
-      }
-    }
-
-    return [
-      ...searchMessages,
-      ...conversationContext,
-      ...recentMessages,
-      ...args.inputMessages,
-      ...args.inputPrompt,
-      ...args.existingResponses,
-    ];
-  },
+  // Agent automatically includes conversation history via built-in message storage
+  // No custom contextHandler needed - using Convex Agent Component defaults
 
   // Usage tracking for billing and monitoring
   ...sharedAgentConfig,

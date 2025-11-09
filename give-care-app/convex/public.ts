@@ -10,7 +10,6 @@
 import { mutation, internalQuery } from './_generated/server';
 import { v } from 'convex/values';
 import * as Core from './core';
-import { summarizeConversation, formatForContext } from './lib/summarization';
 
 // ============================================================================
 // VALIDATORS
@@ -67,36 +66,6 @@ export const persist = mutation({
   },
   handler: async (ctx, { context }) => {
     await Core.persist(ctx, context);
-  },
-});
-
-/**
- * Get conversation summary for a user
- *
- * Returns compressed conversation history with 60-80% token savings
- */
-export const getConversationSummary = internalQuery({
-  args: {
-    externalId: v.string(),
-    limit: v.optional(v.number()),
-  },
-  handler: async (ctx, { externalId, limit = 25 }) => {
-    const user = await Core.getByExternalId(ctx, externalId);
-    if (!user) {
-      return {
-        recentMessages: [],
-        compressedHistory: '',
-        totalMessages: 0,
-        tokensSaved: 0,
-        compressionRatio: 0,
-      };
-    }
-
-    const summary = await summarizeConversation(ctx, user._id, limit);
-    return {
-      ...summary,
-      formattedContext: formatForContext(summary),
-    };
   },
 });
 

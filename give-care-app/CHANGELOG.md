@@ -24,6 +24,7 @@
 
 ### Changed
 
+- **Agent Memory System Refactor** (`convex/agents.ts`, `convex/lib/summarization.ts`, `convex/public.ts`): Removed custom context handling in favor of Convex Agent Component's built-in message storage. Deleted custom contextHandler (47 lines), summarization.ts (167 lines), and getConversationSummary query. Agent now uses native `args.recent` for conversation history instead of manual queries and compression. Aligns with Convex conventions: simpler, more maintainable, removes 214 lines of bespoke code. Messages table retained for webhook audit trail and analytics
 - **Integration Documentation** (`docs/CONVEX_INTEGRATION.md`): Created comprehensive 200-line guide documenting the refactored Convex architecture. Includes file organization rules (actions/ vs domains/ vs lib/), namespace calling conventions (api.* vs internal.*), real examples from production code, common mistakes to avoid, and migration checklist. Serves as reference for maintaining proper architecture boundaries
 - **GPT-5 Provider Settings**: Optimized reasoning effort, text verbosity, and service tier for each agent use case:
   - **Main Agent** (`convex/agents.ts:371-376`): `reasoningEffort: 'low'`, `textVerbosity: 'low'`, `serviceTier: 'auto'` for balanced speed in SMS conversations
