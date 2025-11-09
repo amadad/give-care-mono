@@ -13,7 +13,7 @@ crons.interval(
 crons.interval(
   'engagement-watchers',
   { hours: 6 },
-  internal.watchers.runEngagementChecks,
+  internal.runEngagementChecks,
   {}
 );
 

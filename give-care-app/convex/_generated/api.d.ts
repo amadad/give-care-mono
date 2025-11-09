@@ -20,475 +20,427 @@ import type { FunctionReference } from "convex/server";
  */
 export declare const api: {
   agents: {
-    assessment: {
-      runAssessmentAgent: FunctionReference<
-        "action",
-        "public",
-        {
-          context: {
-            consent: { emergency: boolean; marketing: boolean };
-            crisisFlags?: { active: boolean; terms: Array<string> };
-            locale: string;
-            metadata?: any;
-            sessionId?: string;
-            userId: string;
-          };
-          input: {
-            channel: "sms" | "email" | "web";
-            text: string;
-            userId: string;
-          };
-          threadId?: string;
-        },
-        any
-      >;
-    };
-    crisis: {
-      shouldInvokeCrisisAgent: FunctionReference<
-        "action",
-        "public",
-        {
-          context: {
-            consent: { emergency: boolean; marketing: boolean };
-            crisisFlags?: { active: boolean; terms: Array<string> };
-            locale: string;
-            metadata?: any;
-            sessionId?: string;
-            userId: string;
-          };
-        },
-        any
-      >;
-    };
-    main: {
-      runMainAgent: FunctionReference<
-        "action",
-        "public",
-        {
-          context: {
-            consent: { emergency: boolean; marketing: boolean };
-            crisisFlags?: { active: boolean; terms: Array<string> };
-            locale: string;
-            metadata?: any;
-            sessionId?: string;
-            userId: string;
-          };
-          input: {
-            channel: "sms" | "email" | "web";
-            text: string;
-            userId: string;
-          };
-          threadId?: string;
-        },
-        any
-      >;
-    };
-  };
-  functions: {
-    admin: {
-      getMetrics: FunctionReference<"query", "public", {}, any>;
-      getAllUsers: FunctionReference<
-        "query",
-        "public",
-        {
-          burnoutBand?: string;
-          cursor?: string;
-          journeyPhase?: string;
-          limit?: number;
-          search?: string;
-          subscriptionStatus?: string;
-        },
-        any
-      >;
-      getUserDetails: FunctionReference<
-        "query",
-        "public",
-        { userId: Id<"users"> },
-        any
-      >;
-      getSystemHealth: FunctionReference<"query", "public", {}, any>;
-      getCrisisAlerts: FunctionReference<"query", "public", {}, any>;
-      getAllSubscriptions: FunctionReference<"query", "public", {}, any>;
-      getSubscriptionsByPhone: FunctionReference<
-        "query",
-        "public",
-        { phoneNumber: string },
-        any
-      >;
-      getBillingEvents: FunctionReference<"query", "public", {}, any>;
-    };
-    alerts: {
-      listPending: FunctionReference<"query", "public", { limit: number }, any>;
-      markProcessed: FunctionReference<
-        "mutation",
-        "public",
-        {
-          alertId: Id<"alerts">;
-          result: { deliveredVia: "sms" | "email"; metadata?: any };
-        },
-        any
-      >;
-    };
-    analytics: {
-      getBurnoutDistribution: FunctionReference<"query", "public", {}, any>;
-      getUserJourneyFunnel: FunctionReference<"query", "public", {}, any>;
-      getDailyMetrics: FunctionReference<
-        "query",
-        "public",
-        { days: number },
-        any
-      >;
-      getQualityMetrics: FunctionReference<
-        "query",
-        "public",
-        { days: number },
-        any
-      >;
-      getRecentFeedback: FunctionReference<
-        "query",
-        "public",
-        { limit: number },
-        any
-      >;
-      getAgentPerformance: FunctionReference<
-        "query",
-        "public",
-        { days: number },
-        any
-      >;
-      getSummaryPerformance: FunctionReference<"query", "public", {}, any>;
-    };
-    assessmentResults: {
-      submit: FunctionReference<
-        "action",
-        "public",
-        { email: string; pressureZones: any; responses: Array<number> },
-        any
-      >;
-    };
-    assessments: {
-      start: FunctionReference<
-        "mutation",
-        "public",
-        { definitionId: string; userId: string },
-        any
-      >;
-      recordAnswer: FunctionReference<
-        "mutation",
-        "public",
-        {
-          definitionId: string;
-          questionId: string;
-          sessionId: Id<"assessment_sessions">;
-          value: number;
-        },
-        any
-      >;
-    };
-    billing: {
-      applyStripeEvent: FunctionReference<
-        "mutation",
-        "public",
-        { id: string; payload: any; type: string },
-        any
-      >;
-      refreshEntitlements: FunctionReference<
-        "mutation",
-        "public",
-        { userId: string },
-        any
-      >;
-    };
-    context: {
-      hydrate: FunctionReference<
-        "mutation",
-        "public",
-        {
-          user: {
-            channel: "sms" | "web";
-            externalId: string;
-            locale?: string;
-            phone?: string;
-          };
-        },
-        any
-      >;
-      persist: FunctionReference<
-        "mutation",
-        "public",
-        {
-          context: {
-            budget: {
-              maxInputTokens: number;
-              maxOutputTokens: number;
-              maxTools: number;
-            };
-            consent: { emergency: boolean; marketing: boolean };
-            crisisFlags?: { active: boolean; terms: Array<string> };
-            lastAssessment?: { definitionId: string; score: number };
-            locale: string;
-            metadata: any;
-            policyBundle: string;
-            promptHistory: Array<{ fieldId: string; text: string }>;
-            sessionId: string;
-            userId: string;
-          };
-        },
-        any
-      >;
-      recordMemory: FunctionReference<
-        "mutation",
-        "public",
-        {
-          category: string;
-          content: string;
-          importance: number;
-          userId: string;
-        },
-        any
-      >;
-    };
-    email: {
-      logDelivery: FunctionReference<
-        "mutation",
-        "public",
-        {
-          status: string;
-          subject: string;
-          to: string;
-          traceId: string;
-          userId?: string;
-        },
-        any
-      >;
-    };
-    interventions: {
-      getByZones: FunctionReference<
-        "query",
-        "public",
-        {
-          limit?: number;
-          minEvidenceLevel?: "high" | "moderate" | "low";
-          zones: Array<string>;
-        },
-        any
-      >;
-      getByCategory: FunctionReference<
-        "query",
-        "public",
-        { category: string; limit?: number },
-        any
-      >;
-      search: FunctionReference<
-        "query",
-        "public",
-        { limit?: number; query: string },
-        any
-      >;
-      getCategories: FunctionReference<"query", "public", {}, any>;
-      recordEvent: FunctionReference<
-        "mutation",
-        "public",
-        {
-          interventionId: Id<"interventions">;
+    runAssessmentAgent: FunctionReference<
+      "action",
+      "public",
+      {
+        context: {
+          consent: { emergency: boolean; marketing: boolean };
+          crisisFlags?: { active: boolean; terms: Array<string> };
+          locale: string;
           metadata?: any;
-          status: "viewed" | "started" | "completed";
+          sessionId?: string;
           userId: string;
-        },
-        any
-      >;
-      getUserHistory: FunctionReference<
-        "query",
-        "public",
-        { userId: string },
-        any
-      >;
-    };
-    logs: {
-      agentRun: FunctionReference<
-        "mutation",
-        "public",
-        {
-          payload: {
-            agent: string;
-            budgetResult: {
-              toolCalls: number;
-              usedInputTokens: number;
-              usedOutputTokens: number;
-            };
-            externalId: string;
-            latencyMs: number;
-            policyBundle: string;
-            traceId: string;
-          };
-        },
-        any
-      >;
-      guardrail: FunctionReference<
-        "mutation",
-        "public",
-        {
-          payload: {
-            action: string;
-            context?: any;
-            externalId?: string;
-            ruleId: string;
-            traceId: string;
-          };
-        },
-        any
-      >;
-    };
-    manualLinkSubscription: {
-      linkSubscription: FunctionReference<
-        "mutation",
-        "public",
-        {
-          currentPeriodEnd: number;
-          phoneNumber: string;
-          planId: string;
-          stripeCustomerId: string;
-        },
-        any
-      >;
-    };
-    memory: {
-      record: FunctionReference<
-        "mutation",
-        "public",
-        {
-          category: string;
-          content: string;
-          importance: number;
+        };
+        input: {
+          channel: "sms" | "email" | "web";
+          text: string;
           userId: string;
-        },
-        any
-      >;
-      retrieve: FunctionReference<
-        "query",
-        "public",
-        { limit?: number; userId: string },
-        any
-      >;
-      retrieveByCategory: FunctionReference<
-        "query",
-        "public",
-        { category: string; limit?: number; userId: string },
-        any
-      >;
-      retrieveImportant: FunctionReference<
-        "query",
-        "public",
-        { limit?: number; minImportance?: number; userId: string },
-        any
-      >;
-    };
-    messages: {
-      recordInbound: FunctionReference<
-        "mutation",
-        "public",
-        {
-          message: {
-            channel: "sms" | "web";
-            externalId: string;
-            meta?: any;
-            redactionFlags?: Array<string>;
-            text: string;
-            traceId: string;
-          };
-        },
-        any
-      >;
-      recordOutbound: FunctionReference<
-        "mutation",
-        "public",
-        {
-          message: {
-            channel: "sms" | "web";
-            externalId: string;
-            meta?: any;
-            redactionFlags?: Array<string>;
-            text: string;
-            traceId: string;
-          };
-        },
-        any
-      >;
-    };
-    newsletterActions: {
-      newsletterSignup: FunctionReference<
-        "action",
-        "public",
-        { email: string },
-        any
-      >;
-    };
-    resources: {
-      searchResources: FunctionReference<
-        "action",
-        "public",
-        {
-          location?: { address?: string; latitude: number; longitude: number };
+        };
+        threadId?: string;
+      },
+      any
+    >;
+    runMainAgent: FunctionReference<
+      "action",
+      "public",
+      {
+        context: {
+          consent: { emergency: boolean; marketing: boolean };
+          crisisFlags?: { active: boolean; terms: Array<string> };
+          locale: string;
           metadata?: any;
-          query: string;
-        },
-        any
-      >;
-      getResourceTemplates: FunctionReference<"action", "public", {}, any>;
-    };
-    scheduler: {
-      enqueueOnce: FunctionReference<
-        "mutation",
-        "public",
-        {
-          job: {
-            name: string;
-            payload: any;
-            runAt: string;
-            timezone: string;
-            userExternalId: string;
-          };
-        },
-        any
-      >;
-      createTrigger: FunctionReference<
-        "mutation",
-        "public",
-        {
-          trigger: {
-            nextRun: string;
-            payload: any;
-            rrule: string;
-            timezone: string;
-            userExternalId: string;
-          };
-        },
-        any
-      >;
-      cancelTrigger: FunctionReference<
-        "mutation",
-        "public",
-        { triggerId: Id<"triggers"> },
-        any
-      >;
-    };
-    users: {
-      getByExternalId: FunctionReference<
-        "query",
-        "public",
-        { externalId: string },
-        any
-      >;
-    };
-    wellness: {
-      getStatus: FunctionReference<"query", "public", { userId: string }, any>;
-    };
+          sessionId?: string;
+          userId: string;
+        };
+        input: {
+          channel: "sms" | "email" | "web";
+          text: string;
+          userId: string;
+        };
+        threadId?: string;
+      },
+      any
+    >;
+    shouldInvokeCrisisAgent: FunctionReference<
+      "action",
+      "public",
+      {
+        context: {
+          consent: { emergency: boolean; marketing: boolean };
+          crisisFlags?: { active: boolean; terms: Array<string> };
+          locale: string;
+          metadata?: any;
+          sessionId?: string;
+          userId: string;
+        };
+      },
+      any
+    >;
   };
-  stripe: {
+  billing: {
     createCheckoutSession: FunctionReference<
       "action",
       "public",
       { email: string; fullName: string; phoneNumber: string; priceId: string },
+      any
+    >;
+    applyStripeEvent: FunctionReference<
+      "mutation",
+      "public",
+      { id: string; payload: any; type: string },
+      any
+    >;
+    refreshEntitlements: FunctionReference<
+      "mutation",
+      "public",
+      { userId: string },
+      any
+    >;
+  };
+  internal: {
+    recordInbound: FunctionReference<
+      "mutation",
+      "public",
+      {
+        message: {
+          channel: "sms" | "email" | "web";
+          externalId: string;
+          meta?: any;
+          redactionFlags?: Array<string>;
+          text: string;
+          traceId: string;
+        };
+      },
+      any
+    >;
+    recordOutbound: FunctionReference<
+      "mutation",
+      "public",
+      {
+        message: {
+          channel: "sms" | "email" | "web";
+          externalId: string;
+          meta?: any;
+          redactionFlags?: Array<string>;
+          text: string;
+          traceId: string;
+        };
+      },
+      any
+    >;
+    getByExternalId: FunctionReference<
+      "query",
+      "public",
+      { externalId: string },
+      any
+    >;
+    logDelivery: FunctionReference<
+      "mutation",
+      "public",
+      {
+        status: string;
+        subject: string;
+        to: string;
+        traceId: string;
+        userId?: string;
+      },
+      any
+    >;
+    listPending: FunctionReference<"query", "public", { limit: number }, any>;
+    markProcessed: FunctionReference<
+      "mutation",
+      "public",
+      {
+        alertId: Id<"alerts">;
+        result: { deliveredVia: "sms" | "email"; metadata?: any };
+      },
+      any
+    >;
+    getStatus: FunctionReference<"query", "public", { userId: string }, any>;
+    enqueueOnce: FunctionReference<
+      "mutation",
+      "public",
+      {
+        job: {
+          name: string;
+          payload: any;
+          runAt: string;
+          timezone: string;
+          userExternalId: string;
+        };
+      },
+      any
+    >;
+    createTrigger: FunctionReference<
+      "mutation",
+      "public",
+      {
+        trigger: {
+          nextRun: string;
+          payload: any;
+          rrule: string;
+          timezone: string;
+          userExternalId: string;
+        };
+      },
+      any
+    >;
+    cancelTrigger: FunctionReference<
+      "mutation",
+      "public",
+      { triggerId: Id<"triggers"> },
+      any
+    >;
+    record: FunctionReference<
+      "mutation",
+      "public",
+      { category: string; content: string; importance: number; userId: string },
+      any
+    >;
+    retrieve: FunctionReference<
+      "query",
+      "public",
+      { limit?: number; userId: string },
+      any
+    >;
+    retrieveByCategory: FunctionReference<
+      "query",
+      "public",
+      { category: string; limit?: number; userId: string },
+      any
+    >;
+    retrieveImportant: FunctionReference<
+      "query",
+      "public",
+      { limit?: number; minImportance?: number; userId: string },
+      any
+    >;
+    agentRun: FunctionReference<
+      "mutation",
+      "public",
+      {
+        payload: {
+          agent: string;
+          budgetResult: {
+            toolCalls: number;
+            usedInputTokens: number;
+            usedOutputTokens: number;
+          };
+          externalId: string;
+          latencyMs: number;
+          policyBundle: string;
+          traceId: string;
+        };
+      },
+      any
+    >;
+    guardrail: FunctionReference<
+      "mutation",
+      "public",
+      {
+        payload: {
+          action: string;
+          context?: any;
+          externalId?: string;
+          ruleId: string;
+          traceId: string;
+        };
+      },
+      any
+    >;
+    getByZones: FunctionReference<
+      "query",
+      "public",
+      {
+        limit?: number;
+        minEvidenceLevel?: "high" | "moderate" | "low";
+        zones: Array<string>;
+      },
+      any
+    >;
+    getByCategory: FunctionReference<
+      "query",
+      "public",
+      { category: string; limit?: number },
+      any
+    >;
+    search: FunctionReference<
+      "query",
+      "public",
+      { limit?: number; query: string },
+      any
+    >;
+    getCategories: FunctionReference<"query", "public", {}, any>;
+    recordEvent: FunctionReference<
+      "mutation",
+      "public",
+      {
+        interventionId: Id<"interventions">;
+        metadata?: any;
+        status: "viewed" | "started" | "completed";
+        userId: string;
+      },
+      any
+    >;
+    getUserHistory: FunctionReference<
+      "query",
+      "public",
+      { userId: string },
+      any
+    >;
+    newsletterSignup: FunctionReference<
+      "action",
+      "public",
+      { email: string },
+      any
+    >;
+    submit: FunctionReference<
+      "action",
+      "public",
+      { email: string; pressureZones: any; responses: Array<number> },
+      any
+    >;
+    linkSubscription: FunctionReference<
+      "mutation",
+      "public",
+      {
+        currentPeriodEnd: number;
+        phoneNumber: string;
+        planId: string;
+        stripeCustomerId: string;
+      },
+      any
+    >;
+    start: FunctionReference<
+      "mutation",
+      "public",
+      { definitionId: string; userId: string },
+      any
+    >;
+    recordAnswer: FunctionReference<
+      "mutation",
+      "public",
+      {
+        definitionId: string;
+        questionId: string;
+        sessionId: Id<"assessment_sessions">;
+        value: number;
+      },
+      any
+    >;
+    getBurnoutDistribution: FunctionReference<"query", "public", {}, any>;
+    getUserJourneyFunnel: FunctionReference<"query", "public", {}, any>;
+    getDailyMetrics: FunctionReference<
+      "query",
+      "public",
+      { days: number },
+      any
+    >;
+    getQualityMetrics: FunctionReference<
+      "query",
+      "public",
+      { days: number },
+      any
+    >;
+    getRecentFeedback: FunctionReference<
+      "query",
+      "public",
+      { limit: number },
+      any
+    >;
+    getAgentPerformance: FunctionReference<
+      "query",
+      "public",
+      { days: number },
+      any
+    >;
+    getSummaryPerformance: FunctionReference<"query", "public", {}, any>;
+    getMetrics: FunctionReference<"query", "public", {}, any>;
+    getAllUsers: FunctionReference<
+      "query",
+      "public",
+      {
+        burnoutBand?: string;
+        cursor?: string;
+        journeyPhase?: string;
+        limit?: number;
+        search?: string;
+        subscriptionStatus?: string;
+      },
+      any
+    >;
+    getUserDetails: FunctionReference<
+      "query",
+      "public",
+      { userId: Id<"users"> },
+      any
+    >;
+    getSystemHealth: FunctionReference<"query", "public", {}, any>;
+    getCrisisAlerts: FunctionReference<"query", "public", {}, any>;
+    getAllSubscriptions: FunctionReference<"query", "public", {}, any>;
+    getSubscriptionsByPhone: FunctionReference<
+      "query",
+      "public",
+      { phoneNumber: string },
+      any
+    >;
+    getBillingEvents: FunctionReference<"query", "public", {}, any>;
+  };
+  public: {
+    hydrate: FunctionReference<
+      "mutation",
+      "public",
+      {
+        user: {
+          channel: "sms" | "web";
+          externalId: string;
+          locale?: string;
+          phone?: string;
+        };
+      },
+      any
+    >;
+    persist: FunctionReference<
+      "mutation",
+      "public",
+      {
+        context: {
+          budget: {
+            maxInputTokens: number;
+            maxOutputTokens: number;
+            maxTools: number;
+          };
+          consent: { emergency: boolean; marketing: boolean };
+          crisisFlags?: { active: boolean; terms: Array<string> };
+          lastAssessment?: { definitionId: string; score: number };
+          locale: string;
+          metadata: any;
+          policyBundle: string;
+          promptHistory: Array<{ fieldId: string; text: string }>;
+          sessionId: string;
+          userId: string;
+        };
+      },
+      any
+    >;
+    recordMemory: FunctionReference<
+      "mutation",
+      "public",
+      { category: string; content: string; importance: number; userId: string },
+      any
+    >;
+  };
+  resources: {
+    getResourceTemplates: FunctionReference<"action", "public", {}, any>;
+    searchResources: FunctionReference<
+      "action",
+      "public",
+      {
+        location?: { address?: string; latitude: number; longitude: number };
+        metadata?: any;
+        query: string;
+      },
       any
     >;
   };
@@ -504,432 +456,401 @@ export declare const api: {
  */
 export declare const internal: {
   agents: {
-    crisis: {
-      runCrisisAgent: FunctionReference<
-        "action",
-        "internal",
-        {
-          context: {
-            consent: { emergency: boolean; marketing: boolean };
-            crisisFlags?: { active: boolean; terms: Array<string> };
-            locale: string;
-            metadata?: any;
-            sessionId?: string;
-            userId: string;
+    generateTextAction: FunctionReference<
+      "action",
+      "internal",
+      {
+        callSettings?: {
+          frequencyPenalty?: number;
+          headers?: Record<string, string>;
+          maxOutputTokens?: number;
+          maxRetries?: number;
+          presencePenalty?: number;
+          seed?: number;
+          stopSequences?: Array<string>;
+          temperature?: number;
+          topK?: number;
+          topP?: number;
+        };
+        contextOptions?: {
+          excludeToolMessages?: boolean;
+          recentMessages?: number;
+          searchOptions?: {
+            limit: number;
+            messageRange?: { after: number; before: number };
+            textSearch?: boolean;
+            vectorScoreThreshold?: number;
+            vectorSearch?: boolean;
           };
-          input: {
-            channel: "sms" | "email" | "web";
-            text: string;
-            userId: string;
-          };
-          threadId?: string;
-        },
-        any
-      >;
-    };
-    main: {
-      generateTextAction: FunctionReference<
-        "action",
-        "internal",
-        {
-          callSettings?: {
-            frequencyPenalty?: number;
-            headers?: Record<string, string>;
-            maxOutputTokens?: number;
-            maxRetries?: number;
-            presencePenalty?: number;
-            seed?: number;
-            stopSequences?: Array<string>;
-            temperature?: number;
-            topK?: number;
-            topP?: number;
-          };
-          contextOptions?: {
-            excludeToolMessages?: boolean;
-            recentMessages?: number;
-            searchOptions?: {
-              limit: number;
-              messageRange?: { after: number; before: number };
-              textSearch?: boolean;
-              vectorScoreThreshold?: number;
-              vectorSearch?: boolean;
-            };
-            searchOtherThreads?: boolean;
-          };
-          experimental_continueSteps?: boolean;
-          maxSteps?: number;
-          messages?: Array<
-            | {
-                content:
-                  | string
-                  | Array<
-                      | {
-                          providerMetadata?: Record<
-                            string,
-                            Record<string, any>
-                          >;
-                          providerOptions?: Record<string, Record<string, any>>;
-                          text: string;
-                          type: "text";
-                        }
-                      | {
-                          image: string | ArrayBuffer;
-                          mimeType?: string;
-                          providerOptions?: Record<string, Record<string, any>>;
-                          type: "image";
-                        }
-                      | {
-                          data: string | ArrayBuffer;
-                          filename?: string;
-                          mimeType: string;
-                          providerMetadata?: Record<
-                            string,
-                            Record<string, any>
-                          >;
-                          providerOptions?: Record<string, Record<string, any>>;
-                          type: "file";
-                        }
-                    >;
-                providerOptions?: Record<string, Record<string, any>>;
-                role: "user";
-              }
-            | {
-                content:
-                  | string
-                  | Array<
-                      | {
-                          providerMetadata?: Record<
-                            string,
-                            Record<string, any>
-                          >;
-                          providerOptions?: Record<string, Record<string, any>>;
-                          text: string;
-                          type: "text";
-                        }
-                      | {
-                          data: string | ArrayBuffer;
-                          filename?: string;
-                          mimeType: string;
-                          providerMetadata?: Record<
-                            string,
-                            Record<string, any>
-                          >;
-                          providerOptions?: Record<string, Record<string, any>>;
-                          type: "file";
-                        }
-                      | {
-                          providerMetadata?: Record<
-                            string,
-                            Record<string, any>
-                          >;
-                          providerOptions?: Record<string, Record<string, any>>;
-                          signature?: string;
-                          text: string;
-                          type: "reasoning";
-                        }
-                      | {
-                          data: string;
-                          providerMetadata?: Record<
-                            string,
-                            Record<string, any>
-                          >;
-                          providerOptions?: Record<string, Record<string, any>>;
-                          type: "redacted-reasoning";
-                        }
-                      | {
-                          args: any;
-                          providerExecuted?: boolean;
-                          providerMetadata?: Record<
-                            string,
-                            Record<string, any>
-                          >;
-                          providerOptions?: Record<string, Record<string, any>>;
-                          toolCallId: string;
-                          toolName: string;
-                          type: "tool-call";
-                        }
-                      | {
-                          args?: any;
-                          experimental_content?: Array<
-                            | { text: string; type: "text" }
-                            | { data: string; mimeType?: string; type: "image" }
-                          >;
-                          isError?: boolean;
-                          output?:
-                            | { type: "text"; value: string }
-                            | { type: "json"; value: any }
-                            | { type: "error-text"; value: string }
-                            | { type: "error-json"; value: any }
-                            | {
-                                type: "content";
-                                value: Array<
-                                  | { text: string; type: "text" }
-                                  | {
-                                      data: string;
-                                      mediaType: string;
-                                      type: "media";
-                                    }
-                                >;
-                              };
-                          providerExecuted?: boolean;
-                          providerMetadata?: Record<
-                            string,
-                            Record<string, any>
-                          >;
-                          providerOptions?: Record<string, Record<string, any>>;
-                          result?: any;
-                          toolCallId: string;
-                          toolName: string;
-                          type: "tool-result";
-                        }
-                      | {
-                          id: string;
-                          providerMetadata?: Record<
-                            string,
-                            Record<string, any>
-                          >;
-                          providerOptions?: Record<string, Record<string, any>>;
-                          sourceType: "url";
-                          title?: string;
-                          type: "source";
-                          url: string;
-                        }
-                      | {
-                          filename?: string;
-                          id: string;
-                          mediaType: string;
-                          providerMetadata?: Record<
-                            string,
-                            Record<string, any>
-                          >;
-                          providerOptions?: Record<string, Record<string, any>>;
-                          sourceType: "document";
-                          title: string;
-                          type: "source";
-                        }
-                    >;
-                providerOptions?: Record<string, Record<string, any>>;
-                role: "assistant";
-              }
-            | {
-                content: Array<{
-                  args?: any;
-                  experimental_content?: Array<
-                    | { text: string; type: "text" }
-                    | { data: string; mimeType?: string; type: "image" }
-                  >;
-                  isError?: boolean;
-                  output?:
-                    | { type: "text"; value: string }
-                    | { type: "json"; value: any }
-                    | { type: "error-text"; value: string }
-                    | { type: "error-json"; value: any }
+          searchOtherThreads?: boolean;
+        };
+        experimental_continueSteps?: boolean;
+        maxSteps?: number;
+        messages?: Array<
+          | {
+              content:
+                | string
+                | Array<
                     | {
-                        type: "content";
-                        value: Array<
+                        providerMetadata?: Record<string, Record<string, any>>;
+                        providerOptions?: Record<string, Record<string, any>>;
+                        text: string;
+                        type: "text";
+                      }
+                    | {
+                        image: string | ArrayBuffer;
+                        mimeType?: string;
+                        providerOptions?: Record<string, Record<string, any>>;
+                        type: "image";
+                      }
+                    | {
+                        data: string | ArrayBuffer;
+                        filename?: string;
+                        mimeType: string;
+                        providerMetadata?: Record<string, Record<string, any>>;
+                        providerOptions?: Record<string, Record<string, any>>;
+                        type: "file";
+                      }
+                  >;
+              providerOptions?: Record<string, Record<string, any>>;
+              role: "user";
+            }
+          | {
+              content:
+                | string
+                | Array<
+                    | {
+                        providerMetadata?: Record<string, Record<string, any>>;
+                        providerOptions?: Record<string, Record<string, any>>;
+                        text: string;
+                        type: "text";
+                      }
+                    | {
+                        data: string | ArrayBuffer;
+                        filename?: string;
+                        mimeType: string;
+                        providerMetadata?: Record<string, Record<string, any>>;
+                        providerOptions?: Record<string, Record<string, any>>;
+                        type: "file";
+                      }
+                    | {
+                        providerMetadata?: Record<string, Record<string, any>>;
+                        providerOptions?: Record<string, Record<string, any>>;
+                        signature?: string;
+                        text: string;
+                        type: "reasoning";
+                      }
+                    | {
+                        data: string;
+                        providerMetadata?: Record<string, Record<string, any>>;
+                        providerOptions?: Record<string, Record<string, any>>;
+                        type: "redacted-reasoning";
+                      }
+                    | {
+                        args: any;
+                        providerExecuted?: boolean;
+                        providerMetadata?: Record<string, Record<string, any>>;
+                        providerOptions?: Record<string, Record<string, any>>;
+                        toolCallId: string;
+                        toolName: string;
+                        type: "tool-call";
+                      }
+                    | {
+                        args?: any;
+                        experimental_content?: Array<
                           | { text: string; type: "text" }
-                          | { data: string; mediaType: string; type: "media" }
+                          | { data: string; mimeType?: string; type: "image" }
                         >;
-                      };
-                  providerExecuted?: boolean;
-                  providerMetadata?: Record<string, Record<string, any>>;
-                  providerOptions?: Record<string, Record<string, any>>;
-                  result?: any;
-                  toolCallId: string;
-                  toolName: string;
-                  type: "tool-result";
-                }>;
+                        isError?: boolean;
+                        output?:
+                          | { type: "text"; value: string }
+                          | { type: "json"; value: any }
+                          | { type: "error-text"; value: string }
+                          | { type: "error-json"; value: any }
+                          | {
+                              type: "content";
+                              value: Array<
+                                | { text: string; type: "text" }
+                                | {
+                                    data: string;
+                                    mediaType: string;
+                                    type: "media";
+                                  }
+                              >;
+                            };
+                        providerExecuted?: boolean;
+                        providerMetadata?: Record<string, Record<string, any>>;
+                        providerOptions?: Record<string, Record<string, any>>;
+                        result?: any;
+                        toolCallId: string;
+                        toolName: string;
+                        type: "tool-result";
+                      }
+                    | {
+                        id: string;
+                        providerMetadata?: Record<string, Record<string, any>>;
+                        providerOptions?: Record<string, Record<string, any>>;
+                        sourceType: "url";
+                        title?: string;
+                        type: "source";
+                        url: string;
+                      }
+                    | {
+                        filename?: string;
+                        id: string;
+                        mediaType: string;
+                        providerMetadata?: Record<string, Record<string, any>>;
+                        providerOptions?: Record<string, Record<string, any>>;
+                        sourceType: "document";
+                        title: string;
+                        type: "source";
+                      }
+                  >;
+              providerOptions?: Record<string, Record<string, any>>;
+              role: "assistant";
+            }
+          | {
+              content: Array<{
+                args?: any;
+                experimental_content?: Array<
+                  | { text: string; type: "text" }
+                  | { data: string; mimeType?: string; type: "image" }
+                >;
+                isError?: boolean;
+                output?:
+                  | { type: "text"; value: string }
+                  | { type: "json"; value: any }
+                  | { type: "error-text"; value: string }
+                  | { type: "error-json"; value: any }
+                  | {
+                      type: "content";
+                      value: Array<
+                        | { text: string; type: "text" }
+                        | { data: string; mediaType: string; type: "media" }
+                      >;
+                    };
+                providerExecuted?: boolean;
+                providerMetadata?: Record<string, Record<string, any>>;
                 providerOptions?: Record<string, Record<string, any>>;
-                role: "tool";
-              }
-            | {
-                content: string;
-                providerOptions?: Record<string, Record<string, any>>;
-                role: "system";
-              }
-          >;
-          prompt?: string;
-          promptMessageId?: string;
-          providerOptions?: Record<string, Record<string, any>>;
-          storageOptions?: {
-            saveMessages?: "all" | "none" | "promptAndOutput";
-          };
-          stream?: boolean;
-          system?: string;
-          threadId?: string;
-          toolChoice?:
-            | "auto"
-            | "none"
-            | "required"
-            | { toolName: string; type: "tool" };
-          userId?: string;
-        },
-        any
-      >;
-    };
+                result?: any;
+                toolCallId: string;
+                toolName: string;
+                type: "tool-result";
+              }>;
+              providerOptions?: Record<string, Record<string, any>>;
+              role: "tool";
+            }
+          | {
+              content: string;
+              providerOptions?: Record<string, Record<string, any>>;
+              role: "system";
+            }
+        >;
+        prompt?: string;
+        promptMessageId?: string;
+        providerOptions?: Record<string, Record<string, any>>;
+        storageOptions?: { saveMessages?: "all" | "none" | "promptAndOutput" };
+        stream?: boolean;
+        system?: string;
+        threadId?: string;
+        toolChoice?:
+          | "auto"
+          | "none"
+          | "required"
+          | { toolName: string; type: "tool" };
+        userId?: string;
+      },
+      any
+    >;
+    runCrisisAgent: FunctionReference<
+      "action",
+      "internal",
+      {
+        context: {
+          consent: { emergency: boolean; marketing: boolean };
+          crisisFlags?: { active: boolean; terms: Array<string> };
+          locale: string;
+          metadata?: any;
+          sessionId?: string;
+          userId: string;
+        };
+        input: {
+          channel: "sms" | "email" | "web";
+          text: string;
+          userId: string;
+        };
+        threadId?: string;
+      },
+      any
+    >;
   };
-  functions: {
-    context: {
-      getConversationSummary: FunctionReference<
-        "query",
-        "internal",
-        { externalId: string; limit?: number },
-        any
-      >;
-    };
-    inbound: {
-      processInboundMessage: FunctionReference<
-        "action",
-        "internal",
-        {
-          channel: "sms" | "email" | "web";
-          externalId: string;
-          messageId: Id<"messages">;
-          text: string;
-          userId: Id<"users">;
-        },
-        any
-      >;
-    };
-    inboundActions: {
-      generateMainResponse: FunctionReference<
-        "action",
-        "internal",
-        {
-          channel: "sms" | "email" | "web";
-          text: string;
-          threadId: string;
-          userId: Id<"users">;
-        },
-        any
-      >;
-      sendSignupMessage: FunctionReference<
-        "action",
-        "internal",
-        {
-          channel: "sms" | "email" | "web";
-          phone?: string;
-          signupUrl: string;
-          userId: string;
-        },
-        any
-      >;
-      sendSmsResponse: FunctionReference<
-        "action",
-        "internal",
-        { text: string; to: string; userId: string },
-        any
-      >;
-      generateCrisisResponse: FunctionReference<
-        "action",
-        "internal",
-        {
-          channel: "sms" | "email" | "web";
-          text: string;
-          threadId: string;
-          userId: Id<"users">;
-        },
-        any
-      >;
-    };
-    logs: {
-      logCrisisInteraction: FunctionReference<
-        "mutation",
-        "internal",
-        {
-          chunks: Array<string>;
-          input: string;
-          timestamp: number;
-          userId: string;
-        },
-        any
-      >;
-      logAgentRunInternal: FunctionReference<
-        "mutation",
-        "internal",
-        {
-          agent: string;
-          budgetResult: {
-            toolCalls: number;
-            usedInputTokens: number;
-            usedOutputTokens: number;
-          };
-          latencyMs: number;
-          policyBundle: string;
-          traceId: string;
-          userId: string;
-        },
-        any
-      >;
-    };
-    scheduler: {
-      processBatchInternal: FunctionReference<
-        "mutation",
-        "internal",
-        { batchSize: number },
-        any
-      >;
-      internalProcessDueTriggers: FunctionReference<
-        "action",
-        "internal",
-        { batchSize?: number },
-        any
-      >;
-    };
-    watchers: {
-      runEngagementChecks: FunctionReference<"mutation", "internal", {}, any>;
-    };
+  core: {
+    ensureUserMutation: FunctionReference<
+      "mutation",
+      "internal",
+      {
+        channel: "sms" | "web";
+        consent?: { emergency: boolean; marketing: boolean };
+        externalId: string;
+        locale?: string;
+        metadata?: any;
+        phone?: string;
+      },
+      any
+    >;
+    getUser: FunctionReference<
+      "query",
+      "internal",
+      { userId: Id<"users"> },
+      any
+    >;
+    hasActiveSubscriptionQuery: FunctionReference<
+      "query",
+      "internal",
+      { userId: Id<"users"> },
+      any
+    >;
+    updateUserMetadata: FunctionReference<
+      "mutation",
+      "internal",
+      { metadata: any; userId: Id<"users"> },
+      any
+    >;
+  };
+  inbound: {
+    generateCrisisResponse: FunctionReference<
+      "action",
+      "internal",
+      {
+        channel: "sms" | "email" | "web";
+        text: string;
+        threadId: string;
+        userId: Id<"users">;
+      },
+      any
+    >;
+    generateMainResponse: FunctionReference<
+      "action",
+      "internal",
+      {
+        channel: "sms" | "email" | "web";
+        text: string;
+        threadId: string;
+        userId: Id<"users">;
+      },
+      any
+    >;
+    processInboundMessage: FunctionReference<
+      "action",
+      "internal",
+      {
+        channel: "sms" | "email" | "web";
+        externalId: string;
+        messageId: Id<"messages">;
+        text: string;
+        userId: Id<"users">;
+      },
+      any
+    >;
+    sendSignupMessage: FunctionReference<
+      "action",
+      "internal",
+      {
+        channel: "sms" | "email" | "web";
+        phone?: string;
+        signupUrl: string;
+        userId: string;
+      },
+      any
+    >;
+    sendSmsResponse: FunctionReference<
+      "action",
+      "internal",
+      { text: string; to: string; userId: string },
+      any
+    >;
   };
   internal: {
-    metrics: {
-      aggregateDailyMetrics: FunctionReference<"action", "internal", {}, any>;
-      computeDailyMetrics: FunctionReference<
-        "mutation",
-        "internal",
-        { date: string },
-        any
-      >;
-      computeSubscriptionMetrics: FunctionReference<
-        "mutation",
-        "internal",
-        {},
-        any
-      >;
-      computeJourneyFunnel: FunctionReference<"mutation", "internal", {}, any>;
-      computeBurnoutDistribution: FunctionReference<
-        "mutation",
-        "internal",
-        {},
-        any
-      >;
-    };
-    onboarding: {
-      sendWelcomeSms: FunctionReference<
-        "action",
-        "internal",
-        { fullName: string; phoneNumber: string },
-        any
-      >;
-    };
-    scheduler: {
-      advanceTriggerMutation: FunctionReference<
-        "mutation",
-        "internal",
-        { triggerId: Id<"triggers"> },
-        any
-      >;
-    };
-    seed: {
-      seedInterventions: FunctionReference<"mutation", "internal", {}, any>;
-    };
-    threads: {
-      createComponentThread: FunctionReference<
-        "mutation",
-        "internal",
-        { userId: Id<"users"> },
-        any
-      >;
-    };
+    aggregateDailyMetrics: FunctionReference<"action", "internal", {}, any>;
+    computeDailyMetrics: FunctionReference<
+      "mutation",
+      "internal",
+      { date: string },
+      any
+    >;
+    computeSubscriptionMetrics: FunctionReference<
+      "mutation",
+      "internal",
+      {},
+      any
+    >;
+    computeJourneyFunnel: FunctionReference<"mutation", "internal", {}, any>;
+    computeBurnoutDistribution: FunctionReference<
+      "mutation",
+      "internal",
+      {},
+      any
+    >;
+    sendWelcomeSms: FunctionReference<
+      "action",
+      "internal",
+      { fullName: string; phoneNumber: string },
+      any
+    >;
+    advanceTriggerMutation: FunctionReference<
+      "mutation",
+      "internal",
+      { triggerId: Id<"triggers"> },
+      any
+    >;
+    seedInterventions: FunctionReference<"mutation", "internal", {}, any>;
+    createComponentThread: FunctionReference<
+      "mutation",
+      "internal",
+      { userId: Id<"users"> },
+      any
+    >;
+    processBatchInternal: FunctionReference<
+      "mutation",
+      "internal",
+      { batchSize: number },
+      any
+    >;
+    internalProcessDueTriggers: FunctionReference<
+      "action",
+      "internal",
+      { batchSize?: number },
+      any
+    >;
+    logCrisisInteraction: FunctionReference<
+      "mutation",
+      "internal",
+      {
+        chunks: Array<string>;
+        input: string;
+        timestamp: number;
+        userId: string;
+      },
+      any
+    >;
+    logAgentRunInternal: FunctionReference<
+      "mutation",
+      "internal",
+      {
+        agent: string;
+        budgetResult: {
+          toolCalls: number;
+          usedInputTokens: number;
+          usedOutputTokens: number;
+        };
+        latencyMs: number;
+        policyBundle: string;
+        traceId: string;
+        userId: string;
+      },
+      any
+    >;
+    runEngagementChecks: FunctionReference<"mutation", "internal", {}, any>;
   };
   lib: {
     files: {
@@ -970,115 +891,73 @@ export declare const internal: {
       >;
     };
   };
-  migrations: {
-    consolidateUserFields: {
-      consolidateUserFields: FunctionReference<"mutation", "internal", {}, any>;
-    };
-  };
-  model: {
-    subscriptions: {
-      hasActiveSubscriptionQuery: FunctionReference<
-        "query",
-        "internal",
-        { userId: Id<"users"> },
-        any
-      >;
-    };
-    users: {
-      ensureUserMutation: FunctionReference<
-        "mutation",
-        "internal",
-        {
-          channel: "sms" | "web";
-          consent?: { emergency: boolean; marketing: boolean };
-          externalId: string;
-          locale?: string;
-          metadata?: any;
-          phone?: string;
-        },
-        any
-      >;
-      getUser: FunctionReference<
-        "query",
-        "internal",
-        { userId: Id<"users"> },
-        any
-      >;
-      updateUserMetadata: FunctionReference<
-        "mutation",
-        "internal",
-        { metadata: any; userId: Id<"users"> },
-        any
-      >;
-    };
+  public: {
+    getConversationSummary: FunctionReference<
+      "query",
+      "internal",
+      { externalId: string; limit?: number },
+      any
+    >;
   };
   workflows: {
-    crisis: {
-      crisisEscalation: FunctionReference<"mutation", "internal", any, any>;
-      crisisFollowUp: FunctionReference<"mutation", "internal", any, any>;
-    };
-    crisisSteps: {
-      logCrisisEvent: FunctionReference<
-        "mutation",
-        "internal",
-        {
-          messageText: string;
-          severity: "high" | "medium" | "low";
-          terms: Array<string>;
-          userId: Id<"users">;
-        },
-        any
-      >;
-      generateCrisisResponse: FunctionReference<
-        "action",
-        "internal",
-        {
-          messageText: string;
-          severity: "high" | "medium" | "low";
-          threadId: string;
-          userId: Id<"users">;
-        },
-        any
-      >;
-      notifyEmergencyContact: FunctionReference<
-        "action",
-        "internal",
-        {
-          crisisEventId: Id<"alerts">;
-          messageText: string;
-          userId: Id<"users">;
-        },
-        any
-      >;
-      scheduleFollowUp: FunctionReference<
-        "mutation",
-        "internal",
-        {
-          crisisEventId: Id<"alerts">;
-          hoursFromNow: number;
-          userId: Id<"users">;
-        },
-        any
-      >;
-      checkRecentActivity: FunctionReference<
-        "query",
-        "internal",
-        { hoursAgo: number; userId: Id<"users"> },
-        any
-      >;
-      sendFollowUpMessage: FunctionReference<
-        "action",
-        "internal",
-        { crisisEventId: Id<"alerts">; userId: Id<"users"> },
-        any
-      >;
-      updateCrisisEvent: FunctionReference<
-        "mutation",
-        "internal",
-        { crisisEventId: Id<"alerts">; status: string },
-        any
-      >;
-    };
+    crisisEscalation: FunctionReference<"mutation", "internal", any, any>;
+    crisisFollowUp: FunctionReference<"mutation", "internal", any, any>;
+    logCrisisEvent: FunctionReference<
+      "mutation",
+      "internal",
+      {
+        messageText: string;
+        severity: "high" | "medium" | "low";
+        terms: Array<string>;
+        userId: Id<"users">;
+      },
+      any
+    >;
+    generateCrisisResponse: FunctionReference<
+      "action",
+      "internal",
+      {
+        messageText: string;
+        severity: "high" | "medium" | "low";
+        threadId: string;
+        userId: Id<"users">;
+      },
+      any
+    >;
+    notifyEmergencyContact: FunctionReference<
+      "action",
+      "internal",
+      { crisisEventId: Id<"alerts">; messageText: string; userId: Id<"users"> },
+      any
+    >;
+    scheduleFollowUp: FunctionReference<
+      "mutation",
+      "internal",
+      {
+        crisisEventId: Id<"alerts">;
+        hoursFromNow: number;
+        userId: Id<"users">;
+      },
+      any
+    >;
+    checkRecentActivity: FunctionReference<
+      "query",
+      "internal",
+      { hoursAgo: number; userId: Id<"users"> },
+      any
+    >;
+    sendFollowUpMessage: FunctionReference<
+      "action",
+      "internal",
+      { crisisEventId: Id<"alerts">; userId: Id<"users"> },
+      any
+    >;
+    updateCrisisEvent: FunctionReference<
+      "mutation",
+      "internal",
+      { crisisEventId: Id<"alerts">; status: string },
+      any
+    >;
   };
 };
 

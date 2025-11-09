@@ -1,10 +1,11 @@
-"use node";
-
 /**
  * Billing - Stripe integration and checkout
  *
  * Merges functions/billing.ts and stripe.ts
  * Handles checkout sessions, webhook processing, and entitlements.
+ *
+ * Note: createCheckoutSession action uses Node.js runtime automatically.
+ * No "use node" directive needed since this file contains mutations too.
  */
 
 import { action, mutation } from './_generated/server';

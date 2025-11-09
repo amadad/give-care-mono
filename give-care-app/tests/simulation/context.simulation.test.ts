@@ -17,7 +17,7 @@ describe('Context Simulation Tests', () => {
     // ARCHITECTURE.md: "Conversation Management - hydrate loads/creates user session"
     const t = convexTest(schema, modules);
 
-    const result = await t.mutation(api.functions.context.hydrate, {
+    const result = await t.mutation(api.public.hydrate, {
       user: {
         externalId: 'sim_test_user_1',
         channel: 'sms',
@@ -36,7 +36,7 @@ describe('Context Simulation Tests', () => {
     const t = convexTest(schema, modules);
 
     // First hydrate to create session
-    const hydrated = await t.mutation(api.functions.context.hydrate, {
+    const hydrated = await t.mutation(api.public.hydrate, {
       user: {
         externalId: 'sim_test_user_2',
         channel: 'sms',
@@ -44,7 +44,7 @@ describe('Context Simulation Tests', () => {
     });
 
     // Then persist updated metadata
-    await t.mutation(api.functions.context.persist, {
+    await t.mutation(api.public.persist, {
       context: {
         userId: hydrated.userId,
         sessionId: hydrated.sessionId,
@@ -65,7 +65,7 @@ describe('Context Simulation Tests', () => {
     });
 
     // Verify persisted
-    const session = await t.mutation(api.functions.context.hydrate, {
+    const session = await t.mutation(api.public.hydrate, {
       user: {
         externalId: 'sim_test_user_2',
         channel: 'sms',
@@ -80,14 +80,14 @@ describe('Context Simulation Tests', () => {
     // ARCHITECTURE.md: "Working Memory System - recordMemory stores categorized memories"
     const t = convexTest(schema, modules);
 
-    const hydrated = await t.mutation(api.functions.context.hydrate, {
+    const hydrated = await t.mutation(api.public.hydrate, {
       user: {
         externalId: 'sim_test_user_3',
         channel: 'sms',
       },
     });
 
-    await t.mutation(api.functions.context.recordMemory, {
+    await t.mutation(api.public.recordMemory, {
       userId: hydrated.userId,
       category: 'care_routine',
       content: 'Morning bath at 9am, prefers lavender soap',
@@ -120,7 +120,7 @@ describe('Context Simulation Tests', () => {
 
     // Try to record memory without hydrating user first
     await expect(
-      t.mutation(api.functions.context.recordMemory, {
+      t.mutation(api.public.recordMemory, {
         userId: 'non_existent_user',
         category: 'preference',
         content: 'Likes yoga',
@@ -137,10 +137,10 @@ describe('Context Simulation Tests', () => {
     const t = convexTest(schema, modules);
 
     const [session1, session2] = await Promise.all([
-      t.mutation(api.functions.context.hydrate, {
+      t.mutation(api.public.hydrate, {
         user: { externalId: 'sim_test_user_4', channel: 'sms' },
       }),
-      t.mutation(api.functions.context.hydrate, {
+      t.mutation(api.public.hydrate, {
         user: { externalId: 'sim_test_user_4', channel: 'sms' },
       }),
     ]);

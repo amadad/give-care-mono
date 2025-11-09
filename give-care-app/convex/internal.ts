@@ -1,10 +1,11 @@
-"use node";
-
 /**
  * Internal Functions - Server-side only
  *
  * Consolidates all server-only functions from internal/* and functions/*.
  * NOT exposed to frontend - use internal.* to call these.
+ *
+ * Note: Actions (newsletterSignup, submit, sendWelcomeSms) use Node.js runtime automatically.
+ * No "use node" directive needed since this file contains mutations/queries too.
  *
  * Includes:
  * - Metrics aggregation (daily, subscriptions, journey funnel, burnout distribution)
