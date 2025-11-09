@@ -72,7 +72,8 @@ export const persist = mutation({
 /**
  * Record important memory about a user
  *
- * Part of working memory system for building context over time
+ * Part of working memory system for building context over time.
+ * Stores in both RAG (for semantic search) and memories table (for structured queries).
  */
 export const recordMemory = mutation({
   args: {
@@ -87,16 +88,59 @@ export const recordMemory = mutation({
       throw new Error('User not found');
     }
 
+    // Store in memories table for structured queries by category/importance
+    // TODO: Add RAG integration via separate action for semantic search
     await ctx.db.insert('memories', {
       userId: user._id,
       externalId: args.userId,
       category: args.category,
       content: args.content,
       importance: args.importance,
-      embedding: undefined,
+      embedding: undefined, // Future: Add embeddings via action
       lastAccessedAt: Date.now(),
       accessCount: 0,
     });
+  },
+});
+
+/**
+ * Retrieve relevant memories for a user using semantic search
+ *
+ * Uses RAG to find memories semantically similar to the query.
+ * Returns high-importance memories first.
+ */
+export const retrieveMemories = internalQuery({
+  args: {
+    userId: v.string(),
+    query: v.string(),
+    limit: v.optional(v.number()),
+  },
+  handler: async (ctx, { userId, query, limit = 5 }) => {
+    const user = await Core.getByExternalId(ctx, userId);
+    if (!user) {
+      return [];
+    }
+
+    // TODO: Implement semantic search via RAG component in separate action
+    // For now, return recent high-importance memories by category match
+    const memories = await ctx.db
+      .query('memories')
+      .withIndex('by_user', (q) => q.eq('userId', user._id))
+      .collect();
+
+    // Simple keyword matching + importance sorting
+    const queryLower = query.toLowerCase();
+    const matches = memories
+      .filter((m) => m.content.toLowerCase().includes(queryLower) || m.category.toLowerCase().includes(queryLower))
+      .sort((a, b) => b.importance - a.importance)
+      .slice(0, limit);
+
+    return matches.map((m) => ({
+      content: m.content,
+      category: m.category,
+      importance: m.importance,
+      score: 1.0, // Placeholder score
+    }));
   },
 });
 

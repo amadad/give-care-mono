@@ -91,7 +91,7 @@ const ensureComponentThreadId = async (ctx: ActionCtx, user: UserDoc): Promise<s
   }
 
   // Use internal mutation wrapper (Convex best practice: avoid ActionCtx→MutationCtx casts)
-  const createdThreadId = await ctx.runMutation(internal.domains.threads.createComponentThread, {
+  const createdThreadId = await ctx.runMutation(internal.core.createComponentThread, {
     userId: user._id,
   });
   await persistThreadIdIfNeeded(ctx, user._id, metadata, createdThreadId);

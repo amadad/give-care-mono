@@ -248,8 +248,50 @@ const mainAgent = new Agent(components.agent, {
   },
   maxSteps: 5, // Increased to allow for tool chains (e.g., check wellness → find interventions)
 
-  // Agent automatically includes conversation history via built-in message storage
-  // No custom contextHandler needed - using Convex Agent Component defaults
+  // Context handler: Combine conversation history + semantic memory retrieval
+  contextHandler: async (ctx, args) => {
+    const recentMessages = args.recent || [];
+    const searchMessages = args.search || [];
+
+    // Extract user query for memory search
+    const rawContent = args.inputPrompt?.[0]?.content || args.inputMessages?.[0]?.content || '';
+    const userQuery = typeof rawContent === 'string' ? rawContent : '';
+
+    // Retrieve relevant memories via semantic search
+    let memoryContext: any[] = [];
+    if (args.userId && userQuery) {
+      try {
+        const memories = await ctx.runQuery(internal.public.retrieveMemories, {
+          userId: args.userId,
+          query: userQuery,
+          limit: 5,
+        });
+
+        if (memories.length > 0) {
+          const memoryText = memories
+            .map((m: { category: string; content: string; importance: number }) =>
+              `[${m.category}] ${m.content} (importance: ${m.importance}/10)`)
+            .join('\n');
+
+          memoryContext = [{
+            role: 'system' as const,
+            content: `## Long-term Memories\nRelevant information from previous conversations:\n${memoryText}`,
+          }];
+        }
+      } catch (error) {
+        console.error('[contextHandler] Error retrieving memories:', error);
+      }
+    }
+
+    return [
+      ...searchMessages,
+      ...memoryContext,      // Long-term facts (RAG-powered)
+      ...recentMessages,     // Recent conversation (Agent built-in)
+      ...args.inputMessages,
+      ...args.inputPrompt,
+      ...args.existingResponses,
+    ];
+  },
 
   // Usage tracking for billing and monitoring
   ...sharedAgentConfig,

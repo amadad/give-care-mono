@@ -129,7 +129,7 @@ export const applyStripeEvent = mutation({
       console.log('[billing] Scheduling welcome SMS for checkout:', { phoneNumber, fullName });
       await ctx.scheduler.runAfter(
         5000, // 5 second delay to ensure subscription is fully set up
-        internal.sendWelcomeSms,
+        internal.internal.sendWelcomeSms,
         {
           phoneNumber,
           fullName: fullName ?? 'there',
