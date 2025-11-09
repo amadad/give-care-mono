@@ -133,10 +133,12 @@ npx convex dev
 ```
 
 This will:
-- Generate types in `convex/_generated/`
+- Generate static types in `convex/_generated/` (using `staticApi` + `staticDataModel`)
 - Install Agent Component
 - Watch for file changes
 - Deploy to dev environment
+
+**Note**: Static API generation improves performance for large projects by pre-generating type definitions instead of relying on TypeScript inference. Types update automatically when `convex dev` runs.
 
 ### 4. Test the API
 ```bash
@@ -567,11 +569,15 @@ npx convex dev
 ### Production
 ```bash
 # Deploy to production
-npx convex deploy --prod
+# Note: Use --typecheck=disable for large projects due to TS compiler memory limits
+npx convex deploy --prod --typecheck=disable
 
 # Set production environment variables in Convex dashboard
 # Then configure webhooks to point to production deployment
 ```
+
+**Note on TypeScript Compilation**:
+This project uses static API generation (`staticApi` + `staticDataModel` in `convex.json`) to improve IDE performance and reduce memory usage. The TypeScript compiler may still timeout during deployment due to project size - this is a tooling limitation, not a code issue. Deploy with `--typecheck=disable` flag as shown above.
 
 ### Webhook URLs
 
