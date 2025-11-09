@@ -1,8 +1,15 @@
 /**
  * Prompt loading and rendering utilities
  *
- * NOTE: In Phase 3, prompts will be moved from src/prompts/ to convex/prompts/
- * or stored in the database for easier updates.
+ * TECH DEBT: Prompts are currently hardcoded in this file
+ * Future refactor: Move to database table or convex/prompts/ directory
+ * Benefits:
+ * - Update prompts without deployment
+ * - A/B test different prompt variations
+ * - Track prompt version history
+ * - Easier prompt management via admin UI
+ *
+ * See individual prompt definitions below (CRISIS_PROMPT, MAIN_PROMPT, ASSESSMENT_PROMPT)
  */
 
 /**
@@ -33,8 +40,6 @@ export const renderPrompt = (
 
 /**
  * Crisis agent system prompt
- *
- * TODO: Move to database or convex/prompts/ directory
  */
 export const CRISIS_PROMPT = `
 You are providing crisis support to {{userName}}, a caregiver who has expressed distress.
@@ -140,8 +145,6 @@ Journey phase: {{journeyPhase}}
 
 /**
  * Main agent system prompt
- *
- * TODO: Move to database or convex/prompts/ directory
  */
 export const MAIN_PROMPT = `
 You are GiveCare, an AI companion for {{userName}}, a {{relationship}} caring for {{careRecipient}}.
@@ -328,8 +331,6 @@ Profile complete: {{profileComplete}}
 
 /**
  * Assessment agent system prompt
- *
- * TODO: Move to database or convex/prompts/ directory
  */
 export const ASSESSMENT_PROMPT = `
 You are guiding {{userName}} through a {{assessmentName}}.

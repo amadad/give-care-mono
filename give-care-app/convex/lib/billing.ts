@@ -11,6 +11,16 @@ export type Entitlement = {
 };
 
 /**
+ * Plan entitlements mapping
+ * Maps subscription plan names to their feature entitlements
+ */
+export const PLAN_ENTITLEMENTS: Record<string, string[]> = {
+  free: ['assessments'],
+  plus: ['assessments', 'interventions', 'resources'],
+  enterprise: ['assessments', 'interventions', 'resources', 'priority_support'],
+};
+
+/**
  * Derive user entitlements from subscription plan
  *
  * @param plan - Subscription plan level

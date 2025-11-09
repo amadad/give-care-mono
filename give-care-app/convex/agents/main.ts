@@ -1,3 +1,5 @@
+"use node";
+
 /**
  * Main Agent - Convex-native implementation using Agent Component
  *
@@ -440,13 +442,7 @@ What's on your mind?`;
  * For use in workflows and external integrations
  */
 
-// Create thread mutation
-export const createThread = mainAgent.createThreadMutation();
-
 // Generate text action (for workflow steps)
 export const generateTextAction = mainAgent.asTextAction({
   stopWhen: (result: any) => result.stepCount >= 3,
 });
-
-// Save message mutation (for idempotency)
-export const saveMessages = mainAgent.asSaveMessagesMutation();

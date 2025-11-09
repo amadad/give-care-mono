@@ -1,6 +1,7 @@
 import { mutation } from '../_generated/server';
 import { v } from 'convex/values';
 import * as Users from '../model/users';
+import { PLAN_ENTITLEMENTS } from '../lib/billing';
 
 /**
  * Manually link a Stripe subscription to a user
@@ -47,13 +48,7 @@ export const linkSubscription = mutation({
       currentPeriodEnd: args.currentPeriodEnd,
     });
 
-    // Apply entitlements (same logic as billing.ts)
-    const PLAN_ENTITLEMENTS: Record<string, string[]> = {
-      free: ['assessments'],
-      plus: ['assessments', 'interventions', 'resources'],
-      enterprise: ['assessments', 'interventions', 'resources', 'priority_support'],
-    };
-
+    // Apply entitlements
     // Map price ID to plan name
     const planName = args.planId.includes('standard') ? 'plus' : 'plus'; // Default to plus for paid plans
     const features = PLAN_ENTITLEMENTS[planName] ?? PLAN_ENTITLEMENTS.plus;

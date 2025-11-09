@@ -1,5 +1,31 @@
 # Changelog - GiveCare App
 
+## [Unreleased] - 2025-11-08
+
+### Fixed
+
+- **Missing "use node" Directive** (`convex/agents/main.ts`): Added required directive for AI SDK compatibility. All agent files now correctly use Node.js runtime for `@ai-sdk/openai` package
+- **Illegal Mutation Exports in Node Runtime** (`convex/agents/main.ts`): Removed `createThread` and `saveMessages` mutation exports from "use node" file. Only actions can be exported from Node.js runtime files per Convex requirements
+
+### Code Quality
+
+- **Consolidated PLAN_ENTITLEMENTS** (`convex/lib/billing.ts`): Exported shared constant to eliminate duplication across `functions/billing.ts` and `functions/manualLinkSubscription.ts`
+- **Removed Debug Files** (`convex/functions/debugSubscriptions.ts`): Moved debug queries (`getAllSubscriptions`, `getSubscriptionsByPhone`, `getBillingEvents`) to `functions/admin.ts` and deleted temporary file
+- **Removed Unused Constants** (`convex/functions/admin.ts`): Deleted unused `_WEEK_MS` constant
+- **Updated Tech Debt Documentation** (`convex/lib/prompts.ts`): Replaced scattered TODO comments with consolidated tech debt note explaining future prompt management refactor
+
+### Documentation
+
+- **Tool Usage Guidelines** (`CLAUDE.md`): Added Bash tool limitations, CLI flag verification requirements, and Convex command reference to prevent recurring syntax errors and incorrect flag usage
+
+### Deprecated Schema Fields - Investigation
+
+**Status:** Migration complete, safe to remove in future version
+
+- **`users.phoneNumber` field**: Migration complete via `migrations/consolidateUserFields.ts`. All code now uses `users.phone` field. Only usage is in admin TypeScript types (safe) and migration script itself
+- **`threads` table**: DEPRECATED but still in schema. No queries use `db.query('threads')`. Agent Component manages threads internally. Table kept for backward compatibility during v1.4.x series
+- **Recommendation**: Schedule removal for v1.5.0 after verifying all production deployments migrated
+
 ## [1.4.1] - 2025-11-09
 
 ### Fixed

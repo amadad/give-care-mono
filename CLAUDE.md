@@ -14,6 +14,37 @@ Parallelize subagents for non-overlapping requests
 - No mocking in tests - real tests only
 - Plan mode must include writing tests
 
+## Tool Usage Guidelines
+
+### Bash Tool Limitations
+- ❌ NO command substitution: `$(find ...)` gets mangled by escaping
+- ❌ NO complex loops: `for file in $(cmd); do ... done` fails
+- ❌ NO multiple pipes in loops
+- ✅ USE simple commands: `find ... -exec ... {} \;`
+- ✅ USE sequential commands: `cmd1 && cmd2`
+- ✅ BREAK complex operations into multiple simple Bash calls
+
+**Wrong:**
+```bash
+for file in $(find . -name "*.ts"); do grep "export" "$file"; done
+```
+
+**Correct:**
+```bash
+find . -name "*.ts" -exec grep "export" {} \;
+```
+
+### CLI Flag Verification
+- ALWAYS check `--help` output before using CLI flags
+- NEVER assume flag names (e.g., `--prod` doesn't exist for `convex deploy`)
+- VERIFY syntax with actual CLI documentation
+
+### Convex Deploy Commands
+- ✅ `npx convex deploy` (deploys to prod by default)
+- ✅ `npx convex deploy --yes` (skip confirmation)
+- ✅ `npx convex dev` (dev deployment)
+- ❌ `npx convex deploy --prod` (flag doesn't exist)
+
 ## Monorepo Structure
 
 AI-powered SMS caregiving platform (pnpm workspace)
