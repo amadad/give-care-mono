@@ -373,6 +373,7 @@ export const runMainAgent = action({
         providerOptions: {
           openai: {
             reasoningEffort: 'low', // Fast responses for general conversation
+            textVerbosity: 'low', // Concise, shorter responses
           },
         },
       });

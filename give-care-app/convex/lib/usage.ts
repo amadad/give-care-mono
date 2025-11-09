@@ -48,10 +48,14 @@ export const usageHandler: UsageHandler = async (ctx, args) => {
     return;
   }
 
-  const { usage, userId, threadId, agentName, model, provider, providerMetadata } = args;
+  const { usage, userId, threadId, agentName, model, provider, providerMetadata, metadata } = args;
+
+  // Extract actual Convex user ID from metadata if available
+  // (userId from agent is the externalId string)
+  const convexUserId = (metadata as any)?.convexUserId;
 
   await ctx.runMutation(internal.lib.usage.insertLLMUsage, {
-    userId: userId as any, // Type compatibility with agent framework
+    userId: convexUserId, // Use actual Convex ID from metadata
     agentName,
     threadId,
     model,
@@ -63,6 +67,7 @@ export const usageHandler: UsageHandler = async (ctx, args) => {
   // Log for monitoring
   console.log('LLM Usage tracked:', {
     userId,
+    convexUserId,
     agentName,
     model,
   });

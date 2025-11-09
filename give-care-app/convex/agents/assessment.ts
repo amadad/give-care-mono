@@ -181,6 +181,7 @@ export const runAssessmentAgent: any = action({
         providerOptions: {
           openai: {
             reasoningEffort: 'low', // Balanced speed for clinical interpretations
+            textVerbosity: 'low', // Focused, actionable recommendations
           },
         },
       });

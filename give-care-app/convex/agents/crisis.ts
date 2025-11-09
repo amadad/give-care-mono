@@ -116,6 +116,7 @@ export const runCrisisAgent = internalAction({
         providerOptions: {
           openai: {
             reasoningEffort: 'minimal', // Maximum speed for crisis response
+            textVerbosity: 'low', // Concise, direct crisis support
           },
         },
       });

@@ -137,7 +137,7 @@ export const processInboundMessage = internalAction({
       await ctx.runAction(internal.functions.inboundActions.generateCrisisResponse, {
         threadId,
         text,
-        userId: externalId,
+        userId,
         channel,
       });
     } else {
@@ -145,7 +145,7 @@ export const processInboundMessage = internalAction({
       await ctx.runAction(internal.functions.inboundActions.generateMainResponse, {
         threadId,
         text,
-        userId: externalId,
+        userId,
         channel,
       });
     }

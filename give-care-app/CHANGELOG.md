@@ -4,6 +4,7 @@
 
 ### Fixed
 
+- **Usage Tracking Type Mismatch** (`convex/functions/inbound.ts`, `convex/functions/inboundActions.ts`, `convex/lib/usage.ts`): Fixed `ArgumentValidationError` by correctly passing Convex user ID instead of phone number. Updated inbound routing to pass actual `userId` (Convex ID) instead of `externalId` (phone number). Modified usage handler to extract `convexUserId` from agent metadata for proper database insertion
 - **GPT-5 Model Compatibility** (`convex/agents/main.ts`, `convex/agents/crisis.ts`, `convex/agents/assessment.ts`): Migrated from Chat API to Responses API for GPT-5 models. Changed `openai.chat('gpt-5-nano')` to `openai('gpt-5-nano')` to use AI SDK 5's default Responses API, which supports GPT-5 model specification v2 and enables chain-of-thought passing between turns
 - **AI SDK Version Conflict** (`package.json`): Removed explicit `@ai-sdk/openai@1.3.24` dependency that was incompatible with GPT-5. Now relies on `@convex-dev/agent@0.2.12`'s peer dependency of `@ai-sdk/openai@2.0.64`, which includes GPT-5 support
 - **Agent Response Type Handling** (`convex/functions/inboundActions.ts`): Fixed validation error when agents fail by extracting text from response chunks (`result.chunks?.[0]?.content`) instead of expecting deprecated `result.text` property. Prevents cascading failures when model errors occur
@@ -12,6 +13,10 @@
 
 ### Changed
 
+- **Response Performance Optimization**: Added `textVerbosity: 'low'` to all agents for faster, more concise responses:
+  - **Main Agent** (`convex/agents/main.ts`): Shorter, focused general conversation responses
+  - **Crisis Agent** (`convex/agents/crisis.ts`): Direct, concise emergency support
+  - **Assessment Agent** (`convex/agents/assessment.ts`): Actionable, targeted clinical recommendations
 - **Reasoning Effort Configuration**: Configured optimized reasoning levels for each agent type via `providerOptions.openai.reasoningEffort`:
   - **Main Agent** (`convex/agents/main.ts`): Set to `low` for balanced speed and quality in general caregiving conversations
   - **Crisis Agent** (`convex/agents/crisis.ts`): Set to `minimal` for maximum speed in emergency support scenarios

@@ -9,28 +9,30 @@ export const generateCrisisResponse = internalAction({
   args: {
     threadId: v.string(),
     text: v.string(),
-    userId: v.string(),
+    userId: v.id('users'),
     channel: v.union(v.literal('sms'), v.literal('email'), v.literal('web')),
   },
   handler: async (ctx, { threadId, text, userId, channel }): Promise<any> => {
     // Get user context
-    const user: any = await ctx.runQuery(api.functions.users.getByExternalId, {
-      externalId: userId,
+    const user: any = await ctx.runQuery(internal.model.users.getUser, {
+      userId,
     });
     if (!user) {
       console.error('[inbound] User not found:', userId);
       return;
     }
 
+    const externalId = user.externalId || user.phone;
+
     // Run crisis agent
     const result: any = await ctx.runAction(internal.agents.crisis.runCrisisAgent, {
       input: {
         channel,
         text,
-        userId,
+        userId: externalId,
       },
       context: {
-        userId,
+        userId: externalId,
         locale: user.locale || 'en',
         consent: {
           emergency: true,
@@ -40,7 +42,10 @@ export const generateCrisisResponse = internalAction({
           active: true,
           terms: CRISIS_TERMS,
         },
-        metadata: user.metadata,
+        metadata: {
+          ...user.metadata,
+          convexUserId: userId, // Pass actual Convex ID for usage tracking
+        },
       },
       threadId,
     });
@@ -51,7 +56,7 @@ export const generateCrisisResponse = internalAction({
       await ctx.runAction(internal.functions.inboundActions.sendSmsResponse, {
         to: user.phone,
         text: responseText,
-        userId,
+        userId: externalId,
       });
     }
 
@@ -66,35 +71,40 @@ export const generateMainResponse = internalAction({
   args: {
     threadId: v.string(),
     text: v.string(),
-    userId: v.string(),
+    userId: v.id('users'),
     channel: v.union(v.literal('sms'), v.literal('email'), v.literal('web')),
   },
   handler: async (ctx, { threadId, text, userId, channel }): Promise<any> => {
     // Get user context
-    const user: any = await ctx.runQuery(api.functions.users.getByExternalId, {
-      externalId: userId,
+    const user: any = await ctx.runQuery(internal.model.users.getUser, {
+      userId,
     });
     if (!user) {
       console.error('[inbound] User not found:', userId);
       return;
     }
 
+    const externalId = user.externalId || user.phone;
+
     // Run main agent
     const result: any = await ctx.runAction(api.agents.main.runMainAgent, {
       input: {
         channel,
         text,
-        userId,
+        userId: externalId,
       },
       context: {
-        userId,
+        userId: externalId,
         sessionId: threadId,
         locale: user.locale || 'en',
         consent: {
           emergency: user.consent?.emergency ?? false,
           marketing: user.consent?.marketing ?? false,
         },
-        metadata: user.metadata,
+        metadata: {
+          ...user.metadata,
+          convexUserId: userId, // Pass actual Convex ID for usage tracking
+        },
       },
       threadId,
     });
@@ -105,7 +115,7 @@ export const generateMainResponse = internalAction({
       await ctx.runAction(internal.functions.inboundActions.sendSmsResponse, {
         to: user.phone,
         text: responseText,
-        userId,
+        userId: externalId,
       });
     }
 
