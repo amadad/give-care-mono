@@ -87,7 +87,7 @@ export const generateMainResponse = internalAction({
     const externalId = user.externalId || user.phone;
 
     // Run main agent
-    const result: any = await ctx.runAction(api.agents.main.runMainAgent, {
+    const result: any = await ctx.runAction(internal.agents.main.runMainAgent, {
       input: {
         channel,
         text,
@@ -194,7 +194,7 @@ export const sendSmsResponse = internalAction({
       const data: any = await response.json();
 
       // Record outbound message
-      await ctx.runMutation(api.functions.messages.recordOutbound, {
+      await ctx.runMutation(internal.functions.messages.recordOutbound, {
         message: {
           externalId: userId,
           channel: 'sms',

@@ -29,7 +29,7 @@ export const newsletterSignup = action({
       }
 
       // Log subscription in Convex emails table
-      await ctx.runMutation(api.functions.email.logDelivery, {
+      await ctx.runMutation(internal.functions.email.logDelivery, {
         to: email,
         subject: 'Newsletter Subscription',
         status: 'subscribed',

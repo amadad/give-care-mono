@@ -62,7 +62,7 @@ const getInterventionsTool = createTool({
       duration: string;
       description: string;
       content: string;
-    }> = await ctx.runQuery(api.functions.interventions.getByZones, {
+    }> = await ctx.runQuery(internal.functions.interventions.getByZones, {
       zones: args.zones,
       minEvidenceLevel: args.minEvidenceLevel || 'moderate',
       limit: args.limit || 5,

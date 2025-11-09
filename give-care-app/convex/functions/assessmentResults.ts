@@ -22,7 +22,7 @@ export const submit = action({
 
     try {
       // 1. Start assessment session (creates user if needed)
-      const startResult: any = await ctx.runMutation(api.functions.assessments.start, {
+      const startResult: any = await ctx.runMutation(internal.functions.assessments.start, {
         userId: email,
         definitionId: 'bsfc_v1',
       });
@@ -30,7 +30,7 @@ export const submit = action({
 
       // 2. Record all 10 answers
       for (let i = 0; i < responses.length; i++) {
-        const result: any = await ctx.runMutation(api.functions.assessments.recordAnswer, {
+        const result: any = await ctx.runMutation(internal.functions.assessments.recordAnswer, {
           sessionId,
           definitionId: 'bsfc_v1',
           questionId: `q${i + 1}`,
@@ -73,7 +73,7 @@ export const submit = action({
             });
 
             // Log email delivery
-            await ctx.runMutation(api.functions.email.logDelivery, {
+            await ctx.runMutation(internal.functions.email.logDelivery, {
               userId: email,
               to: email,
               subject: 'Your Caregiver Burnout Assessment Results',

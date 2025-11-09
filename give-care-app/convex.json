@@ -1,5 +1,9 @@
 {
   "node": {
     "version": "20"
+  },
+  "codegen": {
+    "staticApi": true,
+    "staticDataModel": true
   }
 }

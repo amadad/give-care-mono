@@ -60,7 +60,7 @@ const searchResourcesTool = createTool({
     const contextData = ctx.metadata as { context?: { metadata?: Record<string, unknown> } };
     const userMetadata = contextData?.context?.metadata || {};
 
-    const result = await ctx.runAction(api.functions.resources.searchResources, {
+    const result = await ctx.runAction(internal.functions.resources.searchResources, {
       query: args.query,
       metadata: userMetadata,
     });
@@ -96,7 +96,7 @@ const recordMemoryTool = createTool({
     }
 
     // Store the memory
-    await ctx.runMutation(api.functions.context.recordMemory, {
+    await ctx.runMutation(internal.functions.context.recordMemory, {
       userId,
       category: args.category,
       content: args.content,
@@ -121,7 +121,7 @@ const checkWellnessStatusTool = createTool({
       return { error: 'User ID not available' };
     }
 
-    const status = await ctx.runQuery(api.functions.wellness.getStatus, {
+    const status = await ctx.runQuery(internal.functions.wellness.getStatus, {
       userId,
     });
 
@@ -147,13 +147,13 @@ const findInterventionsTool = createTool({
     // If no zones provided, fetch user's pressure zones from wellness status
     let zones = args.zones;
     if (!zones || zones.length === 0) {
-      const status = await ctx.runQuery(api.functions.wellness.getStatus, {
+      const status = await ctx.runQuery(internal.functions.wellness.getStatus, {
         userId,
       });
       zones = status.pressureZones || ['emotional', 'physical']; // Default fallback
     }
 
-    const interventions = await ctx.runQuery(api.functions.interventions.getByZones, {
+    const interventions = await ctx.runQuery(internal.functions.interventions.getByZones, {
       zones,
       minEvidenceLevel: args.minEvidenceLevel || 'moderate',
       limit: args.limit || 5,

@@ -8,139 +8,1079 @@
  * @module
  */
 
-import type * as agents_assessment from "../agents/assessment.js";
-import type * as agents_crisis from "../agents/crisis.js";
-import type * as agents_main from "../agents/main.js";
-import type * as crons from "../crons.js";
-import type * as functions_admin from "../functions/admin.js";
-import type * as functions_alerts from "../functions/alerts.js";
-import type * as functions_analytics from "../functions/analytics.js";
-import type * as functions_assessmentResults from "../functions/assessmentResults.js";
-import type * as functions_assessments from "../functions/assessments.js";
-import type * as functions_billing from "../functions/billing.js";
-import type * as functions_context from "../functions/context.js";
-import type * as functions_email from "../functions/email.js";
-import type * as functions_inbound from "../functions/inbound.js";
-import type * as functions_inboundActions from "../functions/inboundActions.js";
-import type * as functions_interventions from "../functions/interventions.js";
-import type * as functions_logs from "../functions/logs.js";
-import type * as functions_manualLinkSubscription from "../functions/manualLinkSubscription.js";
-import type * as functions_memory from "../functions/memory.js";
-import type * as functions_messages from "../functions/messages.js";
-import type * as functions_newsletterActions from "../functions/newsletterActions.js";
-import type * as functions_resources from "../functions/resources.js";
-import type * as functions_scheduler from "../functions/scheduler.js";
-import type * as functions_users from "../functions/users.js";
-import type * as functions_watchers from "../functions/watchers.js";
-import type * as functions_wellness from "../functions/wellness.js";
-import type * as http from "../http.js";
-import type * as internal_metrics from "../internal/metrics.js";
-import type * as internal_onboarding from "../internal/onboarding.js";
-import type * as internal_scheduler from "../internal/scheduler.js";
-import type * as internal_seed from "../internal/seed.js";
-import type * as internal_threads from "../internal/threads.js";
-import type * as lib_billing from "../lib/billing.js";
-import type * as lib_constants from "../lib/constants.js";
-import type * as lib_files from "../lib/files.js";
-import type * as lib_interventions_seed from "../lib/interventions_seed.js";
-import type * as lib_maps from "../lib/maps.js";
-import type * as lib_policy from "../lib/policy.js";
-import type * as lib_profile from "../lib/profile.js";
-import type * as lib_prompts from "../lib/prompts.js";
-import type * as lib_rateLimiting from "../lib/rateLimiting.js";
-import type * as lib_summarization from "../lib/summarization.js";
-import type * as lib_types from "../lib/types.js";
-import type * as lib_usage from "../lib/usage.js";
-import type * as migrations_consolidateUserFields from "../migrations/consolidateUserFields.js";
-import type * as model_context from "../model/context.js";
-import type * as model_logs from "../model/logs.js";
-import type * as model_messages from "../model/messages.js";
-import type * as model_subscriptions from "../model/subscriptions.js";
-import type * as model_triggers from "../model/triggers.js";
-import type * as model_users from "../model/users.js";
-import type * as stripe from "../stripe.js";
-import type * as workflows_crisis from "../workflows/crisis.js";
-import type * as workflows_crisisSteps from "../workflows/crisisSteps.js";
-
-import type {
-  ApiFromModules,
-  FilterApi,
-  FunctionReference,
-} from "convex/server";
+import type { FunctionReference } from "convex/server";
 
 /**
- * A utility for referencing Convex functions in your app's API.
+ * A utility for referencing Convex functions in your app's public API.
  *
  * Usage:
  * ```js
  * const myFunctionReference = api.myModule.myFunction;
  * ```
  */
-declare const fullApi: ApiFromModules<{
-  "agents/assessment": typeof agents_assessment;
-  "agents/crisis": typeof agents_crisis;
-  "agents/main": typeof agents_main;
-  crons: typeof crons;
-  "functions/admin": typeof functions_admin;
-  "functions/alerts": typeof functions_alerts;
-  "functions/analytics": typeof functions_analytics;
-  "functions/assessmentResults": typeof functions_assessmentResults;
-  "functions/assessments": typeof functions_assessments;
-  "functions/billing": typeof functions_billing;
-  "functions/context": typeof functions_context;
-  "functions/email": typeof functions_email;
-  "functions/inbound": typeof functions_inbound;
-  "functions/inboundActions": typeof functions_inboundActions;
-  "functions/interventions": typeof functions_interventions;
-  "functions/logs": typeof functions_logs;
-  "functions/manualLinkSubscription": typeof functions_manualLinkSubscription;
-  "functions/memory": typeof functions_memory;
-  "functions/messages": typeof functions_messages;
-  "functions/newsletterActions": typeof functions_newsletterActions;
-  "functions/resources": typeof functions_resources;
-  "functions/scheduler": typeof functions_scheduler;
-  "functions/users": typeof functions_users;
-  "functions/watchers": typeof functions_watchers;
-  "functions/wellness": typeof functions_wellness;
-  http: typeof http;
-  "internal/metrics": typeof internal_metrics;
-  "internal/onboarding": typeof internal_onboarding;
-  "internal/scheduler": typeof internal_scheduler;
-  "internal/seed": typeof internal_seed;
-  "internal/threads": typeof internal_threads;
-  "lib/billing": typeof lib_billing;
-  "lib/constants": typeof lib_constants;
-  "lib/files": typeof lib_files;
-  "lib/interventions_seed": typeof lib_interventions_seed;
-  "lib/maps": typeof lib_maps;
-  "lib/policy": typeof lib_policy;
-  "lib/profile": typeof lib_profile;
-  "lib/prompts": typeof lib_prompts;
-  "lib/rateLimiting": typeof lib_rateLimiting;
-  "lib/summarization": typeof lib_summarization;
-  "lib/types": typeof lib_types;
-  "lib/usage": typeof lib_usage;
-  "migrations/consolidateUserFields": typeof migrations_consolidateUserFields;
-  "model/context": typeof model_context;
-  "model/logs": typeof model_logs;
-  "model/messages": typeof model_messages;
-  "model/subscriptions": typeof model_subscriptions;
-  "model/triggers": typeof model_triggers;
-  "model/users": typeof model_users;
-  stripe: typeof stripe;
-  "workflows/crisis": typeof workflows_crisis;
-  "workflows/crisisSteps": typeof workflows_crisisSteps;
-}>;
-declare const fullApiWithMounts: typeof fullApi;
+export declare const api: {
+  agents: {
+    assessment: {
+      runAssessmentAgent: FunctionReference<
+        "action",
+        "public",
+        {
+          context: {
+            consent: { emergency: boolean; marketing: boolean };
+            crisisFlags?: { active: boolean; terms: Array<string> };
+            locale: string;
+            metadata?: any;
+            sessionId?: string;
+            userId: string;
+          };
+          input: {
+            channel: "sms" | "email" | "web";
+            text: string;
+            userId: string;
+          };
+          threadId?: string;
+        },
+        any
+      >;
+    };
+    crisis: {
+      shouldInvokeCrisisAgent: FunctionReference<
+        "action",
+        "public",
+        {
+          context: {
+            consent: { emergency: boolean; marketing: boolean };
+            crisisFlags?: { active: boolean; terms: Array<string> };
+            locale: string;
+            metadata?: any;
+            sessionId?: string;
+            userId: string;
+          };
+        },
+        any
+      >;
+    };
+    main: {
+      runMainAgent: FunctionReference<
+        "action",
+        "public",
+        {
+          context: {
+            consent: { emergency: boolean; marketing: boolean };
+            crisisFlags?: { active: boolean; terms: Array<string> };
+            locale: string;
+            metadata?: any;
+            sessionId?: string;
+            userId: string;
+          };
+          input: {
+            channel: "sms" | "email" | "web";
+            text: string;
+            userId: string;
+          };
+          threadId?: string;
+        },
+        any
+      >;
+    };
+  };
+  functions: {
+    admin: {
+      getMetrics: FunctionReference<"query", "public", {}, any>;
+      getAllUsers: FunctionReference<
+        "query",
+        "public",
+        {
+          burnoutBand?: string;
+          cursor?: string;
+          journeyPhase?: string;
+          limit?: number;
+          search?: string;
+          subscriptionStatus?: string;
+        },
+        any
+      >;
+      getUserDetails: FunctionReference<
+        "query",
+        "public",
+        { userId: Id<"users"> },
+        any
+      >;
+      getSystemHealth: FunctionReference<"query", "public", {}, any>;
+      getCrisisAlerts: FunctionReference<"query", "public", {}, any>;
+      getAllSubscriptions: FunctionReference<"query", "public", {}, any>;
+      getSubscriptionsByPhone: FunctionReference<
+        "query",
+        "public",
+        { phoneNumber: string },
+        any
+      >;
+      getBillingEvents: FunctionReference<"query", "public", {}, any>;
+    };
+    alerts: {
+      listPending: FunctionReference<"query", "public", { limit: number }, any>;
+      markProcessed: FunctionReference<
+        "mutation",
+        "public",
+        {
+          alertId: Id<"alerts">;
+          result: { deliveredVia: "sms" | "email"; metadata?: any };
+        },
+        any
+      >;
+    };
+    analytics: {
+      getBurnoutDistribution: FunctionReference<"query", "public", {}, any>;
+      getUserJourneyFunnel: FunctionReference<"query", "public", {}, any>;
+      getDailyMetrics: FunctionReference<
+        "query",
+        "public",
+        { days: number },
+        any
+      >;
+      getQualityMetrics: FunctionReference<
+        "query",
+        "public",
+        { days: number },
+        any
+      >;
+      getRecentFeedback: FunctionReference<
+        "query",
+        "public",
+        { limit: number },
+        any
+      >;
+      getAgentPerformance: FunctionReference<
+        "query",
+        "public",
+        { days: number },
+        any
+      >;
+      getSummaryPerformance: FunctionReference<"query", "public", {}, any>;
+    };
+    assessmentResults: {
+      submit: FunctionReference<
+        "action",
+        "public",
+        { email: string; pressureZones: any; responses: Array<number> },
+        any
+      >;
+    };
+    assessments: {
+      start: FunctionReference<
+        "mutation",
+        "public",
+        { definitionId: string; userId: string },
+        any
+      >;
+      recordAnswer: FunctionReference<
+        "mutation",
+        "public",
+        {
+          definitionId: string;
+          questionId: string;
+          sessionId: Id<"assessment_sessions">;
+          value: number;
+        },
+        any
+      >;
+    };
+    billing: {
+      applyStripeEvent: FunctionReference<
+        "mutation",
+        "public",
+        { id: string; payload: any; type: string },
+        any
+      >;
+      refreshEntitlements: FunctionReference<
+        "mutation",
+        "public",
+        { userId: string },
+        any
+      >;
+    };
+    context: {
+      hydrate: FunctionReference<
+        "mutation",
+        "public",
+        {
+          user: {
+            channel: "sms" | "web";
+            externalId: string;
+            locale?: string;
+            phone?: string;
+          };
+        },
+        any
+      >;
+      persist: FunctionReference<
+        "mutation",
+        "public",
+        {
+          context: {
+            budget: {
+              maxInputTokens: number;
+              maxOutputTokens: number;
+              maxTools: number;
+            };
+            consent: { emergency: boolean; marketing: boolean };
+            crisisFlags?: { active: boolean; terms: Array<string> };
+            lastAssessment?: { definitionId: string; score: number };
+            locale: string;
+            metadata: any;
+            policyBundle: string;
+            promptHistory: Array<{ fieldId: string; text: string }>;
+            sessionId: string;
+            userId: string;
+          };
+        },
+        any
+      >;
+      recordMemory: FunctionReference<
+        "mutation",
+        "public",
+        {
+          category: string;
+          content: string;
+          importance: number;
+          userId: string;
+        },
+        any
+      >;
+    };
+    email: {
+      logDelivery: FunctionReference<
+        "mutation",
+        "public",
+        {
+          status: string;
+          subject: string;
+          to: string;
+          traceId: string;
+          userId?: string;
+        },
+        any
+      >;
+    };
+    interventions: {
+      getByZones: FunctionReference<
+        "query",
+        "public",
+        {
+          limit?: number;
+          minEvidenceLevel?: "high" | "moderate" | "low";
+          zones: Array<string>;
+        },
+        any
+      >;
+      getByCategory: FunctionReference<
+        "query",
+        "public",
+        { category: string; limit?: number },
+        any
+      >;
+      search: FunctionReference<
+        "query",
+        "public",
+        { limit?: number; query: string },
+        any
+      >;
+      getCategories: FunctionReference<"query", "public", {}, any>;
+      recordEvent: FunctionReference<
+        "mutation",
+        "public",
+        {
+          interventionId: Id<"interventions">;
+          metadata?: any;
+          status: "viewed" | "started" | "completed";
+          userId: string;
+        },
+        any
+      >;
+      getUserHistory: FunctionReference<
+        "query",
+        "public",
+        { userId: string },
+        any
+      >;
+    };
+    logs: {
+      agentRun: FunctionReference<
+        "mutation",
+        "public",
+        {
+          payload: {
+            agent: string;
+            budgetResult: {
+              toolCalls: number;
+              usedInputTokens: number;
+              usedOutputTokens: number;
+            };
+            externalId: string;
+            latencyMs: number;
+            policyBundle: string;
+            traceId: string;
+          };
+        },
+        any
+      >;
+      guardrail: FunctionReference<
+        "mutation",
+        "public",
+        {
+          payload: {
+            action: string;
+            context?: any;
+            externalId?: string;
+            ruleId: string;
+            traceId: string;
+          };
+        },
+        any
+      >;
+    };
+    manualLinkSubscription: {
+      linkSubscription: FunctionReference<
+        "mutation",
+        "public",
+        {
+          currentPeriodEnd: number;
+          phoneNumber: string;
+          planId: string;
+          stripeCustomerId: string;
+        },
+        any
+      >;
+    };
+    memory: {
+      record: FunctionReference<
+        "mutation",
+        "public",
+        {
+          category: string;
+          content: string;
+          importance: number;
+          userId: string;
+        },
+        any
+      >;
+      retrieve: FunctionReference<
+        "query",
+        "public",
+        { limit?: number; userId: string },
+        any
+      >;
+      retrieveByCategory: FunctionReference<
+        "query",
+        "public",
+        { category: string; limit?: number; userId: string },
+        any
+      >;
+      retrieveImportant: FunctionReference<
+        "query",
+        "public",
+        { limit?: number; minImportance?: number; userId: string },
+        any
+      >;
+    };
+    messages: {
+      recordInbound: FunctionReference<
+        "mutation",
+        "public",
+        {
+          message: {
+            channel: "sms" | "web";
+            externalId: string;
+            meta?: any;
+            redactionFlags?: Array<string>;
+            text: string;
+            traceId: string;
+          };
+        },
+        any
+      >;
+      recordOutbound: FunctionReference<
+        "mutation",
+        "public",
+        {
+          message: {
+            channel: "sms" | "web";
+            externalId: string;
+            meta?: any;
+            redactionFlags?: Array<string>;
+            text: string;
+            traceId: string;
+          };
+        },
+        any
+      >;
+    };
+    newsletterActions: {
+      newsletterSignup: FunctionReference<
+        "action",
+        "public",
+        { email: string },
+        any
+      >;
+    };
+    resources: {
+      searchResources: FunctionReference<
+        "action",
+        "public",
+        {
+          location?: { address?: string; latitude: number; longitude: number };
+          metadata?: any;
+          query: string;
+        },
+        any
+      >;
+      getResourceTemplates: FunctionReference<"action", "public", {}, any>;
+    };
+    scheduler: {
+      enqueueOnce: FunctionReference<
+        "mutation",
+        "public",
+        {
+          job: {
+            name: string;
+            payload: any;
+            runAt: string;
+            timezone: string;
+            userExternalId: string;
+          };
+        },
+        any
+      >;
+      createTrigger: FunctionReference<
+        "mutation",
+        "public",
+        {
+          trigger: {
+            nextRun: string;
+            payload: any;
+            rrule: string;
+            timezone: string;
+            userExternalId: string;
+          };
+        },
+        any
+      >;
+      cancelTrigger: FunctionReference<
+        "mutation",
+        "public",
+        { triggerId: Id<"triggers"> },
+        any
+      >;
+    };
+    users: {
+      getByExternalId: FunctionReference<
+        "query",
+        "public",
+        { externalId: string },
+        any
+      >;
+    };
+    wellness: {
+      getStatus: FunctionReference<"query", "public", { userId: string }, any>;
+    };
+  };
+  stripe: {
+    createCheckoutSession: FunctionReference<
+      "action",
+      "public",
+      { email: string; fullName: string; phoneNumber: string; priceId: string },
+      any
+    >;
+  };
+};
 
-export declare const api: FilterApi<
-  typeof fullApiWithMounts,
-  FunctionReference<any, "public">
->;
-export declare const internal: FilterApi<
-  typeof fullApiWithMounts,
-  FunctionReference<any, "internal">
->;
+/**
+ * A utility for referencing Convex functions in your app's internal API.
+ *
+ * Usage:
+ * ```js
+ * const myFunctionReference = internal.myModule.myFunction;
+ * ```
+ */
+export declare const internal: {
+  agents: {
+    crisis: {
+      runCrisisAgent: FunctionReference<
+        "action",
+        "internal",
+        {
+          context: {
+            consent: { emergency: boolean; marketing: boolean };
+            crisisFlags?: { active: boolean; terms: Array<string> };
+            locale: string;
+            metadata?: any;
+            sessionId?: string;
+            userId: string;
+          };
+          input: {
+            channel: "sms" | "email" | "web";
+            text: string;
+            userId: string;
+          };
+          threadId?: string;
+        },
+        any
+      >;
+    };
+    main: {
+      generateTextAction: FunctionReference<
+        "action",
+        "internal",
+        {
+          callSettings?: {
+            frequencyPenalty?: number;
+            headers?: Record<string, string>;
+            maxOutputTokens?: number;
+            maxRetries?: number;
+            presencePenalty?: number;
+            seed?: number;
+            stopSequences?: Array<string>;
+            temperature?: number;
+            topK?: number;
+            topP?: number;
+          };
+          contextOptions?: {
+            excludeToolMessages?: boolean;
+            recentMessages?: number;
+            searchOptions?: {
+              limit: number;
+              messageRange?: { after: number; before: number };
+              textSearch?: boolean;
+              vectorScoreThreshold?: number;
+              vectorSearch?: boolean;
+            };
+            searchOtherThreads?: boolean;
+          };
+          experimental_continueSteps?: boolean;
+          maxSteps?: number;
+          messages?: Array<
+            | {
+                content:
+                  | string
+                  | Array<
+                      | {
+                          providerMetadata?: Record<
+                            string,
+                            Record<string, any>
+                          >;
+                          providerOptions?: Record<string, Record<string, any>>;
+                          text: string;
+                          type: "text";
+                        }
+                      | {
+                          image: string | ArrayBuffer;
+                          mimeType?: string;
+                          providerOptions?: Record<string, Record<string, any>>;
+                          type: "image";
+                        }
+                      | {
+                          data: string | ArrayBuffer;
+                          filename?: string;
+                          mimeType: string;
+                          providerMetadata?: Record<
+                            string,
+                            Record<string, any>
+                          >;
+                          providerOptions?: Record<string, Record<string, any>>;
+                          type: "file";
+                        }
+                    >;
+                providerOptions?: Record<string, Record<string, any>>;
+                role: "user";
+              }
+            | {
+                content:
+                  | string
+                  | Array<
+                      | {
+                          providerMetadata?: Record<
+                            string,
+                            Record<string, any>
+                          >;
+                          providerOptions?: Record<string, Record<string, any>>;
+                          text: string;
+                          type: "text";
+                        }
+                      | {
+                          data: string | ArrayBuffer;
+                          filename?: string;
+                          mimeType: string;
+                          providerMetadata?: Record<
+                            string,
+                            Record<string, any>
+                          >;
+                          providerOptions?: Record<string, Record<string, any>>;
+                          type: "file";
+                        }
+                      | {
+                          providerMetadata?: Record<
+                            string,
+                            Record<string, any>
+                          >;
+                          providerOptions?: Record<string, Record<string, any>>;
+                          signature?: string;
+                          text: string;
+                          type: "reasoning";
+                        }
+                      | {
+                          data: string;
+                          providerMetadata?: Record<
+                            string,
+                            Record<string, any>
+                          >;
+                          providerOptions?: Record<string, Record<string, any>>;
+                          type: "redacted-reasoning";
+                        }
+                      | {
+                          args: any;
+                          providerExecuted?: boolean;
+                          providerMetadata?: Record<
+                            string,
+                            Record<string, any>
+                          >;
+                          providerOptions?: Record<string, Record<string, any>>;
+                          toolCallId: string;
+                          toolName: string;
+                          type: "tool-call";
+                        }
+                      | {
+                          args?: any;
+                          experimental_content?: Array<
+                            | { text: string; type: "text" }
+                            | { data: string; mimeType?: string; type: "image" }
+                          >;
+                          isError?: boolean;
+                          output?:
+                            | { type: "text"; value: string }
+                            | { type: "json"; value: any }
+                            | { type: "error-text"; value: string }
+                            | { type: "error-json"; value: any }
+                            | {
+                                type: "content";
+                                value: Array<
+                                  | { text: string; type: "text" }
+                                  | {
+                                      data: string;
+                                      mediaType: string;
+                                      type: "media";
+                                    }
+                                >;
+                              };
+                          providerExecuted?: boolean;
+                          providerMetadata?: Record<
+                            string,
+                            Record<string, any>
+                          >;
+                          providerOptions?: Record<string, Record<string, any>>;
+                          result?: any;
+                          toolCallId: string;
+                          toolName: string;
+                          type: "tool-result";
+                        }
+                      | {
+                          id: string;
+                          providerMetadata?: Record<
+                            string,
+                            Record<string, any>
+                          >;
+                          providerOptions?: Record<string, Record<string, any>>;
+                          sourceType: "url";
+                          title?: string;
+                          type: "source";
+                          url: string;
+                        }
+                      | {
+                          filename?: string;
+                          id: string;
+                          mediaType: string;
+                          providerMetadata?: Record<
+                            string,
+                            Record<string, any>
+                          >;
+                          providerOptions?: Record<string, Record<string, any>>;
+                          sourceType: "document";
+                          title: string;
+                          type: "source";
+                        }
+                    >;
+                providerOptions?: Record<string, Record<string, any>>;
+                role: "assistant";
+              }
+            | {
+                content: Array<{
+                  args?: any;
+                  experimental_content?: Array<
+                    | { text: string; type: "text" }
+                    | { data: string; mimeType?: string; type: "image" }
+                  >;
+                  isError?: boolean;
+                  output?:
+                    | { type: "text"; value: string }
+                    | { type: "json"; value: any }
+                    | { type: "error-text"; value: string }
+                    | { type: "error-json"; value: any }
+                    | {
+                        type: "content";
+                        value: Array<
+                          | { text: string; type: "text" }
+                          | { data: string; mediaType: string; type: "media" }
+                        >;
+                      };
+                  providerExecuted?: boolean;
+                  providerMetadata?: Record<string, Record<string, any>>;
+                  providerOptions?: Record<string, Record<string, any>>;
+                  result?: any;
+                  toolCallId: string;
+                  toolName: string;
+                  type: "tool-result";
+                }>;
+                providerOptions?: Record<string, Record<string, any>>;
+                role: "tool";
+              }
+            | {
+                content: string;
+                providerOptions?: Record<string, Record<string, any>>;
+                role: "system";
+              }
+          >;
+          prompt?: string;
+          promptMessageId?: string;
+          providerOptions?: Record<string, Record<string, any>>;
+          storageOptions?: {
+            saveMessages?: "all" | "none" | "promptAndOutput";
+          };
+          stream?: boolean;
+          system?: string;
+          threadId?: string;
+          toolChoice?:
+            | "auto"
+            | "none"
+            | "required"
+            | { toolName: string; type: "tool" };
+          userId?: string;
+        },
+        any
+      >;
+    };
+  };
+  functions: {
+    context: {
+      getConversationSummary: FunctionReference<
+        "query",
+        "internal",
+        { externalId: string; limit?: number },
+        any
+      >;
+    };
+    inbound: {
+      processInboundMessage: FunctionReference<
+        "action",
+        "internal",
+        {
+          channel: "sms" | "email" | "web";
+          externalId: string;
+          messageId: Id<"messages">;
+          text: string;
+          userId: Id<"users">;
+        },
+        any
+      >;
+    };
+    inboundActions: {
+      generateMainResponse: FunctionReference<
+        "action",
+        "internal",
+        {
+          channel: "sms" | "email" | "web";
+          text: string;
+          threadId: string;
+          userId: Id<"users">;
+        },
+        any
+      >;
+      sendSignupMessage: FunctionReference<
+        "action",
+        "internal",
+        {
+          channel: "sms" | "email" | "web";
+          phone?: string;
+          signupUrl: string;
+          userId: string;
+        },
+        any
+      >;
+      sendSmsResponse: FunctionReference<
+        "action",
+        "internal",
+        { text: string; to: string; userId: string },
+        any
+      >;
+      generateCrisisResponse: FunctionReference<
+        "action",
+        "internal",
+        {
+          channel: "sms" | "email" | "web";
+          text: string;
+          threadId: string;
+          userId: Id<"users">;
+        },
+        any
+      >;
+    };
+    logs: {
+      logCrisisInteraction: FunctionReference<
+        "mutation",
+        "internal",
+        {
+          chunks: Array<string>;
+          input: string;
+          timestamp: number;
+          userId: string;
+        },
+        any
+      >;
+      logAgentRunInternal: FunctionReference<
+        "mutation",
+        "internal",
+        {
+          agent: string;
+          budgetResult: {
+            toolCalls: number;
+            usedInputTokens: number;
+            usedOutputTokens: number;
+          };
+          latencyMs: number;
+          policyBundle: string;
+          traceId: string;
+          userId: string;
+        },
+        any
+      >;
+    };
+    scheduler: {
+      processBatchInternal: FunctionReference<
+        "mutation",
+        "internal",
+        { batchSize: number },
+        any
+      >;
+      internalProcessDueTriggers: FunctionReference<
+        "action",
+        "internal",
+        { batchSize?: number },
+        any
+      >;
+    };
+    watchers: {
+      runEngagementChecks: FunctionReference<"mutation", "internal", {}, any>;
+    };
+  };
+  internal: {
+    metrics: {
+      aggregateDailyMetrics: FunctionReference<"action", "internal", {}, any>;
+      computeDailyMetrics: FunctionReference<
+        "mutation",
+        "internal",
+        { date: string },
+        any
+      >;
+      computeSubscriptionMetrics: FunctionReference<
+        "mutation",
+        "internal",
+        {},
+        any
+      >;
+      computeJourneyFunnel: FunctionReference<"mutation", "internal", {}, any>;
+      computeBurnoutDistribution: FunctionReference<
+        "mutation",
+        "internal",
+        {},
+        any
+      >;
+    };
+    onboarding: {
+      sendWelcomeSms: FunctionReference<
+        "action",
+        "internal",
+        { fullName: string; phoneNumber: string },
+        any
+      >;
+    };
+    scheduler: {
+      advanceTriggerMutation: FunctionReference<
+        "mutation",
+        "internal",
+        { triggerId: Id<"triggers"> },
+        any
+      >;
+    };
+    seed: {
+      seedInterventions: FunctionReference<"mutation", "internal", {}, any>;
+    };
+    threads: {
+      createComponentThread: FunctionReference<
+        "mutation",
+        "internal",
+        { userId: Id<"users"> },
+        any
+      >;
+    };
+  };
+  lib: {
+    files: {
+      storeMMSFile: FunctionReference<
+        "action",
+        "internal",
+        { blob: any; filename?: string; mimeType: string; sha256?: string },
+        any
+      >;
+      getMessageFileParts: FunctionReference<
+        "action",
+        "internal",
+        { fileIds: Array<string> },
+        any
+      >;
+      vacuumUnusedFiles: FunctionReference<
+        "mutation",
+        "internal",
+        { olderThanDays?: number },
+        any
+      >;
+    };
+    usage: {
+      insertLLMUsage: FunctionReference<
+        "mutation",
+        "internal",
+        {
+          agentName?: string;
+          model: string;
+          provider: string;
+          providerMetadata?: any;
+          threadId?: string;
+          traceId?: string;
+          usage: any;
+          userId?: Id<"users">;
+        },
+        any
+      >;
+    };
+  };
+  migrations: {
+    consolidateUserFields: {
+      consolidateUserFields: FunctionReference<"mutation", "internal", {}, any>;
+    };
+  };
+  model: {
+    subscriptions: {
+      hasActiveSubscriptionQuery: FunctionReference<
+        "query",
+        "internal",
+        { userId: Id<"users"> },
+        any
+      >;
+    };
+    users: {
+      ensureUserMutation: FunctionReference<
+        "mutation",
+        "internal",
+        {
+          channel: "sms" | "web";
+          consent?: { emergency: boolean; marketing: boolean };
+          externalId: string;
+          locale?: string;
+          metadata?: any;
+          phone?: string;
+        },
+        any
+      >;
+      getUser: FunctionReference<
+        "query",
+        "internal",
+        { userId: Id<"users"> },
+        any
+      >;
+      updateUserMetadata: FunctionReference<
+        "mutation",
+        "internal",
+        { metadata: any; userId: Id<"users"> },
+        any
+      >;
+    };
+  };
+  workflows: {
+    crisis: {
+      crisisEscalation: FunctionReference<"mutation", "internal", any, any>;
+      crisisFollowUp: FunctionReference<"mutation", "internal", any, any>;
+    };
+    crisisSteps: {
+      logCrisisEvent: FunctionReference<
+        "mutation",
+        "internal",
+        {
+          messageText: string;
+          severity: "high" | "medium" | "low";
+          terms: Array<string>;
+          userId: Id<"users">;
+        },
+        any
+      >;
+      generateCrisisResponse: FunctionReference<
+        "action",
+        "internal",
+        {
+          messageText: string;
+          severity: "high" | "medium" | "low";
+          threadId: string;
+          userId: Id<"users">;
+        },
+        any
+      >;
+      notifyEmergencyContact: FunctionReference<
+        "action",
+        "internal",
+        {
+          crisisEventId: Id<"alerts">;
+          messageText: string;
+          userId: Id<"users">;
+        },
+        any
+      >;
+      scheduleFollowUp: FunctionReference<
+        "mutation",
+        "internal",
+        {
+          crisisEventId: Id<"alerts">;
+          hoursFromNow: number;
+          userId: Id<"users">;
+        },
+        any
+      >;
+      checkRecentActivity: FunctionReference<
+        "query",
+        "internal",
+        { hoursAgo: number; userId: Id<"users"> },
+        any
+      >;
+      sendFollowUpMessage: FunctionReference<
+        "action",
+        "internal",
+        { crisisEventId: Id<"alerts">; userId: Id<"users"> },
+        any
+      >;
+      updateCrisisEvent: FunctionReference<
+        "mutation",
+        "internal",
+        { crisisEventId: Id<"alerts">; status: string },
+        any
+      >;
+    };
+  };
+};
 
 export declare const components: {
   agent: {
