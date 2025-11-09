@@ -133,7 +133,10 @@ export const applyStripeEvent = mutation({
     const customerId = payload?.data?.object?.customer ?? payload?.customer;
     const planId = payload?.data?.object?.plan?.id ?? payload?.plan_id ?? 'free';
     const status = payload?.data?.object?.status ?? 'active';
-    const currentPeriodEnd = payload?.data?.object?.current_period_end ?? Date.now();
+    // Stripe uses seconds, convert to milliseconds
+    const currentPeriodEnd = payload?.data?.object?.current_period_end
+      ? payload.data.object.current_period_end * 1000
+      : Date.now();
     const externalUserId = payload?.metadata?.userId ?? payload?.data?.object?.metadata?.userId;
 
     // Extract phone number and name from checkout.session.completed metadata

@@ -240,12 +240,15 @@ export const searchResources = action({
 
     if (!finalLocation && metadata) {
       const extracted = extractLocation(metadata as Record<string, unknown>);
-      if (extracted && extracted.latitude !== undefined && extracted.longitude !== undefined) {
-        finalLocation = extracted as { address?: string; latitude: number; longitude: number };
+      if (extracted) {
+        finalLocation = extracted as any;
       }
     }
 
-    if (!finalLocation || (!('zipCode' in finalLocation) && !finalLocation.address && !finalLocation.latitude)) {
+    // Check if we have any valid location data (zipCode, address, or lat/lng)
+    if (!finalLocation ||
+        (!finalLocation.zipCode && !finalLocation.address &&
+         finalLocation.latitude === undefined && finalLocation.longitude === undefined)) {
       return {
         error: 'I need your zip code to find nearby resources. What\'s your zip code?',
         text: '',

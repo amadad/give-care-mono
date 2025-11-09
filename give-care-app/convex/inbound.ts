@@ -71,7 +71,7 @@ const persistThreadIdIfNeeded = async (
     return;
   }
   const nextMetadata: UserMetadata = { ...metadata, componentThreadId: nextThreadId };
-  await ctx.runMutation(internal.model.users.updateUserMetadata, {
+  await ctx.runMutation(internal.core.updateUserMetadata, {
     userId,
     metadata: nextMetadata,
   });
@@ -91,7 +91,7 @@ const ensureComponentThreadId = async (ctx: ActionCtx, user: UserDoc): Promise<s
   }
 
   // Use internal mutation wrapper (Convex best practice: avoid ActionCtx→MutationCtx casts)
-  const createdThreadId = await ctx.runMutation(internal.createComponentThread, {
+  const createdThreadId = await ctx.runMutation(internal.internal.createComponentThread, {
     userId: user._id,
   });
   await persistThreadIdIfNeeded(ctx, user._id, metadata, createdThreadId);
@@ -123,12 +123,12 @@ export const processInboundMessage = internalAction({
     console.log('[inbound] Processing message', { messageId, userId, externalId, channel });
 
     // Check subscription status via query
-    const hasSubscription = await ctx.runQuery(internal.model.subscriptions.hasActiveSubscriptionQuery, {
+    const hasSubscription = await ctx.runQuery(internal.core.hasActiveSubscriptionQuery, {
       userId,
     });
     console.log('[inbound] Subscription check', { userId, hasSubscription });
 
-    const user = await ctx.runQuery(internal.model.users.getUser, { userId });
+    const user = await ctx.runQuery(internal.core.getUser, { userId });
     if (!user) {
       throw new Error(`User ${userId} not found during inbound processing`);
     }
@@ -193,7 +193,7 @@ export const generateCrisisResponse = internalAction({
   },
   handler: async (ctx, { threadId, text, userId, channel }): Promise<any> => {
     // Get user context
-    const user: any = await ctx.runQuery(internal.model.users.getUser, {
+    const user: any = await ctx.runQuery(internal.core.getUser, {
       userId,
     });
     if (!user) {
@@ -255,7 +255,7 @@ export const generateMainResponse = internalAction({
   },
   handler: async (ctx, { threadId, text, userId, channel }): Promise<any> => {
     // Get user context
-    const user: any = await ctx.runQuery(internal.model.users.getUser, {
+    const user: any = await ctx.runQuery(internal.core.getUser, {
       userId,
     });
     if (!user) {
@@ -348,13 +348,14 @@ export const sendSmsResponse = internalAction({
     }
 
     try {
+      const auth = Buffer.from(`${accountSid}:${authToken}`).toString('base64');
       const response = await fetch(
         `https://api.twilio.com/2010-04-01/Accounts/${accountSid}/Messages.json`,
         {
           method: 'POST',
           headers: {
             'Content-Type': 'application/x-www-form-urlencoded',
-            Authorization: `Basic ${btoa(`${accountSid}:${authToken}`)}`,
+            Authorization: `Basic ${auth}`,
           },
           body: new URLSearchParams({
             To: to,
@@ -373,7 +374,7 @@ export const sendSmsResponse = internalAction({
       const data: any = await response.json();
 
       // Record outbound message
-      await ctx.runMutation(internal.recordOutbound, {
+      await ctx.runMutation(internal.internal.recordOutbound, {
         message: {
           externalId: userId,
           channel: 'sms',

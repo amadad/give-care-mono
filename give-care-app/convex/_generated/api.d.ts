@@ -99,6 +99,18 @@ export declare const api: {
     >;
   };
   internal: {
+    newsletterSignup: FunctionReference<
+      "action",
+      "public",
+      { email: string },
+      any
+    >;
+    submit: FunctionReference<
+      "action",
+      "public",
+      { email: string; pressureZones: any; responses: Array<number> },
+      any
+    >;
     recordInbound: FunctionReference<
       "mutation",
       "public",
@@ -287,18 +299,6 @@ export declare const api: {
       "query",
       "public",
       { userId: string },
-      any
-    >;
-    newsletterSignup: FunctionReference<
-      "action",
-      "public",
-      { email: string },
-      any
-    >;
-    submit: FunctionReference<
-      "action",
-      "public",
-      { email: string; pressureZones: any; responses: Array<number> },
       any
     >;
     linkSubscription: FunctionReference<
@@ -771,6 +771,12 @@ export declare const internal: {
     >;
   };
   internal: {
+    sendWelcomeSms: FunctionReference<
+      "action",
+      "internal",
+      { fullName: string; phoneNumber: string },
+      any
+    >;
     aggregateDailyMetrics: FunctionReference<"action", "internal", {}, any>;
     computeDailyMetrics: FunctionReference<
       "mutation",
@@ -789,12 +795,6 @@ export declare const internal: {
       "mutation",
       "internal",
       {},
-      any
-    >;
-    sendWelcomeSms: FunctionReference<
-      "action",
-      "internal",
-      { fullName: string; phoneNumber: string },
       any
     >;
     advanceTriggerMutation: FunctionReference<

@@ -36,10 +36,10 @@ async function verifyTwilioSignature(
     encoder.encode(data)
   );
 
-  // Convert to base64
-  const expectedSignature = btoa(
-    String.fromCharCode(...new Uint8Array(signatureBytes))
-  );
+  // Convert to base64 using Buffer (Node.js)
+  const expectedSignature = Buffer
+    .from(new Uint8Array(signatureBytes))
+    .toString('base64');
 
   return expectedSignature === signature;
 }
@@ -161,7 +161,7 @@ http.route({
       const traceId = `twilio-${messageSid}`;
 
       // Record the inbound message (phone number is extracted from 'from' field)
-      const messageRecord = await ctx.runMutation(internal.recordInbound, {
+      const messageRecord = await ctx.runMutation(internal.internal.recordInbound, {
         message: {
           externalId: from,
           channel: 'sms',
