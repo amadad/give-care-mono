@@ -26,8 +26,8 @@ const deliverSms = async (ctx: any, args: DeliverSmsArgs) => {
     await enforceOutboundSmsLimit(ctx, args.convexUserId);
   }
 
-  // Send via Twilio component
-  await twilio.send(ctx, {
+  // Send via Twilio SDK
+  await twilio.messages.create({
     to: args.to,
     body: args.text,
   });
