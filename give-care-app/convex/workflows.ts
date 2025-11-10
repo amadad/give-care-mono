@@ -220,8 +220,8 @@ export const generateCrisisResponse = internalAction({
       },
     };
 
-    // Call crisis agent (now in agents.ts)
-    const response: any = await ctx.runAction(internal.agents.runCrisisAgent, {
+    // Call crisis agent (now in agents/crisis.ts)
+    const response: any = await ctx.runAction(internal.agents.crisis.runCrisisAgent, {
       input: {
         channel: 'sms' as const,
         text: args.messageText,
