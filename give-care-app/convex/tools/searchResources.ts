@@ -14,7 +14,7 @@ export const searchResources = createTool({
     query: z.string().describe('Natural language query for caregiving resources (e.g., "respite care near me", "support groups")'),
     category: z.string().optional().describe('Optional category: respite, support, daycare, homecare, medical, community, meals, transport, hospice, memory'),
   }),
-  description: 'Search for local caregiving resources using Google Maps. Returns nearby services like respite care, support groups, adult day care, home health agencies, and community resources with addresses, hours, and reviews.',
+  description: 'Search for local caregiving resources using Google Maps Grounding (real-time data from 250M+ places). Returns nearby services like respite care, support groups, adult day care, home health agencies, and community resources with real addresses, hours, ratings, and phone numbers. Requires user zip code.',
   handler: async (ctx, args: { query: string; category?: string }): Promise<{ error?: string; suggestion?: string; resources?: string; sources?: any[]; widgetToken?: string }> => {
     // @ts-expect-error - metadata property exists at runtime
     const contextData = ctx.metadata as { context?: { metadata?: Record<string, unknown> } };
