@@ -23,16 +23,15 @@ export const startAssessment = mutation({
       throw new Error('User not found');
     }
 
-    // Close any existing active sessions for this assessment
+    // ✅ Fix: Only fetch active sessions, limit query
     const existingSessions = await ctx.db
       .query('assessment_sessions')
       .withIndex('by_user_definition', (q) => q.eq('userId', user._id).eq('definitionId', definition))
-      .collect();
+      .filter((q) => q.eq(q.field('status'), 'active'))
+      .take(10); // Reasonable limit
 
     for (const session of existingSessions) {
-      if (session.status === 'active') {
-        await ctx.db.patch(session._id, { status: 'completed' });
-      }
+      await ctx.db.patch(session._id, { status: 'completed' });
     }
 
     // Create new assessment session

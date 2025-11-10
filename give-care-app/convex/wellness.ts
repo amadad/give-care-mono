@@ -66,9 +66,15 @@ export const getStatus = query({
       .order('desc')
       .take(recentLimit);
 
+    // ✅ Fix N+1: Batch fetch all assessments in parallel
+    const assessments = await Promise.all(
+      scoreDocs.map((score) => ctx.db.get(score.assessmentId))
+    );
+
     const history = [];
-    for (const score of scoreDocs) {
-      const assessment = await ctx.db.get(score.assessmentId);
+    for (let i = 0; i < scoreDocs.length; i++) {
+      const score = scoreDocs[i];
+      const assessment = assessments[i];
       if (!assessment) continue;
       history.push({
         assessmentId: score.assessmentId,

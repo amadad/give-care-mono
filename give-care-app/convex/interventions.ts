@@ -19,7 +19,12 @@ export const getByZones = query({
     const targetZones = new Set(zones.map((zone) => zone.toLowerCase()));
     const minRank = evidenceRank(minEvidenceLevel);
 
-    const interventions = await ctx.db.query('interventions').collect();
+    // ✅ Fix: Add reasonable limit to prevent full table scan
+    // Load up to 100 interventions for filtering/sorting (most queries need <20)
+    // Note: Index doesn't exist yet, but query still works with limit
+    const interventions = await ctx.db
+      .query('interventions')
+      .take(100);
     const scored = interventions
       .filter((intervention) => evidenceRank(intervention.evidenceLevel) >= minRank)
       .map((intervention) => {

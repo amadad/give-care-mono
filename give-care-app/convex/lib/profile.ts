@@ -10,16 +10,11 @@ export const extractProfileVariables = (profile: any) => {
   };
 };
 
-export const getProfileCompleteness = (profile: any) => {
-  return {
-    profileComplete: true,
-    missingFieldsSection: '',
-  };
-};
+// ✅ Fix: Removed unused getProfileCompleteness function
 
-export const buildWellnessInfo = (metadata: any) => {
-  // Build wellness info from metadata
-  // This can be expanded based on assessment scores, etc.
+export const buildWellnessInfo = (metadata: any): string => {
+  // ✅ Fix: Placeholder - can be expanded based on assessment scores, etc.
+  // Currently returns empty string as wellness info is handled elsewhere
   return '';
 };
 

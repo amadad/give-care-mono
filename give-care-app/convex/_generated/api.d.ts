@@ -377,13 +377,13 @@ export declare const internal: {
       saveFacts: FunctionReference<
         "mutation",
         "internal",
-        { facts: Array<any>; userId: string },
+        { convexUserId: Id<"users">; facts: Array<any> },
         any
       >;
       updateContext: FunctionReference<
         "mutation",
         "internal",
-        { enrichedContext: string | null; userId: string },
+        { convexUserId: Id<"users">; enrichedContext: string | null },
         any
       >;
     };

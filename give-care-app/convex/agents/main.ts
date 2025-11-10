@@ -124,13 +124,7 @@ export const runMainAgent = action({
       let thread;
       let newThreadId: string;
 
-      const threadMetadata = {
-        context: {
-          sessionId: context.sessionId,
-          userId: context.userId,
-          metadata,
-        },
-      };
+      // ✅ Fix: Removed unused threadMetadata variable
 
       if (threadId) {
         // ✅ Continue existing thread - automatically includes message history
@@ -191,10 +185,14 @@ export const runMainAgent = action({
         { role: 'assistant', content: responseText },
       ];
 
+      // ✅ Fix: Add error handling for non-blocking workflow
       workflow.start(ctx, internal.workflows.memory.enrichMemory, {
         userId: context.userId,
         threadId: newThreadId,
         recentMessages,
+      }).catch((error) => {
+        // Log but don't block response - memory enrichment is best-effort
+        console.error('[main-agent] Memory enrichment workflow failed:', error);
       });
 
       return {

@@ -22,6 +22,15 @@ export const enrichMemory = workflow.define({
     recentMessages: v.array(v.any()), // Last few messages to analyze
   },
   handler: async (step, { userId, threadId, recentMessages }) => {
+    // ✅ Fix: Look up user once and reuse Convex ID
+    const user = await step.runQuery(internal.internal.getByExternalIdQuery, {
+      externalId: userId,
+    });
+    if (!user) {
+      console.warn(`[memory-enrichment] User not found: ${userId}`);
+      return { enriched: 0, contextReady: false };
+    }
+
     // Step 1: Extract important facts from recent conversation
     const facts = await step.runAction(
       internal.workflows.memoryActions.extractFacts,
@@ -29,11 +38,11 @@ export const enrichMemory = workflow.define({
       { retry: true }
     );
 
-    // Step 2: Save facts to memories table
+    // Step 2: Save facts to memories table (using Convex ID directly)
     if (facts && facts.length > 0) {
       await step.runMutation(
         internal.workflows.memoryMutations.saveFacts,
-        { userId, facts }
+        { convexUserId: user._id, facts }
       );
     }
 
@@ -44,10 +53,10 @@ export const enrichMemory = workflow.define({
       { retry: true }
     );
 
-    // Step 4: Save enriched context to user.metadata
+    // Step 4: Save enriched context to user.metadata (using Convex ID directly)
     await step.runMutation(
       internal.workflows.memoryMutations.updateContext,
-      { userId, enrichedContext }
+      { convexUserId: user._id, enrichedContext }
     );
 
     return { enriched: facts.length, contextReady: true };

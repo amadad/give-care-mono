@@ -13,21 +13,15 @@ import { v } from 'convex/values';
 
 export const saveFacts = internalMutation({
   args: {
-    userId: v.string(),
+    convexUserId: v.id('users'), // ✅ Fix: Accept Convex ID directly
     facts: v.array(v.any()),
   },
-  handler: async (ctx, { userId, facts }) => {
-    const user = await ctx.db
-      .query('users')
-      .withIndex('by_externalId', (q) => q.eq('externalId', userId))
-      .unique();
-
-    if (!user) return;
-
+  handler: async (ctx, { convexUserId, facts }) => {
+    // ✅ Fix: No user lookup needed - use ID directly
     // Save each fact to memories table
     for (const fact of facts) {
       await ctx.db.insert('memories', {
-        userId: user._id,
+        userId: convexUserId,
         category: fact.category || 'preference',
         content: fact.fact,
         importance: fact.importance || 5,
@@ -42,15 +36,12 @@ export const saveFacts = internalMutation({
 
 export const updateContext = internalMutation({
   args: {
-    userId: v.string(),
+    convexUserId: v.id('users'), // ✅ Fix: Accept Convex ID directly
     enrichedContext: v.union(v.string(), v.null()),
   },
-  handler: async (ctx, { userId, enrichedContext }) => {
-    const user = await ctx.db
-      .query('users')
-      .withIndex('by_externalId', (q) => q.eq('externalId', userId))
-      .unique();
-
+  handler: async (ctx, { convexUserId, enrichedContext }) => {
+    // ✅ Fix: No user lookup needed - use ID directly
+    const user = await ctx.db.get(convexUserId);
     if (!user) return;
 
     // Update user metadata with enriched context
@@ -58,6 +49,6 @@ export const updateContext = internalMutation({
     metadata.enrichedContext = enrichedContext;
     metadata.contextUpdatedAt = Date.now();
 
-    await ctx.db.patch(user._id, { metadata });
+    await ctx.db.patch(convexUserId, { metadata });
   },
 });

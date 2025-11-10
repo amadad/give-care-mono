@@ -67,8 +67,8 @@ export const processInbound = internalAction({
       });
     } else {
       // Main agent
-      // Get or create thread for user
-      const threadId = await getOrCreateThread(ctx, user._id, user.externalId);
+      // ✅ Fix: Pass user object directly to avoid redundant query
+      const threadId = getOrCreateThread(user);
       
       response = await ctx.runAction(api.agents.main.runMainAgent, {
         input: {
@@ -106,15 +106,10 @@ export const processInbound = internalAction({
 // GET OR CREATE THREAD
 // ============================================================================
 
-async function getOrCreateThread(
-  ctx: any,
-  userId: string,
-  externalId: string
-): Promise<string | undefined> {
-  const user = await ctx.runQuery(internal.internal.getUserById, { id: userId });
-  if (!user) return undefined;
-
-  // Get threadId from user metadata
+function getOrCreateThread(
+  user: { _id: string; metadata?: Record<string, unknown> }
+): string | undefined {
+  // ✅ Fix: Use user object directly instead of re-querying
   const metadata = (user.metadata ?? {}) as Record<string, unknown>;
   const threadId = metadata.threadId as string | undefined;
 
