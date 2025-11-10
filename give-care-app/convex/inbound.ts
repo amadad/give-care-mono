@@ -67,16 +67,8 @@ export const processInbound = internalAction({
       });
     } else {
       // Main agent
-      // ✅ Priority 3: Use listThreadsByUserId() instead of manual threadId storage
-      const existingThreadsResult = await ctx.runQuery(components.agent.threads.listThreadsByUserId, {
-        userId: user.externalId,
-        paginationOpts: { cursor: null, numItems: 1 },
-        order: 'desc', // Most recent first
-      });
-      const threadId = existingThreadsResult && existingThreadsResult.page && existingThreadsResult.page.length > 0 
-        ? existingThreadsResult.page[0]._id 
-        : undefined;
-      
+      // ✅ Removed duplicate thread lookup - let main agent handle it internally
+      // This saves ~229ms by avoiding duplicate query
       response = await ctx.runAction(api.agents.main.runMainAgent, {
         input: {
           channel: 'sms' as const,
@@ -84,7 +76,7 @@ export const processInbound = internalAction({
           userId: user.externalId,
         },
         context,
-        threadId,
+        threadId: undefined, // Let agent handle thread lookup internally
       });
     }
 

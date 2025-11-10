@@ -252,6 +252,23 @@ export type DataModel = {
     searchIndexes: {};
     vectorIndexes: {};
   };
+  intervention_zones: {
+    document: {
+      interventionId: Id<"interventions">;
+      zone: string;
+      _id: Id<"intervention_zones">;
+      _creationTime: number;
+    };
+    fieldPaths: "_creationTime" | "_id" | "interventionId" | "zone";
+    indexes: {
+      by_id: ["_id"];
+      by_creation_time: ["_creationTime"];
+      by_intervention: ["interventionId", "_creationTime"];
+      by_zone: ["zone", "_creationTime"];
+    };
+    searchIndexes: {};
+    vectorIndexes: {};
+  };
   interventions: {
     document: {
       category: string;

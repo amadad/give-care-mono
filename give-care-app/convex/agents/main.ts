@@ -151,45 +151,155 @@ export const runMainAgent = action({
         }
       }
 
+      // ✅ SPEED: Short input guard - skip heavy tools for throwaway inputs
+      const trimmedInput = input.text.trim();
+      const isShortInput = trimmedInput.length < 5;
+      
+      if (isShortInput) {
+        // Fast path: Return empathetic response + 1 concrete next step
+        // No LLM call, no tool calls, no context search
+        const fastResponse = `Hi ${userName}! I'm here to help. 
+
+What's on your mind today? You can ask me about:
+- Caregiving tips
+- Local resources
+- Managing stress
+- Or anything else you need support with
+
+What would be most helpful right now?`;
+        
+        // Save message for thread continuity
+        await saveMessage(ctx, components.agent, {
+          threadId: newThreadId,
+          prompt: input.text,
+        });
+        
+        const latencyMs = Date.now() - startTime;
+        
+        // Schedule enrichment in background (non-blocking)
+        // Use workflow.start() for retryable background work
+        void workflow.start(ctx, internal.workflows.memory.enrichMemory, {
+          userId: context.userId,
+          threadId: newThreadId,
+          recentMessages: [
+            { role: 'user', content: input.text },
+            { role: 'assistant', content: fastResponse },
+          ],
+        }).catch((error) => {
+          console.error('[main-agent] Background enrichment failed:', error);
+        });
+        
+        return {
+          text: fastResponse,
+          threadId: newThreadId,
+          latencyMs,
+          fastPath: true,
+        };
+      }
+
       // ✅ Priority 1: Save user message first (for idempotency and retries)
       const { messageId } = await saveMessage(ctx, components.agent, {
         threadId: newThreadId,
         prompt: input.text,
       });
 
-      // ✅ Priority 2: Use contextOptions for built-in RAG (replaces manual enrichedContext)
-      // ✅ Generate response using promptMessageId (references saved message)
-      // Note: contextOptions may not be in types yet, but should work at runtime per docs
-      const result = await thread.generateText({
-        promptMessageId: messageId, // ✅ Reference saved message for idempotency
-        system: systemPrompt,
-        // @ts-expect-error - contextOptions not in types yet but supported per docs
-        contextOptions: {
-          // Built-in semantic search - optimized for speed
-          searchOtherThreads: false, // ✅ Disable for speed - only search current thread
-          recentMessages: 5, // ✅ Reduced from 10 to 5 for faster responses
-          searchOptions: {
-            textSearch: true,
-            vectorSearch: false, // ✅ Disable vector search for speed (text search is faster)
-            limit: 5, // ✅ Reduced from 10 to 5
-          },
-        },
-        providerOptions: {
-          google: {
-            temperature: 0.7, // Balanced creativity (0-2, default 1.0)
-            topP: 0.95, // Nucleus sampling (0-1, default 0.95)
-            topK: 40, // Top-k sampling (1-40, default 40)
-            maxOutputTokens: 300, // Keep SMS responses concise (~150-300 tokens)
-            // Safety settings: Block harmful content (default is moderate)
-            safetySettings: [
-              { category: 'HARM_CATEGORY_HARASSMENT', threshold: 'BLOCK_MEDIUM_AND_ABOVE' },
-              { category: 'HARM_CATEGORY_HATE_SPEECH', threshold: 'BLOCK_MEDIUM_AND_ABOVE' },
-              { category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT', threshold: 'BLOCK_MEDIUM_AND_ABOVE' },
-              { category: 'HARM_CATEGORY_DANGEROUS_CONTENT', threshold: 'BLOCK_MEDIUM_AND_ABOVE' },
-            ],
-          },
-        },
+      // ✅ SPEED: Reduce contextOptions on first turns (fewer messages = faster)
+      const isFirstTurn = !threadId;
+      const contextOptions = isFirstTurn
+        ? {
+            // Minimal context for first turn - fastest response
+            searchOtherThreads: false,
+            recentMessages: 3, // Reduced from 5 for first turn
+            searchOptions: {
+              textSearch: true,
+              vectorSearch: false,
+              limit: 3, // Reduced from 5
+            },
+          }
+        : {
+            // Full context for subsequent turns
+            searchOtherThreads: false,
+            recentMessages: 5,
+            searchOptions: {
+              textSearch: true,
+              vectorSearch: false,
+              limit: 5,
+            },
+          };
+
+      // ✅ SPEED: LLM timeout wrapper (4s SLA) - prevents hanging responses
+      const LLM_TIMEOUT_MS = 4000; // 4 second SLA
+      const timeoutPromise = new Promise<never>((_, reject) => {
+        setTimeout(() => {
+          reject(new Error('LLM response timeout after 4s'));
+        }, LLM_TIMEOUT_MS);
       });
+
+      let result;
+      let timedOut = false;
+      
+      try {
+        // Race LLM call against timeout
+        result = await Promise.race([
+          thread.generateText({
+            promptMessageId: messageId,
+            system: systemPrompt,
+            // @ts-expect-error - contextOptions not in types yet but supported per docs
+            contextOptions,
+            providerOptions: {
+              google: {
+                temperature: 0.7,
+                topP: 0.95,
+                topK: 40,
+                maxOutputTokens: 300, // Keep SMS responses concise
+                safetySettings: [
+                  { category: 'HARM_CATEGORY_HARASSMENT', threshold: 'BLOCK_MEDIUM_AND_ABOVE' },
+                  { category: 'HARM_CATEGORY_HATE_SPEECH', threshold: 'BLOCK_MEDIUM_AND_ABOVE' },
+                  { category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT', threshold: 'BLOCK_MEDIUM_AND_ABOVE' },
+                  { category: 'HARM_CATEGORY_DANGEROUS_CONTENT', threshold: 'BLOCK_MEDIUM_AND_ABOVE' },
+                ],
+              },
+            },
+          }),
+          timeoutPromise,
+        ]);
+      } catch (error) {
+        // Timeout or LLM error - return fast fallback
+        if (error instanceof Error && error.message.includes('timeout')) {
+          timedOut = true;
+          // Schedule enrichment in background to improve next response
+          void workflow.start(ctx, internal.workflows.memory.enrichMemory, {
+            userId: context.userId,
+            threadId: newThreadId,
+            recentMessages: [
+              { role: 'user', content: input.text },
+              { role: 'assistant', content: '' }, // Will be enriched later
+            ],
+          }).catch(() => {
+            // Ignore errors - best effort
+          });
+          
+          // Return actionable fallback immediately
+          const timeoutResponse = `Hi ${userName}! I'm processing your message but it's taking longer than expected.
+
+Here's what I can help with right now:
+- Find local caregiving resources
+- Answer caregiving questions
+- Help manage stress
+
+What's most urgent for you today?`;
+          
+          const latencyMs = Date.now() - startTime;
+          
+          return {
+            text: timeoutResponse,
+            threadId: newThreadId,
+            latencyMs,
+            timeout: true,
+          };
+        }
+        throw error; // Re-throw non-timeout errors
+      }
 
       // ✅ Agent Component automatically saves message
       // No manual recordOutbound needed!
@@ -197,8 +307,9 @@ export const runMainAgent = action({
       const responseText: string = result.text;
       const latencyMs = Date.now() - startTime;
 
-      // Log agent run for analytics
-      await ctx.runMutation(internal.internal.logAgentRunInternal, {
+      // ✅ Log agent run for analytics (async, non-blocking)
+      // Don't await - fire and forget to return response faster
+      ctx.runMutation(internal.internal.logAgentRunInternal, {
         externalId: context.userId,
         agent: 'main',
         policyBundle: 'default_v1',
@@ -209,6 +320,9 @@ export const runMainAgent = action({
         },
         latencyMs,
         traceId: `main-${Date.now()}`,
+      }).catch((error) => {
+        // Log but don't block - analytics is best-effort
+        console.error('[main-agent] Analytics logging failed:', error);
       });
 
       // ✅ Async memory enrichment (non-blocking)
@@ -219,19 +333,18 @@ export const runMainAgent = action({
         { role: 'assistant', content: responseText },
       ];
 
-      // ✅ Fix: Memory enrichment runs async AFTER response (non-blocking)
-      // Skip for first message (threadId is new) to reduce overhead
-      // Memory enrichment needs conversation history, so only run after a few exchanges
-      if (threadId) {
+      // ✅ SPEED: Memory enrichment runs async AFTER response (non-blocking)
+      // Use workflow.start() for retryable background work (properly voided to avoid dangling promise)
+      // Skip for first message to reduce overhead
+      if (threadId && !timedOut) {
         // Thread exists - we have conversation history, safe to enrich
-        // ✅ Reduced to 3 messages for faster processing (matches extractFacts limit)
         void workflow.start(ctx, internal.workflows.memory.enrichMemory, {
           userId: context.userId,
           threadId: newThreadId,
-          recentMessages: recentMessages.slice(-3), // ✅ Only analyze last 3 messages (reduced overhead)
+          recentMessages: recentMessages.slice(-3), // Only analyze last 3 messages
         }).catch((error) => {
-          // Log but don't block response - memory enrichment is best-effort
-          console.error('[main-agent] Memory enrichment workflow failed:', error);
+          // Log but don't block - memory enrichment is best-effort
+          console.error('[main-agent] Memory enrichment failed:', error);
         });
       }
 

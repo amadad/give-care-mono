@@ -94,7 +94,7 @@ export default defineSchema({
     title: v.string(),
     description: v.string(),
     category: v.string(),
-    targetZones: v.array(v.string()),
+    targetZones: v.array(v.string()), // Kept for backward compatibility, but use intervention_zones for queries
     evidenceLevel: v.string(), // 'high', 'moderate', 'low'
     duration: v.string(),
     tags: v.array(v.string()),
@@ -102,6 +102,15 @@ export default defineSchema({
   })
     .index('by_category', ['category'])
     .index('by_evidence', ['evidenceLevel']),
+
+  // Intervention Zones (join table for efficient zone-based queries)
+  // ✅ SPEED: Normalized for O(log n) queries instead of O(n) table scans
+  intervention_zones: defineTable({
+    interventionId: v.id('interventions'),
+    zone: v.string(), // 'emotional', 'physical', 'social', 'time', 'financial'
+  })
+    .index('by_zone', ['zone']) // ✅ Fast zone lookups
+    .index('by_intervention', ['interventionId']), // For cleanup/deletes
 
   // Intervention events (tracking user interactions with interventions)
   intervention_events: defineTable({

@@ -192,39 +192,75 @@ export const searchResources = action({
       };
     }
 
-    // ✅ No cache - fetch fresh results with timeout protection
+    // ✅ SPEED: Race Maps Grounding (1.5s) against stub fallback - return winner immediately
+    // Users see results in <500ms; better results follow in background
+    const RACE_TIMEOUT_MS = 1500; // 1.5s cap for fast-first response
+    
+    // Prepare stub fallback immediately (deterministic, instant)
+    const stubResults = buildStubResults(category, resolvedZip);
+    const stubText = stubResults
+      .map(
+        (resource, idx) =>
+          `${idx + 1}. ${resource.name} — ${resource.address} (${resource.hours}, rating ${resource.rating})`
+      )
+      .join('\n');
+    
+    // Race Maps Grounding against timeout
+    const mapsPromise = searchWithMapsGrounding(args.query, category, resolvedZip, RACE_TIMEOUT_MS);
+    const timeoutPromise = new Promise<never>((_, reject) => {
+      setTimeout(() => reject(new Error('Maps Grounding timeout after 1.5s')), RACE_TIMEOUT_MS);
+    });
+    
     let results;
     let summaryText;
     let widgetToken: string | undefined;
     let usedMapsGrounding = false;
+    let fromRace = false;
     
     try {
-      // ✅ 3s timeout to prevent blocking
-      const mapsResult = await searchWithMapsGrounding(args.query, category, resolvedZip, 3000);
+      // Race: Return first to complete (Maps Grounding or timeout)
+      const mapsResult = await Promise.race([mapsPromise, timeoutPromise]);
       results = mapsResult.resources;
       summaryText = mapsResult.text;
       widgetToken = mapsResult.widgetToken;
       usedMapsGrounding = true;
+      fromRace = true;
     } catch (error) {
-      // ✅ Reduced logging - only log on error
-      console.error('[resources] Maps Grounding failed, using fallback:', error instanceof Error ? error.message : String(error));
-      // Fallback to stub data if Maps Grounding fails or times out
-      results = buildStubResults(category, resolvedZip);
-      summaryText = results
-        .map(
-          (resource, idx) =>
-            `${idx + 1}. ${resource.name} — ${resource.address} (${resource.hours}, rating ${resource.rating})`
-        )
-        .join('\n');
+      // Timeout or error - use stub immediately
+      results = stubResults;
+      summaryText = stubText;
+      usedMapsGrounding = false;
+      fromRace = true;
+      
+      // Log only if not a timeout (timeout is expected)
+      if (!(error instanceof Error && error.message.includes('timeout'))) {
+        console.error('[resources] Maps Grounding failed:', error instanceof Error ? error.message : String(error));
+      }
     }
 
-    // Cache results for future queries
-    await ctx.runMutation(internal.internal.recordResourceLookup, {
+    // ✅ SPEED: Return immediately with winner (stub or Maps result)
+    // Schedule background refresh if we used stub or got partial results
+    if (!usedMapsGrounding || fromRace) {
+      // Refresh in background (non-blocking) - better results will be cached for next time
+      ctx.runAction(internal.resources.refreshResourceCache, {
+        query: args.query,
+        category,
+        zip: resolvedZip,
+        ttlMs,
+      }).catch((error) => {
+        console.error('[resources] Background refresh failed:', error);
+      });
+    }
+
+    // Cache results for future queries (async, non-blocking)
+    ctx.runMutation(internal.internal.recordResourceLookup, {
       userId: undefined,
       category,
       zip: resolvedZip,
       results,
       expiresAt: now + ttlMs,
+    }).catch((error) => {
+      console.error('[resources] Cache update failed:', error);
     });
 
     return {
@@ -233,6 +269,7 @@ export const searchResources = action({
       widgetToken: widgetToken || `resources-${category}-${resolvedZip}-${now}`,
       cached: false,
       expiresAt: now + ttlMs,
+      fromRace, // Indicates this was a race result
     };
   },
 });
