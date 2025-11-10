@@ -290,7 +290,8 @@ npx convex run agents/main:runMainAgent '{
 
 Ensure these are set in Convex Dashboard:
 
-- `GEMINI_API_KEY` - Required for Maps Grounding
+- `GOOGLE_GENERATIVE_AI_API_KEY` - Required for Maps Grounding (AI SDK expects this name)
+- `GEMINI_API_KEY` - Also supported for backward compatibility
 - `TWILIO_ACCOUNT_SID` - For SMS testing (optional)
 - `TWILIO_AUTH_TOKEN` - For SMS testing (optional)
 

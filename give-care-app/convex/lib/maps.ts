@@ -195,9 +195,9 @@ export async function searchWithMapsGrounding(
       // Fall back to direct REST API if AI SDK doesn't support Maps Grounding
       console.log('[maps-grounding] AI SDK approach failed, using REST API fallback:', aiSdkError);
       
-      const apiKey = process.env.GEMINI_API_KEY;
+      const apiKey = process.env.GOOGLE_GENERATIVE_AI_API_KEY || process.env.GEMINI_API_KEY;
       if (!apiKey) {
-        throw new Error('GEMINI_API_KEY environment variable is required');
+        throw new Error('GOOGLE_GENERATIVE_AI_API_KEY environment variable is required (or GEMINI_API_KEY for backward compatibility)');
       }
 
       const requestBody: any = {
