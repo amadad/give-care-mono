@@ -141,7 +141,12 @@ export const searchResources = action({
       zip: resolvedZip,
     });
 
-    if (cache && cache.expiresAt && cache.expiresAt > now) {
+    // ✅ Stale-while-revalidate: Return expired cache immediately if available
+    // This prevents blocking while Maps Grounding refreshes in background
+    const isCacheValid = cache && cache.expiresAt && cache.expiresAt > now;
+    const hasStaleCache = cache && cache.results && cache.results.length > 0;
+
+    if (isCacheValid) {
       const text = cache.results
         .map(
           (resource: any, idx: number) =>
@@ -158,19 +163,52 @@ export const searchResources = action({
       };
     }
 
-    // ✅ Use Gemini Maps Grounding instead of stub data
+    // ✅ If stale cache exists, return it immediately and refresh in background
+    if (hasStaleCache) {
+      const staleText = cache.results
+        .map(
+          (resource: any, idx: number) =>
+            `${idx + 1}. ${resource.name} — ${resource.address} (${resource.hours}, rating ${resource.rating})`
+        )
+        .join('\n');
+
+      // Refresh in background (non-blocking)
+      ctx.runAction(internal.resources.refreshResourceCache, {
+        query: args.query,
+        category,
+        zip: resolvedZip,
+        ttlMs,
+      }).catch((error) => {
+        console.error('[resources] Background cache refresh failed:', error);
+      });
+
+      return {
+        resources: staleText,
+        sources: cache.results,
+        widgetToken: `resources-${category}-${resolvedZip}-${cache._id}`,
+        cached: true, // Mark as cached even though stale
+        expiresAt: cache.expiresAt,
+        stale: true,
+      };
+    }
+
+    // ✅ No cache - fetch fresh results with timeout protection
     let results;
     let summaryText;
     let widgetToken: string | undefined;
+    let usedMapsGrounding = false;
     
     try {
-      const mapsResult = await searchWithMapsGrounding(args.query, category, resolvedZip);
+      // ✅ 3s timeout to prevent blocking
+      const mapsResult = await searchWithMapsGrounding(args.query, category, resolvedZip, 3000);
       results = mapsResult.resources;
       summaryText = mapsResult.text;
       widgetToken = mapsResult.widgetToken;
+      usedMapsGrounding = true;
     } catch (error) {
-      console.error('[resources] Maps Grounding failed, using fallback:', error);
-      // Fallback to stub data if Maps Grounding fails
+      // ✅ Reduced logging - only log on error
+      console.error('[resources] Maps Grounding failed, using fallback:', error instanceof Error ? error.message : String(error));
+      // Fallback to stub data if Maps Grounding fails or times out
       results = buildStubResults(category, resolvedZip);
       summaryText = results
         .map(
@@ -196,6 +234,39 @@ export const searchResources = action({
       cached: false,
       expiresAt: now + ttlMs,
     };
+  },
+});
+
+// ============================================================================
+// BACKGROUND CACHE REFRESH ACTION (stale-while-revalidate)
+// ============================================================================
+
+export const refreshResourceCache = internalAction({
+  args: {
+    query: v.string(),
+    category: v.string(),
+    zip: v.string(),
+    ttlMs: v.number(),
+  },
+  handler: async (ctx, args) => {
+    try {
+      // Fetch fresh results with timeout
+      const mapsResult = await searchWithMapsGrounding(args.query, args.category, args.zip, 3000);
+      
+      // Update cache
+      await ctx.runMutation(internal.internal.recordResourceLookup, {
+        userId: undefined,
+        category: args.category,
+        zip: args.zip,
+        results: mapsResult.resources,
+        expiresAt: Date.now() + args.ttlMs,
+      });
+
+      return { success: true };
+    } catch (error) {
+      console.error('[resources] Background cache refresh failed:', error);
+      return { success: false, error: String(error) };
+    }
   },
 });
 

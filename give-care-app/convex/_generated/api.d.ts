@@ -331,6 +331,12 @@ export declare const internal: {
   };
   resources: {
     cleanupResourceCache: FunctionReference<"action", "internal", {}, any>;
+    refreshResourceCache: FunctionReference<
+      "action",
+      "internal",
+      { category: string; query: string; ttlMs: number; zip: string },
+      any
+    >;
   };
   workflows: {
     crisis: {

@@ -23,16 +23,23 @@ export const extractFacts = internalAction({
     recentMessages: v.array(v.any()),
   },
   handler: async (ctx, { userId, recentMessages }) => {
-    // Skip if no meaningful conversation
+    // ✅ Skip if no meaningful conversation (reduced threshold for speed)
     if (recentMessages.length < 2) return [];
 
-    const conversationText = recentMessages
+    // ✅ Limit to last 3 messages for faster processing (reduced from all)
+    const limitedMessages = recentMessages.slice(-3);
+    const conversationText = limitedMessages
       .map((m: any) => `${m.role}: ${m.content}`)
       .join('\n');
 
     try {
       // ✅ Use generateObject with Zod schema for structured output
-      const result = await generateObject({
+      // ✅ Optimized for speed: faster model, reduced tokens, timeout protection
+      const timeoutPromise = new Promise<never>((_, reject) => {
+        setTimeout(() => reject(new Error('Fact extraction timeout after 2s')), 2000);
+      });
+
+      const extractionPromise = generateObject({
         model: google('gemini-2.5-flash-lite'), // Fastest model for extraction
         prompt: `Extract important long-term facts about this caregiver from the conversation below.
 Focus on:
@@ -54,10 +61,12 @@ ${conversationText}`,
         providerOptions: {
           google: {
             topP: 0.8,
-            maxOutputTokens: 500,
+            maxOutputTokens: 300, // ✅ Reduced from 500 for faster responses
           },
         },
       });
+
+      const result = await Promise.race([extractionPromise, timeoutPromise]);
 
       // ✅ generateObject returns structured data directly - no parsing needed!
       return result.object;
@@ -78,10 +87,10 @@ export const buildContext = internalAction({
     threadId: v.string(),
   },
   handler: async (ctx, { userId, threadId }) => {
-    // Get recent memories for this user
+    // ✅ Get fewer memories for faster processing (reduced from 10 to 5)
     const memories = await ctx.runQuery(api.public.listMemories, {
       userId,
-      limit: 10,
+      limit: 5, // ✅ Reduced from 10 for speed
     });
 
     if (!memories || memories.length === 0) {
@@ -94,9 +103,14 @@ export const buildContext = internalAction({
       .join('\n');
 
     try {
-      const result = await generateText({
+      // ✅ Add timeout protection (2s max)
+      const timeoutPromise = new Promise<never>((_, reject) => {
+        setTimeout(() => reject(new Error('Context building timeout after 2s')), 2000);
+      });
+
+      const generationPromise = generateText({
         model: google('gemini-2.5-flash-lite'), // Fastest model for context building
-        prompt: `Summarize these caregiver facts into a concise context paragraph (max 200 words) for use in future conversations:
+        prompt: `Summarize these caregiver facts into a concise context paragraph (max 150 words) for use in future conversations:
 
 ${memoriesText}
 
@@ -109,13 +123,15 @@ Focus on:
 Context summary:`,
         temperature: 0.3, // Low for consistent summaries
         topP: 0.9,
-        maxOutputTokens: 300, // ~200 words = ~300 tokens
+        maxOutputTokens: 200, // ✅ Reduced from 300 for faster responses (~150 words)
         providerOptions: {
           google: {
             // No special options needed for text summarization
           },
         },
       });
+
+      const result = await Promise.race([generationPromise, timeoutPromise]);
 
       return result.text;
     } catch (error) {

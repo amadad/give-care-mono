@@ -35,7 +35,7 @@ const workflow = new WorkflowManager(components.workflow);
 
 export const mainAgent = new Agent(components.agent, {
   name: 'Caregiver Support',
-  languageModel: google('gemini-2.5-flash'), // Fast reasoning + tool use
+  languageModel: google('gemini-2.5-flash-lite'), // ✅ Fastest model for speed
   textEmbeddingModel: openai.embedding('text-embedding-3-small'), // Keep OpenAI embeddings (proven, separate from language model)
   instructions: MAIN_PROMPT,
   tools: {
@@ -224,10 +224,11 @@ export const runMainAgent = action({
       // Memory enrichment needs conversation history, so only run after a few exchanges
       if (threadId) {
         // Thread exists - we have conversation history, safe to enrich
+        // ✅ Reduced to 3 messages for faster processing (matches extractFacts limit)
         void workflow.start(ctx, internal.workflows.memory.enrichMemory, {
           userId: context.userId,
           threadId: newThreadId,
-          recentMessages: recentMessages.slice(-5), // ✅ Only analyze last 5 messages (reduced overhead)
+          recentMessages: recentMessages.slice(-3), // ✅ Only analyze last 3 messages (reduced overhead)
         }).catch((error) => {
           // Log but don't block response - memory enrichment is best-effort
           console.error('[main-agent] Memory enrichment workflow failed:', error);

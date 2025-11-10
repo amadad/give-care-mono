@@ -22,7 +22,7 @@ import { getInterventions } from '../tools/getInterventions';
 
 export const assessmentAgent = new Agent(components.agent, {
   name: 'Assessment Specialist',
-  languageModel: google('gemini-2.5-flash'), // Better reasoning for assessments
+  languageModel: google('gemini-2.5-flash-lite'), // ✅ Fastest model for speed
   textEmbeddingModel: openai.embedding('text-embedding-3-small'), // Keep OpenAI embeddings
   instructions: ASSESSMENT_PROMPT,
   tools: { getInterventions },
