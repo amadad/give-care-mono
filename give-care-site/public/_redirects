@@ -1,0 +1,7 @@
+# Cloudflare Pages redirects (for static export)
+# These redirects are handled at the edge, not by Next.js
+# Format: /source /destination status_code
+
+/news /words 301
+/news/:slug* /words/:slug* 301
+
