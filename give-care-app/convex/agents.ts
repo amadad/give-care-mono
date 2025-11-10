@@ -283,45 +283,13 @@ const mainAgent = new Agent(components.agent, {
   },
   maxSteps: 5, // Increased to allow for tool chains (e.g., check wellness → find interventions)
 
-  // Context handler: Combine conversation history + semantic memory retrieval
+  // Context handler: Use Agent Component's built-in search (non-blocking)
   contextHandler: async (ctx, args) => {
-    const recentMessages = args.recent || [];
-    const searchMessages = args.search || [];
-
-    // Extract user query for memory search
-    const rawContent = args.inputPrompt?.[0]?.content || args.inputMessages?.[0]?.content || '';
-    const userQuery = typeof rawContent === 'string' ? rawContent : '';
-
-    // Retrieve relevant memories via semantic search
-    let memoryContext: any[] = [];
-    if (args.userId && userQuery) {
-      try {
-        const memories = await ctx.runQuery(internal.public.retrieveMemories, {
-          userId: args.userId,
-          query: userQuery,
-          limit: 5,
-        });
-
-        if (memories.length > 0) {
-          const memoryText = memories
-            .map((m: { category: string; content: string; importance: number }) =>
-              `[${m.category}] ${m.content} (importance: ${m.importance}/10)`)
-            .join('\n');
-
-          memoryContext = [{
-            role: 'system' as const,
-            content: `## Long-term Memories\nRelevant information from previous conversations:\n${memoryText}`,
-          }];
-        }
-      } catch (error) {
-        console.error('[contextHandler] Error retrieving memories:', error);
-      }
-    }
-
+    // Agent Component provides built-in hybrid vector/text search
+    // Return only built-in context for fast responses
     return [
-      ...searchMessages,
-      ...memoryContext,      // Long-term facts (RAG-powered)
-      ...recentMessages,     // Recent conversation (Agent built-in)
+      ...args.search || [],      // Built-in search results
+      ...args.recent || [],      // Recent conversation
       ...args.inputMessages,
       ...args.inputPrompt,
       ...args.existingResponses,
@@ -435,6 +403,13 @@ export const runMainAgent = action({
         },
         latencyMs,
         traceId: `main-${Date.now()}`,
+      });
+
+      // Async: Enrich context with memories after response (non-blocking)
+      ctx.scheduler.runAfter(0, internal.agents.enrichThreadContext, {
+        threadId: newThreadId,
+        userId: context.userId,
+        userQuery: input.text,
       });
 
       return {
@@ -806,6 +781,52 @@ export const runAssessmentAgent: any = action({
         chunks: [{ type: 'error', content: errorMessage, meta: { error: String(error) } }],
         latencyMs,
       };
+    }
+  },
+});
+
+// ============================================================================
+// ASYNC CONTEXT ENRICHMENT
+// ============================================================================
+
+/**
+ * Enrich thread context with relevant memories (runs async after response)
+ * 
+ * This action retrieves memories based on user query and adds them as system
+ * messages to the thread. Agent Component's built-in search will find them
+ * on the next turn.
+ */
+export const enrichThreadContext = internalAction({
+  args: {
+    threadId: v.string(),
+    userId: v.string(),
+    userQuery: v.string(),
+  },
+  handler: async (ctx, { threadId, userId, userQuery }) => {
+    try {
+      // Retrieve relevant memories via semantic search
+      const memories = await ctx.runQuery(internal.public.retrieveMemories, {
+        userId,
+        query: userQuery,
+        limit: 5,
+      });
+
+      // Add high-importance memories as system messages to thread
+      for (const memory of memories.filter((m: any) => m.importance >= 7)) {
+        await ctx.runMutation(internal.appendMessage, {
+          userId,
+          role: 'system',
+          text: `[Memory: ${memory.category}] ${memory.content} (importance: ${memory.importance}/10)`,
+          metadata: {
+            threadId,
+            source: 'memory_enrichment',
+            importance: memory.importance,
+          },
+        });
+      }
+    } catch (error) {
+      console.error('[enrichThreadContext] Error enriching context:', error);
+      // Don't throw - this is fire-and-forget
     }
   },
 });
