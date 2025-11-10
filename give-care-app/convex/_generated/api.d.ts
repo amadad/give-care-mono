@@ -724,7 +724,7 @@ export declare const internal: {
       any
     >;
     cleanupResourceCache: FunctionReference<
-      "action",
+      "mutation",
       "internal",
       { limit?: number },
       any

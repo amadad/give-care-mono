@@ -119,7 +119,7 @@ export const recordResourceLookup = internalMutation({
   },
 });
 
-export const cleanupResourceCache = internalAction({
+export const cleanupResourceCache = internalMutation({
   args: {
     limit: v.optional(v.number()),
   },
