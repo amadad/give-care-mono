@@ -43,7 +43,7 @@ export const extractFacts = internalAction({
         model: google('gemini-2.5-flash-lite'), // Fastest model for extraction
         prompt: `Extract important long-term facts about this caregiver from the conversation below.
 Focus on:
-- Care recipient details (name, condition, relationship)
+- Care recipient details (name, condition, relationship) - use 'family_health'
 - Caregiver stress levels, triggers, coping strategies
 - Important dates, routines, preferences
 - Crisis indicators or concerning patterns
@@ -53,7 +53,7 @@ ${conversationText}`,
         schema: z.array(
           z.object({
             fact: z.string().describe('The fact to remember'),
-            category: z.enum(['care_routine', 'preference', 'crisis_trigger', 'intervention_result']),
+            category: z.enum(['care_routine', 'preference', 'crisis_trigger', 'intervention_result', 'family_health']),
             importance: z.number().min(1).max(10).describe('Importance score 1-10'),
           })
         ),
