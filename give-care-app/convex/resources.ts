@@ -1,354 +1,222 @@
-"use node";
-
-/**
- * Resources - External resource search
- *
- * Merges functions/resources.ts and lib/maps.ts
- * Handles Gemini search and Google Maps integration.
- *
- * Uses Gemini API with Google Maps grounding to find local caregiving resources
- * such as respite care, support groups, medical facilities, and community services.
- */
-
-import { action } from './_generated/server';
+"use server";
+import { action, internalMutation, internalQuery, internalAction } from './_generated/server';
 import { v } from 'convex/values';
-import { GoogleGenAI } from '@google/genai';
+import { getByExternalId } from './core';
+import { internal } from './_generated/api';
 
-// ============================================================================
-// TYPES
-// ============================================================================
-
-interface LocationContext {
-  zipCode?: string;
-  address?: string;
-  latitude?: number;
-  longitude?: number;
-}
-
-interface ResourceQuery {
-  query: string;
-  location: LocationContext;
-  radius?: number; // in meters, optional
-}
-
-interface MapSource {
-  uri: string;
-  title: string;
-  placeId: string;
-}
-
-interface ResourceResult {
-  text: string;
-  sources: MapSource[];
-  widgetToken?: string;
-}
-
-// ============================================================================
-// GOOGLE MAPS GROUNDING
-// ============================================================================
-
-/**
- * Build caregiving-specific query with context
- */
-const buildCaregivingQuery = (userQuery: string, location: LocationContext): string => {
-  // Enhance query with caregiving context if not already specific
-  const caregivingKeywords = [
-    'respite',
-    'adult day care',
-    'support group',
-    'caregiver',
-    'hospice',
-    'home health',
-    'senior center',
-    'nursing',
-    'memory care',
-    'assisted living',
-  ];
-
-  const hasCaregicingContext = caregivingKeywords.some((keyword) =>
-    userQuery.toLowerCase().includes(keyword)
-  );
-
-  let enhancedQuery = userQuery;
-
-  if (!hasCaregicingContext) {
-    enhancedQuery = `Caregiving resource: ${userQuery}`;
-  }
-
-  // Add location hint - prefer zip code, then address
-  if (location.zipCode) {
-    enhancedQuery += ` near ${location.zipCode}`;
-  } else if (location.address) {
-    enhancedQuery += ` near ${location.address}`;
-  }
-
-  return enhancedQuery;
+const CATEGORY_TTLS_DAYS: Record<string, number> = {
+  respite: 30,
+  respite_care: 30,
+  support: 14,
+  support_group: 7,
+  daycare: 30,
+  homecare: 30,
+  medical: 14,
+  community: 14,
+  meals: 7,
+  transport: 7,
+  hospice: 30,
+  memory: 30,
 };
 
-/**
- * Search for local caregiving resources using Google Maps grounding
- *
- * @param query - Natural language query (e.g., "respite care near me", "adult day care centers")
- * @param location - User's location (latitude, longitude)
- * @returns Grounded response with sources and optional widget token
- */
-export const searchLocalResources = async (
-  request: ResourceQuery
-): Promise<ResourceResult> => {
-  const apiKey = process.env.GEMINI_API_KEY;
-  if (!apiKey) {
-    throw new Error('GEMINI_API_KEY not configured');
-  }
-
-  const ai = new GoogleGenAI({ apiKey });
-
-  // Build location-aware prompt
-  const enhancedQuery = buildCaregivingQuery(request.query, request.location);
-
-  try {
-    // Build config with optional location context
-    const config: any = {
-      temperature: 0.2,
-      topP: 0.8,
-      topK: 40,
-      maxOutputTokens: 2048,
-      tools: [{ googleMaps: { enableWidget: true } }],
-    };
-
-    // Add location context if available (lat/lng takes precedence for precision)
-    if (request.location.latitude && request.location.longitude) {
-      config.toolConfig = {
-        retrievalConfig: {
-          latLng: {
-            latitude: request.location.latitude,
-            longitude: request.location.longitude,
-          },
-        },
-      };
-    }
-    // Note: Google Maps grounding also uses the text query itself for location
-    // (e.g., "near 90210" in the query works without explicit lat/lng)
-
-    const response = await ai.models.generateContent({
-      model: 'gemini-2.0-flash-exp',
-      contents: enhancedQuery,
-      config,
-    });
-
-    const text = response.text ?? '';
-
-    // Extract grounding metadata
-    const groundingMetadata = response.candidates?.[0]?.groundingMetadata;
-    const sources: MapSource[] = [];
-
-    if (groundingMetadata?.groundingChunks) {
-      for (const chunk of groundingMetadata.groundingChunks) {
-        if (chunk.maps) {
-          sources.push({
-            uri: chunk.maps.uri || '',
-            title: chunk.maps.title || '',
-            placeId: chunk.maps.placeId || '',
-          });
-        }
-      }
-    }
-
-    const widgetToken = groundingMetadata?.googleMapsWidgetContextToken;
-
-    return {
-      text,
-      sources,
-      widgetToken,
-    };
-  } catch (error) {
-    console.error('Google Maps grounding error:', error);
-    throw new Error(`Resource search failed: ${error instanceof Error ? error.message : String(error)}`);
-  }
+const CATEGORY_KEYWORDS: Record<string, RegExp> = {
+  respite: /respite|break/i,
+  support: /support|group/i,
+  daycare: /day\s*care|adult/i,
+  homecare: /home\s*care|in[-\s]?home/i,
+  medical: /nurse|doctor|medical/i,
+  community: /community|center/i,
+  meals: /meal|food/i,
+  transport: /transport|ride/i,
+  hospice: /hospice|end of life/i,
+  memory: /memory|alzheim/i,
 };
 
-/**
- * Extract location from user profile or session
- *
- * Priority:
- * 1. Zip code (most common - users provide during onboarding)
- * 2. Full address
- * 3. Lat/lng (if geocoded previously)
- */
-export const extractLocation = (metadata: Record<string, unknown>): LocationContext | null => {
-  const profile = metadata.profile as Record<string, unknown> | undefined;
-
-  if (!profile) {
-    return null;
-  }
-
-  return {
-    zipCode: profile.zipCode as string | undefined,
-    address: profile.address as string | undefined,
-    latitude: profile.latitude as number | undefined,
-    longitude: profile.longitude as number | undefined,
-  };
+const normalizeZip = (zip?: string) => {
+  if (!zip) return undefined;
+  const digits = zip.replace(/\D/g, '');
+  return digits.length >= 5 ? digits.slice(0, 5) : undefined;
 };
 
-/**
- * Common caregiving resource queries
- */
-export const CAREGIVING_QUERIES = {
-  respiteCare: 'Find respite care centers or services that provide temporary relief for family caregivers',
-  supportGroups: 'Find caregiver support groups or peer support meetings in my area',
-  adultDayCare: 'Find adult day care centers that provide supervised activities and care during daytime hours',
-  homeCare: 'Find home health care agencies that provide in-home medical and personal care services',
-  medicalSupplies: 'Find medical supply stores that sell mobility aids, incontinence products, and home medical equipment',
-  seniorCenters: 'Find senior centers or community centers with programs for older adults',
-  mealDelivery: 'Find meal delivery services like Meals on Wheels for seniors',
-  transportation: 'Find senior transportation services or medical transport providers',
-  hospice: 'Find hospice care providers that offer end-of-life care and support',
-  memoryCare: 'Find memory care facilities or Alzheimer\'s programs and resources',
-} as const;
+const inferCategory = (query: string, fallback = 'respite') => {
+  for (const [category, regex] of Object.entries(CATEGORY_KEYWORDS)) {
+    if (regex.test(query)) return category;
+  }
+  return fallback;
+};
 
-// ============================================================================
-// PUBLIC ACTIONS
-// ============================================================================
-
-/**
- * Search for local caregiving resources using Google Maps grounding
- *
- * This action uses Gemini API with Google Maps to find:
- * - Respite care centers
- * - Support groups
- * - Adult day care facilities
- * - Home health agencies
- * - Medical supply stores
- * - Community resources
- *
- * Returns grounded results with sources and optional widget token for rendering
- */
-export const searchResources = action({
-  args: {
-    query: v.string(),
-    location: v.optional(
-      v.object({
-        zipCode: v.optional(v.string()),
-        address: v.optional(v.string()),
-        latitude: v.optional(v.number()),
-        longitude: v.optional(v.number()),
-      })
-    ),
-    metadata: v.optional(v.any()),
+const buildStubResults = (category: string, zip: string) => [
+  {
+    name: `${category} Care Collective`,
+    address: `${zip.slice(0, 3)}12 Oak Street`,
+    hours: 'Mon-Sat 8a-8p',
+    rating: 4.8,
+    source: 'stubbed',
+    phone: '(555) 123-0000',
+    category,
   },
-  handler: async (ctx, { query, location, metadata }) => {
-    // Extract location from params or user metadata
-    let finalLocation: LocationContext | undefined = location;
+  {
+    name: `${category} Support Hub`,
+    address: `${zip.slice(0, 3)}45 Maple Ave`,
+    hours: '24/7 hotline',
+    rating: 4.7,
+    source: 'stubbed',
+    phone: '(555) 234-1111',
+    category,
+  },
+  {
+    name: `${category} Community Center`,
+    address: `${zip.slice(0, 3)}78 Elm Blvd`,
+    hours: 'Mon-Fri 9a-6p',
+    rating: 4.6,
+    source: 'stubbed',
+    phone: '(555) 678-2222',
+    category,
+  },
+];
 
-    if (!finalLocation && metadata) {
-      const extracted = extractLocation(metadata as Record<string, unknown>);
-      if (extracted) {
-        finalLocation = extracted;
-      }
-    }
+const resolveZipFromMetadata = (metadata: Record<string, unknown> | undefined): string | undefined => {
+  if (!metadata) return undefined;
+  const direct = metadata.zip as string | undefined;
+  if (direct) return direct;
+  const nestedProfile = metadata.profile as Record<string, unknown> | undefined;
+  if (nestedProfile?.zipCode) return String(nestedProfile.zipCode);
+  return metadata.zipCode as string | undefined;
+};
 
-    // Check if we have any valid location data (zipCode, address, or lat/lng)
-    if (!finalLocation ||
-        (!finalLocation.zipCode && !finalLocation.address &&
-         finalLocation.latitude === undefined && finalLocation.longitude === undefined)) {
-      return {
-        error: 'I need your zip code to find nearby resources. What\'s your zip code?',
-        text: '',
-        sources: [],
-      };
-    }
-
-    try {
-      const result = await searchLocalResources({
-        query,
-        location: finalLocation,
-      });
-
-      return {
-        text: result.text,
-        sources: result.sources,
-        widgetToken: result.widgetToken,
-      };
-    } catch (error) {
-      console.error('Resource search error:', error);
-      return {
-        error: error instanceof Error ? error.message : 'Resource search failed',
-        text: '',
-        sources: [],
-      };
-    }
+export const getResourceLookupCache = internalQuery({
+  args: {
+    category: v.string(),
+    zip: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const [cached] = await ctx.db
+      .query('resource_cache')
+      .withIndex('by_category_zip', (q) => q.eq('category', args.category).eq('zip', args.zip))
+      .order('desc')
+      .take(1);
+    return cached ?? null;
   },
 });
 
-/**
- * Get common caregiving resource query templates
- */
-export const getResourceTemplates = action({
-  args: {},
-  handler: async () => {
+export const recordResourceLookup = internalMutation({
+  args: {
+    userId: v.optional(v.id('users')),
+    category: v.string(),
+    zip: v.string(),
+    results: v.any(),
+    expiresAt: v.number(),
+  },
+  handler: async (ctx, args) => {
+    await ctx.db.insert('resource_cache', {
+      userId: args.userId,
+      category: args.category,
+      zip: args.zip,
+      results: args.results,
+      createdAt: Date.now(),
+      expiresAt: args.expiresAt,
+    });
+  },
+});
+
+export const cleanupResourceCache = internalAction({
+  args: {
+    limit: v.optional(v.number()),
+  },
+  handler: async (ctx, { limit = 200 }) => {
+    const now = Date.now();
+    const stale = await ctx.db.query('resource_cache').take(limit);
+
+    let removed = 0;
+    for (const entry of stale) {
+      if (entry.expiresAt && entry.expiresAt <= now) {
+        await ctx.db.delete(entry._id);
+        removed += 1;
+      }
+    }
+    return { removed };
+  },
+});
+
+export const searchResources = action({
+  args: {
+    query: v.string(),
+    metadata: v.optional(v.any()),
+    userId: v.optional(v.string()),
+    category: v.optional(v.string()),
+    zip: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    const metadata = (args.metadata ?? {}) as Record<string, unknown>;
+    let resolvedZip =
+      normalizeZip(args.zip) ||
+      normalizeZip(resolveZipFromMetadata(metadata)) ||
+      undefined;
+
+    if (!resolvedZip && args.userId) {
+      const user = await getByExternalId(ctx, args.userId);
+      if (user?.metadata) {
+        resolvedZip = normalizeZip(resolveZipFromMetadata(user.metadata as Record<string, unknown>));
+      }
+    }
+
+    if (!resolvedZip) {
+      return {
+        error: 'missing_zip',
+        message: 'Zip code required to search for nearby resources.',
+        suggestion: "What's your 5-digit zip code so I can tailor nearby support?",
+      };
+    }
+
+    const category = (args.category ?? inferCategory(args.query)).toLowerCase();
+    const ttlDays = CATEGORY_TTLS_DAYS[category] ?? 14;
+    const ttlMs = ttlDays * 24 * 60 * 60 * 1000;
+    const now = Date.now();
+
+    const cache = await ctx.runQuery(internal.resources.getResourceLookupCache, {
+      category,
+      zip: resolvedZip,
+    });
+
+    if (cache && cache.expiresAt && cache.expiresAt > now) {
+      const text = cache.results
+        .map(
+          (resource: any, idx: number) =>
+            `${idx + 1}. ${resource.name} — ${resource.address} (${resource.hours}, rating ${resource.rating})`
+        )
+        .join('\n');
+
+      return {
+        resources: text,
+        sources: cache.results,
+        widgetToken: `resources-${category}-${resolvedZip}-${cache._id}`,
+        cached: true,
+        expiresAt: cache.expiresAt,
+      };
+    }
+
+    const results = buildStubResults(category, resolvedZip);
+    const summaryText = results
+      .map(
+        (resource, idx) =>
+          `${idx + 1}. ${resource.name} — ${resource.address} (${resource.hours}, rating ${resource.rating})`
+      )
+      .join('\n');
+
+    await ctx.runMutation(internal.resources.recordResourceLookup, {
+      userId: undefined,
+      category,
+      zip: resolvedZip,
+      results,
+      expiresAt: now + ttlMs,
+    });
+
     return {
-      templates: [
-        {
-          id: 'respiteCare',
-          title: 'Respite Care',
-          query: 'Find respite care centers or services that provide temporary relief for family caregivers',
-          category: 'Support Services',
-        },
-        {
-          id: 'supportGroups',
-          title: 'Support Groups',
-          query: 'Find caregiver support groups or peer support meetings in my area',
-          category: 'Emotional Support',
-        },
-        {
-          id: 'adultDayCare',
-          title: 'Adult Day Care',
-          query: 'Find adult day care centers that provide supervised activities and care during daytime hours',
-          category: 'Daytime Care',
-        },
-        {
-          id: 'homeCare',
-          title: 'Home Health Care',
-          query: 'Find home health care agencies that provide in-home medical and personal care services',
-          category: 'Medical Services',
-        },
-        {
-          id: 'medicalSupplies',
-          title: 'Medical Supplies',
-          query:
-            'Find medical supply stores that sell mobility aids, incontinence products, and home medical equipment',
-          category: 'Equipment',
-        },
-        {
-          id: 'seniorCenters',
-          title: 'Senior Centers',
-          query: 'Find senior centers or community centers with programs for older adults',
-          category: 'Community',
-        },
-        {
-          id: 'mealDelivery',
-          title: 'Meal Delivery',
-          query: 'Find meal delivery services like Meals on Wheels for seniors',
-          category: 'Nutrition',
-        },
-        {
-          id: 'transportation',
-          title: 'Transportation',
-          query: 'Find senior transportation services or medical transport providers',
-          category: 'Transportation',
-        },
-        {
-          id: 'hospice',
-          title: 'Hospice Care',
-          query: 'Find hospice care providers that offer end-of-life care and support',
-          category: 'Medical Services',
-        },
-        {
-          id: 'memoryCare',
-          title: 'Memory Care',
-          query: "Find memory care facilities or Alzheimer's programs and resources",
-          category: 'Specialized Care',
-        },
-      ],
+      resources: summaryText,
+      sources: results,
+      widgetToken: `resources-${category}-${resolvedZip}-${now}`,
+      cached: false,
+      expiresAt: now + ttlMs,
     };
   },
 });

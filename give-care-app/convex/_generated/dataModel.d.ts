@@ -559,6 +559,34 @@ export type DataModel = {
     searchIndexes: {};
     vectorIndexes: {};
   };
+  resource_cache: {
+    document: {
+      category: string;
+      createdAt: number;
+      expiresAt?: number;
+      results?: any;
+      userId?: Id<"users">;
+      zip: string;
+      _id: Id<"resource_cache">;
+      _creationTime: number;
+    };
+    fieldPaths:
+      | "_creationTime"
+      | "_id"
+      | "category"
+      | "createdAt"
+      | "expiresAt"
+      | "results"
+      | "userId"
+      | "zip";
+    indexes: {
+      by_id: ["_id"];
+      by_creation_time: ["_creationTime"];
+      by_category_zip: ["category", "zip", "createdAt", "_creationTime"];
+    };
+    searchIndexes: {};
+    vectorIndexes: {};
+  };
   scores: {
     document: {
       assessmentId: Id<"assessments">;

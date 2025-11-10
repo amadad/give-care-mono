@@ -1,31 +1,76 @@
-/**
- * Billing - Stripe integration and webhook processing
- *
- * All Stripe SDK usage now lives in actions/billing.actions.ts to maintain the Node boundary.
- */
+"use server";
 
 import { mutation } from './_generated/server';
 import type { MutationCtx } from './_generated/server';
 import { v } from 'convex/values';
-import { internal } from './_generated/api';
-import * as Core from './core';
-import { PLAN_ENTITLEMENTS } from './lib/billing';
-export { createCheckoutSession } from './actions/billing.actions';
+import { getByExternalId } from './core';
 
-// ============================================================================
-// WEBHOOK PROCESSING
-// ============================================================================
+const SUBSCRIPTION_EVENTS = new Set([
+  'customer.subscription.created',
+  'customer.subscription.updated',
+  'customer.subscription.deleted',
+  'customer.subscription.paused',
+  'customer.subscription.resumed',
+]);
 
-const applyEntitlements = async (ctx: MutationCtx, userId: string, plan: string, expiresAt?: number) => {
-  const user = await Core.getByExternalId(ctx, userId);
-  if (!user) return;
-  const features = PLAN_ENTITLEMENTS[plan] ?? PLAN_ENTITLEMENTS.free;
-  for (const feature of features) {
-    await ctx.db.insert('entitlements', {
+const normalizeStatus = (status?: string) => {
+  switch (status) {
+    case 'trialing':
+    case 'active':
+    case 'past_due':
+    case 'canceled':
+    case 'unpaid':
+    case 'paused':
+      return status;
+    default:
+      return 'active';
+  }
+};
+
+const extractExternalId = (payload: Record<string, unknown>): string | undefined => {
+  const metadata = (payload?.metadata ?? {}) as Record<string, unknown>;
+  return (
+    (metadata.externalId as string | undefined) ||
+    (metadata.userId as string | undefined) ||
+    (metadata.convexUserId as string | undefined)
+  );
+};
+
+const upsertSubscription = async (
+  ctx: MutationCtx,
+  params: {
+    userExternalId: string;
+    status: string;
+    planId?: string;
+    stripeCustomerId?: string;
+    currentPeriodEnd?: number;
+  }
+) => {
+  const user = await getByExternalId(ctx, params.userExternalId);
+  if (!user) {
+    console.warn('[billing] Unable to link subscription, user not found', params.userExternalId);
+    return;
+  }
+
+  const existing = await ctx.db
+    .query('subscriptions')
+    .withIndex('by_user', (q) => q.eq('userId', user._id))
+    .unique();
+
+  if (existing) {
+    await ctx.db.patch(existing._id, {
+      status: params.status,
+      planId: params.planId ?? existing.planId,
+      stripeCustomerId: params.stripeCustomerId ?? existing.stripeCustomerId,
+      currentPeriodEnd: params.currentPeriodEnd ?? existing.currentPeriodEnd,
+    });
+  } else {
+    await ctx.db.insert('subscriptions', {
       userId: user._id,
-      feature,
-      active: true,
-      expiresAt,
+      status: params.status,
+      planId: params.planId ?? 'free',
+      stripeCustomerId: params.stripeCustomerId ?? 'unknown',
+      currentPeriodEnd: params.currentPeriodEnd ?? Date.now(),
     });
   }
 };
@@ -36,125 +81,56 @@ export const applyStripeEvent = mutation({
     type: v.string(),
     payload: v.any(),
   },
-  handler: async (ctx, { id, type, payload }) => {
-    console.log('[billing] Processing Stripe event:', { id, type });
-
-    const existing = await ctx.db
+  handler: async (ctx, args) => {
+    const existingEvent = await ctx.db
       .query('billing_events')
-      .withIndex('by_event', (q) => q.eq('stripeEventId', id))
+      .withIndex('by_event', (q) => q.eq('stripeEventId', args.id))
       .unique();
-    if (existing) {
-      console.log('[billing] Event already processed:', id);
-      return;
+
+    if (existingEvent) {
+      return existingEvent._id;
     }
 
-    const customerId = payload?.data?.object?.customer ?? payload?.customer;
-    const planId = payload?.data?.object?.plan?.id ?? payload?.plan_id ?? 'free';
-    const status = payload?.data?.object?.status ?? 'active';
-    // Stripe uses seconds, convert to milliseconds
-    const currentPeriodEnd = payload?.data?.object?.current_period_end
-      ? payload.data.object.current_period_end * 1000
-      : Date.now();
-    const externalUserId = payload?.metadata?.userId ?? payload?.data?.object?.metadata?.userId;
-
-    // Extract phone number and name from checkout.session.completed metadata
-    const phoneNumber = payload?.data?.object?.metadata?.phoneNumber;
-    const fullName = payload?.data?.object?.metadata?.fullName;
-
-    console.log('[billing] Extracted metadata:', {
-      type,
-      hasMetadata: !!payload?.data?.object?.metadata,
-      phoneNumber,
-      fullName,
-      allMetadata: payload?.data?.object?.metadata
+    const eventId = await ctx.db.insert('billing_events', {
+      stripeEventId: args.id,
+      type: args.type,
+      data: args.payload,
+      userId: undefined,
     });
 
-    // Extract billing address from customer_details (checkout.session.completed)
-    const billingAddress = payload?.data?.object?.customer_details?.address;
-    const address = billingAddress ? {
-      line1: billingAddress.line1,
-      line2: billingAddress.line2 || undefined,
-      city: billingAddress.city,
-      state: billingAddress.state,
-      postalCode: billingAddress.postal_code,
-      country: billingAddress.country,
-    } : undefined;
+    if (SUBSCRIPTION_EVENTS.has(args.type)) {
+      const subscription = (args.payload?.data as any)?.object as Record<string, any> | undefined;
+      if (subscription) {
+        const externalId =
+          extractExternalId(subscription) ??
+          (subscription.metadata?.userExternalId as string | undefined);
+        const planId =
+          (subscription.items?.data?.[0]?.price?.id as string | undefined) ??
+          (subscription.plan?.id as string | undefined);
+        const status = normalizeStatus(subscription.status);
+        const currentPeriodEnd =
+          typeof subscription.current_period_end === 'number'
+            ? subscription.current_period_end * 1000
+            : undefined;
+        const stripeCustomerId = subscription.customer as string | undefined;
 
-    let user: Awaited<ReturnType<typeof Core.getByExternalId>> = null;
-    if (externalUserId) {
-      user = await Core.getByExternalId(ctx, externalUserId);
-    } else if (phoneNumber) {
-      // Fallback: try phone number if userId not in metadata (old checkouts)
-      user = await Core.getByExternalId(ctx, phoneNumber);
-    } else if (customerId) {
-      const sub = await ctx.db
-        .query('subscriptions')
-        .withIndex('by_customer', (q) => q.eq('stripeCustomerId', customerId))
-        .unique();
-      if (sub) {
-        user = await ctx.db.get(sub.userId);
-      }
-    }
-
-    const userId = user?._id;
-
-    await ctx.db.insert('billing_events', {
-      userId: userId ?? undefined,
-      stripeEventId: id,
-      type,
-      data: payload,
-    });
-
-    if (userId && user) {
-      await ctx.db.insert('subscriptions', {
-        userId,
-        stripeCustomerId: customerId ?? 'unknown',
-        planId,
-        status,
-        currentPeriodEnd,
-      });
-      if (user.externalId) {
-        await applyEntitlements(ctx, user.externalId, planId, currentPeriodEnd);
-      }
-    }
-
-    // Update user with billing address from checkout.session.completed
-    if (type === 'checkout.session.completed' && userId && address) {
-      console.log('[billing] Updating user with billing address:', { userId, address });
-      await ctx.db.patch(userId, { address });
-    }
-
-    // Send welcome SMS for checkout.session.completed
-    if (type === 'checkout.session.completed' && phoneNumber) {
-      console.log('[billing] Scheduling welcome SMS for checkout:', { phoneNumber, fullName });
-      await ctx.scheduler.runAfter(
-        5000, // 5 second delay to ensure subscription is fully set up
-        internal.internal.sendWelcomeSms,
-        {
-          phoneNumber,
-          fullName: fullName ?? 'there',
+        if (externalId) {
+          await upsertSubscription(ctx, {
+            userExternalId: externalId,
+            status,
+            planId,
+            stripeCustomerId,
+            currentPeriodEnd,
+          });
+        } else {
+          console.warn('[billing] Subscription event missing externalId metadata', {
+            eventType: args.type,
+            subscriptionId: subscription.id,
+          });
         }
-      );
+      }
     }
-  },
-});
 
-export const refreshEntitlements = mutation({
-  args: {
-    userId: v.string(),
-  },
-  handler: async (ctx, { userId }) => {
-    const user = await Core.getByExternalId(ctx, userId);
-    if (!user) {
-      return { plan: 'free', entitlements: PLAN_ENTITLEMENTS.free };
-    }
-    const sub = await ctx.db
-      .query('subscriptions')
-      .withIndex('by_user', (q) => q.eq('userId', user._id))
-      .order('desc')
-      .first();
-    const plan = sub?.planId ?? 'free';
-    const entitlements = PLAN_ENTITLEMENTS[plan] ?? PLAN_ENTITLEMENTS.free;
-    return { plan, entitlements, validUntil: sub ? new Date(sub.currentPeriodEnd).toISOString() : undefined };
+    return eventId;
   },
 });

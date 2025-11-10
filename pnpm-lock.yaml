@@ -162,6 +162,9 @@ importers:
       '@convex-dev/rate-limiter':
         specifier: ^0.2.14
         version: 0.2.14(convex@1.28.2(react@19.2.0))(react@19.2.0)
+      '@convex-dev/twilio':
+        specifier: ^0.1.7
+        version: 0.1.7(convex@1.28.2(react@19.2.0))
       '@convex-dev/workflow':
         specifier: ^0.2.7
         version: 0.2.7(@convex-dev/workpool@0.2.19(convex-helpers@0.1.104(@standard-schema/spec@1.0.0)(convex@1.28.2(react@19.2.0))(react@19.2.0)(typescript@5.8.3)(zod@3.25.76))(convex@1.28.2(react@19.2.0)))(convex-helpers@0.1.104(@standard-schema/spec@1.0.0)(convex@1.28.2(react@19.2.0))(react@19.2.0)(typescript@5.8.3)(zod@3.25.76))(convex@1.28.2(react@19.2.0))
@@ -810,6 +813,11 @@ packages:
     peerDependenciesMeta:
       react:
         optional: true
+
+  '@convex-dev/twilio@0.1.7':
+    resolution: {integrity: sha512-wQlHlsVpXey68vGq6J5pk6WHMPP0IWRuRGaVYQF62IQa1y7w37cmks/1RS5335rn5gOc4PnQv7lmHW+pgSg2Zg==}
+    peerDependencies:
+      convex: ~1.16.5 || >=1.17.0 <1.35.0
 
   '@convex-dev/workflow@0.2.7':
     resolution: {integrity: sha512-BUVJBKSMEuHNztFBlcmCdlsRwdPqLn2iv72teTrHlkMVKvQj1EhBIflT7asjWBrVy3JUgWiVdUbl58xv5+kXSQ==}
@@ -7926,6 +7934,10 @@ snapshots:
       convex: 1.28.2(react@19.2.0)
     optionalDependencies:
       react: 19.2.0
+
+  '@convex-dev/twilio@0.1.7(convex@1.28.2(react@19.2.0))':
+    dependencies:
+      convex: 1.28.2(react@19.2.0)
 
   '@convex-dev/workflow@0.2.7(@convex-dev/workpool@0.2.19(convex-helpers@0.1.104(@standard-schema/spec@1.0.0)(convex@1.28.2(react@19.2.0))(react@19.2.0)(typescript@5.8.3)(zod@3.25.76))(convex@1.28.2(react@19.2.0)))(convex-helpers@0.1.104(@standard-schema/spec@1.0.0)(convex@1.28.2(react@19.2.0))(react@19.2.0)(typescript@5.8.3)(zod@3.25.76))(convex@1.28.2(react@19.2.0))':
     dependencies:

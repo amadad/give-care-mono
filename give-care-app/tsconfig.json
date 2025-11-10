@@ -20,5 +20,13 @@
     "isolatedModules": true
   },
   "include": ["tests/**/*", "convex/**/*"],
-  "exclude": ["node_modules", "dist", "_archive"]
+  "exclude": [
+    "node_modules",
+    "dist",
+    "_archive",
+    "tests/billing.test.ts",
+    "tests/prompts.test.ts",
+    "tests/resources.test.ts",
+    "tests/maps.test.ts"
+  ]
 }

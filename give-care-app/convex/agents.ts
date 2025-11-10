@@ -64,6 +64,8 @@ const searchResourcesTool = createTool({
 
     const result = await ctx.runAction(api.resources.searchResources, {
       query: args.query,
+      category: args.category,
+      userId: ctx.userId,
       metadata: userMetadata,
     });
 

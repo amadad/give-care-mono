@@ -79,22 +79,10 @@ export declare const api: {
     >;
   };
   billing: {
-    createCheckoutSession: FunctionReference<
-      "action",
-      "public",
-      { email: string; fullName: string; phoneNumber: string; priceId: string },
-      any
-    >;
     applyStripeEvent: FunctionReference<
       "mutation",
       "public",
       { id: string; payload: any; type: string },
-      any
-    >;
-    refreshEntitlements: FunctionReference<
-      "mutation",
-      "public",
-      { userId: string },
       any
     >;
   };
@@ -149,98 +137,82 @@ export declare const api: {
     >;
   };
   domains: {
-    admin: {
-      getAllSubscriptions: FunctionReference<"query", "public", {}, any>;
-      getAllUsers: FunctionReference<
+    interventions: {
+      getByZones: FunctionReference<
         "query",
         "public",
         {
-          burnoutBand?: string;
-          journeyPhase?: string;
           limit?: number;
-          search?: string;
-          subscriptionStatus?: string;
+          minEvidenceLevel?: "high" | "moderate" | "low";
+          zones: Array<string>;
         },
         any
       >;
-      getBillingEvents: FunctionReference<"query", "public", {}, any>;
-      getCrisisAlerts: FunctionReference<"query", "public", {}, any>;
-      getMetrics: FunctionReference<"query", "public", {}, any>;
-      getSubscriptionsByPhone: FunctionReference<
-        "query",
-        "public",
-        { phoneNumber: string },
-        any
-      >;
-      getSystemHealth: FunctionReference<"query", "public", {}, any>;
-      getUserDetails: FunctionReference<
-        "query",
-        "public",
-        { userId: Id<"users"> },
-        any
-      >;
     };
-    alerts: {
-      listPending: FunctionReference<"query", "public", { limit: number }, any>;
-      markProcessed: FunctionReference<
+    messages: {
+      recordInbound: FunctionReference<
         "mutation",
         "public",
         {
-          alertId: Id<"alerts">;
-          result: { deliveredVia: "sms" | "email"; metadata?: any };
+          message: {
+            channel: "sms" | "email" | "web";
+            externalId: string;
+            meta?: any;
+            redactionFlags?: Array<string>;
+            text: string;
+            traceId: string;
+          };
         },
         any
       >;
     };
-    analytics: {
-      getAgentPerformance: FunctionReference<
+    wellness: {
+      getStatus: FunctionReference<
         "query",
         "public",
-        { days: number },
+        { recentLimit?: number; userId: string },
         any
       >;
-      getBurnoutDistribution: FunctionReference<"query", "public", {}, any>;
-      getDailyMetrics: FunctionReference<
-        "query",
-        "public",
-        { days: number },
-        any
-      >;
-      getQualityMetrics: FunctionReference<
-        "query",
-        "public",
-        { days: number },
-        any
-      >;
-      getRecentFeedback: FunctionReference<
-        "query",
-        "public",
-        { limit: number },
-        any
-      >;
-      getSummaryPerformance: FunctionReference<"query", "public", {}, any>;
-      getUserJourneyFunnel: FunctionReference<"query", "public", {}, any>;
     };
-    assessments: {
-      recordAnswer: FunctionReference<
+  };
+  internal: {
+    core: {
+      logAuditEntry: FunctionReference<
+        "mutation",
+        "public",
+        { action: string; actorId?: string; metadata?: any; resource: string },
+        any
+      >;
+      appendMessage: FunctionReference<
         "mutation",
         "public",
         {
-          definitionId: string;
-          questionId: string;
-          sessionId: Id<"assessment_sessions">;
-          value: number;
+          metadata?: any;
+          role: "user" | "assistant" | "system" | "tool";
+          sessionId?: Id<"sessions">;
+          text: string;
+          userId: string;
         },
         any
       >;
-      start: FunctionReference<
+      logCrisisEvent: FunctionReference<
         "mutation",
         "public",
-        { definitionId: string; userId: string },
+        {
+          message: string;
+          severity: "high" | "medium" | "low";
+          userId: string;
+        },
         any
       >;
     };
-    email: {
+    index: {
+      getByExternalId: FunctionReference<
+        "query",
+        "public",
+        { externalId: string },
+        any
+      >;
       logDelivery: FunctionReference<
         "mutation",
         "public",
@@ -253,116 +225,6 @@ export declare const api: {
         },
         any
       >;
-    };
-    interventions: {
-      getByCategory: FunctionReference<
-        "query",
-        "public",
-        { category: string; limit?: number },
-        any
-      >;
-      getByZones: FunctionReference<
-        "query",
-        "public",
-        {
-          limit?: number;
-          minEvidenceLevel?: "high" | "moderate" | "low";
-          zones: Array<string>;
-        },
-        any
-      >;
-      getCategories: FunctionReference<"query", "public", {}, any>;
-      getUserHistory: FunctionReference<
-        "query",
-        "public",
-        { userId: string },
-        any
-      >;
-      recordEvent: FunctionReference<
-        "mutation",
-        "public",
-        {
-          interventionId: Id<"interventions">;
-          metadata?: any;
-          status: "viewed" | "started" | "completed";
-          userId: string;
-        },
-        any
-      >;
-      search: FunctionReference<
-        "query",
-        "public",
-        { limit?: number; query: string },
-        any
-      >;
-    };
-    logs: {
-      agentRun: FunctionReference<
-        "mutation",
-        "public",
-        {
-          payload: {
-            agent: string;
-            budgetResult: {
-              toolCalls: number;
-              usedInputTokens: number;
-              usedOutputTokens: number;
-            };
-            externalId: string;
-            latencyMs: number;
-            policyBundle: string;
-            traceId: string;
-          };
-        },
-        any
-      >;
-      guardrail: FunctionReference<
-        "mutation",
-        "public",
-        {
-          payload: {
-            action: string;
-            context?: any;
-            externalId?: string;
-            ruleId: string;
-            traceId: string;
-          };
-        },
-        any
-      >;
-    };
-    memories: {
-      record: FunctionReference<
-        "mutation",
-        "public",
-        {
-          category: string;
-          content: string;
-          importance: number;
-          userId: string;
-        },
-        any
-      >;
-      retrieve: FunctionReference<
-        "query",
-        "public",
-        { limit?: number; userId: string },
-        any
-      >;
-      retrieveByCategory: FunctionReference<
-        "query",
-        "public",
-        { category: string; limit?: number; userId: string },
-        any
-      >;
-      retrieveImportant: FunctionReference<
-        "query",
-        "public",
-        { limit?: number; minImportance?: number; userId: string },
-        any
-      >;
-    };
-    messages: {
       recordInbound: FunctionReference<
         "mutation",
         "public",
@@ -394,346 +256,6 @@ export declare const api: {
         any
       >;
     };
-    scheduler: {
-      cancelTrigger: FunctionReference<
-        "mutation",
-        "public",
-        { triggerId: Id<"triggers"> },
-        any
-      >;
-      createTrigger: FunctionReference<
-        "mutation",
-        "public",
-        {
-          trigger: {
-            nextRun: string;
-            payload: any;
-            rrule: string;
-            timezone: string;
-            userExternalId: string;
-          };
-        },
-        any
-      >;
-      enqueueOnce: FunctionReference<
-        "mutation",
-        "public",
-        {
-          job: {
-            name: string;
-            payload: any;
-            runAt: string;
-            timezone: string;
-            userExternalId: string;
-          };
-        },
-        any
-      >;
-    };
-    subscriptions: {
-      linkSubscription: FunctionReference<
-        "mutation",
-        "public",
-        {
-          currentPeriodEnd: number;
-          phoneNumber: string;
-          planId: string;
-          stripeCustomerId: string;
-        },
-        any
-      >;
-    };
-    wellness: {
-      getStatus: FunctionReference<"query", "public", { userId: string }, any>;
-    };
-  };
-  internal: {
-    agentRun: FunctionReference<
-      "mutation",
-      "public",
-      {
-        payload: {
-          agent: string;
-          budgetResult: {
-            toolCalls: number;
-            usedInputTokens: number;
-            usedOutputTokens: number;
-          };
-          externalId: string;
-          latencyMs: number;
-          policyBundle: string;
-          traceId: string;
-        };
-      },
-      any
-    >;
-    cancelTrigger: FunctionReference<
-      "mutation",
-      "public",
-      { triggerId: Id<"triggers"> },
-      any
-    >;
-    createTrigger: FunctionReference<
-      "mutation",
-      "public",
-      {
-        trigger: {
-          nextRun: string;
-          payload: any;
-          rrule: string;
-          timezone: string;
-          userExternalId: string;
-        };
-      },
-      any
-    >;
-    enqueueOnce: FunctionReference<
-      "mutation",
-      "public",
-      {
-        job: {
-          name: string;
-          payload: any;
-          runAt: string;
-          timezone: string;
-          userExternalId: string;
-        };
-      },
-      any
-    >;
-    getAgentPerformance: FunctionReference<
-      "query",
-      "public",
-      { days: number },
-      any
-    >;
-    getAllSubscriptions: FunctionReference<"query", "public", {}, any>;
-    getAllUsers: FunctionReference<
-      "query",
-      "public",
-      {
-        burnoutBand?: string;
-        journeyPhase?: string;
-        limit?: number;
-        search?: string;
-        subscriptionStatus?: string;
-      },
-      any
-    >;
-    getBillingEvents: FunctionReference<"query", "public", {}, any>;
-    getBurnoutDistribution: FunctionReference<"query", "public", {}, any>;
-    getByCategory: FunctionReference<
-      "query",
-      "public",
-      { category: string; limit?: number },
-      any
-    >;
-    getByExternalId: FunctionReference<
-      "query",
-      "public",
-      { externalId: string },
-      any
-    >;
-    getByZones: FunctionReference<
-      "query",
-      "public",
-      {
-        limit?: number;
-        minEvidenceLevel?: "high" | "moderate" | "low";
-        zones: Array<string>;
-      },
-      any
-    >;
-    getCategories: FunctionReference<"query", "public", {}, any>;
-    getCrisisAlerts: FunctionReference<"query", "public", {}, any>;
-    getDailyMetrics: FunctionReference<
-      "query",
-      "public",
-      { days: number },
-      any
-    >;
-    getMetrics: FunctionReference<"query", "public", {}, any>;
-    getQualityMetrics: FunctionReference<
-      "query",
-      "public",
-      { days: number },
-      any
-    >;
-    getRecentFeedback: FunctionReference<
-      "query",
-      "public",
-      { limit: number },
-      any
-    >;
-    getStatus: FunctionReference<"query", "public", { userId: string }, any>;
-    getSubscriptionsByPhone: FunctionReference<
-      "query",
-      "public",
-      { phoneNumber: string },
-      any
-    >;
-    getSummaryPerformance: FunctionReference<"query", "public", {}, any>;
-    getSystemHealth: FunctionReference<"query", "public", {}, any>;
-    getUserDetails: FunctionReference<
-      "query",
-      "public",
-      { userId: Id<"users"> },
-      any
-    >;
-    getUserHistory: FunctionReference<
-      "query",
-      "public",
-      { userId: string },
-      any
-    >;
-    getUserJourneyFunnel: FunctionReference<"query", "public", {}, any>;
-    guardrail: FunctionReference<
-      "mutation",
-      "public",
-      {
-        payload: {
-          action: string;
-          context?: any;
-          externalId?: string;
-          ruleId: string;
-          traceId: string;
-        };
-      },
-      any
-    >;
-    linkSubscription: FunctionReference<
-      "mutation",
-      "public",
-      {
-        currentPeriodEnd: number;
-        phoneNumber: string;
-        planId: string;
-        stripeCustomerId: string;
-      },
-      any
-    >;
-    listPending: FunctionReference<"query", "public", { limit: number }, any>;
-    logDelivery: FunctionReference<
-      "mutation",
-      "public",
-      {
-        status: string;
-        subject: string;
-        to: string;
-        traceId: string;
-        userId?: string;
-      },
-      any
-    >;
-    markProcessed: FunctionReference<
-      "mutation",
-      "public",
-      {
-        alertId: Id<"alerts">;
-        result: { deliveredVia: "sms" | "email"; metadata?: any };
-      },
-      any
-    >;
-    record: FunctionReference<
-      "mutation",
-      "public",
-      { category: string; content: string; importance: number; userId: string },
-      any
-    >;
-    recordAnswer: FunctionReference<
-      "mutation",
-      "public",
-      {
-        definitionId: string;
-        questionId: string;
-        sessionId: Id<"assessment_sessions">;
-        value: number;
-      },
-      any
-    >;
-    recordEvent: FunctionReference<
-      "mutation",
-      "public",
-      {
-        interventionId: Id<"interventions">;
-        metadata?: any;
-        status: "viewed" | "started" | "completed";
-        userId: string;
-      },
-      any
-    >;
-    recordInbound: FunctionReference<
-      "mutation",
-      "public",
-      {
-        message: {
-          channel: "sms" | "email" | "web";
-          externalId: string;
-          meta?: any;
-          redactionFlags?: Array<string>;
-          text: string;
-          traceId: string;
-        };
-      },
-      any
-    >;
-    recordOutbound: FunctionReference<
-      "mutation",
-      "public",
-      {
-        message: {
-          channel: "sms" | "email" | "web";
-          externalId: string;
-          meta?: any;
-          redactionFlags?: Array<string>;
-          text: string;
-          traceId: string;
-        };
-      },
-      any
-    >;
-    retrieve: FunctionReference<
-      "query",
-      "public",
-      { limit?: number; userId: string },
-      any
-    >;
-    retrieveByCategory: FunctionReference<
-      "query",
-      "public",
-      { category: string; limit?: number; userId: string },
-      any
-    >;
-    retrieveImportant: FunctionReference<
-      "query",
-      "public",
-      { limit?: number; minImportance?: number; userId: string },
-      any
-    >;
-    search: FunctionReference<
-      "query",
-      "public",
-      { limit?: number; query: string },
-      any
-    >;
-    start: FunctionReference<
-      "mutation",
-      "public",
-      { definitionId: string; userId: string },
-      any
-    >;
-    newsletterSignup: FunctionReference<
-      "action",
-      "public",
-      { email: string },
-      any
-    >;
-    submit: FunctionReference<
-      "action",
-      "public",
-      { email: string; pressureZones: any; responses: Array<number> },
-      any
-    >;
   };
   public: {
     hydrate: FunctionReference<
@@ -778,21 +300,56 @@ export declare const api: {
       { category: string; content: string; importance: number; userId: string },
       any
     >;
+    listMemories: FunctionReference<
+      "query",
+      "public",
+      { limit?: number; userId: string },
+      any
+    >;
+    startAssessment: FunctionReference<
+      "mutation",
+      "public",
+      {
+        channel?: "sms" | "web";
+        definition: "ema" | "bsfc" | "reach2" | "sdoh";
+        userId: string;
+      },
+      any
+    >;
+    recordAssessmentOffer: FunctionReference<
+      "mutation",
+      "public",
+      { definition: "ema" | "bsfc" | "reach2" | "sdoh"; userId: string },
+      any
+    >;
+    declineAssessmentOffer: FunctionReference<
+      "mutation",
+      "public",
+      { definition: "ema" | "bsfc" | "reach2" | "sdoh"; userId: string },
+      any
+    >;
+    upsertCheckInSchedule: FunctionReference<
+      "mutation",
+      "public",
+      {
+        cadenceMinutes: number;
+        timezone: string;
+        userId: string;
+        windowStartMinutes: number;
+      },
+      any
+    >;
   };
   resources: {
-    getResourceTemplates: FunctionReference<"action", "public", {}, any>;
     searchResources: FunctionReference<
       "action",
       "public",
       {
-        location?: {
-          address?: string;
-          latitude?: number;
-          longitude?: number;
-          zipCode?: string;
-        };
+        category?: string;
         metadata?: any;
         query: string;
+        userId?: string;
+        zip?: string;
       },
       any
     >;
@@ -1077,9 +634,6 @@ export declare const internal: {
     >;
   };
   domains: {
-    interventions: {
-      seedInterventions: FunctionReference<"mutation", "internal", {}, any>;
-    };
     logs: {
       logAgentRunInternal: FunctionReference<
         "mutation",
@@ -1105,85 +659,19 @@ export declare const internal: {
           chunks: Array<string>;
           input: string;
           timestamp: number;
+          traceId?: string;
           userId: string;
         },
         any
       >;
     };
-    metrics: {
-      aggregateDailyMetrics: FunctionReference<"action", "internal", {}, any>;
-      computeBurnoutDistribution: FunctionReference<
-        "mutation",
-        "internal",
-        {},
-        any
-      >;
-      computeDailyMetrics: FunctionReference<
-        "mutation",
-        "internal",
-        { date: string },
-        any
-      >;
-      computeJourneyFunnel: FunctionReference<"mutation", "internal", {}, any>;
-      computeSubscriptionMetrics: FunctionReference<
-        "mutation",
-        "internal",
-        {},
-        any
-      >;
-    };
-    scheduler: {
-      advanceTriggerMutation: FunctionReference<
-        "mutation",
-        "internal",
-        { triggerId: Id<"triggers"> },
-        any
-      >;
-      internalProcessDueTriggers: FunctionReference<
-        "action",
-        "internal",
-        { batchSize?: number },
-        any
-      >;
-      processBatchInternal: FunctionReference<
-        "mutation",
-        "internal",
-        { batchSize: number },
-        any
-      >;
-    };
-    watchers: {
-      runEngagementChecks: FunctionReference<"mutation", "internal", {}, any>;
-    };
   };
   inbound: {
-    generateCrisisResponse: FunctionReference<
-      "action",
-      "internal",
-      {
-        channel: "sms" | "email" | "web";
-        text: string;
-        threadId: string;
-        userId: Id<"users">;
-      },
-      any
-    >;
-    generateMainResponse: FunctionReference<
-      "action",
-      "internal",
-      {
-        channel: "sms" | "email" | "web";
-        text: string;
-        threadId: string;
-        userId: Id<"users">;
-      },
-      any
-    >;
     processInboundMessage: FunctionReference<
       "action",
       "internal",
       {
-        channel: "sms" | "email" | "web";
+        channel: "sms" | "web";
         externalId: string;
         messageId: Id<"messages">;
         text: string;
@@ -1191,141 +679,19 @@ export declare const internal: {
       },
       any
     >;
-    sendSignupMessage: FunctionReference<
-      "action",
-      "internal",
-      {
-        channel: "sms" | "email" | "web";
-        phone?: string;
-        signupUrl: string;
-        userId: string;
-      },
-      any
-    >;
     sendSmsResponse: FunctionReference<
       "action",
       "internal",
-      { text: string; to: string; userId: string },
+      { text: string; to: string; traceId?: string; userId?: string },
       any
     >;
   };
   internal: {
-    advanceTriggerMutation: FunctionReference<
-      "mutation",
-      "internal",
-      { triggerId: Id<"triggers"> },
-      any
-    >;
-    aggregateDailyMetrics: FunctionReference<"action", "internal", {}, any>;
-    computeBurnoutDistribution: FunctionReference<
-      "mutation",
-      "internal",
-      {},
-      any
-    >;
-    computeDailyMetrics: FunctionReference<
-      "mutation",
-      "internal",
-      { date: string },
-      any
-    >;
-    computeJourneyFunnel: FunctionReference<"mutation", "internal", {}, any>;
-    computeSubscriptionMetrics: FunctionReference<
-      "mutation",
-      "internal",
-      {},
-      any
-    >;
-    createComponentThread: FunctionReference<
-      "mutation",
-      "internal",
-      { userId: Id<"users"> },
-      any
-    >;
-    internalProcessDueTriggers: FunctionReference<
-      "action",
-      "internal",
-      { batchSize?: number },
-      any
-    >;
-    logAgentRunInternal: FunctionReference<
-      "mutation",
-      "internal",
-      {
-        agent: string;
-        budgetResult: {
-          toolCalls: number;
-          usedInputTokens: number;
-          usedOutputTokens: number;
-        };
-        latencyMs: number;
-        policyBundle: string;
-        traceId: string;
-        userId: string;
-      },
-      any
-    >;
-    logCrisisInteraction: FunctionReference<
-      "mutation",
-      "internal",
-      {
-        chunks: Array<string>;
-        input: string;
-        timestamp: number;
-        userId: string;
-      },
-      any
-    >;
-    processBatchInternal: FunctionReference<
-      "mutation",
-      "internal",
-      { batchSize: number },
-      any
-    >;
-    runEngagementChecks: FunctionReference<"mutation", "internal", {}, any>;
-    seedInterventions: FunctionReference<"mutation", "internal", {}, any>;
-    sendWelcomeSms: FunctionReference<
-      "action",
-      "internal",
-      { fullName: string; phoneNumber: string },
-      any
-    >;
-  };
-  lib: {
-    files: {
-      storeMMSFile: FunctionReference<
-        "action",
-        "internal",
-        { blob: any; filename?: string; mimeType: string; sha256?: string },
-        any
-      >;
-      getMessageFileParts: FunctionReference<
-        "action",
-        "internal",
-        { fileIds: Array<string> },
-        any
-      >;
-      vacuumUnusedFiles: FunctionReference<
+    index: {
+      createComponentThread: FunctionReference<
         "mutation",
         "internal",
-        { olderThanDays?: number },
-        any
-      >;
-    };
-    usage: {
-      insertLLMUsage: FunctionReference<
-        "mutation",
-        "internal",
-        {
-          agentName?: string;
-          model: string;
-          provider: string;
-          providerMetadata?: any;
-          threadId?: string;
-          traceId?: string;
-          usage: any;
-          userId?: Id<"users">;
-        },
+        { userId: Id<"users"> },
         any
       >;
     };
@@ -1335,6 +701,32 @@ export declare const internal: {
       "query",
       "internal",
       { limit?: number; query: string; userId: string },
+      any
+    >;
+  };
+  resources: {
+    getResourceLookupCache: FunctionReference<
+      "query",
+      "internal",
+      { category: string; zip: string },
+      any
+    >;
+    recordResourceLookup: FunctionReference<
+      "mutation",
+      "internal",
+      {
+        category: string;
+        expiresAt: number;
+        results: any;
+        userId?: Id<"users">;
+        zip: string;
+      },
+      any
+    >;
+    cleanupResourceCache: FunctionReference<
+      "action",
+      "internal",
+      { limit?: number },
       any
     >;
   };
@@ -4235,140 +3627,6 @@ export declare const components: {
       };
     };
   };
-  rateLimiter: {
-    lib: {
-      checkRateLimit: FunctionReference<
-        "query",
-        "internal",
-        {
-          config:
-            | {
-                capacity?: number;
-                kind: "token bucket";
-                maxReserved?: number;
-                period: number;
-                rate: number;
-                shards?: number;
-                start?: null;
-              }
-            | {
-                capacity?: number;
-                kind: "fixed window";
-                maxReserved?: number;
-                period: number;
-                rate: number;
-                shards?: number;
-                start?: number;
-              };
-          count?: number;
-          key?: string;
-          name: string;
-          reserve?: boolean;
-          throws?: boolean;
-        },
-        { ok: true; retryAfter?: number } | { ok: false; retryAfter: number }
-      >;
-      clearAll: FunctionReference<
-        "mutation",
-        "internal",
-        { before?: number },
-        null
-      >;
-      getServerTime: FunctionReference<"mutation", "internal", {}, number>;
-      getValue: FunctionReference<
-        "query",
-        "internal",
-        {
-          config:
-            | {
-                capacity?: number;
-                kind: "token bucket";
-                maxReserved?: number;
-                period: number;
-                rate: number;
-                shards?: number;
-                start?: null;
-              }
-            | {
-                capacity?: number;
-                kind: "fixed window";
-                maxReserved?: number;
-                period: number;
-                rate: number;
-                shards?: number;
-                start?: number;
-              };
-          key?: string;
-          name: string;
-          sampleShards?: number;
-        },
-        {
-          config:
-            | {
-                capacity?: number;
-                kind: "token bucket";
-                maxReserved?: number;
-                period: number;
-                rate: number;
-                shards?: number;
-                start?: null;
-              }
-            | {
-                capacity?: number;
-                kind: "fixed window";
-                maxReserved?: number;
-                period: number;
-                rate: number;
-                shards?: number;
-                start?: number;
-              };
-          shard: number;
-          ts: number;
-          value: number;
-        }
-      >;
-      rateLimit: FunctionReference<
-        "mutation",
-        "internal",
-        {
-          config:
-            | {
-                capacity?: number;
-                kind: "token bucket";
-                maxReserved?: number;
-                period: number;
-                rate: number;
-                shards?: number;
-                start?: null;
-              }
-            | {
-                capacity?: number;
-                kind: "fixed window";
-                maxReserved?: number;
-                period: number;
-                rate: number;
-                shards?: number;
-                start?: number;
-              };
-          count?: number;
-          key?: string;
-          name: string;
-          reserve?: boolean;
-          throws?: boolean;
-        },
-        { ok: true; retryAfter?: number } | { ok: false; retryAfter: number }
-      >;
-      resetRateLimit: FunctionReference<
-        "mutation",
-        "internal",
-        { key?: string; name: string },
-        null
-      >;
-    };
-    time: {
-      getServerTime: FunctionReference<"mutation", "internal", {}, number>;
-    };
-  };
   workflow: {
     journal: {
       load: FunctionReference<
@@ -4564,400 +3822,441 @@ export declare const components: {
       >;
     };
   };
-  rag: {
-    chunks: {
-      insert: FunctionReference<
-        "mutation",
-        "internal",
-        {
-          chunks: Array<{
-            content: { metadata?: Record<string, any>; text: string };
-            embedding: Array<number>;
-            searchableText?: string;
-          }>;
-          entryId: string;
-          startOrder: number;
-        },
-        { status: "pending" | "ready" | "replaced" }
-      >;
-      list: FunctionReference<
-        "query",
-        "internal",
-        {
-          entryId: string;
-          order: "desc" | "asc";
-          paginationOpts: {
-            cursor: string | null;
-            endCursor?: string | null;
-            id?: number;
-            maximumBytesRead?: number;
-            maximumRowsRead?: number;
-            numItems: number;
-          };
-        },
-        {
-          continueCursor: string;
-          isDone: boolean;
-          page: Array<{
-            metadata?: Record<string, any>;
-            order: number;
-            state: "pending" | "ready" | "replaced";
-            text: string;
-          }>;
-          pageStatus?: "SplitRecommended" | "SplitRequired" | null;
-          splitCursor?: string | null;
-        }
-      >;
-      replaceChunksPage: FunctionReference<
-        "mutation",
-        "internal",
-        { entryId: string; startOrder: number },
-        { nextStartOrder: number; status: "pending" | "ready" | "replaced" }
-      >;
-    };
-    entries: {
-      add: FunctionReference<
-        "mutation",
-        "internal",
-        {
-          allChunks?: Array<{
-            content: { metadata?: Record<string, any>; text: string };
-            embedding: Array<number>;
-            searchableText?: string;
-          }>;
-          entry: {
-            contentHash?: string;
-            filterValues: Array<{ name: string; value: any }>;
-            importance: number;
-            key?: string;
-            metadata?: Record<string, any>;
-            namespaceId: string;
-            title?: string;
-          };
-          onComplete?: string;
-        },
-        {
-          created: boolean;
-          entryId: string;
-          status: "pending" | "ready" | "replaced";
-        }
-      >;
-      addAsync: FunctionReference<
-        "mutation",
-        "internal",
-        {
-          chunker: string;
-          entry: {
-            contentHash?: string;
-            filterValues: Array<{ name: string; value: any }>;
-            importance: number;
-            key?: string;
-            metadata?: Record<string, any>;
-            namespaceId: string;
-            title?: string;
-          };
-          onComplete?: string;
-        },
-        { created: boolean; entryId: string; status: "pending" | "ready" }
-      >;
-      deleteAsync: FunctionReference<
-        "mutation",
-        "internal",
-        { entryId: string; startOrder: number },
-        null
-      >;
-      deleteByKeyAsync: FunctionReference<
-        "mutation",
-        "internal",
-        { beforeVersion?: number; key: string; namespaceId: string },
-        null
-      >;
-      deleteByKeySync: FunctionReference<
+  twilio: {
+    messages: {
+      create: FunctionReference<
         "action",
         "internal",
-        { key: string; namespaceId: string },
-        null
-      >;
-      deleteSync: FunctionReference<
-        "action",
-        "internal",
-        { entryId: string },
-        null
-      >;
-      findByContentHash: FunctionReference<
-        "query",
-        "internal",
         {
-          contentHash: string;
-          dimension: number;
-          filterNames: Array<string>;
-          key: string;
-          modelId: string;
-          namespace: string;
+          account_sid: string;
+          auth_token: string;
+          body: string;
+          callback?: string;
+          from: string;
+          status_callback: string;
+          to: string;
         },
         {
-          contentHash?: string;
-          entryId: string;
-          filterValues: Array<{ name: string; value: any }>;
-          importance: number;
-          key?: string;
-          metadata?: Record<string, any>;
-          replacedAt?: number;
-          status: "pending" | "ready" | "replaced";
-          title?: string;
+          account_sid: string;
+          api_version: string;
+          body: string;
+          counterparty?: string;
+          date_created: string;
+          date_sent: string | null;
+          date_updated: string | null;
+          direction: string;
+          error_code: number | null;
+          error_message: string | null;
+          from: string;
+          messaging_service_sid: string | null;
+          num_media: string;
+          num_segments: string;
+          price: string | null;
+          price_unit: string | null;
+          rest?: any;
+          sid: string;
+          status: string;
+          subresource_uris: { feedback?: string; media: string } | null;
+          to: string;
+          uri: string;
+        }
+      >;
+      getByCounterparty: FunctionReference<
+        "query",
+        "internal",
+        { account_sid: string; counterparty: string; limit?: number },
+        Array<{
+          account_sid: string;
+          api_version: string;
+          body: string;
+          counterparty?: string;
+          date_created: string;
+          date_sent: string | null;
+          date_updated: string | null;
+          direction: string;
+          error_code: number | null;
+          error_message: string | null;
+          from: string;
+          messaging_service_sid: string | null;
+          num_media: string;
+          num_segments: string;
+          price: string | null;
+          price_unit: string | null;
+          rest?: any;
+          sid: string;
+          status: string;
+          subresource_uris: { feedback?: string; media: string } | null;
+          to: string;
+          uri: string;
+        }>
+      >;
+      getBySid: FunctionReference<
+        "query",
+        "internal",
+        { account_sid: string; sid: string },
+        {
+          account_sid: string;
+          api_version: string;
+          body: string;
+          counterparty?: string;
+          date_created: string;
+          date_sent: string | null;
+          date_updated: string | null;
+          direction: string;
+          error_code: number | null;
+          error_message: string | null;
+          from: string;
+          messaging_service_sid: string | null;
+          num_media: string;
+          num_segments: string;
+          price: string | null;
+          price_unit: string | null;
+          rest?: any;
+          sid: string;
+          status: string;
+          subresource_uris: { feedback?: string; media: string } | null;
+          to: string;
+          uri: string;
         } | null
       >;
-      get: FunctionReference<
+      getFrom: FunctionReference<
         "query",
         "internal",
-        { entryId: string },
+        { account_sid: string; from: string; limit?: number },
+        Array<{
+          account_sid: string;
+          api_version: string;
+          body: string;
+          counterparty?: string;
+          date_created: string;
+          date_sent: string | null;
+          date_updated: string | null;
+          direction: string;
+          error_code: number | null;
+          error_message: string | null;
+          from: string;
+          messaging_service_sid: string | null;
+          num_media: string;
+          num_segments: string;
+          price: string | null;
+          price_unit: string | null;
+          rest?: any;
+          sid: string;
+          status: string;
+          subresource_uris: { feedback?: string; media: string } | null;
+          to: string;
+          uri: string;
+        }>
+      >;
+      getFromTwilioBySidAndInsert: FunctionReference<
+        "action",
+        "internal",
         {
-          contentHash?: string;
-          entryId: string;
-          filterValues: Array<{ name: string; value: any }>;
-          importance: number;
-          key?: string;
-          metadata?: Record<string, any>;
-          replacedAt?: number;
-          status: "pending" | "ready" | "replaced";
-          title?: string;
-        } | null
+          account_sid: string;
+          auth_token: string;
+          incomingMessageCallback?: string;
+          sid: string;
+        },
+        {
+          account_sid: string;
+          api_version: string;
+          body: string;
+          counterparty?: string;
+          date_created: string;
+          date_sent: string | null;
+          date_updated: string | null;
+          direction: string;
+          error_code: number | null;
+          error_message: string | null;
+          from: string;
+          messaging_service_sid: string | null;
+          num_media: string;
+          num_segments: string;
+          price: string | null;
+          price_unit: string | null;
+          rest?: any;
+          sid: string;
+          status: string;
+          subresource_uris: { feedback?: string; media: string } | null;
+          to: string;
+          uri: string;
+        }
+      >;
+      getTo: FunctionReference<
+        "query",
+        "internal",
+        { account_sid: string; limit?: number; to: string },
+        Array<{
+          account_sid: string;
+          api_version: string;
+          body: string;
+          counterparty?: string;
+          date_created: string;
+          date_sent: string | null;
+          date_updated: string | null;
+          direction: string;
+          error_code: number | null;
+          error_message: string | null;
+          from: string;
+          messaging_service_sid: string | null;
+          num_media: string;
+          num_segments: string;
+          price: string | null;
+          price_unit: string | null;
+          rest?: any;
+          sid: string;
+          status: string;
+          subresource_uris: { feedback?: string; media: string } | null;
+          to: string;
+          uri: string;
+        }>
       >;
       list: FunctionReference<
         "query",
         "internal",
-        {
-          namespaceId?: string;
-          order?: "desc" | "asc";
-          paginationOpts: {
-            cursor: string | null;
-            endCursor?: string | null;
-            id?: number;
-            maximumBytesRead?: number;
-            maximumRowsRead?: number;
-            numItems: number;
-          };
-          status: "pending" | "ready" | "replaced";
-        },
-        {
-          continueCursor: string;
-          isDone: boolean;
-          page: Array<{
-            contentHash?: string;
-            entryId: string;
-            filterValues: Array<{ name: string; value: any }>;
-            importance: number;
-            key?: string;
-            metadata?: Record<string, any>;
-            replacedAt?: number;
-            status: "pending" | "ready" | "replaced";
-            title?: string;
-          }>;
-          pageStatus?: "SplitRecommended" | "SplitRequired" | null;
-          splitCursor?: string | null;
-        }
+        { account_sid: string; limit?: number },
+        Array<{
+          account_sid: string;
+          api_version: string;
+          body: string;
+          counterparty?: string;
+          date_created: string;
+          date_sent: string | null;
+          date_updated: string | null;
+          direction: string;
+          error_code: number | null;
+          error_message: string | null;
+          from: string;
+          messaging_service_sid: string | null;
+          num_media: string;
+          num_segments: string;
+          price: string | null;
+          price_unit: string | null;
+          rest?: any;
+          sid: string;
+          status: string;
+          subresource_uris: { feedback?: string; media: string } | null;
+          to: string;
+          uri: string;
+        }>
       >;
-      promoteToReady: FunctionReference<
+      listIncoming: FunctionReference<
+        "query",
+        "internal",
+        { account_sid: string; limit?: number },
+        Array<{
+          account_sid: string;
+          api_version: string;
+          body: string;
+          counterparty?: string;
+          date_created: string;
+          date_sent: string | null;
+          date_updated: string | null;
+          direction: string;
+          error_code: number | null;
+          error_message: string | null;
+          from: string;
+          messaging_service_sid: string | null;
+          num_media: string;
+          num_segments: string;
+          price: string | null;
+          price_unit: string | null;
+          rest?: any;
+          sid: string;
+          status: string;
+          subresource_uris: { feedback?: string; media: string } | null;
+          to: string;
+          uri: string;
+        }>
+      >;
+      listOutgoing: FunctionReference<
+        "query",
+        "internal",
+        { account_sid: string; limit?: number },
+        Array<{
+          account_sid: string;
+          api_version: string;
+          body: string;
+          counterparty?: string;
+          date_created: string;
+          date_sent: string | null;
+          date_updated: string | null;
+          direction: string;
+          error_code: number | null;
+          error_message: string | null;
+          from: string;
+          messaging_service_sid: string | null;
+          num_media: string;
+          num_segments: string;
+          price: string | null;
+          price_unit: string | null;
+          rest?: any;
+          sid: string;
+          status: string;
+          subresource_uris: { feedback?: string; media: string } | null;
+          to: string;
+          uri: string;
+        }>
+      >;
+      updateStatus: FunctionReference<
         "mutation",
         "internal",
-        { entryId: string },
-        {
-          replacedEntry: {
-            contentHash?: string;
-            entryId: string;
-            filterValues: Array<{ name: string; value: any }>;
-            importance: number;
-            key?: string;
-            metadata?: Record<string, any>;
-            replacedAt?: number;
-            status: "pending" | "ready" | "replaced";
-            title?: string;
-          } | null;
-        }
-      >;
-    };
-    namespaces: {
-      deleteNamespace: FunctionReference<
-        "mutation",
-        "internal",
-        { namespaceId: string },
-        {
-          deletedNamespace: null | {
-            createdAt: number;
-            dimension: number;
-            filterNames: Array<string>;
-            modelId: string;
-            namespace: string;
-            namespaceId: string;
-            status: "pending" | "ready" | "replaced";
-            version: number;
-          };
-        }
-      >;
-      deleteNamespaceSync: FunctionReference<
-        "action",
-        "internal",
-        { namespaceId: string },
+        { account_sid: string; sid: string; status: string },
         null
       >;
-      get: FunctionReference<
-        "query",
-        "internal",
-        {
-          dimension: number;
-          filterNames: Array<string>;
-          modelId: string;
-          namespace: string;
-        },
-        null | {
-          createdAt: number;
-          dimension: number;
-          filterNames: Array<string>;
-          modelId: string;
-          namespace: string;
-          namespaceId: string;
-          status: "pending" | "ready" | "replaced";
-          version: number;
-        }
-      >;
-      getOrCreate: FunctionReference<
-        "mutation",
-        "internal",
-        {
-          dimension: number;
-          filterNames: Array<string>;
-          modelId: string;
-          namespace: string;
-          onComplete?: string;
-          status: "pending" | "ready";
-        },
-        { namespaceId: string; status: "pending" | "ready" }
-      >;
-      list: FunctionReference<
-        "query",
-        "internal",
-        {
-          paginationOpts: {
-            cursor: string | null;
-            endCursor?: string | null;
-            id?: number;
-            maximumBytesRead?: number;
-            maximumRowsRead?: number;
-            numItems: number;
-          };
-          status: "pending" | "ready" | "replaced";
-        },
-        {
-          continueCursor: string;
-          isDone: boolean;
-          page: Array<{
-            createdAt: number;
-            dimension: number;
-            filterNames: Array<string>;
-            modelId: string;
-            namespace: string;
-            namespaceId: string;
-            status: "pending" | "ready" | "replaced";
-            version: number;
-          }>;
-          pageStatus?: "SplitRecommended" | "SplitRequired" | null;
-          splitCursor?: string | null;
-        }
-      >;
-      listNamespaceVersions: FunctionReference<
-        "query",
-        "internal",
-        {
-          namespace: string;
-          paginationOpts: {
-            cursor: string | null;
-            endCursor?: string | null;
-            id?: number;
-            maximumBytesRead?: number;
-            maximumRowsRead?: number;
-            numItems: number;
-          };
-        },
-        {
-          continueCursor: string;
-          isDone: boolean;
-          page: Array<{
-            createdAt: number;
-            dimension: number;
-            filterNames: Array<string>;
-            modelId: string;
-            namespace: string;
-            namespaceId: string;
-            status: "pending" | "ready" | "replaced";
-            version: number;
-          }>;
-          pageStatus?: "SplitRecommended" | "SplitRequired" | null;
-          splitCursor?: string | null;
-        }
-      >;
-      lookup: FunctionReference<
-        "query",
-        "internal",
-        {
-          dimension: number;
-          filterNames: Array<string>;
-          modelId: string;
-          namespace: string;
-        },
-        null | string
-      >;
-      promoteToReady: FunctionReference<
-        "mutation",
-        "internal",
-        { namespaceId: string },
-        {
-          replacedNamespace: null | {
-            createdAt: number;
-            dimension: number;
-            filterNames: Array<string>;
-            modelId: string;
-            namespace: string;
-            namespaceId: string;
-            status: "pending" | "ready" | "replaced";
-            version: number;
-          };
-        }
-      >;
     };
-    search: {
-      search: FunctionReference<
+    phone_numbers: {
+      create: FunctionReference<
+        "action",
+        "internal",
+        { account_sid: string; auth_token: string; number: string },
+        any
+      >;
+      updateSmsUrl: FunctionReference<
         "action",
         "internal",
         {
-          chunkContext?: { after: number; before: number };
-          embedding: Array<number>;
-          filters: Array<{ name: string; value: any }>;
-          limit: number;
-          modelId: string;
-          namespace: string;
-          vectorScoreThreshold?: number;
+          account_sid: string;
+          auth_token: string;
+          sid: string;
+          sms_url: string;
+        },
+        any
+      >;
+    };
+  };
+  rateLimiter: {
+    lib: {
+      checkRateLimit: FunctionReference<
+        "query",
+        "internal",
+        {
+          config:
+            | {
+                capacity?: number;
+                kind: "token bucket";
+                maxReserved?: number;
+                period: number;
+                rate: number;
+                shards?: number;
+                start?: null;
+              }
+            | {
+                capacity?: number;
+                kind: "fixed window";
+                maxReserved?: number;
+                period: number;
+                rate: number;
+                shards?: number;
+                start?: number;
+              };
+          count?: number;
+          key?: string;
+          name: string;
+          reserve?: boolean;
+          throws?: boolean;
+        },
+        { ok: true; retryAfter?: number } | { ok: false; retryAfter: number }
+      >;
+      clearAll: FunctionReference<
+        "mutation",
+        "internal",
+        { before?: number },
+        null
+      >;
+      getServerTime: FunctionReference<"mutation", "internal", {}, number>;
+      getValue: FunctionReference<
+        "query",
+        "internal",
+        {
+          config:
+            | {
+                capacity?: number;
+                kind: "token bucket";
+                maxReserved?: number;
+                period: number;
+                rate: number;
+                shards?: number;
+                start?: null;
+              }
+            | {
+                capacity?: number;
+                kind: "fixed window";
+                maxReserved?: number;
+                period: number;
+                rate: number;
+                shards?: number;
+                start?: number;
+              };
+          key?: string;
+          name: string;
+          sampleShards?: number;
         },
         {
-          entries: Array<{
-            contentHash?: string;
-            entryId: string;
-            filterValues: Array<{ name: string; value: any }>;
-            importance: number;
-            key?: string;
-            metadata?: Record<string, any>;
-            replacedAt?: number;
-            status: "pending" | "ready" | "replaced";
-            title?: string;
-          }>;
-          results: Array<{
-            content: Array<{ metadata?: Record<string, any>; text: string }>;
-            entryId: string;
-            order: number;
-            score: number;
-            startOrder: number;
-          }>;
+          config:
+            | {
+                capacity?: number;
+                kind: "token bucket";
+                maxReserved?: number;
+                period: number;
+                rate: number;
+                shards?: number;
+                start?: null;
+              }
+            | {
+                capacity?: number;
+                kind: "fixed window";
+                maxReserved?: number;
+                period: number;
+                rate: number;
+                shards?: number;
+                start?: number;
+              };
+          shard: number;
+          ts: number;
+          value: number;
         }
       >;
+      rateLimit: FunctionReference<
+        "mutation",
+        "internal",
+        {
+          config:
+            | {
+                capacity?: number;
+                kind: "token bucket";
+                maxReserved?: number;
+                period: number;
+                rate: number;
+                shards?: number;
+                start?: null;
+              }
+            | {
+                capacity?: number;
+                kind: "fixed window";
+                maxReserved?: number;
+                period: number;
+                rate: number;
+                shards?: number;
+                start?: number;
+              };
+          count?: number;
+          key?: string;
+          name: string;
+          reserve?: boolean;
+          throws?: boolean;
+        },
+        { ok: true; retryAfter?: number } | { ok: false; retryAfter: number }
+      >;
+      resetRateLimit: FunctionReference<
+        "mutation",
+        "internal",
+        { key?: string; name: string },
+        null
+      >;
+    };
+    time: {
+      getServerTime: FunctionReference<"mutation", "internal", {}, number>;
     };
   };
 };

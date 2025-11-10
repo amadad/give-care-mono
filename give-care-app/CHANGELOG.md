@@ -1,9 +1,96 @@
 # Changelog - GiveCare App
 
+## [Unreleased] - Roadmap to v1.6.0
+
+### Planned Enhancements
+
+**See `docs/STATUS.md` for v1.5.0 → v1.6.0 migration (fix broken references first)**
+
+After restoring v1.5.0 functionality, the following enhancements are planned:
+
+#### Phase 2 - Clinical Layer (Remaining Work)
+
+**Evidence-Based Interventions** (🚧 Partially complete):
+- ✅ `interventions` and `interventionEvents` tables exist
+- ⏳ Seed 16 evidence-backed strategies from archived script
+- ⏳ Add agent tool to fetch interventions by dominant pressure zones
+- ⏳ Trigger follow-up nudges ("How did respite go?")
+- ⏳ Log `interventionEvents` for engagement sweep to revisit
+
+**Resource Discovery Upgrade** (🚧 Partially complete):
+- ✅ TTL cache + cleanup cron implemented
+- ✅ Google Maps API integration in `actions/maps.actions.ts`
+- ⏳ Complete live lookup integration (currently stub data)
+- ⏳ Reuse stored zip (no re-asking)
+- ⏳ Format conversational summaries
+- ⏳ Offer SMS link delivery for resources
+
+#### Phase 3 - Engagement & Observability
+
+**Proactive Engagement** (🔄 Planned):
+- Current: Single gentle nudge on silence detection
+- Plan: Day-5/Day-7 escalation tiers
+- Plan: Include crisis resources (988/741741) on second nudge
+- Plan: Adaptive `checkInSchedules` cadence (daily under stress, weekly when stable)
+- Plan: Enrich `engagementFlags` with `escalationLevel`
+
+**Agent Telemetry Dashboards** (🔄 Planned):
+- Current: `agentRuns` + `executionLogs` tables populated
+- Plan: Expose admin queries for latency percentiles
+- Plan: Tool usage monitoring
+- Plan: Cost monitoring (token/SMS spend)
+- Plan: Guardrail violation counts
+
+**Subscription Billing** (🚧 Schema exists):
+- ✅ Schema + Stripe actions exist
+- ⏳ Implement Stripe Checkout session creation
+- ⏳ Implement webhook signature validation
+- ⏳ Persist `stripeCustomerId/status`
+- ⏳ Gate premium features with `requireActiveSubscription` helper
+- ⏳ Add promo codes support
+
+#### Phase 4 - Testing & Hardening
+
+**Documentation & Deploy Readiness** (🔄 In progress):
+- ✅ Initial docs updated (models, prompts, rate limits)
+- ✅ ARCHITECTURE.md with PII hashing/guardrails
+- ⏳ Convex Agents runbook
+- ⏳ Migration steps for embeddings/interventions pre-deploy
+- ⏳ QA checklist (HIPAA hashing, rate limits, crisis flows, Stripe billing)
+
+**Simulation & Load Testing** (⏳ Planned):
+- convex-test journeys (crisis, EMA, assessments)
+- Twilio/OpenAI integration tests
+- Load testing for <600ms crisis / <1s main agents
+- Vector backfill for existing memories
+
+#### Success Metrics & Targets
+
+Once Phase 4 is complete, track:
+- **User retention**: ≥50% at 30 days
+- **Crisis response latency**: p95 <600ms (deterministic)
+- **Main agent latency**: p95 <900ms (gpt-5-nano + flex tier)
+- **Cost per user**: <$2/month at 10k users
+- **Assessment completion**: ≥60% of opt-ins complete BSFC/REACH-II
+- **Burnout improvement**: 10-point drop over 8 weeks
+- **Crisis reduction**: 30% fewer 988 escalations vs baseline
+- **Admin responsiveness**: Daily metrics, <1s user lookup
+
+---
+
 ## [Unreleased] - 2025-11-09
+
+### Added
+
+- **Semantic Memory + Guardrails** (`convex/agents/*`, `lib/prompts.ts`, `actions/embeddings.actions.ts`, `schema.ts`, `core.ts`): Split the agents into modular files, upgraded Main/Assessment agents to the OpenAI Responses API (GPT‑5 nano/mini), and inject semantic memories ranked via Convex vector search. Added a `guardrailsTool` plus prompt suffixes so every ask ends with “(Reply "skip" to move on)” per P1–P6.
+- **PII Hardening + Rate Limits** (`lib/pii.ts`, `lib/rateLimiting.ts`, `sms.ts`): Normalize/hash phones (SHA‑256), redact SSN/CC/ZIP before persistence, log sensitive lookups, and enforce @convex-dev/rate-limiter budgets (10 SMS/day per user, 50K tokens/hour per user, 500K TPM global) on both ingress and egress.
+- **Crisis Automation** (`lib/policy.ts`, `core.ts`, `sms.ts`, `workflows.ts`): Expanded keyword/severity map, log each event with scheduled job IDs, auto-send deterministic responses in <600 ms, and schedule 24h/72h `crisisFollowUp` workflows that cancel when the user replies again.
+- **Clinical Workflows** (`lib/assessments.ts`, `workflows.ts`, `crons.ts`): Added EMA triplet scheduling (0/5/10 minute offsets) with rate-limited SMS delivery, check-in logging per question index, and an hourly resource-cache cleanup job for TTL-based Google Maps/Gemini lookups.
 
 ### Fixed
 
+- **Missing Convex API Surfaces** (`convex/domains/{wellness,interventions,messages}.ts`, `convex/internal/core.ts`, `convex/public.ts`, `convex/inbound.ts`, `convex/billing.ts`): Re-created the compat queries/mutations that agents, guardrails, Stripe webhooks, and Twilio handlers expect (`api.domains.*`, `api.billing.applyStripeEvent`, `api.internal.core.*`, `internal.inbound.*`). Guardrails now log through `api.internal.core.logAuditEntry/appendMessage`, agents route crisis logs via `api.internal.core.logCrisisEvent`, and inbound SMS handling once again records/dispatches messages without runtime crashes.
+- **Resource Lookup Cache Restoration** (`convex/resources.ts`, `convex/actions/maps.actions.ts`, `convex/schema.ts`, `convex/crons.ts`, `docs/ARCHITECTURE.md`): Added the `resource_cache` table + hourly cleanup cron, rebuilt `api.resources.searchResources` to normalize ZIPs and reuse cached payloads, and pointed `maps.actions.ts` at the new `internal.resources.{getResourceLookupCache,recordResourceLookup}` helpers. The Main agent’s `searchResources` tool now returns cached TTL-backed summaries instead of throwing missing export errors.
 - **Twilio Webhook Buffer Error** (`convex/http.ts:39-42`): Fixed `ReferenceError: Buffer is not defined` in Twilio signature verification by replacing Node.js Buffer API with Web-compatible base64 encoding. The `verifyTwilioSignature` function was attempting to use Buffer without the `"use node"` directive, causing webhook failures. Now uses `btoa()` with Uint8Array conversion for edge-compatible execution. Webhook at `/webhooks/twilio/sms` now processes incoming SMS without runtime errors
 - **GPT-5 Model Version Support** (`package.json`, `convex/agents.ts:239, 452, 622`): Fixed `AI_UnsupportedModelVersionError` by upgrading `@ai-sdk/openai` from v1.3.24 to v2.0.64. GPT-5 models require AI SDK v2.x which implements specification version v2. The older v1.x package only supported v1 specification, causing "Unsupported model version" errors. All agents now successfully use `openai('gpt-5-nano')` and `openai('gpt-5-mini')` with proper v2 specification support
 - **Namespace Violations** (`convex/agents.ts`, `convex/inbound.ts`, `convex/http.ts`, `convex/billing.ts`, `convex/crons.ts`, multiple domain files): Corrected 25+ incorrect namespace calls across 9 files following Convex refactor. Fixed critical runtime errors where `internal.internal.*` and `api.internal.*` were used instead of proper `api.domains.*` and `internal.domains.*` paths. Updated cron jobs to use `internal.domains.*` for internal functions. Changed agent references from `internal.agents.*` to `api.agents.*` for public actions. Fixed scheduler calls to use bare `internal.*` for re-exported actions. All functions now use correct namespaces: public functions via `api.*`, internal functions via `internal.*`, with proper domain paths. Deployed successfully twice with full namespace validation
@@ -54,6 +141,130 @@
 - **`users.phoneNumber` field**: Migration complete via `migrations/consolidateUserFields.ts`. All code now uses `users.phone` field. Only usage is in admin TypeScript types (safe) and migration script itself
 - **`threads` table**: DEPRECATED but still in schema. No queries use `db.query('threads')`. Agent Component manages threads internally. Table kept for backward compatibility during v1.4.x series
 - **Recommendation**: Schedule removal for v1.5.0 after verifying all production deployments migrated
+
+## [1.5.0] - 2025-11-09
+
+### ⚠️ Breaking: Post-Refactor Cleanup (Partially Functional)
+
+**Impact:** Production deployed but with 43 TypeScript errors - major cleanup required
+
+#### Changed
+
+- **Domain Folder Removal** (`convex/domains/*`): Archived entire `domains/` directory (14 files, ~1,200 LOC) in favor of consolidated `core.ts`, `public.ts`, and `workflows.ts`. Intended to simplify architecture but left broken references across codebase.
+
+#### Known Issues (43 TypeScript Errors)
+
+**Critical Issues:**
+1. **Agent Tools Broken** (`agents/main.ts`, `agents/assessment.ts`, `agents/guardrails.tool.ts`):
+   - Tools reference deleted `api.domains.wellness.getStatus`
+   - Tools reference deleted `api.domains.interventions.getByZones`
+   - Tools reference deleted `api.resources.searchResources`
+   - **Impact:** Agent tools cannot execute
+
+2. **SMS Handler Disabled** (`twilioClient.ts:11`):
+   - Twilio callback commented out: `// twilio.incomingMessageCallback = internal.sms.handleIncomingMessage`
+   - **Impact:** No incoming SMS processing
+
+3. **Missing Public Functions** (`public.ts`):
+   - 6 functions expected by agent tools not exported: `listMemories`, `startAssessment`, `recordAssessmentOffer`, `declineAssessmentOffer`, `upsertCheckInSchedule`, `recordAssessmentResponse`
+   - **Impact:** Agent tools fail at runtime
+
+**High Priority:**
+4. **Resource Cache Functions Deleted** (`actions/maps.actions.ts`):
+   - References `internal.getResourceLookupCache` (deleted)
+   - References `internal.recordResourceLookup` (deleted)
+   - **Impact:** Resource lookups don't cache, potential rate limits
+
+5. **Billing Webhook Broken** (`http.ts:93`):
+   - References `api.billing.applyStripeEvent` (deleted)
+   - **Impact:** Stripe subscription webhooks fail
+
+6. **Workflow Message Handlers** (`workflows.ts`, `http.ts`):
+   - References `internal.inbound.sendSmsResponse` (deleted)
+   - References `api.domains.messages.recordInbound` (deleted)
+   - **Impact:** SMS sending fails
+
+#### What Still Works
+
+✅ Core Infrastructure:
+- Database schema (36 tables)
+- Convex deployment pipeline
+- Production deployment (with `--typecheck=disable`)
+
+✅ Agent Logic:
+- 3 agent implementations (Main, Crisis, Assessment)
+- Crisis detection (19 keywords)
+- Durable workflow engine
+
+✅ Library Functions:
+- Assessment definitions & scoring
+- PII redaction & hashing
+- Crisis detection (`lib/policy.ts`)
+- Prompts (`lib/prompts.ts`)
+- Rate limiting logic
+
+✅ External Integrations:
+- Stripe SDK
+- OpenAI SDK
+- Google Maps API
+
+#### Files Modified
+
+- `convex/internal.ts` - Removed domain exports (cleaned up)
+- `convex/twilioClient.ts` - Commented out SMS handler
+- `convex/lib/types.ts` - Added missing types (`Channel`, `Budget`, `HydratedContext`)
+- `convex/lib/prompts.ts` - Added `renderPrompt()` function
+- `convex/lib/policy.ts` - Added `getTone()` function
+- `convex/lib/usage.ts` - Created stub with `sharedAgentConfig`
+- `convex/lib/profile.ts` - Created stub with profile helpers
+- `convex/crons.ts` - Emptied cron jobs (removed broken references)
+
+#### Documentation
+
+- **ARCHITECTURE.md** - Complete rewrite reflecting current state with status indicators
+- **README.md** - Updated to v1.5.0 with honest status assessment
+- **STATUS.md** - NEW - 3-phase migration plan with detailed breakdowns
+- Archived: `CONVEX_DEEP_AUDIT.md`, `CONVEX_INTEGRATION.md` (outdated)
+
+#### Migration Path
+
+**See `docs/STATUS.md` for detailed 3-phase plan (v1.5.0 → v1.6.0):**
+
+**Phase 1 (Week 1):** Core functionality
+- Add 6 missing public functions
+- Create SMS handler
+- Fix agent tool references
+
+**Phase 2 (Week 2):** Integrations
+- Implement resource cache
+- Fix billing webhook
+- Fix workflow references
+
+**Phase 3 (Week 3):** Polish
+- Restore cron jobs
+- Fix tests
+- Enable typecheck
+
+#### Deployment
+
+- ✅ Deployed to production: `https://doting-tortoise-411.convex.cloud`
+- ⚠️ Typecheck disabled: `npx convex deploy --typecheck=disable`
+- ⚠️ 43 TypeScript errors prevent normal deployment
+
+#### Rollback
+
+**If needed, revert to v1.4.0:**
+```bash
+git revert <commit-hash>  # Commit 758d233 (pre-domain deletion)
+npx convex deploy --yes
+```
+
+**Version:** 1.5.0
+**Status:** ⚠️ Production deployed but partially broken
+**TypeScript Errors:** 43 errors across 9 files
+**Migration Required:** Yes - See `docs/STATUS.md`
+
+---
 
 ## [1.4.1] - 2025-11-09
 

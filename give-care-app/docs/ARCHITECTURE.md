@@ -1,7 +1,8 @@
 # GiveCare Architecture Reference
+# give-care-app/convex
 
 **Purpose:** Concise technical map for AI agents and developers
-**Last Updated:** 2025-01-08 (v1.4.0)
+**Last Updated:** 2025-11-09 (v1.5.0 - Post-domain cleanup)
 
 ---
 
@@ -16,88 +17,88 @@
 **Communication:** SMS-first (160 char), trauma-informed (P1-P6 principles)
 **Data:** User profiles, wellness scores, conversations, resources, interventions
 
+**Current State:** Compat `domains/` shims restored (wellness, interventions, messages) so legacy `api.domains.*` references resolve during cleanup.
+
 ---
 
 ## Folder Structure
 
 ```
 convex/
-├── actions/         # Node-only side effects (Stripe, Twilio, Resend)
-├── agents.ts        # AI agent implementations (3 agents)
-├── core.ts          # Core model helpers (users, sessions, messages, etc.)
-├── domains/         # Internal-only queries & mutations (12 domain files)
-├── internal.ts      # Barrel that re-exports domains + core for api.internal.*
-├── lib/             # Business logic utilities
-├── workflows.ts     # Durable workflows (crisis escalation, onboarding)
-├── schema.ts        # Database schema (24 tables)
+├── actions/         # Node-only side effects (3 files)
+│   ├── embeddings.actions.ts  # Text embeddings for memory search
+│   ├── maps.actions.ts        # Google Maps resource grounding
+│   └── stripe.actions.ts      # Stripe billing integration
+├── agents/          # Agent tool helpers (now only guardrails)
+│   └── guardrails.tool.ts     # Trauma-informed compliance checking
+├── lib/             # Business logic utilities (10 files)
+│   ├── assessmentCatalog.ts   # Assessment definitions (EMA, BSFC, REACH2, SDOH)
+│   ├── assessments.ts         # Assessment scoring logic
+│   ├── pii.ts                 # PII redaction & hashing
+│   ├── policy.ts              # Crisis detection, tone guidance
+│   ├── profile.ts             # Profile completeness helpers
+│   ├── prompts.ts             # Agent system prompts (P1-P6 principles)
+│   ├── rateLimiting.ts        # SMS & token rate limits
+│   ├── tools.ts               # Shared tool utilities
+│   ├── types.ts               # Shared TypeScript types
+│   └── usage.ts               # LLM cost tracking config
+├── agents.ts        # Main agent implementations (3 agents)
+├── core.ts          # Core data operations (users, sessions, messages)
+├── crons.ts         # Scheduled jobs (resource cache cleanup)
 ├── http.ts          # Webhook router (Twilio, Stripe)
-└── crons.ts         # Scheduled jobs (metrics, triggers)
+├── internal/        # Internal API barrel + compat shims
+├── public.ts        # Public API surface
+├── resources.ts     # Resource search + cache access
+├── schema.ts        # Database schema (36 tables)
+├── twilioClient.ts  # Twilio SDK configuration
+└── workflows.ts     # Durable workflows (crisis escalation)
 ```
 
-### `convex/agents/` - AI Agent Implementations
+**Note:** `domains/` now contains slim compat shims (`wellness`, `interventions`, `messages`) that forward to `core`/`workflows` so existing `api.domains.*` entries remain callable during the refactor.
 
-| File | What | How | Why | For |
-|------|------|-----|-----|-----|
-| `main.ts` | Primary caregiver support agent | 6 tools, conversation context, profile management | Handle 90% of interactions | All users |
-| `crisis.ts` | Crisis intervention agent | Detect crisis terms, provide 988/741741/911 resources | Safety-critical responses | Users in crisis |
-| `assessment.ts` | Assessment results interpreter | Analyze scores, recommend interventions | Personalize support strategies | Users completing assessments |
+---
 
-### `convex/domains/` - Internal API Surface
+## File Breakdown
 
-Domain files group related queries/mutations so `internal/index.ts` can re-export a tidy barrel (`api.internal.*`). Each file stays <300 LOC and only imports `lib/*` or `core.ts`.
+### Core Files
 
-**Note:** Thin wrapper files (`users.ts`, `messages.ts`, `threads.ts`, `email.ts`) have been removed in favor of direct exports from `core.ts` (v1.5.0 refactor).
+| File | LOC | Purpose | Key Exports |
+|------|-----|---------|-------------|
+| `agents.ts` | 777 | 3 agent implementations (Main, Crisis, Assessment) | `runMainAgent`, `runCrisisAgent`, `runAssessmentAgent` |
+| `core.ts` | 435 | User/session/message CRUD, context hydration | `ensureUser`, `ensureSession`, `hydrate`, `persist` |
+| `public.ts` | 137 | Public API surface for web/mobile clients | `hydrate`, `persist`, `recordMemory` |
+| `workflows.ts` | 389 | Durable workflows (crisis escalation, follow-ups) | `crisisEscalation`, `crisisFollowUp` |
+| `http.ts` | 191 | Webhook handlers (Twilio SMS, Stripe) | HTTP router |
+| `schema.ts` | 352 | Database schema (36 tables) | Schema definition |
 
-| File | Focus | Notes | Key exports |
-|------|-------|-------|-------------|
-| `metrics.ts` | Daily/subscription/journey aggregations | Cron-friendly internal mutations | `aggregateDailyMetrics`, `computeDailyMetrics`, `computeSubscriptionMetrics` |
-| `scheduler.ts` | Trigger lifecycle & batching | Mutations only insert alerts; cron advances work | `enqueueOnce`, `createTrigger`, `processBatchInternal` |
-| `wellness.ts` | Recent score summaries | Used by agents for context | `getStatus` |
-| `interventions.ts` | Evidence-based content | Seed + lookup + history tracking | `seedInterventions`, `getByZones`, `recordEvent` |
-| `logs.ts` | Agent + guardrail telemetry | Keeps agent_run/guardrail tables scoped here | `agentRun`, `logAgentRunInternal`, `logCrisisInteraction` |
-| `analytics.ts` | Dashboard rollups | Materialized metrics readers only | `getBurnoutDistribution`, `getDailyMetrics`, `getSummaryPerformance` |
-| `admin.ts` | Admin portal data | Fan-out queries with helper utilities | `getMetrics`, `getAllUsers`, `getSystemHealth` |
-| `alerts.ts` | Alert queue ops | Limited to list + mark | `listPending`, `markProcessed` |
-| `memories.ts` | Working memory | Uses Convex validators, default `minImportance=7` | `record`, `retrieveImportant` |
-| `watchers.ts` | Engagement sweeps | Inserts alerts instead of acting directly | `runEngagementChecks` |
-| `subscriptions.ts` | Manual subscription fixes | Applies PLAN_ENTITLEMENTS consistently | `linkSubscription` |
-| `assessments.ts` | Session orchestration + scoring | Domain config for EMA/BSFC/SDOH | `start`, `recordAnswer` |
+### Agent Files (`agents/`)
 
-**Moved to `core.ts`** (re-exported via `internal.ts` for backward compatibility):
-- `getByExternalId` - User lookups by external ID
-- `recordInbound` / `recordOutbound` - Message persistence
-- `logDelivery` - Email delivery logging
-- `createComponentThread` - Agent Component thread creation
+| File | Purpose | Tools | Notes |
+|------|---------|-------|-------|
+| `guardrails.tool.ts` | Trauma-informed compliance checking | 1 tool (guardrails) | Logs via `api.internal.core.*` compat shims |
 
-Node-only side effects (Stripe/Twilio/Resend) live under `convex/actions/*.actions.ts` and are re-exported through `internal.ts` after passing the `"use node"` boundary.
+### Action Files (`actions/`)
 
-### `convex/lib/` - Business Logic Utilities
+| File | Purpose | Dependencies | Notes |
+|------|---------|--------------|-------|
+| `embeddings.actions.ts` | Text embeddings (text-embedding-3-small) | OpenAI | For memory search |
+| `maps.actions.ts` | Google Maps resource grounding | Google Maps, Gemini | Uses `resource_cache` + `internal.resources.*` |
+| `stripe.actions.ts` | Stripe subscription management | Stripe SDK | Checkout, webhooks |
 
-| File | What | Why | Exports |
-|------|------|-----|---------|
-| `prompts.ts` | Agent system prompts (P1-P6 principles) | Trauma-informed communication | `MAIN_PROMPT`, `CRISIS_PROMPT`, `ASSESSMENT_PROMPT`, `renderPrompt()` |
-| `profile.ts` | Profile completeness helpers | DRY code across agents | `getProfileCompleteness()`, `buildWellnessInfo()`, `extractProfileVariables()` |
-| `usage.ts` | LLM token tracking & cost estimation | Monitor API spend | `sharedAgentConfig`, `insertLLMUsage` |
-| `rateLimiting.ts` | SMS & token rate limits | Prevent abuse, control costs | `checkMessageRateLimit()`, `consumeTokenUsage()`, `estimateTokens()` |
-| `files.ts` | MMS file storage & vision processing | Handle images in SMS | `storeMMSFile()`, `buildMessageWithFiles()` |
-| `policy.ts` | Trauma-informed response policies | Consistent tone across agents | `getTone()`, `shouldEscalateToCrisis()` |
-| `summarization.ts` | Conversation compression (60-80% savings) | Reduce context window costs | `summarizeConversation()`, `formatForContext()` |
-| `maps.ts` | Google Maps grounding (Gemini 2.0) | Geocode resources, semantic search | `searchWithMaps()`, `extractLocations()` |
-| `types.ts` | Shared TypeScript types | Type safety | `Channel`, `ConversationContext`, `AgentContext` |
+### Library Files (`lib/`)
 
-### `convex/model/` - Data Access Layer
-
-| File | What | Why | Exports |
-|------|------|-----|---------|
-| `users.ts` | User CRUD operations | Abstract database queries | `getByExternalId()`, `ensureUser()`, `ensureSession()` |
-| `context.ts` | Session context management | Hydrate/persist conversation state | `hydrate()`, `persist()` |
-
-### `convex/workflows/` - Durable Workflows
-
-| File | What | Why | Steps |
-|------|------|-----|-------|
-| `crisis.ts` | Crisis escalation workflow | Reliable crisis handling with retries | Log event → Generate response → Notify emergency → Schedule follow-up |
-| `crisisSteps.ts` | Individual workflow step functions | Idempotent, retry-safe operations | 7 step functions (logCrisisEvent, generateCrisisResponse, etc.) |
+| File | Purpose | Exports |
+|------|---------|---------|
+| `assessmentCatalog.ts` | Assessment definitions (EMA, BSFC, REACH2, SDOH) | Question sets, scoring logic |
+| `assessments.ts` | Assessment scoring & pressure zone calculation | `scoreAssessment()` |
+| `pii.ts` | PII redaction & phone hashing | `hashPhone()`, `redactPII()` |
+| `policy.ts` | Crisis detection, tone guidance | `detectCrisis()`, `getTone()` |
+| `profile.ts` | Profile completeness helpers | `extractProfileVariables()`, `getProfileCompleteness()` |
+| `prompts.ts` | Agent system prompts (P1-P6) | `MAIN_PROMPT`, `CRISIS_PROMPT`, `ASSESSMENT_PROMPT`, `renderPrompt()` |
+| `rateLimiting.ts` | Rate limit enforcement | `checkMessageRateLimit()` |
+| `tools.ts` | Shared tool utilities | Tool helper functions |
+| `types.ts` | TypeScript types | `Channel`, `Budget`, `HydratedContext` |
+| `usage.ts` | LLM cost tracking config | `sharedAgentConfig` |
 
 ---
 
@@ -111,36 +112,33 @@ Node-only side effects (Stripe/Twilio/Resend) live under `convex/actions/*.actio
 **For:** All users
 
 **Files:**
-- `convex/http.ts` - Twilio webhook handler (`handleInboundSMS`)
-- `convex/agents/main.ts` - Main conversation agent
-- `convex/internal/context.ts` - Internal-only conversation summary query for agents
-- `convex/functions/messages.ts` - Message persistence
+- `http.ts` - Twilio webhook handler
+- `agents.ts` - Agent implementations
+- `core.ts` - Context hydration/persistence
 
 **Flow:**
 ```
-SMS → Twilio → http.ts:handleInboundSMS → context.hydrate → agent.generateText → SMS response
+SMS → Twilio → http.ts → core.hydrate() → agents.runMainAgent() → Twilio SMS
 ```
 
-- `convex/functions/inbound.ts` stores the agent component `threadId` on `users.metadata.componentThreadId` so crisis and main agents continue within the same Convex Agent thread.
+**Status:** ✅ HTTP webhook + `internal/inbound` handle SMS ingress/egress
 
 ### 2. Wellness Assessments
 
-**What:** 4 validated assessments (EMA, BSFC, REACH-II, SDOH) - 57 questions total
+**What:** 4 validated assessments (EMA, BSFC, REACH-II, SDOH)
 **How:** Question-by-question via SMS, scored by pressure zone
 **Why:** Track burnout, identify intervention needs
 **For:** Users tracking wellness over time
 
 **Files:**
-- `convex/functions/assessments.ts` - Definitions, scoring (lines 5-178)
-- `convex/agents/assessment.ts` - Results interpretation
-- `convex/schema.ts` - `assessment_sessions`, `assessment_answers`, `scores`
+- `lib/assessmentCatalog.ts` - Definitions (57 questions)
+- `lib/assessments.ts` - Scoring logic
+- `agents.ts` - Assessment agent + interpretation tools
+- `schema.ts` - `assessment_sessions`, `assessments`, `scores`
 
 **Pressure Zones:** Emotional, Physical, Social, Time, Financial
 
-**Flow:**
-```
-User → "start check-in" → recordAnswer (each Q) → completeSession → scorer → assessment agent → interventions
-```
+**Status:** ✅ Assessment tools run via restored `api.domains.*` queries
 
 ### 3. Crisis Detection & Response
 
@@ -150,17 +148,18 @@ User → "start check-in" → recordAnswer (each Q) → completeSession → scor
 **For:** Users expressing suicidal thoughts, self-harm, despair
 
 **Files:**
-- `convex/lib/policy.ts` - Crisis term detection (`shouldEscalateToCrisis`)
-- `convex/agents/crisis.ts` - Structured crisis response
-- `convex/workflows/crisis.ts` - Durable escalation workflow
-- `convex/functions/alerts.ts` - Crisis event logging
+- `lib/policy.ts` - Crisis term detection (19 keywords)
+- `agents.ts` - Crisis agent implementation
+- `workflows.ts` - Durable escalation workflow
 
 **Resources:** 988 Suicide & Crisis Lifeline, 741741 Crisis Text Line, 911
 
 **Flow:**
 ```
-Detect crisis terms → workflows/crisis.crisisEscalation → crisis agent → 988/741741/911 → emergency contact notification → 24h follow-up
+Detect crisis terms → workflows.crisisEscalation → agents.runCrisisAgent → 988/741741/911
 ```
+
+**Status:** ✅ Core logic intact
 
 ### 4. Local Resource Discovery
 
@@ -170,16 +169,14 @@ Detect crisis terms → workflows/crisis.crisisEscalation → crisis agent → 9
 **For:** Users needing local services
 
 **Files:**
-- `convex/lib/maps.ts` - Google Maps integration
-- `convex/functions/resources.ts` - Search actions
-- `convex/agents/main.ts` - `searchResourcesTool` (lines 49-80)
+- `actions/maps.actions.ts` - Google Maps integration + cache writer
+- `resources.ts` - `api.resources.searchResources` compat action
+- `agents.ts` - `searchResources` tool (Main agent)
+- `schema.ts` - `resource_cache` table (category+zip index)
 
 **Categories:** respite, support, daycare, homecare, medical, community, meals, transport, hospice, memory
 
-**Flow:**
-```
-User query → searchResourcesTool → maps.searchWithMaps(query + zip) → results with citations + widget tokens
-```
+**Status:** ✅ Cache restored (TTL via `resource_cache`, hourly cleanup cron)
 
 ### 5. Working Memory System
 
@@ -189,16 +186,13 @@ User query → searchResourcesTool → maps.searchWithMaps(query + zip) → resu
 **For:** All users - proactive context building
 
 **Files:**
-- `convex/functions/context.ts` - `recordMemory` mutation (lines 82-106)
-- `convex/agents/main.ts` - `recordMemoryTool` (lines 82-110)
-- `convex/schema.ts` - `memories` table
+- `public.ts` - `recordMemory` mutation
+- `agents.ts` - `recordMemoryTool`
+- `schema.ts` - `memories` table (with embeddings)
 
 **Categories:** care_routine, preference, intervention_result, crisis_trigger
 
-**Flow:**
-```
-Agent detects valuable info → recordMemory(externalId, category, content, importance) → stored in memories table
-```
+**Status:** ✅ Public + agent tooling wired via `api.public.recordMemory/listMemories`
 
 ### 6. Evidence-Based Interventions
 
@@ -208,16 +202,12 @@ Agent detects valuable info → recordMemory(externalId, category, content, impo
 **For:** Users with high burnout scores
 
 **Files:**
-- `convex/functions/interventions.ts` - `getByZones` query
-- `convex/agents/main.ts` - `findInterventionsTool` (lines 131-166)
-- `convex/schema.ts` - `interventions` table
+- `schema.ts` - `interventions` table
+- `agents.ts` - `findInterventionsTool`
 
 **Evidence Levels:** high, moderate, low
 
-**Flow:**
-```
-User completes assessment → pressure zones identified → getByZones(zones, minEvidence) → 2-5 min activities
-```
+**Status:** ✅ `api.domains.interventions.getByZones` back online
 
 ### 7. Usage Tracking & Rate Limiting
 
@@ -227,17 +217,13 @@ User completes assessment → pressure zones identified → getByZones(zones, mi
 **For:** System operators
 
 **Files:**
-- `convex/lib/usage.ts` - Token tracking, cost estimation
-- `convex/internal/usage.ts` - Internal mutation for persisting LLM usage
-- `convex/lib/rateLimiting.ts` - Rate limit helpers
-- `convex/schema.ts` - `llm_usage`, `usage_invoices` tables
+- `lib/usage.ts` - Config
+- `lib/rateLimiting.ts` - Rate limit helpers
+- `schema.ts` - `llm_usage`, `usage_invoices` tables
 
-**Limits:** 5 SMS/5min, 50 SMS/day, 50k tokens/hour per user
+**Limits:** 10 SMS/day per user, 50K tokens/hour per user, 500K TPM global
 
-**Flow:**
-```
-Before LLM call → estimateTokens → checkTokenRateLimit → generateText → insertLLMUsage → consumeTokenUsage
-```
+**Status:** ✅ Library functions intact
 
 ### 8. Subscription Billing
 
@@ -247,16 +233,13 @@ Before LLM call → estimateTokens → checkTokenRateLimit → generateText → 
 **For:** Premium users
 
 **Files:**
-- `convex/functions/billing.ts` - Stripe integration
-- `convex/http.ts` - Stripe webhook handler
-- `convex/schema.ts` - `subscriptions` table
+- `actions/stripe.actions.ts` - Stripe integration
+- `http.ts` - Stripe webhook handler
+- `schema.ts` - `subscriptions` table
 
 **Plans:** free (basic), premium (unlimited assessments, priority support)
 
-**Flow:**
-```
-User → checkout → Stripe → webhook → upsert subscription → entitlement checks
-```
+**Status:** ✅ Webhook routes to `api.billing.applyStripeEvent`
 
 ---
 
@@ -264,57 +247,73 @@ User → checkout → Stripe → webhook → upsert subscription → entitlement
 
 ### Main Agent Tools (6)
 
-| Tool | Purpose | Returns | Used When |
-|------|---------|---------|-----------|
-| `searchResources` | Find local caregiving services | Resources with citations, widget tokens | User asks for local help |
-| `recordMemory` | Save important user context | Success confirmation | Agent learns care routine/preference/trigger |
-| `check_wellness_status` | Fetch burnout trends | Latest scores, trend data, pressure zones | User asks about progress |
-| `find_interventions` | Get support strategies | 2-5 interventions by pressure zone | User needs coping strategies |
-| `update_profile` | Update user info | Updated profile object | User provides name/zip/relationship |
-| `start_assessment` | Begin wellness check-in | Assessment instructions | User agrees to check-in |
+| Tool | Purpose | Status |
+|------|---------|--------|
+| `searchResources` | Find local caregiving services | ✅ Uses `api.resources.searchResources` |
+| `recordMemory` | Save important user context | ✅ Working |
+| `checkWellnessStatus` | Fetch burnout trends | ✅ `api.domains.wellness.getStatus` |
+| `findInterventions` | Get support strategies | ✅ `api.domains.interventions.getByZones` |
+| `updateProfile` | Update user info | ❓ Needs verification |
+| `startAssessment` | Begin wellness check-in | ✅ `api.public.startAssessment` |
 
 ### Assessment Agent Tools (1)
 
-| Tool | Purpose | Returns | Used When |
-|------|---------|---------|-----------|
-| `getInterventions` | Fetch interventions by zones | Interventions with evidence levels | After scoring completed assessment |
+| Tool | Purpose | Status |
+|------|---------|--------|
+| `getInterventions` | Fetch interventions by zones | ✅ `api.domains.interventions.getByZones` |
+
+### Guardrails Tool (1)
+
+| Tool | Purpose | Status |
+|------|---------|--------|
+| `guardrails` | Check trauma-informed compliance | ✅ Logs to `api.internal.core.*` |
 
 ---
 
-## Database Schema (24 Tables)
+## Database Schema (36 Tables)
 
 ### Core Tables
 
-| Table | Purpose | Key Fields | Indexes |
-|-------|---------|------------|---------|
-| `users` | User profiles | externalId, phone, metadata.profile | by_externalId, by_phone |
-| `sessions` | Conversation sessions | userId, channel, metadata | by_user_channel |
-| `messages` | Conversation history | threadId, role, content, metadata | by_thread |
-| `memories` | Working memory system | userId, category, content, importance | by_user_category |
+| Table | Purpose | Key Fields |
+|-------|---------|------------|
+| `users` | User profiles | externalId, phone, email, name, channel, locale, consent |
+| `sessions` | Conversation sessions | userId, channel, locale, policyBundle, budget |
+| `messages` | Conversation history | userId, channel, direction, text, traceId |
+| `memories` | Working memory system | userId, category, content, importance, embedding |
 
 ### Assessment Tables
 
-| Table | Purpose | Key Fields | Indexes |
-|-------|---------|------------|---------|
-| `assessment_sessions` | Active assessments | userId, definitionId, answers | by_user_active |
-| `assessment_answers` | Individual answers | sessionId, questionId, answer | by_session |
-| `scores` | Burnout scores | userId, composite, band, zones | by_user, by_band |
+| Table | Purpose | Key Fields |
+|-------|---------|------------|
+| `assessment_sessions` | Active assessments | userId, definitionId, questionIndex, answers, status |
+| `assessments` | Completed assessments | userId, definitionId, version, answers |
+| `scores` | Burnout scores | userId, assessmentId, composite, band, confidence |
 
 ### Support Tables
 
-| Table | Purpose | Key Fields | Indexes |
-|-------|---------|------------|---------|
-| `interventions` | Support strategies | title, targetZones, evidenceLevel | by_zone |
-| `resources` | Local services | name, category, location, contact | by_category, by_location |
-| `alerts` | Crisis events | userId, severity, resolvedAt | by_user, by_unresolved |
+| Table | Purpose | Key Fields |
+|-------|---------|------------|
+| `interventions` | Support strategies | title, category, targetZones, evidenceLevel |
+| `intervention_events` | Intervention history | userId, interventionId, status |
+| `alerts` | Crisis events | userId, type, severity, context, status |
+| `resource_cache` | TTL resource search results | category, zip, results, expiresAt |
 
 ### System Tables
 
-| Table | Purpose | Key Fields | Indexes |
-|-------|---------|------------|---------|
-| `llm_usage` | Token tracking | userId, model, tokens, cost, billingPeriod | by_user_period, by_period |
-| `subscriptions` | Stripe billing | userId, stripeId, status, plan | by_user, by_stripe |
-| `metrics_daily` | Aggregated stats | date, activeUsers, totalMessages | by_date |
+| Table | Purpose | Key Fields |
+|-------|---------|------------|
+| `llm_usage` | Token tracking | userId, model, provider, usage, billingPeriod |
+| `usage_invoices` | Aggregated billing | userId, billingPeriod, totalTokens, totalCost, status |
+| `subscriptions` | Stripe billing | userId, stripeCustomerId, planId, status |
+| `entitlements` | Feature access | userId, feature, active, expiresAt |
+| `tool_calls` | Agent tool telemetry | userId, agent, name, durationMs, success, cost |
+| `agent_runs` | Agent execution logs | userId, agent, policyBundle, budgetResult, latencyMs |
+| `guardrail_events` | Compliance tracking | userId, ruleId, action, context |
+| `triggers` | Scheduled tasks | userId, rrule, timezone, nextRun, status |
+| `policies` | Policy bundles | name, version, bundle |
+| `settings` | System config | key, value |
+| `watcher_state` | Engagement monitoring | watcherName, cursor, lastRun |
+| `metrics_*` | Aggregated stats | Various daily/subscription/journey metrics |
 
 ---
 
@@ -323,19 +322,10 @@ User → checkout → Stripe → webhook → upsert subscription → entitlement
 ### 1. Context Injection Pattern
 
 **What:** Inject conversation summary into agent prompts
-**How:** `contextHandler` in agent config fetches summary
+**How:** Agent Component manages thread context
 **Why:** Reduce token usage (60-80% savings)
 
-```typescript
-// convex/agents/main.ts:250-275
-contextHandler: async (ctx, args) => {
-  const summary = await ctx.runQuery(
-    internal.functions.context.getConversationSummaryInternal,
-    { externalId: args.userId, limit: 25 }
-  );
-  return [...args.recent, ...conversationContext, ...args.inputMessages];
-}
-```
+**Status:** ✅ Agent Component handles this
 
 ### 2. Tool-Based Architecture
 
@@ -344,7 +334,7 @@ contextHandler: async (ctx, args) => {
 **Why:** Reliable, type-safe, testable
 
 ```typescript
-// convex/agents/main.ts:82-110
+// agents.ts
 const recordMemoryTool = createTool({
   args: z.object({ content: z.string(), category: z.enum([...]) }),
   handler: async (ctx, args) => { /* mutation */ }
@@ -354,15 +344,15 @@ const recordMemoryTool = createTool({
 ### 3. Trauma-Informed Principles (P1-P6)
 
 **What:** Non-negotiable communication guidelines
-**How:** Embedded in all agent prompts
+**How:** Embedded in all agent prompts (`lib/prompts.ts`)
 **Why:** Respect boundaries, prevent harm
 
-- **P1:** Acknowledge > Answer > Advance
-- **P2:** Never repeat questions
-- **P3:** Max 2 attempts per field, offer skip
-- **P4:** Soft confirmations ("Got it: Nadia, right?")
-- **P5:** Always offer skip option
-- **P6:** Deliver value every turn
+- **P1:** Acknowledge feelings before answering
+- **P2:** Never repeat the same question within a session
+- **P3:** Offer skip after two attempts
+- **P4:** Use soft confirmations ("Got it: Sarah, right?")
+- **P5:** Give a skip option on every ask
+- **P6:** Deliver value every turn (validation, resource, tip, or progress)
 
 ### 4. Rate Limiting Pattern
 
@@ -370,11 +360,7 @@ const recordMemoryTool = createTool({
 **How:** Rate limiter component with reserve/consume API
 **Why:** Cost control, abuse prevention
 
-```typescript
-// Usage
-await checkMessageRateLimit(ctx, userId, isCrisis);
-await consumeMessageRateLimit(ctx, userId, isCrisis);
-```
+**Status:** ✅ Library functions exist
 
 ### 5. Durable Workflows
 
@@ -383,7 +369,7 @@ await consumeMessageRateLimit(ctx, userId, isCrisis);
 **Why:** Reliability for critical operations (crisis)
 
 ```typescript
-// convex/workflows/crisis.ts
+// workflows.ts
 workflow.define({
   handler: async (step, args) => {
     await step.runMutation(logCrisisEvent);
@@ -393,26 +379,45 @@ workflow.define({
 });
 ```
 
+**Status:** ✅ Workflow logic intact
+
 ---
 
 ## Integration Points
 
 ### Inbound
 
-| Source | Endpoint | Purpose |
-|--------|----------|---------|
-| Twilio SMS | `POST /twilio/sms` | Receive SMS from users |
-| Stripe Webhooks | `POST /stripe/webhook` | Handle subscription events |
-| Web Client | Convex queries/mutations | Admin dashboard, web chat |
+| Source | Endpoint | Status |
+|--------|----------|--------|
+| Twilio SMS | `POST /twilio/incoming-message` | ✅ `api.domains.messages` + `internal.inbound.processInboundMessage` |
+| Stripe Webhooks | `POST /stripe/webhook` | ✅ `api.billing.applyStripeEvent` compat mutation |
+| Web Client | Convex queries/mutations | ✅ Public API intact |
 
 ### Outbound
 
-| Destination | Purpose | File |
-|-------------|---------|------|
-| Twilio API | Send SMS responses | `convex/http.ts` |
-| OpenAI API | LLM generation | `convex/agents/*.ts` |
-| Google Maps API | Resource grounding | `convex/lib/maps.ts` |
-| Stripe API | Billing operations | `convex/functions/billing.ts` |
+| Destination | Purpose | File | Status |
+|-------------|---------|------|--------|
+| Twilio API | Send SMS responses | `http.ts` / `internal/inbound.ts` | ✅ Uses `internal.inbound.sendSmsResponse` |
+| OpenAI API | LLM generation | `agents.ts` | ✅ Working |
+| Google Maps API | Resource grounding | `actions/maps.actions.ts` | ✅ Uses `resource_cache` helpers |
+| Stripe API | Billing operations | `actions/stripe.actions.ts` | ✅ Working |
+
+---
+
+## Known Issues (v1.5.0)
+
+### Critical
+1. **Convex Typecheck Disabled** - `convex/tsconfig.json` was removed; `npx convex codegen --typecheck enable` currently fails. Reintroduce a tsconfig to re-enable type safety.
+
+### High Priority
+1. **Resource Lookup Data** - `api.resources.searchResources` still returns stubbed results; wire the real Google Maps/Gemini lookup before GA.
+
+### Medium Priority
+1. **Assessment Responses** - `recordAssessmentResponse` mutation still missing. Add it when wiring EMA/BSFC answer ingestion back to public API.
+
+### Low Priority
+1. **Twilio SDK Callback** - `twilioClient.ts` incoming callback remains TODO (HTTP webhook handles ingress for now).
+2. **Missing Types** - Some helper types still live only in `lib/types.ts`; re-export as needed.
 
 ---
 
@@ -441,45 +446,31 @@ npx convex dev                          # Runs Convex backend, generates types
 npm test                                # Run all tests (Vitest)
 npm test -- assessments                 # Run specific test file
 
-# Manual operations
-npx convex run functions:assessments:completeSession --userId="user_123"
-npx convex run internal:internal/metrics:aggregateDailyMetrics
-
 # Deployment
-npx convex deploy                       # Deploy to production
+npx convex deploy --typecheck=disable   # Deploy to production (typecheck disabled until tsconfig restored)
+npx convex deploy                       # Re-enable once Convex typecheck passes
+
+# Typecheck
+npm run typecheck                       # Depends on reinstating convex/tsconfig.json
 ```
 
 ---
 
-## Quick Reference
+## Migration Path (v1.5.0 → v1.6.0)
 
-**When user sends SMS:**
-1. `http.ts:handleInboundSMS` receives webhook
-2. `context.hydrate` loads/creates user session
-3. Detect crisis terms → route to crisis agent
-4. Otherwise → main agent with conversation context
-5. Agent generates response (may call tools)
-6. Send SMS via Twilio
-7. `context.persist` saves session state
+To restore full functionality:
 
-**When user completes assessment:**
-1. `assessments.completeSession` triggers scoring
-2. Scorer calculates composite + pressure zones
-3. Insert into `scores` table
-4. Assessment agent interprets results
-5. `getInterventions` by pressure zones
-6. Return personalized support strategies
-
-**When user in crisis:**
-1. Detect crisis terms in message
-2. Trigger `workflows/crisis.crisisEscalation`
-3. Log to `alerts` table (severity: high)
-4. Crisis agent provides 988/741741/911 resources
-5. Notify emergency contact if configured
-6. Schedule 24h follow-up workflow
+1. ✅ **Fix Agent Tools** - `agents.ts` + `agents/guardrails.tool.ts` now call restored APIs
+2. ✅ **Add Missing Public Functions** - `public.ts` exports `listMemories`, assessment helpers, and scheduler mutations
+3. ✅ **Implement SMS Handler** - `http.ts` + `internal/inbound.ts` process inbound SMS and send replies
+4. ✅ **Fix Resource Cache** - `maps.actions.ts` and `resources.ts` share the `resource_cache` table
+5. ✅ **Fix Billing Webhook** - `api.billing.applyStripeEvent` handles Stripe payloads
+6. ✅ **Restore Crons** - Hourly resource-cache cleanup added to `crons.ts`
+7. ⏳ **Enable Typecheck** - Recreate `convex/tsconfig.json` and run full typecheck
 
 ---
 
-**Last Updated:** v1.4.0 (2025-01-08)
-**Total LOC:** ~3,500 (Convex backend)
-**Test Coverage:** 472 tests passing
+**Last Updated:** v1.5.0 (2025-11-09)
+**Total LOC:** ~3,000 (Convex backend)
+**Test Coverage:** Unknown (tests may need updates)
+**Production Status:** ⚠️ Deploy requires `--typecheck=disable` until Convex tsconfig is restored

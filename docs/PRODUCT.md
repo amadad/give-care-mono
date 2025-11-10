@@ -120,6 +120,6 @@
 **Is a product brief** (current capabilities for stakeholders)
 
 For details:
-- Features → `give-care-app/docs/FEATURES.md`
-- Architecture → `give-care-app/docs/ARCHITECTURE.md`
-- Development → `give-care-app/docs/CLAUDE.md`
+- **User Scenarios** → `give-care-app/docs/FEATURES.md` (narrative user flows, no code)
+- **Technical Architecture** → `give-care-app/docs/ARCHITECTURE.md` (implementation reference)
+- **Developer Guide** → `give-care-app/docs/README.md` (setup, configuration, examples)

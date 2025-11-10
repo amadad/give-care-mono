@@ -224,6 +224,15 @@ export default defineSchema({
     accessCount: v.number(),
   }).index('by_user', ['userId']),
 
+  resource_cache: defineTable({
+    userId: v.optional(v.id('users')),
+    category: v.string(),
+    zip: v.string(),
+    results: v.optional(v.any()),
+    createdAt: v.number(),
+    expiresAt: v.optional(v.number()),
+  }).index('by_category_zip', ['category', 'zip', 'createdAt']),
+
   emails: defineTable({
     userId: v.optional(v.id('users')),
     to: v.string(),
