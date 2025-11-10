@@ -15,14 +15,12 @@ import { openai } from '@ai-sdk/openai';
 import { MAIN_PROMPT, renderPrompt } from '../lib/prompts';
 import { getTone } from '../lib/policy';
 import { getProfileCompleteness, buildWellnessInfo, extractProfileVariables } from '../lib/profile';
-import {
-  searchResources,
-  recordMemory,
-  checkWellnessStatus,
-  findInterventions,
-  updateProfile,
-  startAssessment
-} from '../tools';
+import { searchResources } from '../tools/searchResources';
+import { recordMemory } from '../tools/recordMemory';
+import { checkWellnessStatus } from '../tools/checkWellnessStatus';
+import { findInterventions } from '../tools/findInterventions';
+import { updateProfile } from '../tools/updateProfile';
+import { startAssessment } from '../tools/startAssessment';
 
 // ============================================================================
 // AGENT DEFINITION

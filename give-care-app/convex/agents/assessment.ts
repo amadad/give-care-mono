@@ -12,7 +12,7 @@ import { v } from 'convex/values';
 import { Agent } from '@convex-dev/agent';
 import { openai } from '@ai-sdk/openai';
 import { ASSESSMENT_PROMPT, renderPrompt } from '../lib/prompts';
-import { getInterventions } from '../tools';
+import { getInterventions } from '../tools/getInterventions';
 
 // ============================================================================
 // AGENT DEFINITION
