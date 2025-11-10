@@ -72,12 +72,12 @@ const searchResourcesTool = createTool({
     if ('error' in result && result.error) {
       return {
         error: result.error,
-        suggestion: 'I need your zip code to find nearby resources. What\'s your zip code?',
+        suggestion: result.suggestion ?? 'I need your zip code to find nearby resources. What\'s your zip code?',
       };
     }
 
     return {
-      resources: result.text,
+      resources: result.resources,
       sources: result.sources,
       widgetToken: result.widgetToken,
     };
@@ -200,9 +200,21 @@ const updateProfileTool = createTool({
       ...(args.zipCode && { zipCode: args.zipCode }),
     };
 
-    // Update user metadata with new profile
-    // Note: This requires a mutation to persist - for now return updated profile
-    // In production, you'd call a mutation here to update the user's metadata
+    // Persist profile to database
+    const convexUserId = (metadata.convex as Record<string, unknown> | undefined)?.userId;
+    if (convexUserId) {
+      try {
+        await ctx.runMutation(internal.core.updateUserMetadata, {
+          userId: convexUserId,
+          metadata: { ...metadata, profile: updatedProfile },
+        });
+      } catch (error) {
+        return {
+          success: false,
+          error: `Failed to persist profile: ${String(error)}`,
+        };
+      }
+    }
 
     return {
       success: true,
@@ -225,14 +237,36 @@ const startAssessmentTool = createTool({
       return { error: 'User ID not available' };
     }
 
-    // For now, return instructions for starting assessment
-    // In full implementation, this would create an assessment session
-    return {
-      success: true,
-      assessmentType: args.assessmentType,
-      message: `Ready to start ${args.assessmentType} assessment. The assessment agent will guide you through the questions.`,
-      nextStep: 'Assessment questions will be asked one at a time.',
+    // Map tool assessment types to API types
+    const mapType = (t: string): 'ema' | 'bsfc' | 'reach2' | 'sdoh' => {
+      if (t === 'ema_v1') return 'ema';
+      if (t === 'bsfc_v1') return 'bsfc';
+      if (t === 'reach_ii_v1') return 'reach2';
+      if (t === 'sdoh_v1') return 'sdoh';
+      return 'ema'; // default fallback
     };
+
+    const definition = mapType(args.assessmentType);
+
+    try {
+      await ctx.runMutation(api.public.startAssessment, {
+        userId,
+        definition,
+        channel: 'sms',
+      });
+
+      return {
+        success: true,
+        assessmentType: args.assessmentType,
+        message: `Starting ${definition.toUpperCase()} now.`,
+        nextStep: 'I\'ll ask one question at a time.',
+      };
+    } catch (error) {
+      return {
+        error: String(error),
+        success: false,
+      };
+    }
   },
 });
 
@@ -322,7 +356,7 @@ export const runMainAgent = action({
       const profile = (metadata.profile as Record<string, unknown> | undefined) ?? {};
 
       // Extract profile variables using helper
-      const { userName, relationship, careRecipient } = extractProfileVariables(metadata);
+      const { userName, relationship, careRecipient } = extractProfileVariables(profile);
 
       // Calculate profile completeness using helper
       const { profileComplete, missingFieldsSection } = getProfileCompleteness(profile);
@@ -341,7 +375,7 @@ export const runMainAgent = action({
         journeyPhase,
         totalInteractionCount,
         wellnessInfo,
-        profileComplete,
+        profileComplete: String(profileComplete),
         missingFieldsSection,
       });
 
@@ -354,6 +388,8 @@ export const runMainAgent = action({
       // Prepare metadata for tool access
       const threadMetadata = {
         context: {
+          sessionId: context.sessionId,
+          userId: context.userId,
           metadata,
         },
       };

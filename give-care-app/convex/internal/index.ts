@@ -12,4 +12,5 @@ export {
   recordOutboundMutation as recordOutbound,
   logDelivery,
   createComponentThread,
+  updateUserMetadata,
 } from '../core';

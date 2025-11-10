@@ -2,14 +2,17 @@
 
 import { internalAction } from './_generated/server';
 import { v } from 'convex/values';
-import { api } from './_generated/api';
+import { api, internal } from './_generated/api';
 import { channelValidator } from './public';
 import { twilio } from './twilioClient';
+import { enforceInboundSmsLimit, enforceOutboundSmsLimit } from './lib/rateLimiting';
+import { detectCrisis } from './lib/policy';
 
 type DeliverSmsArgs = {
   to: string;
   text: string;
-  userId?: string;
+  userId: string;
+  convexUserId?: any; // Id<'users'>
   traceId?: string;
 };
 
@@ -18,14 +21,21 @@ const deliverSms = async (ctx: any, args: DeliverSmsArgs) => {
     throw new Error('[inbound] Missing destination phone number');
   }
 
-  await twilio.messages.create({
+  // Enforce outbound rate limit
+  if (args.convexUserId) {
+    await enforceOutboundSmsLimit(ctx, args.convexUserId);
+  }
+
+  // Send via Twilio component
+  await twilio.send(ctx, {
     to: args.to,
     body: args.text,
   });
 
+  // Log outbound message
   await ctx.runMutation(api.internal.recordOutbound, {
     message: {
-      externalId: args.userId ?? args.to,
+      externalId: args.userId,
       channel: 'sms',
       text: args.text,
       traceId: args.traceId ?? `sms-${Date.now()}`,
@@ -58,6 +68,23 @@ export const processInboundMessage = internalAction({
     channel: channelValidator,
   },
   handler: async (ctx, args) => {
+    // Enforce inbound rate limit
+    await enforceInboundSmsLimit(ctx, args.userId);
+
+    // Crisis pre-routing: check before LLM call
+    const crisisDetection = detectCrisis(args.text);
+    if (crisisDetection.hit) {
+      // Fast-path: no LLM on the hot path
+      await ctx.runAction(internal.workflows.crisisEscalation, {
+        userId: args.userId,
+        threadId: String(args.messageId),
+        messageText: args.text,
+        crisisTerms: crisisDetection.keyword ? [crisisDetection.keyword] : [],
+        severity: crisisDetection.severity ?? 'medium',
+      });
+      return; // Crisis workflow will send follow-up as needed
+    }
+
     const agentContext = {
       userId: args.externalId,
       sessionId: args.messageId as string,
@@ -85,6 +112,7 @@ export const processInboundMessage = internalAction({
           to: args.externalId,
           text: reply.content,
           userId: args.externalId,
+          convexUserId: args.userId,
           traceId: response?.threadId ?? `thread-${args.messageId}`,
         });
       }
