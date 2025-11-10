@@ -12,6 +12,7 @@
  */
 
 import { GoogleGenAI } from '@google/genai';
+import { MapsGroundingMetadata, MapsGroundingChunk, ResourceResult } from './types';
 
 /**
  * Convert zip code to approximate lat/lng (US only, rough approximation)
@@ -87,23 +88,14 @@ function buildCaregivingQuery(query: string, category: string, zip: string): str
 /**
  * Extract structured results from Maps Grounding response
  */
-function extractMapsResults(groundingMetadata: any): Array<{
-  name: string;
-  address: string;
-  hours?: string;
-  rating?: number;
-  phone?: string;
-  category: string;
-  placeId?: string;
-  uri?: string;
-}> {
+function extractMapsResults(groundingMetadata: MapsGroundingMetadata): ResourceResult[] {
   if (!groundingMetadata?.groundingChunks) {
     return [];
   }
 
   return groundingMetadata.groundingChunks
-    .filter((chunk: any) => chunk.maps)
-    .map((chunk: any, idx: number) => {
+    .filter((chunk: MapsGroundingChunk) => chunk.maps)
+    .map((chunk: MapsGroundingChunk, idx: number) => {
       const maps = chunk.maps;
       return {
         name: maps.title || `Resource ${idx + 1}`,

@@ -4,6 +4,7 @@ import { action, internalAction } from './_generated/server';
 import { v } from 'convex/values';
 import { internal } from './_generated/api';
 import { searchWithMapsGrounding } from './lib/maps';
+import { MS_PER_DAY, RACE_TIMEOUT_MS } from './lib/constants';
 
 const CATEGORY_TTLS_DAYS: Record<string, number> = {
   respite: 30,
@@ -133,7 +134,7 @@ export const searchResources = action({
 
     const category = (args.category ?? inferCategory(args.query)).toLowerCase();
     const ttlDays = CATEGORY_TTLS_DAYS[category] ?? 14;
-    const ttlMs = ttlDays * 24 * 60 * 60 * 1000;
+    const ttlMs = ttlDays * MS_PER_DAY;
     const now = Date.now();
 
     const cache = await ctx.runQuery(internal.internal.getResourceLookupCache, {
@@ -194,7 +195,6 @@ export const searchResources = action({
 
     // ✅ SPEED: Race Maps Grounding (1.5s) against stub fallback - return winner immediately
     // Users see results in <500ms; better results follow in background
-    const RACE_TIMEOUT_MS = 1500; // 1.5s cap for fast-first response
     
     // Prepare stub fallback immediately (deterministic, instant)
     const stubResults = buildStubResults(category, resolvedZip);

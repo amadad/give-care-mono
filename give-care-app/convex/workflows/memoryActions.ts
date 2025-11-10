@@ -12,6 +12,7 @@ import { v } from 'convex/values';
 import { google } from '@ai-sdk/google';
 import { generateObject, generateText } from 'ai';
 import { z } from 'zod';
+import { FACT_EXTRACTION_TIMEOUT_MS, CONTEXT_BUILDING_TIMEOUT_MS, DEFAULT_MEMORY_LIMIT } from '../lib/constants';
 
 // ============================================================================
 // EXTRACT FACTS ACTION
@@ -36,7 +37,7 @@ export const extractFacts = internalAction({
       // ✅ Use generateObject with Zod schema for structured output
       // ✅ Optimized for speed: faster model, reduced tokens, timeout protection
       const timeoutPromise = new Promise<never>((_, reject) => {
-        setTimeout(() => reject(new Error('Fact extraction timeout after 2s')), 2000);
+        setTimeout(() => reject(new Error('Fact extraction timeout after 2s')), FACT_EXTRACTION_TIMEOUT_MS);
       });
 
       const extractionPromise = generateObject({
@@ -90,7 +91,7 @@ export const buildContext = internalAction({
     // ✅ Get fewer memories for faster processing (reduced from 10 to 5)
     const memories = await ctx.runQuery(api.public.listMemories, {
       userId,
-      limit: 5, // ✅ Reduced from 10 for speed
+      limit: DEFAULT_MEMORY_LIMIT,
     });
 
     if (!memories || memories.length === 0) {
@@ -105,7 +106,7 @@ export const buildContext = internalAction({
     try {
       // ✅ Add timeout protection (2s max)
       const timeoutPromise = new Promise<never>((_, reject) => {
-        setTimeout(() => reject(new Error('Context building timeout after 2s')), 2000);
+        setTimeout(() => reject(new Error('Context building timeout after 2s')), CONTEXT_BUILDING_TIMEOUT_MS);
       });
 
       const generationPromise = generateText({

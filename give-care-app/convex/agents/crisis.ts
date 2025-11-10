@@ -19,6 +19,7 @@ import { openai } from '@ai-sdk/openai';
 import { WorkflowManager } from '@convex-dev/workflow';
 import { CRISIS_PROMPT } from '../lib/prompts';
 import { crisisResponse } from '../lib/policy';
+import { agentContextValidator, channelValidator } from '../lib/validators';
 
 const workflow = new WorkflowManager(components.workflow);
 
@@ -37,29 +38,6 @@ export const crisisAgent = new Agent(components.agent, {
 // ============================================================================
 // AGENT ACTION
 // ============================================================================
-
-const agentContextValidator = v.object({
-  userId: v.string(),
-  sessionId: v.optional(v.string()),
-  locale: v.string(),
-  consent: v.object({
-    emergency: v.boolean(),
-    marketing: v.boolean(),
-  }),
-  crisisFlags: v.optional(
-    v.object({
-      active: v.boolean(),
-      terms: v.array(v.string()),
-    })
-  ),
-  metadata: v.optional(v.any()),
-});
-
-const channelValidator = v.union(
-  v.literal('sms'),
-  v.literal('email'),
-  v.literal('web')
-);
 
 export const runCrisisAgent = internalAction({
   args: {

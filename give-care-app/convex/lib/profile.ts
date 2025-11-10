@@ -2,7 +2,9 @@
  * Profile utilities
  */
 
-export const extractProfileVariables = (profile: any) => {
+import { UserProfile, AgentMetadata } from './types';
+
+export const extractProfileVariables = (profile: UserProfile | undefined) => {
   return {
     userName: profile?.firstName || 'there',
     relationship: profile?.relationship || 'caregiver',
@@ -12,7 +14,7 @@ export const extractProfileVariables = (profile: any) => {
 
 // ✅ Fix: Removed unused getProfileCompleteness function
 
-export const buildWellnessInfo = (metadata: any): string => {
+export const buildWellnessInfo = (metadata: AgentMetadata | undefined): string => {
   // ✅ Fix: Placeholder - can be expanded based on assessment scores, etc.
   // Currently returns empty string as wellness info is handled elsewhere
   return '';
