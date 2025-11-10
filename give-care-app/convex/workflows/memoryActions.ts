@@ -10,7 +10,8 @@ import { internalAction } from '../_generated/server';
 import { internal, api } from '../_generated/api';
 import { v } from 'convex/values';
 import { google } from '@ai-sdk/google';
-import { generateText } from 'ai';
+import { generateObject, generateText } from 'ai';
+import { z } from 'zod';
 
 // ============================================================================
 // EXTRACT FACTS ACTION
@@ -30,7 +31,8 @@ export const extractFacts = internalAction({
       .join('\n');
 
     try {
-      const result = await generateText({
+      // ✅ Use generateObject with Zod schema for structured output
+      const result = await generateObject({
         model: google('gemini-2.5-flash-lite'), // Fastest model for extraction
         prompt: `Extract important long-term facts about this caregiver from the conversation below.
 Focus on:
@@ -39,30 +41,26 @@ Focus on:
 - Important dates, routines, preferences
 - Crisis indicators or concerning patterns
 
-Return ONLY valid JSON array (no markdown, no code blocks):
-[{"fact": "...", "category": "care_routine|preference|crisis_trigger|intervention_result", "importance": 8}]
-
 Conversation:
 ${conversationText}`,
+        schema: z.array(
+          z.object({
+            fact: z.string().describe('The fact to remember'),
+            category: z.enum(['care_routine', 'preference', 'crisis_trigger', 'intervention_result']),
+            importance: z.number().min(1).max(10).describe('Importance score 1-10'),
+          })
+        ),
         temperature: 0.2, // Very low for consistent extraction
-        topP: 0.8, // Focused extraction
-        maxOutputTokens: 500, // Facts can be multiple items
         providerOptions: {
           google: {
-            responseMimeType: 'application/json', // ✅ Force JSON output (Gemini-specific)
+            topP: 0.8,
+            maxOutputTokens: 500,
           },
         },
       });
 
-      // ✅ Fix: Strip markdown code blocks if present
-      let jsonText = result.text.trim();
-      // Remove ```json and ``` markers
-      jsonText = jsonText.replace(/^```json\s*/i, '').replace(/```\s*$/, '').trim();
-      // If still wrapped in ```, remove those too
-      jsonText = jsonText.replace(/^```\s*/, '').replace(/```\s*$/, '').trim();
-
-      const facts = JSON.parse(jsonText);
-      return Array.isArray(facts) ? facts : [];
+      // ✅ generateObject returns structured data directly - no parsing needed!
+      return result.object;
     } catch (error) {
       console.error('[memory-enrichment] Fact extraction failed:', error);
       return [];

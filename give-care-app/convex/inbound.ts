@@ -8,7 +8,7 @@
 
 import { internalAction } from './_generated/server';
 import { v } from 'convex/values';
-import { api, internal } from './_generated/api';
+import { api, internal, components } from './_generated/api';
 import { twilio } from './lib/twilio';
 import { detectCrisis } from './lib/policy';
 
@@ -67,8 +67,15 @@ export const processInbound = internalAction({
       });
     } else {
       // Main agent
-      // ✅ Fix: Pass user object directly to avoid redundant query
-      const threadId = getOrCreateThread(user);
+      // ✅ Priority 3: Use listThreadsByUserId() instead of manual threadId storage
+      const existingThreadsResult = await ctx.runQuery(components.agent.threads.listThreadsByUserId, {
+        userId: user.externalId,
+        paginationOpts: { cursor: null, numItems: 1 },
+        order: 'desc', // Most recent first
+      });
+      const threadId = existingThreadsResult && existingThreadsResult.page && existingThreadsResult.page.length > 0 
+        ? existingThreadsResult.page[0]._id 
+        : undefined;
       
       response = await ctx.runAction(api.agents.main.runMainAgent, {
         input: {
@@ -81,13 +88,7 @@ export const processInbound = internalAction({
       });
     }
 
-    // Save threadId to user metadata for continuity
-    if (response?.threadId) {
-      await ctx.runMutation(internal.internal.updateUserMetadata, {
-        userId: user._id,
-        metadata: { threadId: response.threadId },
-      });
-    }
+    // ✅ Priority 3: No need to save threadId manually - Agent Component manages it
 
     // Send SMS response
     if (response?.text) {
@@ -101,20 +102,6 @@ export const processInbound = internalAction({
     return { success: true, response };
   },
 });
-
-// ============================================================================
-// GET OR CREATE THREAD
-// ============================================================================
-
-function getOrCreateThread(
-  user: { _id: string; metadata?: Record<string, unknown> }
-): string | undefined {
-  // ✅ Fix: Use user object directly instead of re-querying
-  const metadata = (user.metadata ?? {}) as Record<string, unknown>;
-  const threadId = metadata.threadId as string | undefined;
-
-  return threadId;
-}
 
 // ============================================================================
 // SEND SMS RESPONSE

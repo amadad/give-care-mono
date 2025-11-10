@@ -3,6 +3,7 @@
 import { action } from './_generated/server';
 import { v } from 'convex/values';
 import { internal } from './_generated/api';
+import { searchWithMapsGrounding } from './lib/maps';
 
 const CATEGORY_TTLS_DAYS: Record<string, number> = {
   respite: 30,
@@ -143,14 +144,29 @@ export const searchResources = action({
       };
     }
 
-    const results = buildStubResults(category, resolvedZip);
-    const summaryText = results
-      .map(
-        (resource, idx) =>
-          `${idx + 1}. ${resource.name} — ${resource.address} (${resource.hours}, rating ${resource.rating})`
-      )
-      .join('\n');
+    // ✅ Use Gemini Maps Grounding instead of stub data
+    let results;
+    let summaryText;
+    let widgetToken: string | undefined;
+    
+    try {
+      const mapsResult = await searchWithMapsGrounding(args.query, category, resolvedZip);
+      results = mapsResult.resources;
+      summaryText = mapsResult.text;
+      widgetToken = mapsResult.widgetToken;
+    } catch (error) {
+      console.error('[resources] Maps Grounding failed, using fallback:', error);
+      // Fallback to stub data if Maps Grounding fails
+      results = buildStubResults(category, resolvedZip);
+      summaryText = results
+        .map(
+          (resource, idx) =>
+            `${idx + 1}. ${resource.name} — ${resource.address} (${resource.hours}, rating ${resource.rating})`
+        )
+        .join('\n');
+    }
 
+    // Cache results for future queries
     await ctx.runMutation(internal.internal.recordResourceLookup, {
       userId: undefined,
       category,
@@ -162,7 +178,7 @@ export const searchResources = action({
     return {
       resources: summaryText,
       sources: results,
-      widgetToken: `resources-${category}-${resolvedZip}-${now}`,
+      widgetToken: widgetToken || `resources-${category}-${resolvedZip}-${now}`,
       cached: false,
       expiresAt: now + ttlMs,
     };

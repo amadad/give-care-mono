@@ -176,16 +176,16 @@ export declare const internal: {
     };
   };
   inbound: {
-    processInbound: FunctionReference<
-      "action",
-      "internal",
-      { messageSid: string; phone: string; text: string },
-      any
-    >;
     sendSmsResponse: FunctionReference<
       "action",
       "internal",
       { text: string; to: string; userId: string },
+      any
+    >;
+    processInbound: FunctionReference<
+      "action",
+      "internal",
+      { messageSid: string; phone: string; text: string },
       any
     >;
   };

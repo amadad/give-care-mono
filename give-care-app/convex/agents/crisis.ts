@@ -13,7 +13,7 @@
 import { internalAction } from '../_generated/server';
 import { internal, components } from '../_generated/api';
 import { v } from 'convex/values';
-import { Agent } from '@convex-dev/agent';
+import { Agent, saveMessage } from '@convex-dev/agent';
 import { google } from '@ai-sdk/google';
 import { openai } from '@ai-sdk/openai';
 import { WorkflowManager } from '@convex-dev/workflow';
@@ -91,12 +91,12 @@ export const runCrisisAgent = internalAction({
     const userName = (profile.firstName as string) ?? 'friend';
 
     try {
-      // Get or create thread
+      // ✅ Priority 3: Use listThreads() instead of manual threadId storage
       let thread;
       let newThreadId: string;
 
       if (threadId) {
-        // ✅ Continue existing thread
+        // Continue existing thread
         const threadResult = await crisisAgent.continueThread(ctx, {
           threadId,
           userId: context.userId,
@@ -104,17 +104,40 @@ export const runCrisisAgent = internalAction({
         thread = threadResult.thread;
         newThreadId = threadId;
       } else {
-        // ✅ Create new thread
-        const threadResult = await crisisAgent.createThread(ctx, {
+        // Find existing thread or create new one
+        const existingThreadsResult = await ctx.runQuery(components.agent.threads.listThreadsByUserId, {
           userId: context.userId,
+          paginationOpts: { cursor: null, numItems: 1 },
+          order: 'desc', // Most recent first
         });
-        thread = threadResult.thread;
-        newThreadId = threadResult.threadId;
+
+        if (existingThreadsResult && existingThreadsResult.page && existingThreadsResult.page.length > 0) {
+          // Use most recent thread
+          const threadResult = await crisisAgent.continueThread(ctx, {
+            threadId: existingThreadsResult.page[0]._id,
+            userId: context.userId,
+          });
+          thread = threadResult.thread;
+          newThreadId = existingThreadsResult.page[0]._id;
+        } else {
+          // Create new thread
+          const threadResult = await crisisAgent.createThread(ctx, {
+            userId: context.userId,
+          });
+          thread = threadResult.thread;
+          newThreadId = threadResult.threadId;
+        }
       }
 
-      // ✅ Fast response - no context search needed for speed
-      const result = await thread.generateText({
+      // ✅ Priority 1: Save user message first (for idempotency)
+      const { messageId } = await saveMessage(ctx, components.agent, {
+        threadId: newThreadId,
         prompt: input.text,
+      });
+
+      // ✅ Fast response - no context search needed for speed (crisis requires immediate response)
+      const result = await thread.generateText({
+        promptMessageId: messageId, // ✅ Reference saved message
         system: CRISIS_PROMPT,
         providerOptions: {
           google: {

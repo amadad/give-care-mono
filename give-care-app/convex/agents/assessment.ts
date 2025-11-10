@@ -10,7 +10,7 @@
 import { action } from '../_generated/server';
 import { internal, components } from '../_generated/api';
 import { v } from 'convex/values';
-import { Agent } from '@convex-dev/agent';
+import { Agent, saveMessage } from '@convex-dev/agent';
 import { google } from '@ai-sdk/google';
 import { openai } from '@ai-sdk/openai';
 import { ASSESSMENT_PROMPT, renderPrompt } from '../lib/prompts';
@@ -97,12 +97,12 @@ export const runAssessmentAgent = action({
         responsesCount,
       });
 
-      // Get or create thread
+      // ✅ Priority 3: Use listThreads() instead of manual threadId storage
       let thread;
       let newThreadId: string;
 
       if (threadId) {
-        // ✅ Continue existing thread
+        // Continue existing thread
         const threadResult = await assessmentAgent.continueThread(ctx, {
           threadId,
           userId: context.userId,
@@ -110,18 +110,54 @@ export const runAssessmentAgent = action({
         thread = threadResult.thread;
         newThreadId = threadId;
       } else {
-        // ✅ Create new thread
-        const threadResult = await assessmentAgent.createThread(ctx, {
+        // Find existing thread or create new one
+        const existingThreadsResult = await ctx.runQuery(components.agent.threads.listThreadsByUserId, {
           userId: context.userId,
+          paginationOpts: { cursor: null, numItems: 1 },
+          order: 'desc', // Most recent first
         });
-        thread = threadResult.thread;
-        newThreadId = threadResult.threadId;
+
+        if (existingThreadsResult && existingThreadsResult.page && existingThreadsResult.page.length > 0) {
+          // Use most recent thread
+          const threadResult = await assessmentAgent.continueThread(ctx, {
+            threadId: existingThreadsResult.page[0]._id,
+            userId: context.userId,
+          });
+          thread = threadResult.thread;
+          newThreadId = existingThreadsResult.page[0]._id;
+        } else {
+          // Create new thread
+          const threadResult = await assessmentAgent.createThread(ctx, {
+            userId: context.userId,
+          });
+          thread = threadResult.thread;
+          newThreadId = threadResult.threadId;
+        }
       }
 
-      // ✅ Use Agent Component's built-in memory
+      const promptText = input.text || 'Please interpret my burnout assessment results and suggest interventions.';
+
+      // ✅ Priority 1: Save user message first (for idempotency)
+      const { messageId } = await saveMessage(ctx, components.agent, {
+        threadId: newThreadId,
+        prompt: promptText,
+      });
+
+      // ✅ Priority 2: Use contextOptions for built-in RAG
       const result = await thread.generateText({
-        prompt: input.text || 'Please interpret my burnout assessment results and suggest interventions.',
+        promptMessageId: messageId, // ✅ Reference saved message
         system: systemPrompt,
+        // @ts-expect-error - contextOptions not in types yet but supported per docs
+        contextOptions: {
+          // Built-in semantic search for assessment context
+          searchOtherThreads: true,
+          recentMessages: 10,
+          searchOptions: {
+            textSearch: true,
+            vectorSearch: true, // Uses textEmbeddingModel automatically
+            limit: 10,
+          },
+        },
         providerOptions: {
           google: {
             temperature: 0.5, // Lower for consistent assessment interpretation
