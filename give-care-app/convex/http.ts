@@ -161,7 +161,7 @@ http.route({
       const traceId = `twilio-${messageSid}`;
 
       // Record the inbound message (phone number is extracted from 'from' field)
-      const messageRecord = await ctx.runMutation(api.domains.messages.recordInbound, {
+      const messageRecord = await ctx.runMutation(api.internal.recordInbound, {
         message: {
           externalId: from,
           channel: 'sms',
@@ -175,14 +175,14 @@ http.route({
         },
       });
 
-      // Trigger async processing and response generation
-      console.log('[webhook] Scheduling processInboundMessage', {
+      // Trigger async processing and response generation (mutation schedules action)
+      console.log('[webhook] Processing inbound message', {
         messageId: messageRecord.messageId,
         userId: messageRecord.userId,
         from,
       });
 
-      await ctx.scheduler.runAfter(0, internal.inbound.processInboundMessage, {
+      await ctx.runMutation(api.inbound.processInboundMessage, {
         messageId: messageRecord.messageId,
         userId: messageRecord.userId,
         text: body,

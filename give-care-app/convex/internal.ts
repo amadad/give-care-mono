@@ -1,10 +1,37 @@
 "use server";
 
-import { mutation } from '../_generated/server';
-import type { MutationCtx } from '../_generated/server';
+/**
+ * Internal Convex API surface
+ *
+ * All server-only functions accessible via api.internal.*
+ * Consolidates internal/ folder into single file.
+ */
+
+import { mutation } from './_generated/server';
+import type { MutationCtx } from './_generated/server';
 import { v } from 'convex/values';
-import { getByExternalId } from '../core';
-import { internal } from '../_generated/api';
+import { getByExternalId } from './core';
+import { internal } from './_generated/api';
+
+// ============================================================================
+// EXPORTS FROM CORE.TS
+// ============================================================================
+
+export {
+  getByExternalIdQuery as getByExternalId,
+  recordInboundMutation as recordInbound,
+  recordOutboundMutation as recordOutbound,
+  logDelivery,
+  createComponentThread,
+  updateUserMetadata,
+  logAgentRunInternal,
+  logCrisisInteraction,
+} from './core';
+
+// ============================================================================
+// ADDITIONAL INTERNAL MUTATIONS
+// Moved from internal/core.ts
+// ============================================================================
 
 const resolveUser = async (ctx: MutationCtx, externalId?: string) => {
   if (!externalId) return null;
