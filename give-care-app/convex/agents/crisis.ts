@@ -119,7 +119,7 @@ export const runCrisisAgent = internalAction({
           openai: {
             reasoningEffort: 'minimal',
             textVerbosity: 'medium',
-            serviceTier: 'auto',
+            serviceTier: 'priority',
           },
         },
       });

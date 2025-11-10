@@ -125,7 +125,7 @@ export const runAssessmentAgent = action({
           openai: {
             reasoningEffort: 'medium',
             textVerbosity: 'medium',
-            serviceTier: 'flex',
+            serviceTier: 'priority',
           },
         },
       });

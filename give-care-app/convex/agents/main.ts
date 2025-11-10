@@ -31,7 +31,7 @@ import { startAssessment } from '../tools/startAssessment';
 
 export const mainAgent = new Agent(components.agent, {
   name: 'Caregiver Support',
-  languageModel: openai('gpt-5-nano'),
+  languageModel: openai('gpt-5-nano'), // High-throughput with minimal reasoning
   textEmbeddingModel: openai.embedding('text-embedding-3-small'),
   instructions: MAIN_PROMPT,
   tools: {
@@ -139,16 +139,16 @@ export const runMainAgent = action({
         newThreadId = threadResult.threadId;
       }
 
-      // ✅ Use Agent Component's built-in memory
+      // ✅ Use Agent Component's built-in memory + Responses API optimizations
       // See: https://stack.convex.dev/ai-agents
       const result = await thread.generateText({
         prompt: input.text,
         system: systemPrompt,
         providerOptions: {
           openai: {
-            reasoningEffort: 'minimal', // Faster for GPT-5-nano
-            textVerbosity: 'medium',
-            serviceTier: 'auto',
+            reasoningEffort: 'minimal', // Fastest time-to-first-token for gpt-5-nano
+            textVerbosity: 'low', // Concise responses for SMS
+            serviceTier: 'priority', // Fastest response times
           },
         },
       });
