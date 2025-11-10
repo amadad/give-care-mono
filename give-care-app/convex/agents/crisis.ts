@@ -14,6 +14,7 @@ import { internalAction } from '../_generated/server';
 import { internal, components } from '../_generated/api';
 import { v } from 'convex/values';
 import { Agent } from '@convex-dev/agent';
+import { google } from '@ai-sdk/google';
 import { openai } from '@ai-sdk/openai';
 import { WorkflowManager } from '@convex-dev/workflow';
 import { CRISIS_PROMPT } from '../lib/prompts';
@@ -27,8 +28,8 @@ const workflow = new WorkflowManager(components.workflow);
 
 export const crisisAgent = new Agent(components.agent, {
   name: 'Crisis Support',
-  languageModel: openai('gpt-5-mini'), // Fast with priority tier support
-  textEmbeddingModel: openai.embedding('text-embedding-3-small'),
+  languageModel: google('gemini-2.5-flash-lite'), // Fastest model for crisis response
+  textEmbeddingModel: openai.embedding('text-embedding-3-small'), // Keep OpenAI embeddings
   instructions: CRISIS_PROMPT,
   maxSteps: 1, // ✅ No tools - prioritize speed
 });
@@ -116,10 +117,17 @@ export const runCrisisAgent = internalAction({
         prompt: input.text,
         system: CRISIS_PROMPT,
         providerOptions: {
-          openai: {
-            reasoningEffort: 'minimal',
-            textVerbosity: 'medium',
-            serviceTier: 'priority',
+          google: {
+            temperature: 0.3, // Lower for consistent crisis responses
+            topP: 0.9, // More focused responses
+            maxOutputTokens: 200, // Keep crisis responses concise
+            // Safety: Allow more content in crisis situations (user may need help)
+            safetySettings: [
+              { category: 'HARM_CATEGORY_HARASSMENT', threshold: 'BLOCK_ONLY_HIGH' },
+              { category: 'HARM_CATEGORY_HATE_SPEECH', threshold: 'BLOCK_ONLY_HIGH' },
+              { category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT', threshold: 'BLOCK_ONLY_HIGH' },
+              { category: 'HARM_CATEGORY_DANGEROUS_CONTENT', threshold: 'BLOCK_MEDIUM_AND_ABOVE' }, // Still block dangerous content
+            ],
           },
         },
       });

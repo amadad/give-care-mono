@@ -11,6 +11,7 @@ import { action } from '../_generated/server';
 import { internal, components } from '../_generated/api';
 import { v } from 'convex/values';
 import { Agent } from '@convex-dev/agent';
+import { google } from '@ai-sdk/google';
 import { openai } from '@ai-sdk/openai';
 import { ASSESSMENT_PROMPT, renderPrompt } from '../lib/prompts';
 import { getInterventions } from '../tools/getInterventions';
@@ -21,8 +22,8 @@ import { getInterventions } from '../tools/getInterventions';
 
 export const assessmentAgent = new Agent(components.agent, {
   name: 'Assessment Specialist',
-  languageModel: openai('gpt-5-mini'),
-  textEmbeddingModel: openai.embedding('text-embedding-3-small'),
+  languageModel: google('gemini-2.5-flash'), // Better reasoning for assessments
+  textEmbeddingModel: openai.embedding('text-embedding-3-small'), // Keep OpenAI embeddings
   instructions: ASSESSMENT_PROMPT,
   tools: { getInterventions },
   maxSteps: 2,
@@ -122,10 +123,16 @@ export const runAssessmentAgent = action({
         prompt: input.text || 'Please interpret my burnout assessment results and suggest interventions.',
         system: systemPrompt,
         providerOptions: {
-          openai: {
-            reasoningEffort: 'medium',
-            textVerbosity: 'medium',
-            serviceTier: 'priority',
+          google: {
+            temperature: 0.5, // Lower for consistent assessment interpretation
+            topP: 0.9, // Focused reasoning
+            maxOutputTokens: 400, // Assessment results can be longer
+            safetySettings: [
+              { category: 'HARM_CATEGORY_HARASSMENT', threshold: 'BLOCK_MEDIUM_AND_ABOVE' },
+              { category: 'HARM_CATEGORY_HATE_SPEECH', threshold: 'BLOCK_MEDIUM_AND_ABOVE' },
+              { category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT', threshold: 'BLOCK_MEDIUM_AND_ABOVE' },
+              { category: 'HARM_CATEGORY_DANGEROUS_CONTENT', threshold: 'BLOCK_MEDIUM_AND_ABOVE' },
+            ],
           },
         },
       });

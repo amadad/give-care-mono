@@ -20,12 +20,13 @@
     "format": "prettier --write \"**/*.{ts,tsx,js,json,md}\""
   },
   "dependencies": {
+    "@ai-sdk/google": "^2.0.30",
     "@ai-sdk/openai": "^2.0.0",
     "@convex-dev/agent": "^0.2.12",
     "@convex-dev/rag": "^0.5.4",
     "@convex-dev/rate-limiter": "^0.2.14",
-    "@convex-dev/workflow": "^0.2.7",
     "@convex-dev/twilio": "^0.1.7",
+    "@convex-dev/workflow": "^0.2.7",
     "@google/genai": "^1.27.0",
     "ai": "^5.0.89",
     "convex": "^1.11.0",

@@ -9,7 +9,7 @@
 import { internalAction } from '../_generated/server';
 import { internal, api } from '../_generated/api';
 import { v } from 'convex/values';
-import { openai } from '@ai-sdk/openai';
+import { google } from '@ai-sdk/google';
 import { generateText } from 'ai';
 
 // ============================================================================
@@ -31,7 +31,7 @@ export const extractFacts = internalAction({
 
     try {
       const result = await generateText({
-        model: openai('gpt-4o-mini'), // Fast model for extraction
+        model: google('gemini-2.5-flash-lite'), // Fastest model for extraction
         prompt: `Extract important long-term facts about this caregiver from the conversation below.
 Focus on:
 - Care recipient details (name, condition, relationship)
@@ -39,17 +39,29 @@ Focus on:
 - Important dates, routines, preferences
 - Crisis indicators or concerning patterns
 
-Return as JSON array of facts with importance 1-10:
+Return ONLY valid JSON array (no markdown, no code blocks):
 [{"fact": "...", "category": "care_routine|preference|crisis_trigger|intervention_result", "importance": 8}]
 
 Conversation:
-${conversationText}
-
-JSON:`,
-        temperature: 0.3,
+${conversationText}`,
+        temperature: 0.2, // Very low for consistent extraction
+        topP: 0.8, // Focused extraction
+        maxOutputTokens: 500, // Facts can be multiple items
+        providerOptions: {
+          google: {
+            responseMimeType: 'application/json', // ✅ Force JSON output (Gemini-specific)
+          },
+        },
       });
 
-      const facts = JSON.parse(result.text);
+      // ✅ Fix: Strip markdown code blocks if present
+      let jsonText = result.text.trim();
+      // Remove ```json and ``` markers
+      jsonText = jsonText.replace(/^```json\s*/i, '').replace(/```\s*$/, '').trim();
+      // If still wrapped in ```, remove those too
+      jsonText = jsonText.replace(/^```\s*/, '').replace(/```\s*$/, '').trim();
+
+      const facts = JSON.parse(jsonText);
       return Array.isArray(facts) ? facts : [];
     } catch (error) {
       console.error('[memory-enrichment] Fact extraction failed:', error);
@@ -85,7 +97,7 @@ export const buildContext = internalAction({
 
     try {
       const result = await generateText({
-        model: openai('gpt-4o-mini'),
+        model: google('gemini-2.5-flash-lite'), // Fastest model for context building
         prompt: `Summarize these caregiver facts into a concise context paragraph (max 200 words) for use in future conversations:
 
 ${memoriesText}
@@ -97,7 +109,14 @@ Focus on:
 - Important patterns or triggers
 
 Context summary:`,
-        temperature: 0.3,
+        temperature: 0.3, // Low for consistent summaries
+        topP: 0.9,
+        maxOutputTokens: 300, // ~200 words = ~300 tokens
+        providerOptions: {
+          google: {
+            // No special options needed for text summarization
+          },
+        },
       });
 
       return result.text;

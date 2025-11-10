@@ -14,6 +14,7 @@ import { action } from '../_generated/server';
 import { internal, components, api } from '../_generated/api';
 import { v } from 'convex/values';
 import { Agent } from '@convex-dev/agent';
+import { google } from '@ai-sdk/google';
 import { openai } from '@ai-sdk/openai';
 import { WorkflowManager } from '@convex-dev/workflow';
 import { MAIN_PROMPT, renderPrompt } from '../lib/prompts';
@@ -34,8 +35,8 @@ const workflow = new WorkflowManager(components.workflow);
 
 export const mainAgent = new Agent(components.agent, {
   name: 'Caregiver Support',
-  languageModel: openai('gpt-5-mini'), // Cost-optimized reasoning + priority tier support
-  textEmbeddingModel: openai.embedding('text-embedding-3-small'),
+  languageModel: google('gemini-2.5-flash'), // Fast reasoning + tool use
+  textEmbeddingModel: openai.embedding('text-embedding-3-small'), // Keep OpenAI embeddings (proven, separate from language model)
   instructions: MAIN_PROMPT,
   tools: {
     searchResources,
@@ -149,10 +150,18 @@ export const runMainAgent = action({
         prompt: input.text,
         system: systemPrompt,
         providerOptions: {
-          openai: {
-            reasoningEffort: 'minimal', // Fastest time-to-first-token
-            textVerbosity: 'low', // Concise responses for SMS
-            serviceTier: 'priority', // Fastest response times
+          google: {
+            temperature: 0.7, // Balanced creativity (0-2, default 1.0)
+            topP: 0.95, // Nucleus sampling (0-1, default 0.95)
+            topK: 40, // Top-k sampling (1-40, default 40)
+            maxOutputTokens: 300, // Keep SMS responses concise (~150-300 tokens)
+            // Safety settings: Block harmful content (default is moderate)
+            safetySettings: [
+              { category: 'HARM_CATEGORY_HARASSMENT', threshold: 'BLOCK_MEDIUM_AND_ABOVE' },
+              { category: 'HARM_CATEGORY_HATE_SPEECH', threshold: 'BLOCK_MEDIUM_AND_ABOVE' },
+              { category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT', threshold: 'BLOCK_MEDIUM_AND_ABOVE' },
+              { category: 'HARM_CATEGORY_DANGEROUS_CONTENT', threshold: 'BLOCK_MEDIUM_AND_ABOVE' },
+            ],
           },
         },
       });
@@ -185,8 +194,8 @@ export const runMainAgent = action({
         { role: 'assistant', content: responseText },
       ];
 
-      // ✅ Fix: Add error handling for non-blocking workflow
-      workflow.start(ctx, internal.workflows.memory.enrichMemory, {
+      // ✅ Fix: Properly handle non-blocking workflow (void to avoid dangling promise warning)
+      void workflow.start(ctx, internal.workflows.memory.enrichMemory, {
         userId: context.userId,
         threadId: newThreadId,
         recentMessages,
