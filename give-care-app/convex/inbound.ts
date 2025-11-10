@@ -81,6 +81,14 @@ export const processInbound = internalAction({
       });
     }
 
+    // Save threadId to user metadata for continuity
+    if (response?.threadId) {
+      await ctx.runMutation(internal.internal.updateUserMetadata, {
+        userId: user._id,
+        metadata: { threadId: response.threadId },
+      });
+    }
+
     // Send SMS response
     if (response?.text) {
       await ctx.runAction(internal.inbound.sendSmsResponse, {
@@ -103,9 +111,14 @@ async function getOrCreateThread(
   userId: string,
   externalId: string
 ): Promise<string | undefined> {
-  // For now, create new thread each time
-  // In future, can store threadId in user.metadata for continuity
-  return undefined;
+  const user = await ctx.runQuery(internal.internal.getUserById, { id: userId });
+  if (!user) return undefined;
+
+  // Get threadId from user metadata
+  const metadata = (user.metadata ?? {}) as Record<string, unknown>;
+  const threadId = metadata.threadId as string | undefined;
+
+  return threadId;
 }
 
 // ============================================================================

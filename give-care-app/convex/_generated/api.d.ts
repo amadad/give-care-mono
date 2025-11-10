@@ -356,6 +356,37 @@ export declare const internal: {
         any
       >;
     };
+    memory: {
+      enrichMemory: FunctionReference<"mutation", "internal", any, any>;
+    };
+    memoryActions: {
+      buildContext: FunctionReference<
+        "action",
+        "internal",
+        { threadId: string; userId: string },
+        any
+      >;
+      extractFacts: FunctionReference<
+        "action",
+        "internal",
+        { recentMessages: Array<any>; userId: string },
+        any
+      >;
+    };
+    memoryMutations: {
+      saveFacts: FunctionReference<
+        "mutation",
+        "internal",
+        { facts: Array<any>; userId: string },
+        any
+      >;
+      updateContext: FunctionReference<
+        "mutation",
+        "internal",
+        { enrichedContext: string | null; userId: string },
+        any
+      >;
+    };
   };
 };
 

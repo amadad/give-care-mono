@@ -15,6 +15,7 @@ import { internal, components, api } from '../_generated/api';
 import { v } from 'convex/values';
 import { Agent } from '@convex-dev/agent';
 import { openai } from '@ai-sdk/openai';
+import { WorkflowManager } from '@convex-dev/workflow';
 import { MAIN_PROMPT, renderPrompt } from '../lib/prompts';
 import { getTone } from '../lib/policy';
 import { extractProfileVariables, buildWellnessInfo } from '../lib/profile';
@@ -25,13 +26,15 @@ import { findInterventions } from '../tools/findInterventions';
 import { updateProfile } from '../tools/updateProfile';
 import { startAssessment } from '../tools/startAssessment';
 
+const workflow = new WorkflowManager(components.workflow);
+
 // ============================================================================
 // AGENT DEFINITION
 // ============================================================================
 
 export const mainAgent = new Agent(components.agent, {
   name: 'Caregiver Support',
-  languageModel: openai('gpt-5-nano'), // High-throughput with minimal reasoning
+  languageModel: openai('gpt-5-mini'), // Cost-optimized reasoning + priority tier support
   textEmbeddingModel: openai.embedding('text-embedding-3-small'),
   instructions: MAIN_PROMPT,
   tools: {
@@ -95,6 +98,9 @@ export const runMainAgent = action({
       const journeyPhase = (metadata.journeyPhase as string) ?? 'active';
       const totalInteractionCount = String((metadata.totalInteractionCount as number) ?? 0);
 
+      // ✅ Hook pattern: Use pre-built context from previous enrichment
+      const enrichedContext = metadata.enrichedContext as string | undefined;
+
       const basePrompt = renderPrompt(MAIN_PROMPT, {
         userName,
         relationship,
@@ -107,7 +113,11 @@ export const runMainAgent = action({
       });
 
       const tone = getTone(context);
-      const systemPrompt = `${basePrompt}\n\n${tone}`;
+      const contextSection = enrichedContext
+        ? `\n\nContext from previous conversations:\n${enrichedContext}`
+        : '';
+
+      const systemPrompt = `${basePrompt}\n\n${tone}${contextSection}`;
 
       // Get or create thread using Agent Component's continueThread pattern
       // See: https://stack.convex.dev/ai-agents
@@ -139,14 +149,14 @@ export const runMainAgent = action({
         newThreadId = threadResult.threadId;
       }
 
-      // ✅ Use Agent Component's built-in memory + Responses API optimizations
-      // See: https://stack.convex.dev/ai-agents
+      // ✅ Fast mode: No blocking memory retrieval
+      // Memory enrichment happens async via recordMemory tool
       const result = await thread.generateText({
         prompt: input.text,
         system: systemPrompt,
         providerOptions: {
           openai: {
-            reasoningEffort: 'minimal', // Fastest time-to-first-token for gpt-5-nano
+            reasoningEffort: 'minimal', // Fastest time-to-first-token
             textVerbosity: 'low', // Concise responses for SMS
             serviceTier: 'priority', // Fastest response times
           },
@@ -171,6 +181,20 @@ export const runMainAgent = action({
         },
         latencyMs,
         traceId: `main-${Date.now()}`,
+      });
+
+      // ✅ Async memory enrichment (non-blocking)
+      // Extracts facts from conversation and saves to memories table
+      // Ready for next interaction without slowing down current response
+      const recentMessages = [
+        { role: 'user', content: input.text },
+        { role: 'assistant', content: responseText },
+      ];
+
+      workflow.start(ctx, internal.workflows.memory.enrichMemory, {
+        userId: context.userId,
+        threadId: newThreadId,
+        recentMessages,
       });
 
       return {

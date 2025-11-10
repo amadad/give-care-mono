@@ -27,7 +27,7 @@ const workflow = new WorkflowManager(components.workflow);
 
 export const crisisAgent = new Agent(components.agent, {
   name: 'Crisis Support',
-  languageModel: openai('gpt-5-nano'),
+  languageModel: openai('gpt-5-mini'), // Fast with priority tier support
   textEmbeddingModel: openai.embedding('text-embedding-3-small'),
   instructions: CRISIS_PROMPT,
   maxSteps: 1, // ✅ No tools - prioritize speed
