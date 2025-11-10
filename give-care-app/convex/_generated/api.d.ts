@@ -694,6 +694,12 @@ export declare const internal: {
         { userId: Id<"users"> },
         any
       >;
+      updateUserMetadata: FunctionReference<
+        "mutation",
+        "internal",
+        { metadata: any; userId: Id<"users"> },
+        any
+      >;
     };
   };
   public: {
