@@ -15,7 +15,6 @@ import { openai } from '@ai-sdk/openai';
 import { MAIN_PROMPT, CRISIS_PROMPT, ASSESSMENT_PROMPT, renderPrompt } from './lib/prompts';
 import { getTone } from './lib/policy';
 import { z } from 'zod';
-import { sharedAgentConfig } from './lib/usage';
 import { getProfileCompleteness, buildWellnessInfo, extractProfileVariables } from './lib/profile';
 
 // ============================================================================
@@ -125,7 +124,7 @@ const checkWellnessStatusTool = createTool({
       return { error: 'User ID not available' };
     }
 
-    const status = await ctx.runQuery(api.domains.wellness.getStatus, {
+    const status = await ctx.runQuery(api.wellness.getStatus, {
       userId,
     });
 
@@ -151,13 +150,13 @@ const findInterventionsTool = createTool({
     // If no zones provided, fetch user's pressure zones from wellness status
     let zones: string[] = args.zones || [];
     if (zones.length === 0) {
-      const status = await ctx.runQuery(api.domains.wellness.getStatus, {
+      const status = await ctx.runQuery(api.wellness.getStatus, {
         userId,
       });
       zones = status.pressureZones || ['emotional', 'physical']; // Default fallback
     }
 
-    const interventions = await ctx.runQuery(api.domains.interventions.getByZones, {
+    const interventions = await ctx.runQuery(api.interventions.getByZones, {
       zones,
       minEvidenceLevel: args.minEvidenceLevel || 'moderate',
       limit: args.limit || 5,
@@ -330,7 +329,6 @@ const mainAgent = new Agent(components.agent, {
   },
 
   // Usage tracking for billing and monitoring
-  ...sharedAgentConfig,
 });
 
 /**
@@ -426,7 +424,7 @@ export const runMainAgent = action({
       const responseText: string = result.text;
       const latencyMs = Date.now() - startTime;
 
-      await ctx.runMutation(internal.domains.logs.logAgentRunInternal, {
+      await ctx.runMutation(internal.logAgentRunInternal, {
         userId: context.userId,
         agent: 'main',
         policyBundle: 'default_v1',
@@ -464,7 +462,7 @@ What's on your mind?`;
 
       const latencyMs = Date.now() - startTime;
 
-      await ctx.runMutation(internal.domains.logs.logAgentRunInternal, {
+      await ctx.runMutation(internal.logAgentRunInternal, {
         userId: context.userId,
         agent: 'main',
         policyBundle: 'default_v1',
@@ -501,7 +499,6 @@ const crisisAgent = new Agent(components.agent, {
   maxSteps: 1, // No tool calls needed for crisis - prioritize speed
 
   // Usage tracking for billing and monitoring
-  ...sharedAgentConfig,
 });
 
 /**
@@ -571,7 +568,7 @@ export const runCrisisAgent = internalAction({
       const responseText = result.text;
       const latencyMs = Date.now() - startTime;
 
-      await ctx.runMutation(internal.domains.logs.logCrisisInteraction, {
+      await ctx.runMutation(internal.logCrisisInteraction, {
         userId: context.userId,
         input: input.text,
         chunks: [responseText],
@@ -595,7 +592,7 @@ If you're experiencing a crisis, please reach out for immediate help:
 
 For ${careRecipient}, resources are available 24/7. You're not alone in this.`;
 
-      await ctx.runMutation(internal.domains.logs.logCrisisInteraction, {
+      await ctx.runMutation(internal.logCrisisInteraction, {
         userId: context.userId,
         input: input.text,
         chunks: [fallbackResponse],
@@ -645,7 +642,7 @@ const getInterventionsTool = createTool({
       duration: string;
       description: string;
       content: string;
-    }> = await ctx.runQuery(api.domains.interventions.getByZones, {
+    }> = await ctx.runQuery(api.interventions.getByZones, {
       zones: args.zones,
       minEvidenceLevel: args.minEvidenceLevel || 'moderate',
       limit: args.limit || 5,
@@ -674,7 +671,6 @@ const assessmentAgent: any = new Agent(components.agent, {
   maxSteps: 2, // Limit tool calls for faster responses
 
   // Usage tracking for billing and monitoring
-  ...sharedAgentConfig,
 });
 
 /**
@@ -769,7 +765,7 @@ export const runAssessmentAgent: any = action({
       const responseText: string = result.text;
       const latencyMs = Date.now() - startTime;
 
-      await ctx.runMutation(internal.domains.logs.logAgentRunInternal, {
+      await ctx.runMutation(internal.logAgentRunInternal, {
         userId: context.userId,
         agent: 'assessment',
         policyBundle: 'assessment_v1',
@@ -793,7 +789,7 @@ export const runAssessmentAgent: any = action({
       const errorMessage = 'I apologize, but I encountered an error processing your assessment. Please try again.';
       const latencyMs = Date.now() - startTime;
 
-      await ctx.runMutation(internal.domains.logs.logAgentRunInternal, {
+      await ctx.runMutation(internal.logAgentRunInternal, {
         userId: context.userId,
         agent: 'assessment',
         policyBundle: 'assessment_v1',

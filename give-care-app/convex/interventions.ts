@@ -1,6 +1,6 @@
 "use server";
 
-import { query } from '../_generated/server';
+import { query } from './_generated/server';
 import { v } from 'convex/values';
 
 const EVIDENCE_ORDER: Record<string, number> = {
