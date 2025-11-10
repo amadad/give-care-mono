@@ -1,14 +1,17 @@
 "use node";
 
 /**
- * Google Maps Grounding via Gemini API (using @ai-sdk/google)
+ * Google Maps Grounding via Gemini API
  *
  * Uses Gemini Maps Grounding to find real caregiving resources.
  * See: https://ai.google.dev/gemini-api/docs/maps-grounding
+ *
+ * Note: Maps Grounding is not yet available as a tool in @ai-sdk/google
+ * (only googleSearch, urlContext, fileSearch, codeExecution are available).
+ * Using @google/genai SDK for Maps Grounding until @ai-sdk/google adds support.
  */
 
-import { google } from '@ai-sdk/google';
-import { generateText } from 'ai';
+import { GoogleGenAI } from '@google/genai';
 
 /**
  * Convert zip code to approximate lat/lng (US only, rough approximation)
@@ -135,137 +138,66 @@ export async function searchWithMapsGrounding(
     // Get approximate lat/lng for better grounding
     const location = zipToApproximateLatLng(zip);
     
-    // ✅ Try using @ai-sdk/google with Maps Grounding via providerOptions
-    // Attempt to pass Maps Grounding config through providerOptions
-    try {
-      const response = await generateText({
-        model: google('gemini-2.5-flash'),
-        prompt: mapsQuery,
-        // Try passing tools through providerOptions
-        // Note: toolConfig may need to be passed differently or via raw API
-        providerOptions: {
-          google: {
-            // Maps Grounding tools/config - not in types yet, using as any
-            tools: [{ googleMaps: {} }],
-            ...(location && {
-              toolConfig: {
-                retrievalConfig: {
-                  latLng: {
-                    latitude: location.latitude,
-                    longitude: location.longitude,
-                  },
-                },
-              },
-            }),
-          } as any,
+    // ✅ Use @google/genai for Maps Grounding (cleaner than REST API)
+    const ai = new GoogleGenAI({
+      apiKey: process.env.GOOGLE_GENERATIVE_AI_API_KEY || process.env.GEMINI_API_KEY,
+    });
+
+    if (!ai) {
+      throw new Error('GOOGLE_GENERATIVE_AI_API_KEY environment variable is required (or GEMINI_API_KEY for backward compatibility)');
+    }
+
+    const config: any = {
+      tools: [{ googleMaps: {} }],
+    };
+
+    // Add location config if available
+    if (location) {
+      config.toolConfig = {
+        retrievalConfig: {
+          latLng: {
+            latitude: location.latitude,
+            longitude: location.longitude,
+          },
         },
-      });
-
-      // Extract grounding metadata from providerMetadata
-      const providerMetadata = response.providerMetadata as any;
-      const groundingMetadata = providerMetadata?.google?.groundingMetadata;
-      
-      if (!groundingMetadata) {
-        // If no grounding metadata, fall back to REST API
-        throw new Error('No grounding metadata in AI SDK response, falling back to REST API');
-      }
-    
-      const resources = extractMapsResults(groundingMetadata);
-      
-      // Get widget token if available
-      const widgetToken = groundingMetadata?.googleMapsWidgetContextToken;
-
-      // Format for SMS
-      const text = resources.length > 0
-        ? resources
-            .slice(0, 5) // Limit to 5 for SMS
-            .map(
-              (r, idx) =>
-                `${idx + 1}. ${r.name} — ${r.address}${r.hours ? ` (${r.hours})` : ''}${r.rating ? `, rating ${r.rating}` : ''}`
-            )
-            .join('\n')
-        : `I couldn't find specific ${category} resources near ${zip}. Try searching with a more specific query or check your zip code.`;
-
-      return {
-        resources,
-        widgetToken,
-        text,
-      };
-    } catch (aiSdkError) {
-      // Fall back to direct REST API if AI SDK doesn't support Maps Grounding
-      console.log('[maps-grounding] AI SDK approach failed, using REST API fallback:', aiSdkError);
-      
-      const apiKey = process.env.GOOGLE_GENERATIVE_AI_API_KEY || process.env.GEMINI_API_KEY;
-      if (!apiKey) {
-        throw new Error('GOOGLE_GENERATIVE_AI_API_KEY environment variable is required (or GEMINI_API_KEY for backward compatibility)');
-      }
-
-      const requestBody: any = {
-        contents: [
-          {
-            role: 'user',
-            parts: [{ text: mapsQuery }],
-          },
-        ],
-        tools: [{ googleMaps: {} }],
-      };
-
-      // Add location config if available
-      if (location) {
-        requestBody.toolConfig = {
-          retrievalConfig: {
-            latLng: {
-              latitude: location.latitude,
-              longitude: location.longitude,
-            },
-          },
-        };
-      }
-
-      const apiResponse = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`,
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify(requestBody),
-        }
-      );
-
-      if (!apiResponse.ok) {
-        const errorText = await apiResponse.text();
-        throw new Error(`Gemini API error: ${apiResponse.status} ${errorText}`);
-      }
-
-      const responseData = await apiResponse.json();
-      
-      // Extract results from grounding metadata
-      const candidate = responseData.candidates?.[0];
-      const groundingMetadata = candidate?.groundingMetadata;
-      
-      const resources = extractMapsResults(groundingMetadata);
-      
-      // Get widget token if available
-      const widgetToken = groundingMetadata?.googleMapsWidgetContextToken;
-
-      // Format for SMS
-      const text = resources.length > 0
-        ? resources
-            .slice(0, 5) // Limit to 5 for SMS
-            .map(
-              (r, idx) =>
-                `${idx + 1}. ${r.name} — ${r.address}${r.hours ? ` (${r.hours})` : ''}${r.rating ? `, rating ${r.rating}` : ''}`
-            )
-            .join('\n')
-        : `I couldn't find specific ${category} resources near ${zip}. Try searching with a more specific query or check your zip code.`;
-
-      return {
-        resources,
-        widgetToken,
-        text,
       };
     }
+
+    const response = await ai.models.generateContent({
+      model: 'gemini-2.5-flash',
+      contents: mapsQuery,
+      config,
+    });
+
+    // Extract grounding metadata from response
+    const candidate = response.candidates?.[0];
+    const groundingMetadata = candidate?.groundingMetadata;
+    
+    if (!groundingMetadata) {
+      throw new Error('No Maps Grounding metadata in response');
+    }
+
+    const resources = extractMapsResults(groundingMetadata);
+    
+    // Get widget token if available
+    const widgetToken = groundingMetadata?.googleMapsWidgetContextToken;
+
+    // Format for SMS
+    const text = resources.length > 0
+      ? resources
+          .slice(0, 5) // Limit to 5 for SMS
+          .map(
+            (r, idx) =>
+              `${idx + 1}. ${r.name} — ${r.address}${r.hours ? ` (${r.hours})` : ''}${r.rating ? `, rating ${r.rating}` : ''}`
+          )
+          .join('\n')
+      : `I couldn't find specific ${category} resources near ${zip}. Try searching with a more specific query or check your zip code.`;
+
+    return {
+      resources,
+      widgetToken,
+      text,
+    };
   } catch (error) {
     console.error('[maps-grounding] Error:', error);
     throw error;
