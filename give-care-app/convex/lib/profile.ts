@@ -2,11 +2,11 @@
  * Profile utilities
  */
 
-export const extractProfileVariables = (metadata: any) => {
+export const extractProfileVariables = (profile: any) => {
   return {
-    userName: metadata?.name || 'there',
-    relationship: metadata?.caregiverRole || 'caregiver',
-    careRecipient: metadata?.careRecipient || 'loved one',
+    userName: profile?.firstName || 'there',
+    relationship: profile?.relationship || 'caregiver',
+    careRecipient: profile?.careRecipientName || 'loved one',
   };
 };
 

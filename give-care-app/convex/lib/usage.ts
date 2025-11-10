@@ -3,5 +3,5 @@
  */
 
 export const sharedAgentConfig = {
-  maxSteps: 10,
+  // maxSteps removed - each agent sets its own
 };
