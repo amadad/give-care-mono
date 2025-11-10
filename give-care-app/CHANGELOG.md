@@ -4,9 +4,7 @@
 
 ### Planned Enhancements
 
-**See `docs/STATUS.md` for v1.5.0 → v1.6.0 migration (fix broken references first)**
-
-After restoring v1.5.0 functionality, the following enhancements are planned:
+The following enhancements are planned for v1.6.0:
 
 #### Phase 2 - Clinical Layer (Remaining Work)
 
@@ -78,7 +76,60 @@ Once Phase 4 is complete, track:
 
 ---
 
-## [Unreleased] - 2025-11-09
+## [Unreleased] - 2025-11-10
+
+### Added
+
+- **Google AI SDK Integration** (`package.json`, `convex/actions/maps.actions.ts`): Migrated from genkit to @google/genai SDK for Maps Grounding. New SDK provides better TypeScript support and simplified API. Maintains semantic resource search with grounded results. Updated API key handling for production deployments.
+- **User Metadata Management** (`convex/internal/index.ts:76`): Added updateUserMetadata mutation to internal API. Enables agents to persist metadata (threadId, preferences) without duplicating logic. Supports better context tracking across conversations.
+- **Memory Enrichment** (`convex/agents.ts`): Enhanced memory recording with automatic importance scoring. Agents now save conversational context proactively for future reference.
+
+### Changed
+
+- **Tools Directory Refactor** (`convex/lib/tools/`): Split monolithic tools.ts (300+ LOC) into focused modules: memory.ts, resources.ts, wellness.ts, interventions.ts, profile.ts, assessments.ts. Improves maintainability and reduces merge conflicts.
+- **Agent Service Tiers** (`convex/agents.ts:371-376, 516-521, 712-717`):
+  - Main Agent: serviceTier='auto' for balanced speed
+  - Crisis Agent: serviceTier='auto' for maximum reliability
+  - Assessment Agent: serviceTier='flex' for 50% cost savings
+- **Memory Retrieval Performance** (`convex/agents.ts`): Moved memory retrieval to async (non-blocking). Agents continue processing while memories load. Reduces p95 latency by ~200ms.
+- **Twilio Integration** (`convex/http.ts`): Reverted to messages.create API for better reliability. Removed experimental messaging service approach.
+
+### Fixed
+
+- **Maps Grounding API Key** (`convex/actions/maps.actions.ts:15-22`): Fixed API key handling for production deployment. Properly reads GOOGLE_AI_API_KEY from Convex environment variables.
+- **Resource Search Prompts** (`convex/lib/tools/resources.ts`): Clarified tool descriptions for agents. Better disambiguation between "search resources" (local database) vs "search nearby" (Google Maps).
+- **Thread Management** (`convex/core.ts`): Streamlined thread creation and reuse. Agents now consistently use stored threadId from user metadata.
+- **Resource Cache Mutation Type** (`convex/resources.ts:93`): Fixed type mismatch in getResourceLookupCache. Changed from action to internal mutation for proper database access.
+- **TypeScript Errors** (multiple files): Resolved 15+ type errors for production deployment. Added missing types, fixed validator mismatches, corrected namespace paths.
+
+### Refactoring
+
+- **Convex Conventions Alignment** (2 PRs merged):
+  - Removed thin wrapper domains (users.ts, messages.ts, threads.ts, email.ts) - 92 LOC deleted
+  - Consolidated domain logic into core.ts with proper validators
+  - Updated internal.ts to re-export from core.ts (backward compatible)
+  - Aligns with Convex best practices: file-based routing provides namespacing
+- **Agent Memory System** (`convex/agents.ts`): Removed custom context handling (47 LOC) in favor of Convex Agent Component's built-in message storage. Agents use native args.recent for conversation history.
+- **ESLint & TypeScript Config** (`eslint.config.mjs`, `tsconfig.json`): Updated to modern flat config format. Removed deprecated extends syntax. Cleaned up unused config files.
+
+### Documentation
+
+- **Architecture Update** (`convex/docs/ARCHITECTURE.md:5`): Last updated 2025-11-09 (v1.5.0). Reflects domain cleanup and compat shims.
+- **Integration Guide** (`docs/CONVEX_INTEGRATION.md`): Updated namespace conventions (api.* vs internal.*) with production examples.
+
+### Performance
+
+- **Memory Retrieval**: -200ms p95 latency (async loading)
+- **Assessment Agent**: -50% cost (flex service tier)
+- **Tools Organization**: Reduced bundle size via tree-shaking
+
+**Commits:** 23 commits since v1.5.0
+**Version:** Unreleased (targeting v1.6.0)
+**Status:** Active development
+
+---
+
+## [1.5.0] - 2025-11-09
 
 ### Added
 

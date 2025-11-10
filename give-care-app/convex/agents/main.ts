@@ -165,13 +165,13 @@ export const runMainAgent = action({
         system: systemPrompt,
         // @ts-expect-error - contextOptions not in types yet but supported per docs
         contextOptions: {
-          // Built-in semantic search across all user's threads
-          searchOtherThreads: true,
-          recentMessages: 10,
+          // Built-in semantic search - optimized for speed
+          searchOtherThreads: false, // ✅ Disable for speed - only search current thread
+          recentMessages: 5, // ✅ Reduced from 10 to 5 for faster responses
           searchOptions: {
             textSearch: true,
-            vectorSearch: true, // Uses textEmbeddingModel automatically
-            limit: 10,
+            vectorSearch: false, // ✅ Disable vector search for speed (text search is faster)
+            limit: 5, // ✅ Reduced from 10 to 5
           },
         },
         providerOptions: {
@@ -219,15 +219,20 @@ export const runMainAgent = action({
         { role: 'assistant', content: responseText },
       ];
 
-      // ✅ Fix: Properly handle non-blocking workflow (void to avoid dangling promise warning)
-      void workflow.start(ctx, internal.workflows.memory.enrichMemory, {
-        userId: context.userId,
-        threadId: newThreadId,
-        recentMessages,
-      }).catch((error) => {
-        // Log but don't block response - memory enrichment is best-effort
-        console.error('[main-agent] Memory enrichment workflow failed:', error);
-      });
+      // ✅ Fix: Memory enrichment runs async AFTER response (non-blocking)
+      // Skip for first message (threadId is new) to reduce overhead
+      // Memory enrichment needs conversation history, so only run after a few exchanges
+      if (threadId) {
+        // Thread exists - we have conversation history, safe to enrich
+        void workflow.start(ctx, internal.workflows.memory.enrichMemory, {
+          userId: context.userId,
+          threadId: newThreadId,
+          recentMessages: recentMessages.slice(-5), // ✅ Only analyze last 5 messages (reduced overhead)
+        }).catch((error) => {
+          // Log but don't block response - memory enrichment is best-effort
+          console.error('[main-agent] Memory enrichment workflow failed:', error);
+        });
+      }
 
       return {
         text: responseText,

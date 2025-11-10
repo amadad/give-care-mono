@@ -1,6 +1,6 @@
 "use node";
 
-import { action } from './_generated/server';
+import { action, internalAction } from './_generated/server';
 import { v } from 'convex/values';
 import { internal } from './_generated/api';
 import { searchWithMapsGrounding } from './lib/maps';
@@ -37,6 +37,18 @@ const normalizeZip = (zip?: string) => {
   if (!zip) return undefined;
   const digits = zip.replace(/\D/g, '');
   return digits.length >= 5 ? digits.slice(0, 5) : undefined;
+};
+
+/**
+ * Extract zip code from query text (e.g., "support groups in 11576" or "11576")
+ */
+const extractZipFromQuery = (query: string): string | undefined => {
+  // Look for 5-digit zip codes in the query
+  const zipMatch = query.match(/\b\d{5}\b/);
+  if (zipMatch) {
+    return normalizeZip(zipMatch[0]);
+  }
+  return undefined;
 };
 
 const inferCategory = (query: string, fallback = 'respite') => {
@@ -95,8 +107,10 @@ export const searchResources = action({
   },
   handler: async (ctx, args) => {
     const metadata = (args.metadata ?? {}) as Record<string, unknown>;
+    // ✅ Priority 1: Extract zip from query if provided (e.g., "support groups in 11576")
     let resolvedZip =
       normalizeZip(args.zip) ||
+      extractZipFromQuery(args.query) ||
       normalizeZip(resolveZipFromMetadata(metadata)) ||
       undefined;
 
@@ -182,6 +196,34 @@ export const searchResources = action({
       cached: false,
       expiresAt: now + ttlMs,
     };
+  },
+});
+
+// ============================================================================
+// RESOURCE CACHE CLEANUP ACTION (for cron jobs)
+// ============================================================================
+
+export const cleanupResourceCache = internalAction({
+  args: {},
+  handler: async (ctx) => {
+    const now = Date.now();
+    
+    // Get expired cache entries (batched for efficiency)
+    const batch = await ctx.runQuery(internal.internal.listExpiredResourceCache, { 
+      now,
+      limit: 200, // Process in batches to avoid timeouts
+    });
+    
+    if (batch.ids.length === 0) {
+      return { deleted: 0 };
+    }
+    
+    // Delete expired entries
+    const result = await ctx.runMutation(internal.internal.deleteResourceCacheBatch, { 
+      ids: batch.ids 
+    });
+    
+    return { deleted: result.deleted };
   },
 });
 

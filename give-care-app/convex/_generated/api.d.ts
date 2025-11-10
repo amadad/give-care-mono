@@ -9,6 +9,7 @@
  */
 
 import type { FunctionReference } from "convex/server";
+import type { GenericId as Id } from "convex/values";
 
 /**
  * A utility for referencing Convex functions in your app's public API.
@@ -68,6 +69,12 @@ export declare const api: {
     };
   };
   assessments: {
+    getAssessment: FunctionReference<
+      "query",
+      "public",
+      { definitionId: string; userId: string },
+      any
+    >;
     startAssessment: FunctionReference<
       "mutation",
       "public",
@@ -76,12 +83,6 @@ export declare const api: {
         definition: "ema" | "bsfc" | "reach2" | "sdoh";
         userId: string;
       },
-      any
-    >;
-    getAssessment: FunctionReference<
-      "query",
-      "public",
-      { definitionId: string; userId: string },
       any
     >;
   };
@@ -104,16 +105,16 @@ export declare const api: {
       { externalId: string },
       any
     >;
-    recordMemory: FunctionReference<
-      "mutation",
-      "public",
-      { category: string; content: string; importance: number; userId: string },
-      any
-    >;
     listMemories: FunctionReference<
       "query",
       "public",
       { limit?: number; userId: string },
+      any
+    >;
+    recordMemory: FunctionReference<
+      "mutation",
+      "public",
+      { category: string; content: string; importance: number; userId: string },
       any
     >;
   };
@@ -176,24 +177,30 @@ export declare const internal: {
     };
   };
   inbound: {
-    sendSmsResponse: FunctionReference<
-      "action",
-      "internal",
-      { text: string; to: string; userId: string },
-      any
-    >;
     processInbound: FunctionReference<
       "action",
       "internal",
       { messageSid: string; phone: string; text: string },
       any
     >;
+    processInboundMessage: FunctionReference<
+      "action",
+      "internal",
+      { messageSid: string; phone: string; text: string },
+      any
+    >;
+    sendSmsResponse: FunctionReference<
+      "action",
+      "internal",
+      { text: string; to: string; userId: string },
+      any
+    >;
   };
   internal: {
-    getByExternalIdQuery: FunctionReference<
-      "query",
+    deleteResourceCacheBatch: FunctionReference<
+      "mutation",
       "internal",
-      { externalId: string },
+      { ids: Array<Id<"resource_cache">> },
       any
     >;
     ensureUserMutation: FunctionReference<
@@ -207,57 +214,10 @@ export declare const internal: {
       },
       any
     >;
-    logAgentRunInternal: FunctionReference<
-      "mutation",
-      "internal",
-      {
-        agent: string;
-        budgetResult: {
-          toolCalls: number;
-          usedInputTokens: number;
-          usedOutputTokens: number;
-        };
-        externalId: string;
-        latencyMs: number;
-        policyBundle: string;
-        traceId: string;
-      },
-      any
-    >;
-    logGuardrailInternal: FunctionReference<
-      "mutation",
-      "internal",
-      {
-        action: string;
-        context?: any;
-        externalId?: string;
-        ruleId: string;
-        traceId: string;
-      },
-      any
-    >;
-    logCrisisInteraction: FunctionReference<
-      "mutation",
-      "internal",
-      {
-        externalId: string;
-        input: string;
-        response: string;
-        timestamp: number;
-        traceId?: string;
-      },
-      any
-    >;
-    updateUserMetadata: FunctionReference<
-      "mutation",
-      "internal",
-      { metadata: any; userId: Id<"users"> },
-      any
-    >;
-    getUserById: FunctionReference<
+    getByExternalIdQuery: FunctionReference<
       "query",
       "internal",
-      { userId: Id<"users"> },
+      { externalId: string },
       any
     >;
     getResourceLookupCache: FunctionReference<
@@ -266,16 +226,10 @@ export declare const internal: {
       { category: string; zip: string },
       any
     >;
-    recordResourceLookup: FunctionReference<
-      "mutation",
+    getUserById: FunctionReference<
+      "query",
       "internal",
-      {
-        category: string;
-        expiresAt: number;
-        results: any;
-        userId?: Id<"users">;
-        zip: string;
-      },
+      { userId: Id<"users"> },
       any
     >;
     handleIncomingMessage: FunctionReference<
@@ -309,9 +263,83 @@ export declare const internal: {
       },
       any
     >;
+    listExpiredResourceCache: FunctionReference<
+      "query",
+      "internal",
+      { limit?: number; now: number },
+      any
+    >;
+    logAgentRunInternal: FunctionReference<
+      "mutation",
+      "internal",
+      {
+        agent: string;
+        budgetResult: {
+          toolCalls: number;
+          usedInputTokens: number;
+          usedOutputTokens: number;
+        };
+        externalId: string;
+        latencyMs: number;
+        policyBundle: string;
+        traceId: string;
+      },
+      any
+    >;
+    logCrisisInteraction: FunctionReference<
+      "mutation",
+      "internal",
+      {
+        externalId: string;
+        input: string;
+        response: string;
+        timestamp: number;
+        traceId?: string;
+      },
+      any
+    >;
+    logGuardrailInternal: FunctionReference<
+      "mutation",
+      "internal",
+      {
+        action: string;
+        context?: any;
+        externalId?: string;
+        ruleId: string;
+        traceId: string;
+      },
+      any
+    >;
+    recordResourceLookup: FunctionReference<
+      "mutation",
+      "internal",
+      {
+        category: string;
+        expiresAt: number;
+        results: any;
+        userId?: Id<"users">;
+        zip: string;
+      },
+      any
+    >;
+    updateUserMetadata: FunctionReference<
+      "mutation",
+      "internal",
+      { metadata: any; userId: Id<"users"> },
+      any
+    >;
+  };
+  resources: {
+    cleanupResourceCache: FunctionReference<"action", "internal", {}, any>;
   };
   workflows: {
     crisis: {
+      checkRecentActivity: FunctionReference<
+        "query",
+        "internal",
+        { hoursAgo: number; userId: Id<"users"> },
+        any
+      >;
       crisisEscalation: FunctionReference<"mutation", "internal", any, any>;
       crisisFollowUp: FunctionReference<"mutation", "internal", any, any>;
       logCrisisEvent: FunctionReference<
@@ -335,12 +363,6 @@ export declare const internal: {
         "mutation",
         "internal",
         { alertId: Id<"alerts">; hoursFromNow: number; userId: Id<"users"> },
-        any
-      >;
-      checkRecentActivity: FunctionReference<
-        "query",
-        "internal",
-        { hoursAgo: number; userId: Id<"users"> },
         any
       >;
       sendFollowUpMessage: FunctionReference<
@@ -1141,12 +1163,6 @@ export declare const components: {
         },
         null
       >;
-      getMessageSearchFields: FunctionReference<
-        "query",
-        "internal",
-        { messageId: string },
-        { embedding?: Array<number>; embeddingModel?: string; text?: string }
-      >;
       getMessagesByIds: FunctionReference<
         "query",
         "internal",
@@ -1413,6 +1429,12 @@ export declare const components: {
             | { message: string; type: "other" }
           >;
         }>
+      >;
+      getMessageSearchFields: FunctionReference<
+        "query",
+        "internal",
+        { messageId: string },
+        { embedding?: Array<number>; embeddingModel?: string; text?: string }
       >;
       listMessagesByThreadId: FunctionReference<
         "query",

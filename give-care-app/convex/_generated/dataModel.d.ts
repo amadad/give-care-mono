@@ -46,6 +46,7 @@ export type DataModel = {
       | "_creationTime"
       | "_id"
       | "agent"
+      | "budgetResult"
       | "budgetResult.toolCalls"
       | "budgetResult.usedInputTokens"
       | "budgetResult.usedOutputTokens"
@@ -505,6 +506,7 @@ export type DataModel = {
       by_id: ["_id"];
       by_creation_time: ["_creationTime"];
       by_category_zip: ["category", "zip", "createdAt", "_creationTime"];
+      by_expiresAt: ["expiresAt", "_creationTime"];
     };
     searchIndexes: {};
     vectorIndexes: {};
@@ -534,6 +536,7 @@ export type DataModel = {
       | "composite"
       | "confidence"
       | "userId"
+      | "zones"
       | "zones.emotional"
       | "zones.financial"
       | "zones.physical"
@@ -656,6 +659,7 @@ export type DataModel = {
       | "_creationTime"
       | "_id"
       | "billingPeriod"
+      | "breakdown"
       | "breakdown.byAgent"
       | "breakdown.byModel"
       | "status"
@@ -695,6 +699,7 @@ export type DataModel = {
     fieldPaths:
       | "_creationTime"
       | "_id"
+      | "address"
       | "address.city"
       | "address.country"
       | "address.line1"
@@ -702,6 +707,7 @@ export type DataModel = {
       | "address.postalCode"
       | "address.state"
       | "channel"
+      | "consent"
       | "consent.emergency"
       | "consent.marketing"
       | "email"

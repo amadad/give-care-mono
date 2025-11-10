@@ -75,19 +75,20 @@ pnpm --filter give-care-story dev          # Presentations
 
 ## give-care-app (Backend)
 
-**Tech**: Convex, OpenAI Agents SDK, Twilio, Vitest
+**Tech**: Convex, Convex Agent Component (@convex-dev/agent), Vercel AI SDK, Twilio, Vitest
 **Critical**: Run `npx convex dev` first - generates types in `convex/_generated/`
 
-**Architecture**: 3-agent system (Main, Crisis, Assessment)
+**Architecture**: 3-agent system (Main, Crisis, Assessment) using Convex Agent Component
 
 **Key Patterns**:
-- Files importing `@openai/agents` need `"use node"` directive
+- Files importing AI SDK need `"use node"` directive
 - Use Convex validators, NOT Zod
-- System prompts are in `convex/lib/prompts.ts` with template variables
-- Use `hasContextState()` guard before accessing context
-- No harness tokens required - Convex-native architecture
+- System prompts in `convex/lib/prompts.ts` with template variables
+- Tools split into `convex/lib/tools/` directory
+- Memory uses Convex Agent Component built-in storage
+- No harness tokens required - fully Convex-native
 
-**Docs**: See `give-care-app/docs/CLAUDE.md`
+**Docs**: See `give-care-app/docs/ARCHITECTURE.md` and `give-care-app/docs/FEATURES.md`
 
 ### Simulation Testing Loop
 
@@ -157,14 +158,18 @@ See `tests/simulation/README.md` for full details.
 
 ## give-care-site (Marketing)
 
-**Tech**: Next.js 16, Tailwind v4.1.7, DaisyUI, Framer Motion, MDX
+**Tech**: Next.js 15, Tailwind v4.1.7, DaisyUI, Framer Motion, MDX, Stripe, Resend
 
 **Design System**:
 - Typography: `.heading-hero`, `.heading-section`
 - Buttons: `.btn-editorial-primary`, `.btn-editorial-secondary`
 - Colors: `bg-base-100`, `text-amber-950`, `text-amber-700`
 
-**Monorepo Integration**: Imports Convex types, start backend first
+**Key Integrations**:
+- Imports Convex types from `give-care-app/convex/_generated/`
+- Stripe checkout for subscriptions
+- Resend for email delivery
+- Start backend first to generate types
 
 **Docs**: See `give-care-site/CLAUDE.md`
 
@@ -189,8 +194,8 @@ See `tests/simulation/README.md` for full details.
 **Missing Convex types**: Run `npx convex dev` in give-care-app
 **EventTarget error**: Add `"use node"` directive to file
 **Workspace import fails**: Check package name in `package.json`
-**Context undefined**: Use `hasContextState()` type guard
-**Code not updating**: Touch parent file: `touch convex/twilio.ts && npx convex dev --once`
+**Code not updating**: Touch parent file or run `npx convex dev --once`
+**TypeScript timeout**: Deploy with `--typecheck=disable` flag (static API generation enabled)
 
 ## Environment Variables
 

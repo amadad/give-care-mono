@@ -212,7 +212,9 @@ export default defineSchema({
     results: v.optional(v.any()),
     createdAt: v.number(),
     expiresAt: v.optional(v.number()),
-  }).index('by_category_zip', ['category', 'zip', 'createdAt']),
+  })
+    .index('by_category_zip', ['category', 'zip', 'createdAt'])
+    .index('by_expiresAt', ['expiresAt']), // For efficient cleanup sweeps
 
   // Emails (tracking)
   emails: defineTable({

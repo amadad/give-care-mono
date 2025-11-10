@@ -145,6 +145,38 @@ export const recordResourceLookup = internalMutation({
 });
 
 // ============================================================================
+// RESOURCE CACHE CLEANUP (for sweep jobs)
+// ============================================================================
+
+export const listExpiredResourceCache = internalQuery({
+  args: { 
+    now: v.number(), 
+    limit: v.optional(v.number()) 
+  },
+  handler: async (ctx, { now, limit = 200 }) => {
+    // Find expired cache entries using the by_expiresAt index
+    const expired = await ctx.db
+      .query('resource_cache')
+      .withIndex('by_expiresAt', (q) => q.lte('expiresAt', now))
+      .take(limit);
+    
+    return { ids: expired.map((r) => r._id) };
+  },
+});
+
+export const deleteResourceCacheBatch = internalMutation({
+  args: { 
+    ids: v.array(v.id('resource_cache')) 
+  },
+  handler: async (ctx, { ids }) => {
+    for (const id of ids) {
+      await ctx.db.delete(id);
+    }
+    return { deleted: ids.length };
+  },
+});
+
+// ============================================================================
 // TWILIO
 // ============================================================================
 

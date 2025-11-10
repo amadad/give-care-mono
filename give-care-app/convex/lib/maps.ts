@@ -100,9 +100,9 @@ function extractMapsResults(groundingMetadata: any): Array<{
       return {
         name: maps.title || `Resource ${idx + 1}`,
         address: maps.address || 'Address not available',
-        hours: maps.hours || undefined,
-        rating: maps.rating || undefined,
-        phone: maps.phoneNumber || undefined,
+        hours: maps.hours?.openNow ? 'Open now' : maps.hours?.weekdayText?.join(', ') || undefined,
+        rating: typeof maps.rating === 'number' ? maps.rating : undefined,
+        phone: maps.phoneNumber || maps.internationalPhoneNumber || undefined,
         category: 'caregiving',
         placeId: maps.placeId,
         uri: maps.uri,
@@ -139,13 +139,14 @@ export async function searchWithMapsGrounding(
     const location = zipToApproximateLatLng(zip);
     
     // ✅ Use @google/genai for Maps Grounding (cleaner than REST API)
-    const ai = new GoogleGenAI({
-      apiKey: process.env.GOOGLE_GENERATIVE_AI_API_KEY || process.env.GEMINI_API_KEY,
-    });
-
-    if (!ai) {
+    const apiKey = process.env.GOOGLE_GENERATIVE_AI_API_KEY || process.env.GEMINI_API_KEY;
+    if (!apiKey) {
       throw new Error('GOOGLE_GENERATIVE_AI_API_KEY environment variable is required (or GEMINI_API_KEY for backward compatibility)');
     }
+
+    const ai = new GoogleGenAI({
+      apiKey,
+    });
 
     const config: any = {
       tools: [{ googleMaps: {} }],
@@ -169,12 +170,20 @@ export async function searchWithMapsGrounding(
       config,
     });
 
-    // Extract grounding metadata from response
+    // Extract grounding metadata from response (matching official example)
     const candidate = response.candidates?.[0];
-    const groundingMetadata = candidate?.groundingMetadata;
     
-    if (!groundingMetadata) {
-      throw new Error('No Maps Grounding metadata in response');
+    if (!candidate) {
+      throw new Error('No response candidate from Maps Grounding API');
+    }
+
+    const groundingMetadata = candidate.groundingMetadata;
+    
+    if (!groundingMetadata || !groundingMetadata.groundingChunks || groundingMetadata.groundingChunks.length === 0) {
+      // Log the full response for debugging
+      console.error('[maps-grounding] No grounding chunks in response. Full candidate:', JSON.stringify(candidate, null, 2));
+      console.error('[maps-grounding] Response text:', response.text);
+      throw new Error('No Maps Grounding results found. Try a more specific query or check your location.');
     }
 
     const resources = extractMapsResults(groundingMetadata);

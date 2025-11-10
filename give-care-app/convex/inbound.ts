@@ -129,4 +129,10 @@ export const sendSmsResponse = internalAction({
   },
 });
 
+// ============================================================================
+// COMPATIBILITY ALIAS (for legacy callers during migration)
+// ============================================================================
+
+// Legacy name support - if anything still schedules processInboundMessage, it will work
+export const processInboundMessage = processInbound;
 

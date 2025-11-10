@@ -8,7 +8,7 @@ This monorepo contains 5 core applications:
 
 | App | Description | Tech Stack | Status |
 |-----|-------------|------------|--------|
-| **give-care-app** | Multi-agent SMS backend | TypeScript, Convex, OpenAI Agents SDK | ✅ Production (v0.8.2) |
+| **give-care-app** | Multi-agent SMS backend | TypeScript, Convex, OpenAI Agents SDK | ✅ Production (v1.5.0) |
 | **give-care-admin** | Real-time admin dashboard | Vite, React 19, TanStack Router | ✅ Stable |
 | **give-care-site** | Marketing website | Next.js 15, Tailwind CSS v4 | 🚧 Active development |
 | **give-care-story** | Presentation system | Next.js 15, Framer Motion | ✅ Stable (v1.0.0) |
@@ -110,25 +110,29 @@ givecare/
 ## 🛠️ Key Technologies
 
 ### give-care-app (Backend)
-- **OpenAI Agents SDK 0.1.9** - Multi-agent AI system (GPT-5 nano)
+- **Convex Agent Component (@convex-dev/agent)** - Multi-agent AI orchestration
+- **Vercel AI SDK + OpenAI** - GPT-5 nano/mini models
 - **Convex** - Serverless database + real-time sync
 - **Twilio** - SMS/RCS messaging
-- **Vitest** - Testing framework (179 tests)
-- **Performance**: ~900ms average response time
+- **Vitest** - Testing framework (235+ tests)
+- **Performance**: <900ms average response time
 
 **Features**:
 - 3 specialized AI agents (Main, Crisis, Assessment)
-- 4 clinical assessments (EMA, CWBS, REACH-II, SDOH)
+- 4 clinical assessments (EMA, BSFC, REACH-II, SDOH)
 - Composite burnout scoring (0-100)
-- 5 pressure zones with 20 interventions
+- 5 pressure zones with 16+ interventions
+- Semantic memory with vector search
 - Real-time metrics API for admin dashboard
+- Google Maps Grounding for local resources
 
 ### give-care-site (Marketing)
-- **Next.js 15.3.2** - React framework with App Router
-- **Tailwind CSS v4** - Utility-first styling
+- **Next.js 15** - React framework with App Router
+- **Tailwind CSS v4.1.7** - Utility-first styling with DaisyUI
 - **MDX** - Markdown + JSX for blog content
 - **Framer Motion** - Animations
-- **Vitest + Playwright** - Testing
+- **Stripe** - Payment processing
+- **Resend** - Email delivery
 
 ### give-care-admin (Admin Dashboard)
 - **Vite 5** - Fast frontend build tool
@@ -240,7 +244,7 @@ See `.env.example` in each project directory.
 
 | Project | Version | Tests | Status |
 |---------|---------|-------|--------|
-| give-care-app | 0.8.2 | 235+ passing | ✅ Production |
+| give-care-app | 1.5.0 | 235+ passing | ✅ Production |
 | give-care-admin | 0.1.0 | In progress | ✅ Stable |
 | give-care-site | 0.1.0 | Active dev | 🚧 Development |
 | give-care-story | 1.0.0 | N/A | ✅ Stable |
@@ -286,4 +290,4 @@ Proprietary - GiveCare Platform
 
 ---
 
-**Last Updated**: 2025-11-08 (Admin dashboard moved to root level)
+**Last Updated**: 2025-11-10 (v1.5.0 production release)
