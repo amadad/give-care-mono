@@ -40,8 +40,8 @@ export const updateProfile = createTool({
     const convexUserId = (metadata.convex as Record<string, unknown> | undefined)?.userId;
     if (convexUserId) {
       try {
-        await ctx.runMutation(internal.core.updateUserMetadata, {
-          userId: convexUserId,
+        await ctx.runMutation(internal.internal.updateUserMetadata, {
+          userId: convexUserId as any,
           metadata: { ...metadata, profile: updatedProfile },
         });
       } catch (error) {
@@ -59,3 +59,4 @@ export const updateProfile = createTool({
     };
   },
 });
+

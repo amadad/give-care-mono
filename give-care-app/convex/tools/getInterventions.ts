@@ -11,7 +11,7 @@ import { api } from '../_generated/api';
 
 export const getInterventions = createTool({
   args: z.object({
-    zones: z.array(z.string()).describe('Pressure zones from BSFC assessment'),
+    zones: z.array(z.string()).describe('Pressure zones from assessment'),
     minEvidenceLevel: z.enum(['high', 'moderate', 'low']).optional().describe('Minimum evidence level (default: moderate)'),
     limit: z.number().optional().describe('Max number of interventions (default: 5)'),
   }),
@@ -26,3 +26,4 @@ export const getInterventions = createTool({
     return { interventions };
   },
 });
+

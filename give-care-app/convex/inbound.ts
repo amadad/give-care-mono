@@ -1,118 +1,115 @@
 "use node";
 
 /**
- * Inbound SMS Processing - Async Pattern
+ * Inbound SMS Processing
  *
- * Following Convex Agent pattern:
- * 1. Mutation: Schedule response (instant webhook response)
- * 2. Action: Generate agent response + send SMS (background)
+ * Processes incoming SMS messages and generates agent responses
  */
 
-import { internalAction, mutation } from './_generated/server';
+import { internalAction } from './_generated/server';
 import { v } from 'convex/values';
 import { api, internal } from './_generated/api';
-import { channelValidator } from './public';
-import { twilio } from './twilioClient';
-import { enforceInboundSmsLimit, enforceOutboundSmsLimit } from './lib/rateLimiting';
+import { twilio } from './lib/twilio';
 import { detectCrisis } from './lib/policy';
 
 // ============================================================================
-// STEP 1: MUTATION - Schedule Response (Returns Immediately)
+// PROCESS INBOUND MESSAGE
 // ============================================================================
 
-export const processInboundMessage = mutation({
+export const processInbound = internalAction({
   args: {
-    messageId: v.id('messages'),
-    userId: v.id('users'),
+    phone: v.string(),
     text: v.string(),
-    externalId: v.string(),
-    channel: channelValidator,
+    messageSid: v.string(),
   },
   handler: async (ctx, args) => {
-    // Enforce rate limit
-    await enforceInboundSmsLimit(ctx, args.userId);
-
-    // Crisis pre-routing
-    const crisisDetection = detectCrisis(args.text);
-    if (crisisDetection.hit) {
-      ctx.scheduler.runAfter(0, internal.workflows.crisisEscalation, {
-        userId: args.userId,
-        threadId: String(args.messageId),
-        messageText: args.text,
-        crisisTerms: crisisDetection.keyword ? [crisisDetection.keyword] : [],
-        severity: crisisDetection.severity ?? 'medium',
-      });
-      return { scheduled: 'crisis' };
-    }
-
-    // Schedule main agent response
-    ctx.scheduler.runAfter(0, internal.inbound.generateAgentResponse, {
-      messageId: args.messageId,
-      userId: args.userId,
-      text: args.text,
-      externalId: args.externalId,
-      channel: args.channel,
+    // Ensure user exists
+    const user = await ctx.runMutation(internal.internal.ensureUserMutation, {
+      externalId: args.phone,
+      channel: 'sms' as const,
+      phone: args.phone,
     });
 
-    return { scheduled: 'main' };
-  },
-});
-
-// ============================================================================
-// STEP 2: ACTION - Generate Response + Send SMS (Background)
-// ============================================================================
-
-export const generateAgentResponse = internalAction({
-  args: {
-    messageId: v.id('messages'),
-    userId: v.id('users'),
-    text: v.string(),
-    externalId: v.string(),
-    channel: channelValidator,
-  },
-  handler: async (ctx, args) => {
-    const agentContext = {
-      userId: args.externalId,
-      sessionId: args.messageId as string,
-      locale: 'en-US',
-      consent: { emergency: false, marketing: false },
-      metadata: {},
+    // Detect crisis keywords
+    const crisisDetection = detectCrisis(args.text);
+    
+    // Build context
+    const metadata = (user.metadata as Record<string, unknown>) ?? {};
+    const context = {
+      userId: user.externalId,
+      locale: user.locale,
+      consent: user.consent ?? { emergency: false, marketing: false },
+      crisisFlags: crisisDetection.hit
+        ? {
+            active: true,
+            terms: crisisDetection.keyword ? [crisisDetection.keyword] : [],
+          }
+        : undefined,
+      metadata: {
+        ...metadata,
+        convex: {
+          userId: user._id,
+        },
+      },
     };
 
-    try {
-      const response = await ctx.runAction(api.agents.main.runMainAgent, {
+    // Route to appropriate agent
+    let response;
+    if (crisisDetection.hit) {
+      // Crisis agent
+      response = await ctx.runAction(internal.agents.crisis.runCrisisAgent, {
         input: {
-          channel: args.channel,
+          channel: 'sms' as const,
           text: args.text,
-          userId: args.externalId,
+          userId: user.externalId,
         },
-        context: agentContext,
+        context,
       });
-
-      const reply =
-        response?.chunks?.find((chunk: any) => chunk.type === 'text') ??
-        response?.chunks?.[0];
-
-      if (reply && typeof reply.content === 'string' && reply.content.trim().length > 0) {
-        await ctx.runAction(internal.inbound.sendSmsResponse, {
-          to: args.externalId,
-          text: reply.content,
-          userId: args.externalId,
-          convexUserId: args.userId,
-          traceId: response?.threadId ?? `thread-${args.messageId}`,
-        });
-      }
-    } catch (error) {
-      console.error('[inbound] Failed to generate agent response', {
-        messageId: args.messageId,
-        error,
+    } else {
+      // Main agent
+      // Get or create thread for user
+      const threadId = await getOrCreateThread(ctx, user._id, user.externalId);
+      
+      response = await ctx.runAction(api.agents.main.runMainAgent, {
+        input: {
+          channel: 'sms' as const,
+          text: args.text,
+          userId: user.externalId,
+        },
+        context,
+        threadId,
       });
     }
+
+    // Send SMS response
+    if (response?.text) {
+      await ctx.runAction(internal.inbound.sendSmsResponse, {
+        to: args.phone,
+        text: response.text,
+        userId: user.externalId,
+      });
+    }
+
+    return { success: true, response };
   },
 });
 
 // ============================================================================
-// SMS DELIVERY
+// GET OR CREATE THREAD
+// ============================================================================
+
+async function getOrCreateThread(
+  ctx: any,
+  userId: string,
+  externalId: string
+): Promise<string | undefined> {
+  // For now, create new thread each time
+  // In future, can store threadId in user.metadata for continuity
+  return undefined;
+}
+
+// ============================================================================
+// SEND SMS RESPONSE
 // ============================================================================
 
 export const sendSmsResponse = internalAction({
@@ -120,35 +117,21 @@ export const sendSmsResponse = internalAction({
     to: v.string(),
     text: v.string(),
     userId: v.string(),
-    convexUserId: v.optional(v.id('users')),
-    traceId: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     if (!args.to) {
       throw new Error('[inbound] Missing destination phone number');
     }
 
-    if (args.convexUserId) {
-      await enforceOutboundSmsLimit(ctx, args.convexUserId);
-    }
-
-    await twilio.messages.create({
+    // ✅ Use Twilio component to send message
+    const status = await twilio.sendMessage(ctx, {
       to: args.to,
       body: args.text,
     });
 
-    await ctx.runMutation(api.internal.recordOutbound, {
-      message: {
-        externalId: args.userId,
-        channel: 'sms',
-        text: args.text,
-        traceId: args.traceId ?? `sms-${Date.now()}`,
-        meta: {
-          phone: args.to,
-        },
-      },
-    });
-
-    return { sent: true };
+    // Component automatically tracks message status
+    return { sent: true, sid: status.sid };
   },
 });
+
+

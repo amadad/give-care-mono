@@ -5,6 +5,9 @@
  *
  * Provides fast, safe responses for crisis situations.
  * No tools - prioritizes speed.
+ * 
+ * Uses Agent Component's continueThread pattern.
+ * See: https://stack.convex.dev/ai-agents
  */
 
 import { internalAction } from '../_generated/server';
@@ -12,8 +15,11 @@ import { internal, components } from '../_generated/api';
 import { v } from 'convex/values';
 import { Agent } from '@convex-dev/agent';
 import { openai } from '@ai-sdk/openai';
-import { CRISIS_PROMPT, renderPrompt } from '../lib/prompts';
-import { buildWellnessInfo } from '../lib/profile';
+import { WorkflowManager } from '@convex-dev/workflow';
+import { CRISIS_PROMPT } from '../lib/prompts';
+import { crisisResponse } from '../lib/policy';
+
+const workflow = new WorkflowManager(components.workflow);
 
 // ============================================================================
 // AGENT DEFINITION
@@ -22,8 +28,9 @@ import { buildWellnessInfo } from '../lib/profile';
 export const crisisAgent = new Agent(components.agent, {
   name: 'Crisis Support',
   languageModel: openai('gpt-5-nano'),
-  instructions: 'You are a compassionate crisis support assistant for caregivers providing immediate support resources.',
-  maxSteps: 1, // No tool calls needed for crisis - prioritize speed
+  textEmbeddingModel: openai.embedding('text-embedding-3-small'),
+  instructions: CRISIS_PROMPT,
+  maxSteps: 1, // ✅ No tools - prioritize speed
 });
 
 // ============================================================================
@@ -70,93 +77,100 @@ export const runCrisisAgent = internalAction({
       throw new Error('Crisis agent requires active crisis flags');
     }
 
+    // Extract user ID from context (already fetched in processInbound)
     const metadata = (context.metadata ?? {}) as Record<string, unknown>;
+    const convexMetadata = (metadata.convex as Record<string, unknown> | undefined) ?? {};
+    const userId = convexMetadata.userId as string | undefined;
+    
+    if (!userId) {
+      throw new Error(`User ID not found in context: ${context.userId}`);
+    }
+
     const profile = (metadata.profile as Record<string, unknown> | undefined) ?? {};
     const userName = (profile.firstName as string) ?? 'friend';
-    const careRecipient = (profile.careRecipientName as string) ?? 'loved one';
-    const journeyPhase = (metadata.journeyPhase as string) ?? 'crisis';
-    const wellnessInfo = buildWellnessInfo(metadata);
 
     try {
-      const systemPrompt = renderPrompt(CRISIS_PROMPT, {
-        userName,
-        careRecipient,
-        journeyPhase,
-        wellnessInfo
-      });
-
-      let newThreadId: string;
+      // Get or create thread
       let thread;
+      let newThreadId: string;
 
       if (threadId) {
-        const threadResult = await crisisAgent.continueThread(ctx, { threadId, userId: context.userId });
+        // ✅ Continue existing thread
+        const threadResult = await crisisAgent.continueThread(ctx, {
+          threadId,
+          userId: context.userId,
+        });
         thread = threadResult.thread;
         newThreadId = threadId;
       } else {
-        const threadResult = await crisisAgent.createThread(ctx, { userId: context.userId });
+        // ✅ Create new thread
+        const threadResult = await crisisAgent.createThread(ctx, {
+          userId: context.userId,
+        });
         thread = threadResult.thread;
         newThreadId = threadResult.threadId;
       }
 
+      // ✅ Fast response - no context search needed for speed
       const result = await thread.generateText({
         prompt: input.text,
-        system: systemPrompt,
+        system: CRISIS_PROMPT,
         providerOptions: {
           openai: {
             reasoningEffort: 'minimal',
-            textVerbosity: 'low',
+            textVerbosity: 'medium',
             serviceTier: 'auto',
           },
         },
       });
 
+      // ✅ Agent Component automatically saves message
+
       const responseText = result.text;
       const latencyMs = Date.now() - startTime;
 
-      await ctx.runMutation(internal.logCrisisInteraction, {
-        userId: context.userId,
+      // Log crisis interaction
+      await ctx.runMutation(internal.internal.logCrisisInteraction, {
+        externalId: context.userId,
         input: input.text,
-        chunks: [responseText],
+        response: responseText,
         timestamp: Date.now(),
+        traceId: `crisis-${Date.now()}`,
+      });
+
+      // Trigger workflow for follow-up
+      await workflow.start(ctx, internal.workflows.crisis.crisisEscalation, {
+        userId: userId,
+        threadId: newThreadId,
+        messageText: input.text,
+        crisisTerms: context.crisisFlags?.terms || [],
+        severity: 'high', // Can be determined from crisis detection
       });
 
       return {
-        chunks: [{ type: 'text', content: responseText }],
-        latencyMs,
+        text: responseText,
         threadId: newThreadId,
+        latencyMs,
       };
     } catch (error) {
       console.error('Crisis agent error:', error);
 
-      const fallbackResponse = `I hear that you're going through a very difficult time.
+      const fallbackResponse = crisisResponse(userName);
 
-If you're experiencing a crisis, please reach out for immediate help:
-- Call 988 (Suicide & Crisis Lifeline)
-- Text HOME to 741741 (Crisis Text Line)
-- Call 911 if you are in immediate danger
-
-For ${careRecipient}, resources are available 24/7. You're not alone in this.`;
-
-      await ctx.runMutation(internal.logCrisisInteraction, {
-        userId: context.userId,
+      await ctx.runMutation(internal.internal.logCrisisInteraction, {
+        externalId: context.userId,
         input: input.text,
-        chunks: [fallbackResponse],
+        response: fallbackResponse,
         timestamp: Date.now(),
+        traceId: `crisis-${Date.now()}`,
       });
 
       return {
-        chunks: [{ type: 'error', content: fallbackResponse, meta: { error: String(error) } }],
+        text: fallbackResponse,
         latencyMs: Date.now() - startTime,
+        error: String(error),
       };
     }
   },
 });
 
-export const shouldInvokeCrisisAgent = internalAction({
-  args: {
-    context: agentContextValidator,
-  },
-  handler: async (_ctx, { context }) => {
-    return Boolean(context.crisisFlags?.active);
-  },
-});

@@ -1,6 +1,6 @@
 const DAY_MS = 24 * 60 * 60 * 1000;
 
-export type AssessmentSlug = 'bsfc' | 'reach2' | 'sdoh';
+export type AssessmentSlug = 'ema' | 'bsfc' | 'reach2' | 'sdoh';
 
 export type AssessmentAnswer = {
   questionIndex: number;
@@ -88,6 +88,12 @@ const createCatalogEntry = (
   },
 });
 
+const emaQuestions = [
+  'On a scale of 1-5, how stressed are you right now? (Reply "skip" to move on)',
+  'Energy check: 1 (empty) to 5 (fully charged)? (Reply "skip" to move on)',
+  'How supported did you feel today? 1 (not at all) - 5 (fully). (Reply "skip" to move on)',
+];
+
 const bsfcQuestions = [
   'I feel emotionally drained caregiving.',
   'I have little time for myself.',
@@ -138,7 +144,7 @@ const sdohQuestions = [
   'I know how to reach crisis resources quickly.',
   'Technology (phone/PC) works reliably.',
   'Neighbors/friends can help in a pinch.',
-  'Care recipient’s providers coordinate well.',
+  'Care recipient\'s providers coordinate well.',
   'I understand the care plan and meds clearly.',
   'I can restock supplies without long delays.',
   'I feel safe walking in my neighborhood.',
@@ -154,6 +160,16 @@ const sdohQuestions = [
 const zoneBuckets = (mapping: Record<string, number[]>) => mapping;
 
 export const CATALOG: Record<AssessmentSlug, AssessmentCatalogEntry> = {
+  ema: createCatalogEntry(
+    'Ecological Momentary Assessment (EMA)',
+    emaQuestions,
+    1,
+    zoneBuckets({
+      emotional: [0],
+      physical: [1],
+      social: [2],
+    })
+  ),
   bsfc: createCatalogEntry(
     'Burden Scale for Family Caregivers (BSFC)',
     bsfcQuestions,
@@ -191,3 +207,4 @@ export const CATALOG: Record<AssessmentSlug, AssessmentCatalogEntry> = {
     })
   ),
 };
+

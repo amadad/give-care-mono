@@ -127,6 +127,7 @@ export type DataModel = {
   assessments: {
     document: {
       answers: Array<{ questionId: string; value: number }>;
+      completedAt: number;
       definitionId: string;
       userId: Id<"users">;
       version: string;
@@ -137,6 +138,7 @@ export type DataModel = {
       | "_creationTime"
       | "_id"
       | "answers"
+      | "completedAt"
       | "definitionId"
       | "userId"
       | "version";
@@ -190,30 +192,6 @@ export type DataModel = {
       | "subject"
       | "to"
       | "traceId"
-      | "userId";
-    indexes: {
-      by_id: ["_id"];
-      by_creation_time: ["_creationTime"];
-      by_user: ["userId", "_creationTime"];
-    };
-    searchIndexes: {};
-    vectorIndexes: {};
-  };
-  entitlements: {
-    document: {
-      active: boolean;
-      expiresAt?: number;
-      feature: string;
-      userId: Id<"users">;
-      _id: Id<"entitlements">;
-      _creationTime: number;
-    };
-    fieldPaths:
-      | "_creationTime"
-      | "_id"
-      | "active"
-      | "expiresAt"
-      | "feature"
       | "userId";
     indexes: {
       by_id: ["_id"];
@@ -344,13 +322,9 @@ export type DataModel = {
   };
   memories: {
     document: {
-      accessCount: number;
       category: string;
       content: string;
-      embedding?: Array<number>;
-      externalId: string;
       importance: number;
-      lastAccessedAt: number;
       userId: Id<"users">;
       _id: Id<"memories">;
       _creationTime: number;
@@ -358,49 +332,14 @@ export type DataModel = {
     fieldPaths:
       | "_creationTime"
       | "_id"
-      | "accessCount"
       | "category"
       | "content"
-      | "embedding"
-      | "externalId"
       | "importance"
-      | "lastAccessedAt"
       | "userId";
     indexes: {
       by_id: ["_id"];
       by_creation_time: ["_creationTime"];
-      by_user: ["userId", "_creationTime"];
-    };
-    searchIndexes: {};
-    vectorIndexes: {};
-  };
-  messages: {
-    document: {
-      channel: "sms" | "email" | "web";
-      direction: "inbound" | "outbound";
-      meta?: any;
-      redactionFlags: Array<string>;
-      text: string;
-      traceId: string;
-      userId: Id<"users">;
-      _id: Id<"messages">;
-      _creationTime: number;
-    };
-    fieldPaths:
-      | "_creationTime"
-      | "_id"
-      | "channel"
-      | "direction"
-      | "meta"
-      | "redactionFlags"
-      | "text"
-      | "traceId"
-      | "userId";
-    indexes: {
-      by_id: ["_id"];
-      by_creation_time: ["_creationTime"];
-      by_user_created: ["userId", "_creationTime"];
-      by_user_direction: ["userId", "direction", "_creationTime"];
+      by_user_category: ["userId", "category", "_creationTime"];
     };
     searchIndexes: {};
     vectorIndexes: {};
@@ -429,9 +368,9 @@ export type DataModel = {
       avgResponseLatencyMs: number;
       crisisAlerts: number;
       date: string;
-      inboundMessages: number;
+      inboundMessages?: number;
       newUsers: number;
-      outboundMessages: number;
+      outboundMessages?: number;
       p95ResponseLatencyMs: number;
       totalMessages: number;
       totalUsers: number;
@@ -520,23 +459,6 @@ export type DataModel = {
     searchIndexes: {};
     vectorIndexes: {};
   };
-  policies: {
-    document: {
-      bundle: {};
-      name: string;
-      version: string;
-      _id: Id<"policies">;
-      _creationTime: number;
-    };
-    fieldPaths: "_creationTime" | "_id" | "name" | "version";
-    indexes: {
-      by_id: ["_id"];
-      by_creation_time: ["_creationTime"];
-      by_name: ["name", "version", "_creationTime"];
-    };
-    searchIndexes: {};
-    vectorIndexes: {};
-  };
   profiles: {
     document: {
       demographics?: any;
@@ -594,6 +516,13 @@ export type DataModel = {
       composite: number;
       confidence: number;
       userId: Id<"users">;
+      zones: {
+        emotional: number;
+        financial?: number;
+        physical: number;
+        social: number;
+        time: number;
+      };
       _id: Id<"scores">;
       _creationTime: number;
     };
@@ -604,75 +533,16 @@ export type DataModel = {
       | "band"
       | "composite"
       | "confidence"
-      | "userId";
+      | "userId"
+      | "zones.emotional"
+      | "zones.financial"
+      | "zones.physical"
+      | "zones.social"
+      | "zones.time";
     indexes: {
       by_id: ["_id"];
       by_creation_time: ["_creationTime"];
       by_user: ["userId", "_creationTime"];
-    };
-    searchIndexes: {};
-    vectorIndexes: {};
-  };
-  sessions: {
-    document: {
-      budget: {
-        maxInputTokens: number;
-        maxOutputTokens: number;
-        maxTools: number;
-      };
-      channel: "sms" | "email" | "web";
-      consent: { emergency: boolean; marketing: boolean };
-      crisisFlags?: { active: boolean; terms: Array<string> };
-      lastAssessment?: { definitionId: string; score: number };
-      lastSeen: number;
-      locale: string;
-      metadata: any;
-      policyBundle: string;
-      promptHistory: Array<{ fieldId: string; text: string }>;
-      userId: Id<"users">;
-      _id: Id<"sessions">;
-      _creationTime: number;
-    };
-    fieldPaths:
-      | "_creationTime"
-      | "_id"
-      | "budget.maxInputTokens"
-      | "budget.maxOutputTokens"
-      | "budget.maxTools"
-      | "channel"
-      | "consent.emergency"
-      | "consent.marketing"
-      | "crisisFlags.active"
-      | "crisisFlags.terms"
-      | "lastAssessment.definitionId"
-      | "lastAssessment.score"
-      | "lastSeen"
-      | "locale"
-      | "metadata"
-      | "policyBundle"
-      | "promptHistory"
-      | "userId";
-    indexes: {
-      by_id: ["_id"];
-      by_creation_time: ["_creationTime"];
-      by_lastSeen: ["lastSeen", "_creationTime"];
-      by_user_channel: ["userId", "channel", "_creationTime"];
-    };
-    searchIndexes: {};
-    vectorIndexes: {};
-  };
-  settings: {
-    document: {
-      key: string;
-      value: any;
-      _id: Id<"settings">;
-      _creationTime: number;
-    };
-    fieldPaths: "_creationTime" | "_id" | "key" | "value";
-    indexes: {
-      by_id: ["_id"];
-      by_creation_time: ["_creationTime"];
-      by_key: ["key", "_creationTime"];
     };
     searchIndexes: {};
     vectorIndexes: {};
@@ -704,26 +574,10 @@ export type DataModel = {
     searchIndexes: {};
     vectorIndexes: {};
   };
-  threads: {
-    document: {
-      metadata?: any;
-      userId: Id<"users">;
-      _id: Id<"threads">;
-      _creationTime: number;
-    };
-    fieldPaths: "_creationTime" | "_id" | "metadata" | "userId";
-    indexes: {
-      by_id: ["_id"];
-      by_creation_time: ["_creationTime"];
-      by_userId: ["userId", "_creationTime"];
-    };
-    searchIndexes: {};
-    vectorIndexes: {};
-  };
   tool_calls: {
     document: {
       agent: string;
-      args?: {};
+      args?: any;
       cost: number;
       durationMs: number;
       name: string;
@@ -737,6 +591,7 @@ export type DataModel = {
       | "_creationTime"
       | "_id"
       | "agent"
+      | "args"
       | "cost"
       | "durationMs"
       | "name"
@@ -826,17 +681,14 @@ export type DataModel = {
         postalCode?: string;
         state?: string;
       };
-      channel?: "sms" | "email" | "web";
+      channel: "sms" | "email" | "web";
       consent?: { emergency: boolean; marketing: boolean };
-      createdAt?: number;
       email?: string;
-      externalId?: string;
-      locale?: string;
+      externalId: string;
+      locale: string;
       metadata?: any;
       name?: string;
       phone?: string;
-      phoneNumber?: string;
-      updatedAt?: number;
       _id: Id<"users">;
       _creationTime: number;
     };
@@ -852,15 +704,12 @@ export type DataModel = {
       | "channel"
       | "consent.emergency"
       | "consent.marketing"
-      | "createdAt"
       | "email"
       | "externalId"
       | "locale"
       | "metadata"
       | "name"
-      | "phone"
-      | "phoneNumber"
-      | "updatedAt";
+      | "phone";
     indexes: {
       by_id: ["_id"];
       by_creation_time: ["_creationTime"];

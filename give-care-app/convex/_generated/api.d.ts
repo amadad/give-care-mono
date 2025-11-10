@@ -20,278 +20,88 @@ import type { FunctionReference } from "convex/server";
  */
 export declare const api: {
   agents: {
-    runAssessmentAgent: FunctionReference<
-      "action",
-      "public",
-      {
-        context: {
-          consent: { emergency: boolean; marketing: boolean };
-          crisisFlags?: { active: boolean; terms: Array<string> };
-          locale: string;
-          metadata?: any;
-          sessionId?: string;
-          userId: string;
-        };
-        input: {
-          channel: "sms" | "email" | "web";
-          text: string;
-          userId: string;
-        };
-        threadId?: string;
-      },
-      any
-    >;
-    runMainAgent: FunctionReference<
-      "action",
-      "public",
-      {
-        context: {
-          consent: { emergency: boolean; marketing: boolean };
-          crisisFlags?: { active: boolean; terms: Array<string> };
-          locale: string;
-          metadata?: any;
-          sessionId?: string;
-          userId: string;
-        };
-        input: {
-          channel: "sms" | "email" | "web";
-          text: string;
-          userId: string;
-        };
-        threadId?: string;
-      },
-      any
-    >;
-    shouldInvokeCrisisAgent: FunctionReference<
-      "action",
-      "public",
-      {
-        context: {
-          consent: { emergency: boolean; marketing: boolean };
-          crisisFlags?: { active: boolean; terms: Array<string> };
-          locale: string;
-          metadata?: any;
-          sessionId?: string;
-          userId: string;
-        };
-      },
-      any
-    >;
+    assessment: {
+      runAssessmentAgent: FunctionReference<
+        "action",
+        "public",
+        {
+          context: {
+            consent: { emergency: boolean; marketing: boolean };
+            crisisFlags?: { active: boolean; terms: Array<string> };
+            locale: string;
+            metadata?: any;
+            sessionId?: string;
+            userId: string;
+          };
+          input: {
+            channel: "sms" | "email" | "web";
+            text: string;
+            userId: string;
+          };
+          threadId?: string;
+        },
+        any
+      >;
+    };
+    main: {
+      runMainAgent: FunctionReference<
+        "action",
+        "public",
+        {
+          context: {
+            consent: { emergency: boolean; marketing: boolean };
+            crisisFlags?: { active: boolean; terms: Array<string> };
+            locale: string;
+            metadata?: any;
+            sessionId?: string;
+            userId: string;
+          };
+          input: {
+            channel: "sms" | "email" | "web";
+            text: string;
+            userId: string;
+          };
+          threadId?: string;
+        },
+        any
+      >;
+    };
   };
-  billing: {
-    applyStripeEvent: FunctionReference<
+  assessments: {
+    startAssessment: FunctionReference<
       "mutation",
       "public",
-      { id: string; payload: any; type: string },
+      {
+        channel?: "sms" | "web";
+        definition: "ema" | "bsfc" | "reach2" | "sdoh";
+        userId: string;
+      },
+      any
+    >;
+    getAssessment: FunctionReference<
+      "query",
+      "public",
+      { definitionId: string; userId: string },
       any
     >;
   };
-  core: {
+  interventions: {
+    getByZones: FunctionReference<
+      "query",
+      "public",
+      {
+        limit?: number;
+        minEvidenceLevel?: "high" | "moderate" | "low";
+        zones: Array<string>;
+      },
+      any
+    >;
+  };
+  public: {
     getByExternalIdQuery: FunctionReference<
       "query",
       "public",
       { externalId: string },
-      any
-    >;
-    logDelivery: FunctionReference<
-      "mutation",
-      "public",
-      {
-        status: string;
-        subject: string;
-        to: string;
-        traceId: string;
-        userId?: string;
-      },
-      any
-    >;
-    recordInboundMutation: FunctionReference<
-      "mutation",
-      "public",
-      {
-        message: {
-          channel: "sms" | "email" | "web";
-          externalId: string;
-          meta?: any;
-          redactionFlags?: Array<string>;
-          text: string;
-          traceId: string;
-        };
-      },
-      any
-    >;
-    recordOutboundMutation: FunctionReference<
-      "mutation",
-      "public",
-      {
-        message: {
-          channel: "sms" | "email" | "web";
-          externalId: string;
-          meta?: any;
-          redactionFlags?: Array<string>;
-          text: string;
-          traceId: string;
-        };
-      },
-      any
-    >;
-  };
-  domains: {
-    interventions: {
-      getByZones: FunctionReference<
-        "query",
-        "public",
-        {
-          limit?: number;
-          minEvidenceLevel?: "high" | "moderate" | "low";
-          zones: Array<string>;
-        },
-        any
-      >;
-    };
-    messages: {
-      recordInbound: FunctionReference<
-        "mutation",
-        "public",
-        {
-          message: {
-            channel: "sms" | "email" | "web";
-            externalId: string;
-            meta?: any;
-            redactionFlags?: Array<string>;
-            text: string;
-            traceId: string;
-          };
-        },
-        any
-      >;
-    };
-    wellness: {
-      getStatus: FunctionReference<
-        "query",
-        "public",
-        { recentLimit?: number; userId: string },
-        any
-      >;
-    };
-  };
-  internal: {
-    core: {
-      logAuditEntry: FunctionReference<
-        "mutation",
-        "public",
-        { action: string; actorId?: string; metadata?: any; resource: string },
-        any
-      >;
-      appendMessage: FunctionReference<
-        "mutation",
-        "public",
-        {
-          metadata?: any;
-          role: "user" | "assistant" | "system" | "tool";
-          sessionId?: Id<"sessions">;
-          text: string;
-          userId: string;
-        },
-        any
-      >;
-      logCrisisEvent: FunctionReference<
-        "mutation",
-        "public",
-        {
-          message: string;
-          severity: "high" | "medium" | "low";
-          userId: string;
-        },
-        any
-      >;
-    };
-    index: {
-      getByExternalId: FunctionReference<
-        "query",
-        "public",
-        { externalId: string },
-        any
-      >;
-      logDelivery: FunctionReference<
-        "mutation",
-        "public",
-        {
-          status: string;
-          subject: string;
-          to: string;
-          traceId: string;
-          userId?: string;
-        },
-        any
-      >;
-      recordInbound: FunctionReference<
-        "mutation",
-        "public",
-        {
-          message: {
-            channel: "sms" | "email" | "web";
-            externalId: string;
-            meta?: any;
-            redactionFlags?: Array<string>;
-            text: string;
-            traceId: string;
-          };
-        },
-        any
-      >;
-      recordOutbound: FunctionReference<
-        "mutation",
-        "public",
-        {
-          message: {
-            channel: "sms" | "email" | "web";
-            externalId: string;
-            meta?: any;
-            redactionFlags?: Array<string>;
-            text: string;
-            traceId: string;
-          };
-        },
-        any
-      >;
-    };
-  };
-  public: {
-    hydrate: FunctionReference<
-      "mutation",
-      "public",
-      {
-        user: {
-          channel: "sms" | "web";
-          externalId: string;
-          locale?: string;
-          phone?: string;
-        };
-      },
-      any
-    >;
-    persist: FunctionReference<
-      "mutation",
-      "public",
-      {
-        context: {
-          budget: {
-            maxInputTokens: number;
-            maxOutputTokens: number;
-            maxTools: number;
-          };
-          consent: { emergency: boolean; marketing: boolean };
-          crisisFlags?: { active: boolean; terms: Array<string> };
-          lastAssessment?: { definitionId: string; score: number };
-          locale: string;
-          metadata: any;
-          policyBundle: string;
-          promptHistory: Array<{ fieldId: string; text: string }>;
-          sessionId: string;
-          userId: string;
-        };
-      },
       any
     >;
     recordMemory: FunctionReference<
@@ -304,39 +114,6 @@ export declare const api: {
       "query",
       "public",
       { limit?: number; userId: string },
-      any
-    >;
-    startAssessment: FunctionReference<
-      "mutation",
-      "public",
-      {
-        channel?: "sms" | "web";
-        definition: "ema" | "bsfc" | "reach2" | "sdoh";
-        userId: string;
-      },
-      any
-    >;
-    recordAssessmentOffer: FunctionReference<
-      "mutation",
-      "public",
-      { definition: "ema" | "bsfc" | "reach2" | "sdoh"; userId: string },
-      any
-    >;
-    declineAssessmentOffer: FunctionReference<
-      "mutation",
-      "public",
-      { definition: "ema" | "bsfc" | "reach2" | "sdoh"; userId: string },
-      any
-    >;
-    upsertCheckInSchedule: FunctionReference<
-      "mutation",
-      "public",
-      {
-        cadenceMinutes: number;
-        timezone: string;
-        userId: string;
-        windowStartMinutes: number;
-      },
       any
     >;
   };
@@ -354,6 +131,14 @@ export declare const api: {
       any
     >;
   };
+  wellness: {
+    getStatus: FunctionReference<
+      "query",
+      "public",
+      { recentLimit?: number; userId: string },
+      any
+    >;
+  };
 };
 
 /**
@@ -366,264 +151,101 @@ export declare const api: {
  */
 export declare const internal: {
   agents: {
-    generateTextAction: FunctionReference<
+    crisis: {
+      runCrisisAgent: FunctionReference<
+        "action",
+        "internal",
+        {
+          context: {
+            consent: { emergency: boolean; marketing: boolean };
+            crisisFlags?: { active: boolean; terms: Array<string> };
+            locale: string;
+            metadata?: any;
+            sessionId?: string;
+            userId: string;
+          };
+          input: {
+            channel: "sms" | "email" | "web";
+            text: string;
+            userId: string;
+          };
+          threadId?: string;
+        },
+        any
+      >;
+    };
+  };
+  inbound: {
+    processInbound: FunctionReference<
       "action",
       "internal",
-      {
-        callSettings?: {
-          frequencyPenalty?: number;
-          headers?: Record<string, string>;
-          maxOutputTokens?: number;
-          maxRetries?: number;
-          presencePenalty?: number;
-          seed?: number;
-          stopSequences?: Array<string>;
-          temperature?: number;
-          topK?: number;
-          topP?: number;
-        };
-        contextOptions?: {
-          excludeToolMessages?: boolean;
-          recentMessages?: number;
-          searchOptions?: {
-            limit: number;
-            messageRange?: { after: number; before: number };
-            textSearch?: boolean;
-            vectorScoreThreshold?: number;
-            vectorSearch?: boolean;
-          };
-          searchOtherThreads?: boolean;
-        };
-        experimental_continueSteps?: boolean;
-        maxSteps?: number;
-        messages?: Array<
-          | {
-              content:
-                | string
-                | Array<
-                    | {
-                        providerMetadata?: Record<string, Record<string, any>>;
-                        providerOptions?: Record<string, Record<string, any>>;
-                        text: string;
-                        type: "text";
-                      }
-                    | {
-                        image: string | ArrayBuffer;
-                        mimeType?: string;
-                        providerOptions?: Record<string, Record<string, any>>;
-                        type: "image";
-                      }
-                    | {
-                        data: string | ArrayBuffer;
-                        filename?: string;
-                        mimeType: string;
-                        providerMetadata?: Record<string, Record<string, any>>;
-                        providerOptions?: Record<string, Record<string, any>>;
-                        type: "file";
-                      }
-                  >;
-              providerOptions?: Record<string, Record<string, any>>;
-              role: "user";
-            }
-          | {
-              content:
-                | string
-                | Array<
-                    | {
-                        providerMetadata?: Record<string, Record<string, any>>;
-                        providerOptions?: Record<string, Record<string, any>>;
-                        text: string;
-                        type: "text";
-                      }
-                    | {
-                        data: string | ArrayBuffer;
-                        filename?: string;
-                        mimeType: string;
-                        providerMetadata?: Record<string, Record<string, any>>;
-                        providerOptions?: Record<string, Record<string, any>>;
-                        type: "file";
-                      }
-                    | {
-                        providerMetadata?: Record<string, Record<string, any>>;
-                        providerOptions?: Record<string, Record<string, any>>;
-                        signature?: string;
-                        text: string;
-                        type: "reasoning";
-                      }
-                    | {
-                        data: string;
-                        providerMetadata?: Record<string, Record<string, any>>;
-                        providerOptions?: Record<string, Record<string, any>>;
-                        type: "redacted-reasoning";
-                      }
-                    | {
-                        args: any;
-                        providerExecuted?: boolean;
-                        providerMetadata?: Record<string, Record<string, any>>;
-                        providerOptions?: Record<string, Record<string, any>>;
-                        toolCallId: string;
-                        toolName: string;
-                        type: "tool-call";
-                      }
-                    | {
-                        args?: any;
-                        experimental_content?: Array<
-                          | { text: string; type: "text" }
-                          | { data: string; mimeType?: string; type: "image" }
-                        >;
-                        isError?: boolean;
-                        output?:
-                          | { type: "text"; value: string }
-                          | { type: "json"; value: any }
-                          | { type: "error-text"; value: string }
-                          | { type: "error-json"; value: any }
-                          | {
-                              type: "content";
-                              value: Array<
-                                | { text: string; type: "text" }
-                                | {
-                                    data: string;
-                                    mediaType: string;
-                                    type: "media";
-                                  }
-                              >;
-                            };
-                        providerExecuted?: boolean;
-                        providerMetadata?: Record<string, Record<string, any>>;
-                        providerOptions?: Record<string, Record<string, any>>;
-                        result?: any;
-                        toolCallId: string;
-                        toolName: string;
-                        type: "tool-result";
-                      }
-                    | {
-                        id: string;
-                        providerMetadata?: Record<string, Record<string, any>>;
-                        providerOptions?: Record<string, Record<string, any>>;
-                        sourceType: "url";
-                        title?: string;
-                        type: "source";
-                        url: string;
-                      }
-                    | {
-                        filename?: string;
-                        id: string;
-                        mediaType: string;
-                        providerMetadata?: Record<string, Record<string, any>>;
-                        providerOptions?: Record<string, Record<string, any>>;
-                        sourceType: "document";
-                        title: string;
-                        type: "source";
-                      }
-                  >;
-              providerOptions?: Record<string, Record<string, any>>;
-              role: "assistant";
-            }
-          | {
-              content: Array<{
-                args?: any;
-                experimental_content?: Array<
-                  | { text: string; type: "text" }
-                  | { data: string; mimeType?: string; type: "image" }
-                >;
-                isError?: boolean;
-                output?:
-                  | { type: "text"; value: string }
-                  | { type: "json"; value: any }
-                  | { type: "error-text"; value: string }
-                  | { type: "error-json"; value: any }
-                  | {
-                      type: "content";
-                      value: Array<
-                        | { text: string; type: "text" }
-                        | { data: string; mediaType: string; type: "media" }
-                      >;
-                    };
-                providerExecuted?: boolean;
-                providerMetadata?: Record<string, Record<string, any>>;
-                providerOptions?: Record<string, Record<string, any>>;
-                result?: any;
-                toolCallId: string;
-                toolName: string;
-                type: "tool-result";
-              }>;
-              providerOptions?: Record<string, Record<string, any>>;
-              role: "tool";
-            }
-          | {
-              content: string;
-              providerOptions?: Record<string, Record<string, any>>;
-              role: "system";
-            }
-        >;
-        prompt?: string;
-        promptMessageId?: string;
-        providerOptions?: Record<string, Record<string, any>>;
-        storageOptions?: { saveMessages?: "all" | "none" | "promptAndOutput" };
-        stream?: boolean;
-        system?: string;
-        threadId?: string;
-        toolChoice?:
-          | "auto"
-          | "none"
-          | "required"
-          | { toolName: string; type: "tool" };
-        userId?: string;
-      },
+      { messageSid: string; phone: string; text: string },
       any
     >;
-    runCrisisAgent: FunctionReference<
+    sendSmsResponse: FunctionReference<
       "action",
       "internal",
-      {
-        context: {
-          consent: { emergency: boolean; marketing: boolean };
-          crisisFlags?: { active: boolean; terms: Array<string> };
-          locale: string;
-          metadata?: any;
-          sessionId?: string;
-          userId: string;
-        };
-        input: {
-          channel: "sms" | "email" | "web";
-          text: string;
-          userId: string;
-        };
-        threadId?: string;
-      },
+      { text: string; to: string; userId: string },
       any
     >;
   };
-  core: {
-    createComponentThread: FunctionReference<
-      "mutation",
+  internal: {
+    getByExternalIdQuery: FunctionReference<
+      "query",
       "internal",
-      { userId: Id<"users"> },
+      { externalId: string },
       any
     >;
     ensureUserMutation: FunctionReference<
       "mutation",
       "internal",
       {
-        channel: "sms" | "web";
-        consent?: { emergency: boolean; marketing: boolean };
+        channel: "sms" | "email" | "web";
         externalId: string;
         locale?: string;
-        metadata?: any;
         phone?: string;
       },
       any
     >;
-    getUser: FunctionReference<
-      "query",
+    logAgentRunInternal: FunctionReference<
+      "mutation",
       "internal",
-      { userId: Id<"users"> },
+      {
+        agent: string;
+        budgetResult: {
+          toolCalls: number;
+          usedInputTokens: number;
+          usedOutputTokens: number;
+        };
+        externalId: string;
+        latencyMs: number;
+        policyBundle: string;
+        traceId: string;
+      },
       any
     >;
-    hasActiveSubscriptionQuery: FunctionReference<
-      "query",
+    logGuardrailInternal: FunctionReference<
+      "mutation",
       "internal",
-      { userId: Id<"users"> },
+      {
+        action: string;
+        context?: any;
+        externalId?: string;
+        ruleId: string;
+        traceId: string;
+      },
+      any
+    >;
+    logCrisisInteraction: FunctionReference<
+      "mutation",
+      "internal",
+      {
+        externalId: string;
+        input: string;
+        response: string;
+        timestamp: number;
+        traceId?: string;
+      },
       any
     >;
     updateUserMetadata: FunctionReference<
@@ -632,85 +254,12 @@ export declare const internal: {
       { metadata: any; userId: Id<"users"> },
       any
     >;
-  };
-  domains: {
-    logs: {
-      logAgentRunInternal: FunctionReference<
-        "mutation",
-        "internal",
-        {
-          agent: string;
-          budgetResult: {
-            toolCalls: number;
-            usedInputTokens: number;
-            usedOutputTokens: number;
-          };
-          latencyMs: number;
-          policyBundle: string;
-          traceId: string;
-          userId: string;
-        },
-        any
-      >;
-      logCrisisInteraction: FunctionReference<
-        "mutation",
-        "internal",
-        {
-          chunks: Array<string>;
-          input: string;
-          timestamp: number;
-          traceId?: string;
-          userId: string;
-        },
-        any
-      >;
-    };
-  };
-  inbound: {
-    processInboundMessage: FunctionReference<
-      "action",
-      "internal",
-      {
-        channel: "sms" | "web";
-        externalId: string;
-        messageId: Id<"messages">;
-        text: string;
-        userId: Id<"users">;
-      },
-      any
-    >;
-    sendSmsResponse: FunctionReference<
-      "action",
-      "internal",
-      { text: string; to: string; traceId?: string; userId?: string },
-      any
-    >;
-  };
-  internal: {
-    index: {
-      createComponentThread: FunctionReference<
-        "mutation",
-        "internal",
-        { userId: Id<"users"> },
-        any
-      >;
-      updateUserMetadata: FunctionReference<
-        "mutation",
-        "internal",
-        { metadata: any; userId: Id<"users"> },
-        any
-      >;
-    };
-  };
-  public: {
-    retrieveMemories: FunctionReference<
+    getUserById: FunctionReference<
       "query",
       "internal",
-      { limit?: number; query: string; userId: string },
+      { userId: Id<"users"> },
       any
     >;
-  };
-  resources: {
     getResourceLookupCache: FunctionReference<
       "query",
       "internal",
@@ -729,72 +278,84 @@ export declare const internal: {
       },
       any
     >;
-    cleanupResourceCache: FunctionReference<
+    handleIncomingMessage: FunctionReference<
       "mutation",
       "internal",
-      { limit?: number },
+      {
+        message: {
+          account_sid: string;
+          api_version: string;
+          body: string;
+          counterparty?: string;
+          date_created: string;
+          date_sent: string | null;
+          date_updated: string | null;
+          direction: string;
+          error_code: number | null;
+          error_message: string | null;
+          from: string;
+          messaging_service_sid: string | null;
+          num_media: string;
+          num_segments: string;
+          price: string | null;
+          price_unit: string | null;
+          rest?: any;
+          sid: string;
+          status: string;
+          subresource_uris: { feedback?: string; media: string } | null;
+          to: string;
+          uri: string;
+        };
+      },
       any
     >;
   };
   workflows: {
-    crisisEscalation: FunctionReference<"mutation", "internal", any, any>;
-    crisisFollowUp: FunctionReference<"mutation", "internal", any, any>;
-    logCrisisEvent: FunctionReference<
-      "mutation",
-      "internal",
-      {
-        messageText: string;
-        severity: "high" | "medium" | "low";
-        terms: Array<string>;
-        userId: Id<"users">;
-      },
-      any
-    >;
-    generateCrisisResponse: FunctionReference<
-      "action",
-      "internal",
-      {
-        messageText: string;
-        severity: "high" | "medium" | "low";
-        threadId: string;
-        userId: Id<"users">;
-      },
-      any
-    >;
-    notifyEmergencyContact: FunctionReference<
-      "action",
-      "internal",
-      { crisisEventId: Id<"alerts">; messageText: string; userId: Id<"users"> },
-      any
-    >;
-    scheduleFollowUp: FunctionReference<
-      "mutation",
-      "internal",
-      {
-        crisisEventId: Id<"alerts">;
-        hoursFromNow: number;
-        userId: Id<"users">;
-      },
-      any
-    >;
-    checkRecentActivity: FunctionReference<
-      "query",
-      "internal",
-      { hoursAgo: number; userId: Id<"users"> },
-      any
-    >;
-    sendFollowUpMessage: FunctionReference<
-      "action",
-      "internal",
-      { crisisEventId: Id<"alerts">; userId: Id<"users"> },
-      any
-    >;
-    updateCrisisEvent: FunctionReference<
-      "mutation",
-      "internal",
-      { crisisEventId: Id<"alerts">; status: string },
-      any
-    >;
+    crisis: {
+      crisisEscalation: FunctionReference<"mutation", "internal", any, any>;
+      crisisFollowUp: FunctionReference<"mutation", "internal", any, any>;
+      logCrisisEvent: FunctionReference<
+        "mutation",
+        "internal",
+        {
+          messageText: string;
+          severity: "high" | "medium" | "low";
+          terms: Array<string>;
+          userId: Id<"users">;
+        },
+        any
+      >;
+      notifyEmergencyContact: FunctionReference<
+        "action",
+        "internal",
+        { alertId: Id<"alerts">; messageText: string; userId: Id<"users"> },
+        any
+      >;
+      scheduleFollowUp: FunctionReference<
+        "mutation",
+        "internal",
+        { alertId: Id<"alerts">; hoursFromNow: number; userId: Id<"users"> },
+        any
+      >;
+      checkRecentActivity: FunctionReference<
+        "query",
+        "internal",
+        { hoursAgo: number; userId: Id<"users"> },
+        any
+      >;
+      sendFollowUpMessage: FunctionReference<
+        "action",
+        "internal",
+        { alertId: Id<"alerts">; userId: Id<"users"> },
+        any
+      >;
+      updateCrisisEvent: FunctionReference<
+        "mutation",
+        "internal",
+        { alertId: Id<"alerts">; status: string },
+        any
+      >;
+    };
   };
 };
 
@@ -3828,6 +3389,140 @@ export declare const components: {
       >;
     };
   };
+  rateLimiter: {
+    lib: {
+      checkRateLimit: FunctionReference<
+        "query",
+        "internal",
+        {
+          config:
+            | {
+                capacity?: number;
+                kind: "token bucket";
+                maxReserved?: number;
+                period: number;
+                rate: number;
+                shards?: number;
+                start?: null;
+              }
+            | {
+                capacity?: number;
+                kind: "fixed window";
+                maxReserved?: number;
+                period: number;
+                rate: number;
+                shards?: number;
+                start?: number;
+              };
+          count?: number;
+          key?: string;
+          name: string;
+          reserve?: boolean;
+          throws?: boolean;
+        },
+        { ok: true; retryAfter?: number } | { ok: false; retryAfter: number }
+      >;
+      clearAll: FunctionReference<
+        "mutation",
+        "internal",
+        { before?: number },
+        null
+      >;
+      getServerTime: FunctionReference<"mutation", "internal", {}, number>;
+      getValue: FunctionReference<
+        "query",
+        "internal",
+        {
+          config:
+            | {
+                capacity?: number;
+                kind: "token bucket";
+                maxReserved?: number;
+                period: number;
+                rate: number;
+                shards?: number;
+                start?: null;
+              }
+            | {
+                capacity?: number;
+                kind: "fixed window";
+                maxReserved?: number;
+                period: number;
+                rate: number;
+                shards?: number;
+                start?: number;
+              };
+          key?: string;
+          name: string;
+          sampleShards?: number;
+        },
+        {
+          config:
+            | {
+                capacity?: number;
+                kind: "token bucket";
+                maxReserved?: number;
+                period: number;
+                rate: number;
+                shards?: number;
+                start?: null;
+              }
+            | {
+                capacity?: number;
+                kind: "fixed window";
+                maxReserved?: number;
+                period: number;
+                rate: number;
+                shards?: number;
+                start?: number;
+              };
+          shard: number;
+          ts: number;
+          value: number;
+        }
+      >;
+      rateLimit: FunctionReference<
+        "mutation",
+        "internal",
+        {
+          config:
+            | {
+                capacity?: number;
+                kind: "token bucket";
+                maxReserved?: number;
+                period: number;
+                rate: number;
+                shards?: number;
+                start?: null;
+              }
+            | {
+                capacity?: number;
+                kind: "fixed window";
+                maxReserved?: number;
+                period: number;
+                rate: number;
+                shards?: number;
+                start?: number;
+              };
+          count?: number;
+          key?: string;
+          name: string;
+          reserve?: boolean;
+          throws?: boolean;
+        },
+        { ok: true; retryAfter?: number } | { ok: false; retryAfter: number }
+      >;
+      resetRateLimit: FunctionReference<
+        "mutation",
+        "internal",
+        { key?: string; name: string },
+        null
+      >;
+    };
+    time: {
+      getServerTime: FunctionReference<"mutation", "internal", {}, number>;
+    };
+  };
   twilio: {
     messages: {
       create: FunctionReference<
@@ -4129,140 +3824,6 @@ export declare const components: {
         },
         any
       >;
-    };
-  };
-  rateLimiter: {
-    lib: {
-      checkRateLimit: FunctionReference<
-        "query",
-        "internal",
-        {
-          config:
-            | {
-                capacity?: number;
-                kind: "token bucket";
-                maxReserved?: number;
-                period: number;
-                rate: number;
-                shards?: number;
-                start?: null;
-              }
-            | {
-                capacity?: number;
-                kind: "fixed window";
-                maxReserved?: number;
-                period: number;
-                rate: number;
-                shards?: number;
-                start?: number;
-              };
-          count?: number;
-          key?: string;
-          name: string;
-          reserve?: boolean;
-          throws?: boolean;
-        },
-        { ok: true; retryAfter?: number } | { ok: false; retryAfter: number }
-      >;
-      clearAll: FunctionReference<
-        "mutation",
-        "internal",
-        { before?: number },
-        null
-      >;
-      getServerTime: FunctionReference<"mutation", "internal", {}, number>;
-      getValue: FunctionReference<
-        "query",
-        "internal",
-        {
-          config:
-            | {
-                capacity?: number;
-                kind: "token bucket";
-                maxReserved?: number;
-                period: number;
-                rate: number;
-                shards?: number;
-                start?: null;
-              }
-            | {
-                capacity?: number;
-                kind: "fixed window";
-                maxReserved?: number;
-                period: number;
-                rate: number;
-                shards?: number;
-                start?: number;
-              };
-          key?: string;
-          name: string;
-          sampleShards?: number;
-        },
-        {
-          config:
-            | {
-                capacity?: number;
-                kind: "token bucket";
-                maxReserved?: number;
-                period: number;
-                rate: number;
-                shards?: number;
-                start?: null;
-              }
-            | {
-                capacity?: number;
-                kind: "fixed window";
-                maxReserved?: number;
-                period: number;
-                rate: number;
-                shards?: number;
-                start?: number;
-              };
-          shard: number;
-          ts: number;
-          value: number;
-        }
-      >;
-      rateLimit: FunctionReference<
-        "mutation",
-        "internal",
-        {
-          config:
-            | {
-                capacity?: number;
-                kind: "token bucket";
-                maxReserved?: number;
-                period: number;
-                rate: number;
-                shards?: number;
-                start?: null;
-              }
-            | {
-                capacity?: number;
-                kind: "fixed window";
-                maxReserved?: number;
-                period: number;
-                rate: number;
-                shards?: number;
-                start?: number;
-              };
-          count?: number;
-          key?: string;
-          name: string;
-          reserve?: boolean;
-          throws?: boolean;
-        },
-        { ok: true; retryAfter?: number } | { ok: false; retryAfter: number }
-      >;
-      resetRateLimit: FunctionReference<
-        "mutation",
-        "internal",
-        { key?: string; name: string },
-        null
-      >;
-    };
-    time: {
-      getServerTime: FunctionReference<"mutation", "internal", {}, number>;
     };
   };
 };

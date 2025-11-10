@@ -1,7 +1,7 @@
-"use server";
-import { action, internalMutation, internalQuery, internalAction } from './_generated/server';
+"use node";
+
+import { action } from './_generated/server';
 import { v } from 'convex/values';
-import { getByExternalId } from './core';
 import { internal } from './_generated/api';
 
 const CATEGORY_TTLS_DAYS: Record<string, number> = {
@@ -84,60 +84,6 @@ const resolveZipFromMetadata = (metadata: Record<string, unknown> | undefined): 
   return metadata.zipCode as string | undefined;
 };
 
-export const getResourceLookupCache = internalQuery({
-  args: {
-    category: v.string(),
-    zip: v.string(),
-  },
-  handler: async (ctx, args) => {
-    const [cached] = await ctx.db
-      .query('resource_cache')
-      .withIndex('by_category_zip', (q) => q.eq('category', args.category).eq('zip', args.zip))
-      .order('desc')
-      .take(1);
-    return cached ?? null;
-  },
-});
-
-export const recordResourceLookup = internalMutation({
-  args: {
-    userId: v.optional(v.id('users')),
-    category: v.string(),
-    zip: v.string(),
-    results: v.any(),
-    expiresAt: v.number(),
-  },
-  handler: async (ctx, args) => {
-    await ctx.db.insert('resource_cache', {
-      userId: args.userId,
-      category: args.category,
-      zip: args.zip,
-      results: args.results,
-      createdAt: Date.now(),
-      expiresAt: args.expiresAt,
-    });
-  },
-});
-
-export const cleanupResourceCache = internalMutation({
-  args: {
-    limit: v.optional(v.number()),
-  },
-  handler: async (ctx, { limit = 200 }) => {
-    const now = Date.now();
-    const stale = await ctx.db.query('resource_cache').take(limit);
-
-    let removed = 0;
-    for (const entry of stale) {
-      if (entry.expiresAt && entry.expiresAt <= now) {
-        await ctx.db.delete(entry._id);
-        removed += 1;
-      }
-    }
-    return { removed };
-  },
-});
-
 export const searchResources = action({
   args: {
     query: v.string(),
@@ -154,7 +100,9 @@ export const searchResources = action({
       undefined;
 
     if (!resolvedZip && args.userId) {
-      const user = await getByExternalId(ctx, args.userId);
+      const user = await ctx.runQuery(internal.internal.getByExternalIdQuery, {
+        externalId: args.userId,
+      });
       if (user?.metadata) {
         resolvedZip = normalizeZip(resolveZipFromMetadata(user.metadata as Record<string, unknown>));
       }
@@ -173,7 +121,7 @@ export const searchResources = action({
     const ttlMs = ttlDays * 24 * 60 * 60 * 1000;
     const now = Date.now();
 
-    const cache = await ctx.runQuery(internal.resources.getResourceLookupCache, {
+    const cache = await ctx.runQuery(internal.internal.getResourceLookupCache, {
       category,
       zip: resolvedZip,
     });
@@ -203,7 +151,7 @@ export const searchResources = action({
       )
       .join('\n');
 
-    await ctx.runMutation(internal.resources.recordResourceLookup, {
+    await ctx.runMutation(internal.internal.recordResourceLookup, {
       userId: undefined,
       category,
       zip: resolvedZip,
@@ -220,3 +168,4 @@ export const searchResources = action({
     };
   },
 });
+

@@ -7,7 +7,7 @@
 
 import { createTool } from '@convex-dev/agent';
 import { z } from 'zod';
-import { api } from '../_generated/api';
+import { api, internal } from '../_generated/api';
 
 export const searchResources = createTool({
   args: z.object({
@@ -41,3 +41,4 @@ export const searchResources = createTool({
     };
   },
 });
+

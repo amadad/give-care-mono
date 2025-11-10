@@ -1,5 +1,3 @@
-import { v } from 'convex/values';
-
 export type CrisisSeverity = 'low' | 'medium' | 'high';
 
 const crisisKeywordMap: Array<{ keyword: string; severity: CrisisSeverity }> = [
@@ -34,14 +32,10 @@ export const detectCrisis = (text: string): CrisisDetection => {
 export const crisisResponse = (userName?: string) =>
   `I hear how hard this is${userName ? `, ${userName}` : ''}. You are not alone.\n\n988 Suicide & Crisis Lifeline (call or text)\n741741 Crisis Text Line (text HOME)\n911 if you're in immediate danger.\n\nWant help contacting one?`;
 
-export const consentArgs = v.object({
-  emergency: v.boolean(),
-  marketing: v.boolean(),
-});
-
 /**
  * Get tone guidance based on context
  */
 export const getTone = (context: any): string => {
   return 'Be warm, empathetic, and concise. Validate feelings before offering solutions.';
 };
+

@@ -18,5 +18,8 @@ export const getProfileCompleteness = (profile: any) => {
 };
 
 export const buildWellnessInfo = (metadata: any) => {
+  // Build wellness info from metadata
+  // This can be expanded based on assessment scores, etc.
   return '';
 };
+

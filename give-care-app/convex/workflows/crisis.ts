@@ -1,31 +1,19 @@
 /**
- * Workflows - Crisis workflow orchestration
+ * Crisis Escalation Workflow
  *
- * Merges workflows/crisis.ts and workflows/crisisSteps.ts
- * Handles multi-step crisis intervention workflows.
- *
- * Durable, retriable workflow for handling crisis situations:
- * 1. Assess crisis severity
- * 2. Generate crisis response
- * 3. Log crisis event
- * 4. Notify emergency contacts if needed
- * 5. Schedule follow-up
- *
- * Uses Workflow component for:
- * - Automatic retries on failures
- * - Durability across server restarts
- * - Idempotent step execution
+ * Handles multi-step crisis intervention workflows using Workflow Component.
+ * Durable, retriable workflow for handling crisis situations.
  */
 
 import { WorkflowManager } from '@convex-dev/workflow';
-import { components, internal } from './_generated/api';
+import { components, internal } from '../_generated/api';
 import { v } from 'convex/values';
-import { internalMutation, internalAction, internalQuery } from './_generated/server';
+import { internalMutation, internalAction, internalQuery } from '../_generated/server';
 
 const workflow = new WorkflowManager(components.workflow);
 
 // ============================================================================
-// CRISIS ESCALATION WORKFLOWS
+// CRISIS ESCALATION WORKFLOW
 // ============================================================================
 
 /**
@@ -42,41 +30,32 @@ export const crisisEscalation = workflow.define({
   },
   handler: async (step, args): Promise<{
     success: boolean;
-    crisisEventId: any;
-    responseText: string;
+    alertId: any;
     emergencyContactNotified: boolean;
   }> => {
     // Step 1: Log the crisis event immediately
-    const crisisEventId: any = await step.runMutation(internal.workflows.logCrisisEvent, {
+    const alertId: any = await step.runMutation(internal.workflows.crisis.logCrisisEvent, {
       userId: args.userId,
       severity: args.severity,
       terms: args.crisisTerms,
       messageText: args.messageText,
     });
 
-    console.log(`Crisis event logged: ${crisisEventId}`);
+    console.log(`Crisis event logged: ${alertId}`);
 
-    // Step 2: Generate crisis response using the crisis agent
-    const response: any = await step.runAction(internal.workflows.generateCrisisResponse, {
-      userId: args.userId,
-      threadId: args.threadId,
-      messageText: args.messageText,
-      severity: args.severity,
-    });
-
-    console.log(`Crisis response generated: ${response.text.substring(0, 100)}...`);
-
-    // Step 3: Check if emergency contact notification is needed (high severity)
+    // Step 2: Check if emergency contact notification is needed (high severity)
+    let emergencyContactNotified = false;
     if (args.severity === 'high') {
       const notificationResult: any = await step.runAction(
-        internal.workflows.notifyEmergencyContact,
+        internal.workflows.crisis.notifyEmergencyContact,
         {
           userId: args.userId,
-          crisisEventId,
+          alertId,
           messageText: args.messageText,
         }
       );
 
+      emergencyContactNotified = notificationResult.sent;
       if (notificationResult.sent) {
         console.log(`Emergency contact notified: ${notificationResult.recipient}`);
       } else {
@@ -84,10 +63,10 @@ export const crisisEscalation = workflow.define({
       }
     }
 
-    // Step 4: Schedule follow-up check-in (24 hours later)
-    await step.runMutation(internal.workflows.scheduleFollowUp, {
+    // Step 3: Schedule follow-up check-in (24 hours later)
+    await step.runMutation(internal.workflows.crisis.scheduleFollowUp, {
       userId: args.userId,
-      crisisEventId,
+      alertId,
       hoursFromNow: 24,
     });
 
@@ -95,9 +74,8 @@ export const crisisEscalation = workflow.define({
 
     return {
       success: true,
-      crisisEventId,
-      responseText: response.text,
-      emergencyContactNotified: args.severity === 'high',
+      alertId,
+      emergencyContactNotified,
     };
   },
 });
@@ -109,7 +87,7 @@ export const crisisEscalation = workflow.define({
 export const crisisFollowUp = workflow.define({
   args: {
     userId: v.id('users'),
-    crisisEventId: v.id('alerts'),
+    alertId: v.id('alerts'),
   },
   handler: async (step, args): Promise<{
     success: boolean;
@@ -117,7 +95,7 @@ export const crisisFollowUp = workflow.define({
   }> => {
     // Step 1: Check if user has had any recent interactions
     const recentActivity: any = await step.runQuery(
-      internal.workflows.checkRecentActivity,
+      internal.workflows.crisis.checkRecentActivity,
       {
         userId: args.userId,
         hoursAgo: 24,
@@ -125,26 +103,28 @@ export const crisisFollowUp = workflow.define({
     );
 
     // Step 2: If no recent activity, send check-in message
+    let followUpSent = false;
     if (!recentActivity.hasActivity) {
-      await step.runAction(internal.workflows.sendFollowUpMessage, {
+      await step.runAction(internal.workflows.crisis.sendFollowUpMessage, {
         userId: args.userId,
-        crisisEventId: args.crisisEventId,
+        alertId: args.alertId,
       });
 
+      followUpSent = true;
       console.log(`Follow-up message sent to user ${args.userId}`);
     } else {
       console.log(`User ${args.userId} has recent activity, skipping follow-up`);
     }
 
     // Step 3: Update crisis event status
-    await step.runMutation(internal.workflows.updateCrisisEvent, {
-      crisisEventId: args.crisisEventId,
-      status: 'followed_up',
+    await step.runMutation(internal.workflows.crisis.updateCrisisEvent, {
+      alertId: args.alertId,
+      status: 'processed',
     });
 
     return {
       success: true,
-      followUpSent: !recentActivity.hasActivity,
+      followUpSent,
     };
   },
 });
@@ -184,71 +164,18 @@ export const logCrisisEvent = internalMutation({
 });
 
 /**
- * Generate crisis response using crisis agent
- */
-export const generateCrisisResponse = internalAction({
-  args: {
-    userId: v.id('users'),
-    threadId: v.string(),
-    messageText: v.string(),
-    severity: v.union(v.literal('high'), v.literal('medium'), v.literal('low')),
-  },
-  handler: async (ctx, args): Promise<any> => {
-    // Get user data for context
-    const user: any = await ctx.runQuery(internal.core.getUser, {
-      userId: args.userId,
-    });
-
-    if (!user) {
-      throw new Error(`User not found: ${args.userId}`);
-    }
-
-    // Build crisis context
-    const context = {
-      userId: user.externalId || user._id,
-      locale: user.locale || 'en-US',
-      consent: {
-        emergency: true,
-        marketing: false,
-      },
-      crisisFlags: {
-        active: true,
-        terms: [], // Will be populated by the workflow caller
-      },
-      metadata: {
-        profile: user.metadata || {},
-      },
-    };
-
-    // Call crisis agent (now in agents/crisis.ts)
-    const response: any = await ctx.runAction(internal.agents.crisis.runCrisisAgent, {
-      input: {
-        channel: 'sms' as const,
-        text: args.messageText,
-        userId: user.externalId || user._id,
-      },
-      context,
-      threadId: args.threadId,
-    });
-
-    console.log(`[Crisis Workflow] Crisis response generated`);
-    return response;
-  },
-});
-
-/**
  * Notify emergency contact (email or SMS)
  */
 export const notifyEmergencyContact = internalAction({
   args: {
     userId: v.id('users'),
-    crisisEventId: v.id('alerts'),
+    alertId: v.id('alerts'),
     messageText: v.string(),
   },
   handler: async (ctx, args): Promise<{ sent: boolean; recipient?: string }> => {
     // Get user with emergency contact info
-    const user: any = await ctx.runQuery(internal.core.getUser, {
-      userId: args.userId,
+    const user: any = await ctx.runQuery(internal.internal.getByExternalIdQuery, {
+      externalId: args.userId.toString(),
     });
 
     if (!user) {
@@ -284,7 +211,7 @@ export const notifyEmergencyContact = internalAction({
 export const scheduleFollowUp = internalMutation({
   args: {
     userId: v.id('users'),
-    crisisEventId: v.id('alerts'),
+    alertId: v.id('alerts'),
     hoursFromNow: v.number(),
   },
   handler: async (ctx, args) => {
@@ -293,10 +220,10 @@ export const scheduleFollowUp = internalMutation({
     // Schedule the follow-up workflow
     await ctx.scheduler.runAfter(
       args.hoursFromNow * 60 * 60 * 1000,
-      internal.workflows.crisisFollowUp,
+      internal.workflows.crisis.crisisFollowUp,
       {
         userId: args.userId,
-        crisisEventId: args.crisisEventId,
+        alertId: args.alertId,
       }
     );
 
@@ -315,17 +242,18 @@ export const checkRecentActivity = internalQuery({
     hoursAgo: v.number(),
   },
   handler: async (ctx, args) => {
+    // Check for recent agent runs (proxy for activity)
     const cutoffTime = Date.now() - args.hoursAgo * 60 * 60 * 1000;
 
-    const recentSessions = await ctx.db
-      .query('sessions')
-      .withIndex('by_user_channel', (q) => q.eq('userId', args.userId))
-      .filter((q) => q.gte(q.field('lastSeen'), cutoffTime))
+    const recentRuns = await ctx.db
+      .query('agent_runs')
+      .withIndex('by_user', (q) => q.eq('userId', args.userId))
+      .filter((q) => q.gte(q.field('_creationTime'), cutoffTime))
       .take(1);
 
     return {
-      hasActivity: recentSessions.length > 0,
-      lastSeen: recentSessions[0]?.lastSeen,
+      hasActivity: recentRuns.length > 0,
+      lastSeen: recentRuns[0]?._creationTime,
     };
   },
 });
@@ -336,26 +264,39 @@ export const checkRecentActivity = internalQuery({
 export const sendFollowUpMessage = internalAction({
   args: {
     userId: v.id('users'),
-    crisisEventId: v.id('alerts'),
+    alertId: v.id('alerts'),
   },
   handler: async (ctx, args) => {
-    const user = await ctx.runQuery(internal.core.getUser, {
+    // Get user by ID
+    const userDoc = await ctx.runQuery(internal.internal.getUserById, {
       userId: args.userId,
     });
+    
+    if (!userDoc) {
+      console.error(`[Crisis Workflow] User not found: ${args.userId}`);
+      return { sent: false };
+    }
+    
+    const user = {
+      ...userDoc,
+      phone: userDoc.phone,
+      externalId: userDoc.externalId,
+    };
 
     if (!user || !user.phone) {
       console.error(`[Crisis Workflow] Cannot send follow-up: user or phone not found`);
       return { sent: false };
     }
 
-    const message = `Hi ${user.name || 'there'}, this is a follow-up from GiveCare. We wanted to check in and see how you're doing. If you need support, please reach out anytime. 988 Suicide & Crisis Lifeline is available 24/7.`;
+    const userName = (user.metadata as any)?.profile?.firstName || 'there';
+    const message = `Hi ${userName}, this is a follow-up from GiveCare. We wanted to check in and see how you're doing. If you need support, please reach out anytime. 988 Suicide & Crisis Lifeline is available 24/7.`;
 
-    // Send SMS via inbound actions (will be in inbound.ts after merge)
+    // Send SMS via inbound actions
     try {
       await ctx.runAction(internal.inbound.sendSmsResponse, {
         to: user.phone,
         text: message,
-        userId: user.externalId || user._id,
+        userId: user.externalId,
       });
 
       console.log(`[Crisis Workflow] Follow-up message sent to ${user.phone}`);
@@ -372,11 +313,11 @@ export const sendFollowUpMessage = internalAction({
  */
 export const updateCrisisEvent = internalMutation({
   args: {
-    crisisEventId: v.id('alerts'),
+    alertId: v.id('alerts'),
     status: v.string(),
   },
   handler: async (ctx, args) => {
-    await ctx.db.patch(args.crisisEventId, {
+    await ctx.db.patch(args.alertId, {
       status: 'processed',
       payload: {
         followUpStatus: args.status,
@@ -384,6 +325,7 @@ export const updateCrisisEvent = internalMutation({
       },
     });
 
-    console.log(`[Crisis Workflow] Crisis event updated: ${args.crisisEventId}`);
+    console.log(`[Crisis Workflow] Crisis event updated: ${args.alertId}`);
   },
 });
+

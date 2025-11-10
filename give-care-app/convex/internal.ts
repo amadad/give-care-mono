@@ -1,113 +1,165 @@
-"use server";
-
 /**
- * Internal Convex API surface
- *
- * All server-only functions accessible via api.internal.*
- * Consolidates internal/ folder into single file.
+ * Internal API - Server-side only functions
  */
 
-import { mutation } from './_generated/server';
-import type { MutationCtx } from './_generated/server';
-import { v } from 'convex/values';
-import { getByExternalId } from './core';
+import { internalMutation, internalQuery } from './_generated/server';
 import { internal } from './_generated/api';
+import { v } from 'convex/values';
+import { logAgentRun, logGuardrail, getByExternalId, ensureUser } from './lib/core';
+import { messageValidator } from '@convex-dev/twilio';
 
 // ============================================================================
-// EXPORTS FROM CORE.TS
+// CORE HELPERS
 // ============================================================================
 
-export {
-  getByExternalIdQuery as getByExternalId,
-  recordInboundMutation as recordInbound,
-  recordOutboundMutation as recordOutbound,
-  logDelivery,
-  createComponentThread,
-  updateUserMetadata,
-  logAgentRunInternal,
-  logCrisisInteraction,
-} from './core';
+export const getByExternalIdQuery = internalQuery({
+  args: { externalId: v.string() },
+  handler: async (ctx, { externalId }) => {
+    return getByExternalId(ctx, externalId);
+  },
+});
 
-// ============================================================================
-// ADDITIONAL INTERNAL MUTATIONS
-// Moved from internal/core.ts
-// ============================================================================
-
-const resolveUser = async (ctx: MutationCtx, externalId?: string) => {
-  if (!externalId) return null;
-  return getByExternalId(ctx, externalId);
-};
-
-export const logAuditEntry = mutation({
+export const ensureUserMutation = internalMutation({
   args: {
-    actorId: v.optional(v.string()),
-    resource: v.string(),
+    externalId: v.string(),
+    channel: v.union(v.literal('sms'), v.literal('email'), v.literal('web')),
+    phone: v.optional(v.string()),
+    locale: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    return ensureUser(ctx, args);
+  },
+});
+
+export const logAgentRunInternal = internalMutation({
+  args: {
+    externalId: v.string(),
+    agent: v.string(),
+    policyBundle: v.string(),
+    budgetResult: v.object({
+      usedInputTokens: v.number(),
+      usedOutputTokens: v.number(),
+      toolCalls: v.number(),
+    }),
+    latencyMs: v.number(),
+    traceId: v.string(),
+  },
+  handler: async (ctx, args) => {
+    return logAgentRun(ctx, args);
+  },
+});
+
+export const logGuardrailInternal = internalMutation({
+  args: {
+    externalId: v.optional(v.string()),
+    ruleId: v.string(),
     action: v.string(),
-    metadata: v.optional(v.any()),
+    context: v.optional(v.any()),
+    traceId: v.string(),
   },
   handler: async (ctx, args) => {
-    const user = await resolveUser(ctx, args.actorId);
+    return logGuardrail(ctx, args);
+  },
+});
 
-    await ctx.db.insert('guardrail_events', {
-      userId: user?._id,
-      ruleId: String((args.metadata as Record<string, unknown> | undefined)?.rule ?? args.resource),
-      action: args.action,
+export const logCrisisInteraction = internalMutation({
+  args: {
+    externalId: v.string(),
+    input: v.string(),
+    response: v.string(),
+    timestamp: v.number(),
+    traceId: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    await logGuardrail(ctx, {
+      externalId: args.externalId,
+      ruleId: 'crisis_interaction',
+      action: 'log',
       context: {
-        ...(args.metadata ?? {}),
-        resource: args.resource,
+        input: args.input,
+        response: args.response,
+        timestamp: args.timestamp,
       },
-      traceId: `audit-${Date.now()}`,
+      traceId: args.traceId ?? `crisis-${Date.now()}`,
     });
   },
 });
 
-export const appendMessage = mutation({
+export const updateUserMetadata = internalMutation({
   args: {
-    sessionId: v.optional(v.id('sessions')),
-    userId: v.string(),
-    role: v.union(v.literal('user'), v.literal('assistant'), v.literal('system'), v.literal('tool')),
-    text: v.string(),
-    metadata: v.optional(v.any()),
+    userId: v.id('users'),
+    metadata: v.any(),
+  },
+  handler: async (ctx, { userId, metadata }) => {
+    await ctx.db.patch(userId, { metadata });
+    return ctx.db.get(userId);
+  },
+});
+
+export const getUserById = internalQuery({
+  args: {
+    userId: v.id('users'),
+  },
+  handler: async (ctx, { userId }) => {
+    return ctx.db.get(userId);
+  },
+});
+
+// ============================================================================
+// RESOURCES
+// ============================================================================
+
+export const getResourceLookupCache = internalQuery({
+  args: {
+    category: v.string(),
+    zip: v.string(),
   },
   handler: async (ctx, args) => {
-    const user = await getByExternalId(ctx, args.userId);
-    if (!user) {
-      throw new Error('User not found for appendMessage');
-    }
-
-    await ctx.db.insert('messages', {
-      userId: user._id,
-      channel: 'sms',
-      direction: args.role === 'user' ? 'inbound' : 'outbound',
-      text: args.text,
-      meta: {
-        ...(args.metadata ?? {}),
-        role: args.role,
-        sessionId: args.sessionId,
-      },
-      traceId: `guardrail-${Date.now()}`,
-      redactionFlags: [],
-    });
+    const [cached] = await ctx.db
+      .query('resource_cache')
+      .withIndex('by_category_zip', (q) => q.eq('category', args.category).eq('zip', args.zip))
+      .order('desc')
+      .take(1);
+    return cached ?? null;
   },
 });
 
-export const logCrisisEvent = mutation({
+export const recordResourceLookup = internalMutation({
   args: {
-    userId: v.string(),
-    severity: v.union(v.literal('high'), v.literal('medium'), v.literal('low')),
-    message: v.string(),
+    userId: v.optional(v.id('users')),
+    category: v.string(),
+    zip: v.string(),
+    results: v.any(),
+    expiresAt: v.number(),
   },
   handler: async (ctx, args) => {
-    const user = await getByExternalId(ctx, args.userId);
-    if (!user) {
-      throw new Error('User not found for crisis event');
-    }
-
-    await ctx.runMutation(internal.workflows.logCrisisEvent, {
-      userId: user._id,
-      severity: args.severity,
-      terms: [],
-      messageText: args.message,
+    await ctx.db.insert('resource_cache', {
+      userId: args.userId,
+      category: args.category,
+      zip: args.zip,
+      results: args.results,
+      createdAt: Date.now(),
+      expiresAt: args.expiresAt,
     });
   },
 });
+
+// ============================================================================
+// TWILIO
+// ============================================================================
+
+export const handleIncomingMessage = internalMutation({
+  args: { message: messageValidator },
+  handler: async (ctx, { message }) => {
+    // Component automatically saves message to its own table
+    // This callback runs in the same transaction
+
+    // Trigger agent response
+    await ctx.scheduler.runAfter(0, internal.inbound.processInbound, {
+      phone: message.from,
+      text: message.body,
+      messageSid: message.sid,
+    });
+  },
+});
+

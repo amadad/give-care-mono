@@ -1,13 +1,11 @@
-import { cronJobs } from 'convex/server';
-import { internal } from './_generated/api';
+import { cronJobs } from "convex/server";
 
 const crons = cronJobs();
 
-crons.interval(
-  'resource-cache-cleanup',
-  { hours: 1 },
-  internal.resources.cleanupResourceCache,
-  { limit: 200 }
-);
+// TODO: Add GiveCare-specific cron jobs here
+// Examples:
+// - Daily wellness check-ins
+// - Assessment reminders
+// - Resource cache cleanup
 
 export default crons;

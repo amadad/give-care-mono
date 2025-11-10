@@ -1,9 +1,7 @@
-"use server";
-
 import { query } from './_generated/server';
 import { v } from 'convex/values';
 import type { Doc } from './_generated/dataModel';
-import { getByExternalId } from './core';
+import { getByExternalId } from './lib/core';
 import { CATALOG, type AssessmentSlug, type AssessmentAnswer } from './lib/assessmentCatalog';
 
 type StatusTrend = 'up' | 'down' | 'steady' | 'unknown';
@@ -25,7 +23,7 @@ const computePressureZones = (
   try {
     return catalog.score(toAssessmentAnswers(answers)).pressureZones;
   } catch (error) {
-    console.warn('[domains/wellness] Failed to compute pressure zones', {
+    console.warn('[wellness] Failed to compute pressure zones', {
       definitionId,
       error,
     });
@@ -101,3 +99,4 @@ export const getStatus = query({
     };
   },
 });
+

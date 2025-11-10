@@ -1,32 +1,13 @@
 {
+  "files": [],
+  "references": [
+    { "path": "./tsconfig.build.json" },
+    { "path": "./tsconfig.node.json" }
+  ],
   "compilerOptions": {
-    "target": "ES2020",
-    "module": "ESNext",
-    "lib": ["ES2020"],
-    "moduleResolution": "bundler",
-    "resolveJsonModule": true,
-    "allowJs": true,
-    "strict": true,
-    "esModuleInterop": true,
-    "skipLibCheck": true,
-    "forceConsistentCasingInFileNames": true,
-    "noEmit": true,
-    "baseUrl": "./",
+    "baseUrl": ".",
     "paths": {
-      "~/*": ["convex/*"]
-    },
-    "types": ["node", "vite/client"],
-    "allowSyntheticDefaultImports": true,
-    "isolatedModules": true
-  },
-  "include": ["tests/**/*", "convex/**/*"],
-  "exclude": [
-    "node_modules",
-    "dist",
-    "_archive",
-    "tests/billing.test.ts",
-    "tests/prompts.test.ts",
-    "tests/resources.test.ts",
-    "tests/maps.test.ts"
-  ]
+      "@/*": ["ui/*"]
+    }
+  }
 }
