@@ -190,7 +190,7 @@ Detect crisis terms → workflows.crisisEscalation → agents.runCrisisAgent →
 - `agents.ts` - `recordMemoryTool`
 - `schema.ts` - `memories` table (with embeddings)
 
-**Categories:** care_routine, preference, intervention_result, crisis_trigger
+**Categories:** care_routine, preference, intervention_result, crisis_trigger, family_health
 
 **Status:** ✅ Public + agent tooling wired via `api.public.recordMemory/listMemories`
 

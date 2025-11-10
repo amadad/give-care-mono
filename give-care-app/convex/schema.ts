@@ -135,7 +135,7 @@ export default defineSchema({
   // Semantic search handled by Agent Component via contextOptions
   memories: defineTable({
     userId: v.id('users'),
-    category: v.string(), // 'care_routine', 'preference', 'intervention_result', 'crisis_trigger'
+    category: v.string(), // 'care_routine', 'preference', 'intervention_result', 'crisis_trigger', 'family_health'
     content: v.string(),
     importance: v.number(), // 1-10
     // No embedding - Agent Component handles semantic search

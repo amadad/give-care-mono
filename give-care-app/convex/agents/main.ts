@@ -20,6 +20,7 @@ import { WorkflowManager } from '@convex-dev/workflow';
 import { MAIN_PROMPT, renderPrompt } from '../lib/prompts';
 import { getTone } from '../lib/policy';
 import { extractProfileVariables, buildWellnessInfo } from '../lib/profile';
+import { agentContextValidator, channelValidator } from '../lib/validators';
 import { searchResources } from '../tools/searchResources';
 import { recordMemory } from '../tools/recordMemory';
 import { checkWellnessStatus } from '../tools/checkWellnessStatus';
@@ -53,29 +54,6 @@ export const mainAgent = new Agent(components.agent, {
 // ============================================================================
 // AGENT ACTION
 // ============================================================================
-
-const agentContextValidator = v.object({
-  userId: v.string(),
-  sessionId: v.optional(v.string()),
-  locale: v.string(),
-  consent: v.object({
-    emergency: v.boolean(),
-    marketing: v.boolean(),
-  }),
-  crisisFlags: v.optional(
-    v.object({
-      active: v.boolean(),
-      terms: v.array(v.string()),
-    })
-  ),
-  metadata: v.optional(v.any()),
-});
-
-const channelValidator = v.union(
-  v.literal('sms'),
-  v.literal('email'),
-  v.literal('web')
-);
 
 export const runMainAgent = action({
   args: {

@@ -14,6 +14,7 @@ import { Agent, saveMessage } from '@convex-dev/agent';
 import { google } from '@ai-sdk/google';
 import { openai } from '@ai-sdk/openai';
 import { ASSESSMENT_PROMPT, renderPrompt } from '../lib/prompts';
+import { agentContextValidator, channelValidator } from '../lib/validators';
 import { getInterventions } from '../tools/getInterventions';
 
 // ============================================================================
@@ -32,29 +33,6 @@ export const assessmentAgent = new Agent(components.agent, {
 // ============================================================================
 // AGENT ACTION
 // ============================================================================
-
-const agentContextValidator = v.object({
-  userId: v.string(),
-  sessionId: v.optional(v.string()),
-  locale: v.string(),
-  consent: v.object({
-    emergency: v.boolean(),
-    marketing: v.boolean(),
-  }),
-  crisisFlags: v.optional(
-    v.object({
-      active: v.boolean(),
-      terms: v.array(v.string()),
-    })
-  ),
-  metadata: v.optional(v.any()),
-});
-
-const channelValidator = v.union(
-  v.literal('sms'),
-  v.literal('email'),
-  v.literal('web')
-);
 
 export const runAssessmentAgent = action({
   args: {

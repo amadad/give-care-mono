@@ -1,3 +1,5 @@
+import { AgentContext } from './types';
+
 export type CrisisSeverity = 'low' | 'medium' | 'high';
 
 const crisisKeywordMap: Array<{ keyword: string; severity: CrisisSeverity }> = [
@@ -35,7 +37,7 @@ export const crisisResponse = (userName?: string) =>
 /**
  * Get tone guidance based on context
  */
-export const getTone = (context: any): string => {
+export const getTone = (context: AgentContext): string => {
   return 'Be warm, empathetic, and concise. Validate feelings before offering solutions.';
 };
 

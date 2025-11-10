@@ -12,6 +12,7 @@ import { v } from 'convex/values';
 import { google } from '@ai-sdk/google';
 import { generateObject, generateText } from 'ai';
 import { z } from 'zod';
+import { FACT_EXTRACTION_TIMEOUT_MS, CONTEXT_BUILDING_TIMEOUT_MS, DEFAULT_MEMORY_LIMIT } from '../lib/constants';
 
 // ============================================================================
 // EXTRACT FACTS ACTION
@@ -36,14 +37,14 @@ export const extractFacts = internalAction({
       // ✅ Use generateObject with Zod schema for structured output
       // ✅ Optimized for speed: faster model, reduced tokens, timeout protection
       const timeoutPromise = new Promise<never>((_, reject) => {
-        setTimeout(() => reject(new Error('Fact extraction timeout after 2s')), 2000);
+        setTimeout(() => reject(new Error('Fact extraction timeout after 2s')), FACT_EXTRACTION_TIMEOUT_MS);
       });
 
       const extractionPromise = generateObject({
         model: google('gemini-2.5-flash-lite'), // Fastest model for extraction
         prompt: `Extract important long-term facts about this caregiver from the conversation below.
 Focus on:
-- Care recipient details (name, condition, relationship)
+- Care recipient details (name, condition, relationship) - use 'family_health'
 - Caregiver stress levels, triggers, coping strategies
 - Important dates, routines, preferences
 - Crisis indicators or concerning patterns
@@ -53,7 +54,7 @@ ${conversationText}`,
         schema: z.array(
           z.object({
             fact: z.string().describe('The fact to remember'),
-            category: z.enum(['care_routine', 'preference', 'crisis_trigger', 'intervention_result']),
+            category: z.enum(['care_routine', 'preference', 'crisis_trigger', 'intervention_result', 'family_health']),
             importance: z.number().min(1).max(10).describe('Importance score 1-10'),
           })
         ),
@@ -90,7 +91,7 @@ export const buildContext = internalAction({
     // ✅ Get fewer memories for faster processing (reduced from 10 to 5)
     const memories = await ctx.runQuery(api.public.listMemories, {
       userId,
-      limit: 5, // ✅ Reduced from 10 for speed
+      limit: DEFAULT_MEMORY_LIMIT,
     });
 
     if (!memories || memories.length === 0) {
@@ -105,7 +106,7 @@ export const buildContext = internalAction({
     try {
       // ✅ Add timeout protection (2s max)
       const timeoutPromise = new Promise<never>((_, reject) => {
-        setTimeout(() => reject(new Error('Context building timeout after 2s')), 2000);
+        setTimeout(() => reject(new Error('Context building timeout after 2s')), CONTEXT_BUILDING_TIMEOUT_MS);
       });
 
       const generationPromise = generateText({
