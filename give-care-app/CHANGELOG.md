@@ -2,6 +2,10 @@
 
 ## [Unreleased] - Roadmap to v1.6.0
 
+### Bug Fixes
+
+- Hardened the `searchResources` action to skip background refreshes when Google Maps credentials are missing, gracefully fall back to stubbed results, and added Convex regression tests that cover cached, stale, and stub responses so SMS conversations no longer surface raw tool invocation code.
+
 ### Planned Enhancements
 
 The following enhancements are planned for v1.6.0:

@@ -92,6 +92,15 @@ const buildStubResults = (category: string, zip: string) => [
   },
 ];
 
+const isCredentialErrorMessage = (message: string) => {
+  const lower = message.toLowerCase();
+  return (
+    lower.includes('api key') ||
+    lower.includes('credential') ||
+    lower.includes('environment variable is required')
+  );
+};
+
 const resolveZipFromMetadata = (metadata: Record<string, unknown> | undefined): string | undefined => {
   if (!metadata) return undefined;
   const direct = metadata.zip as string | undefined;
@@ -206,42 +215,67 @@ export const searchResources = action({
       )
       .join('\n');
     
-    // Race Maps Grounding against timeout
-    const mapsPromise = searchWithMapsGrounding(args.query, category, resolvedZip, RACE_TIMEOUT_MS);
-    const timeoutPromise = new Promise<never>((_, reject) => {
-      setTimeout(() => reject(new Error('Maps Grounding timeout after 1.5s')), RACE_TIMEOUT_MS);
-    });
-    
-    let results;
-    let summaryText;
+    type MapsRaceResult = {
+      resources: Array<{
+        name: string;
+        address: string;
+        hours?: string;
+        rating?: number;
+        phone?: string;
+        category: string;
+        placeId?: string;
+        uri?: string;
+      }>;
+      widgetToken?: string;
+      text: string;
+    };
+
+    let mapsPromise: Promise<MapsRaceResult> | null = null;
+    let mapsCredentialError = false;
+    try {
+      mapsPromise = searchWithMapsGrounding(args.query, category, resolvedZip, RACE_TIMEOUT_MS);
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      console.error('[resources] Failed to start Maps Grounding race:', errorMessage);
+      mapsCredentialError = isCredentialErrorMessage(errorMessage);
+    }
+
+    let results = stubResults;
+    let summaryText = stubText;
     let widgetToken: string | undefined;
     let usedMapsGrounding = false;
     let fromRace = false;
-    
-    try {
-      // Race: Return first to complete (Maps Grounding or timeout)
-      const mapsResult = await Promise.race([mapsPromise, timeoutPromise]);
-      results = mapsResult.resources;
-      summaryText = mapsResult.text;
-      widgetToken = mapsResult.widgetToken;
-      usedMapsGrounding = true;
-      fromRace = true;
-    } catch (error) {
-      // Timeout or error - use stub immediately
-      results = stubResults;
-      summaryText = stubText;
-      usedMapsGrounding = false;
-      fromRace = true;
-      
-      // Log only if not a timeout (timeout is expected)
-      if (!(error instanceof Error && error.message.includes('timeout'))) {
-        console.error('[resources] Maps Grounding failed:', error instanceof Error ? error.message : String(error));
+
+    if (mapsPromise) {
+      const timeoutPromise = new Promise<never>((_, reject) => {
+        setTimeout(() => reject(new Error('Maps Grounding timeout after 1.5s')), RACE_TIMEOUT_MS);
+      });
+
+      try {
+        // Race: Return first to complete (Maps Grounding or timeout)
+        const mapsResult = await Promise.race([mapsPromise, timeoutPromise]);
+        results = mapsResult.resources;
+        summaryText = mapsResult.text;
+        widgetToken = mapsResult.widgetToken;
+        usedMapsGrounding = true;
+        fromRace = true;
+      } catch (error) {
+        // Timeout or error - fall back to stub immediately
+        fromRace = true;
+
+        // Log only if not a timeout (timeout is expected)
+        const message = error instanceof Error ? error.message : String(error);
+        if (!(error instanceof Error && error.message.includes('timeout'))) {
+          console.error('[resources] Maps Grounding failed:', message);
+        }
+        mapsCredentialError ||= isCredentialErrorMessage(message);
       }
     }
 
     // ✅ SPEED: Return immediately with winner (stub or Maps result)
-    // Schedule background refresh if we used stub or got partial results
-    if (!usedMapsGrounding || fromRace) {
+    // Schedule background refresh only when Maps Grounding was available but we returned stubs
+    const shouldRefreshInBackground = mapsPromise !== null && !usedMapsGrounding && !mapsCredentialError;
+    if (shouldRefreshInBackground) {
       // Refresh in background via durable workflow (non-blocking, retriable)
       void workflow.start(ctx, internal.workflows.resources.refresh, {
         query: args.query,
