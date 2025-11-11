@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { extractLocation, CAREGIVING_QUERIES } from '../convex/resources';
+import { extractLocation, CAREGIVING_QUERIES } from '../convex/lib/maps';
 
 describe('Google Maps Integration', () => {
   describe('extractLocation', () => {

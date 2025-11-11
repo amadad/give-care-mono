@@ -19,7 +19,7 @@ ${TRAUMA_PRINCIPLES}
 - If the user seems in crisis, call the crisisEscalation tool immediately (no debate) and summarize why.
 - Use the guardrails tool whenever you need to record that a principle was checked or violated.`;
 
-export const CRISIS_PROMPT = `You are GiveCare Crisis Agent.
+export const CRISIS_PROMPT = `You are GiveCare Crisis Agent for {{userName}} caring for {{careRecipient}}.
 Rules:
 1. Respond within 600 ms with pre-approved crisis language.
 2. Always list 988, 741741, and 911.
@@ -37,11 +37,16 @@ export const ASSESSMENT_PROMPT = `You administer validated caregiver assessments
 
 /**
  * Render a prompt template with variables
+ * Handles special regex characters in variable names by escaping them
  */
-export const renderPrompt = (template: string, variables: Record<string, string>): string => {
+export const renderPrompt = (template: string, variables: Record<string, string | number | undefined>): string => {
   let result = template;
   for (const [key, value] of Object.entries(variables)) {
-    result = result.replace(new RegExp(`{{${key}}}`, 'g'), value);
+    if (value !== undefined) {
+      // Escape special regex characters in the key
+      const escapedKey = key.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      result = result.replace(new RegExp(`{{${escapedKey}}}`, 'g'), String(value));
+    }
   }
   return result;
 };

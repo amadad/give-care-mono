@@ -9,9 +9,13 @@ export const modules = import.meta.glob("./**/*.*s");
 
 export function initConvexTest() {
   const t = convexTest(schema, modules);
-  agent.register(t);
-  // workflow component doesn't have register method
-  rateLimiter.register(t);
+
+  // Register components with explicit names matching convex.config.ts
+  // Note: This works for regular Vitest tests but NOT for Evalite (isolated environment)
+  agent.register(t, "agent");
+  t.registerComponent("workflow", workflow.schema, workflow.modules);
+  rateLimiter.register(t, "rateLimiter");
+
   return t;
 }
 

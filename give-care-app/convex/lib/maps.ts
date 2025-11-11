@@ -14,6 +14,61 @@
 import { GoogleGenAI } from '@google/genai';
 import { MapsGroundingMetadata, MapsGroundingChunk, ResourceResult } from './types';
 
+// ============================================================================
+// LOCATION EXTRACTION
+// ============================================================================
+
+export interface LocationData {
+  zipCode?: string;
+  address?: string;
+  latitude?: number;
+  longitude?: number;
+}
+
+/**
+ * Extract location data from user metadata
+ */
+export function extractLocation(metadata: Record<string, unknown> | undefined): LocationData | null {
+  if (!metadata) return null;
+  
+  const profile = metadata.profile as Record<string, unknown> | undefined;
+  if (!profile) return null;
+
+  const zipCode = profile.zipCode as string | undefined;
+  const address = profile.address as string | undefined;
+  const latitude = profile.latitude as number | undefined;
+  const longitude = profile.longitude as number | undefined;
+
+  // Return empty location object if profile exists but no location data
+  // Return null only if metadata or profile is missing
+  return {
+    zipCode,
+    address,
+    latitude,
+    longitude,
+  };
+}
+
+// ============================================================================
+// CAREGIVING QUERIES
+// ============================================================================
+
+/**
+ * Predefined caregiving resource queries for Google Maps
+ */
+export const CAREGIVING_QUERIES = {
+  respiteCare: 'respite care facilities for family caregivers providing temporary relief',
+  supportGroups: 'caregiver support groups and peer support meetings',
+  adultDayCare: 'adult day care centers and programs for elderly care recipients',
+  homeCare: 'home health care agencies and in-home care services',
+  medicalSupplies: 'medical supply stores and durable medical equipment providers',
+  seniorCenters: 'senior centers and senior community centers with activity programs',
+  mealDelivery: 'meal delivery services for seniors and homebound individuals',
+  transportation: 'medical transportation services and senior ride programs',
+  hospice: 'hospice care facilities and end-of-life care services',
+  memoryCare: 'memory care facilities and Alzheimer\'s disease support services',
+} as const;
+
 /**
  * Convert zip code to approximate lat/lng (US only, rough approximation)
  * For production, use a proper geocoding service
@@ -88,24 +143,50 @@ function buildCaregivingQuery(query: string, category: string, zip: string): str
 /**
  * Extract structured results from Maps Grounding response
  */
-function extractMapsResults(groundingMetadata: MapsGroundingMetadata): ResourceResult[] {
+function extractMapsResults(groundingMetadata: any): ResourceResult[] {
   if (!groundingMetadata?.groundingChunks) {
     return [];
   }
 
   return groundingMetadata.groundingChunks
-    .filter((chunk: MapsGroundingChunk) => chunk.maps)
-    .map((chunk: MapsGroundingChunk, idx: number) => {
+    .filter((chunk: any) => chunk.maps)
+    .map((chunk: any, idx: number) => {
       const maps = chunk.maps;
+      if (!maps) {
+        return {
+          name: `Resource ${idx + 1}`,
+          address: 'Address not available',
+          category: 'caregiving',
+        };
+      }
+
+      // Handle different possible field names from Google Maps API
+      const title = maps.title || maps.name || `Resource ${idx + 1}`;
+      const address = maps.formattedAddress || maps.address || 'Address not available';
+      const rating = typeof maps.rating === 'number' ? maps.rating : undefined;
+      const phone = maps.nationalPhoneNumber || maps.phoneNumber || maps.internationalPhoneNumber || undefined;
+      const placeId = maps.id || maps.placeId;
+      const uri = maps.googleMapsUri || maps.uri;
+
+      // Handle hours - check for different possible structures
+      let hours: string | undefined = undefined;
+      if (maps.regularOpeningHours?.weekdayDescriptions) {
+        hours = maps.regularOpeningHours.weekdayDescriptions.join(', ');
+      } else if (maps.hours?.openNow) {
+        hours = 'Open now';
+      } else if (maps.hours?.weekdayText) {
+        hours = Array.isArray(maps.hours.weekdayText) ? maps.hours.weekdayText.join(', ') : undefined;
+      }
+
       return {
-        name: maps.title || `Resource ${idx + 1}`,
-        address: maps.address || 'Address not available',
-        hours: maps.hours?.openNow ? 'Open now' : maps.hours?.weekdayText?.join(', ') || undefined,
-        rating: typeof maps.rating === 'number' ? maps.rating : undefined,
-        phone: maps.phoneNumber || maps.internationalPhoneNumber || undefined,
+        name: String(title),
+        address: String(address),
+        hours,
+        rating,
+        phone: phone ? String(phone) : undefined,
         category: 'caregiving',
-        placeId: maps.placeId,
-        uri: maps.uri,
+        placeId: placeId ? String(placeId) : undefined,
+        uri: uri ? String(uri) : undefined,
       };
     });
 }
@@ -186,7 +267,7 @@ export async function searchWithMapsGrounding(
       throw new Error('No response candidate from Maps Grounding API');
     }
 
-    const groundingMetadata = candidate.groundingMetadata;
+    const groundingMetadata = candidate.groundingMetadata as any;
     
     if (!groundingMetadata || !groundingMetadata.groundingChunks || groundingMetadata.groundingChunks.length === 0) {
       // ✅ Reduced logging - only log essential info, not full JSON

@@ -6,7 +6,7 @@ export default defineConfig({
     globals: true,
     environment: 'edge-runtime',
     include: ['tests/**/*.test.ts'],
-    exclude: ['node_modules', 'convex/_generated'],
+    exclude: ['node_modules', 'convex/_generated', 'tests/**/*.eval.ts'],
     server: {
       deps: { inline: ['convex-test'] },
     },

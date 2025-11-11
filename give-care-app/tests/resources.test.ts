@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { extractLocation } from '../convex/resources';
+import { extractLocation } from '../convex/lib/maps';
 
 describe('Resource Search', () => {
   describe('Location Validation', () => {

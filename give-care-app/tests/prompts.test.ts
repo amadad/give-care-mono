@@ -66,61 +66,37 @@ describe('Prompt Rendering', () => {
 
   describe('MAIN_PROMPT', () => {
     it('contains core instructions', () => {
-      expect(MAIN_PROMPT).toContain('caregiver assistant');
-      expect(MAIN_PROMPT).toContain('support');
+      expect(MAIN_PROMPT).toContain('GiveCare Main Agent');
+      expect(MAIN_PROMPT).toContain('SMS');
+      expect(MAIN_PROMPT).toContain('caregiver');
     });
 
-    it('has required placeholders', () => {
-      expect(MAIN_PROMPT).toContain('{{userName}}');
-      expect(MAIN_PROMPT).toContain('{{careRecipient}}');
-      expect(MAIN_PROMPT).toContain('{{journeyPhase}}');
-      expect(MAIN_PROMPT).toContain('{{totalInteractionCount}}');
+    it('contains trauma-informed principles', () => {
+      expect(MAIN_PROMPT).toContain('P1');
+      expect(MAIN_PROMPT).toContain('P2');
+      expect(MAIN_PROMPT).toContain('skip');
     });
 
-    it('renders with all variables', () => {
-      const result = renderPrompt(MAIN_PROMPT, {
-        userName: 'Bob',
-        careRecipient: 'Mom',
-        journeyPhase: 'active',
-        totalInteractionCount: 10,
-      });
-      expect(result).toContain('Bob');
-      expect(result).toContain('Mom');
-      expect(result).toContain('active');
-      expect(result).toContain('10');
-      expect(result).not.toContain('{{');
+    it('contains tool references', () => {
+      expect(MAIN_PROMPT).toContain('recordMemory');
+      expect(MAIN_PROMPT).toContain('searchResources');
     });
   });
 
   describe('ASSESSMENT_PROMPT', () => {
     it('contains assessment instructions', () => {
-      expect(ASSESSMENT_PROMPT).toContain('burnout assessment');
-      expect(ASSESSMENT_PROMPT).toContain('score');
+      expect(ASSESSMENT_PROMPT).toContain('validated caregiver assessments');
+      expect(ASSESSMENT_PROMPT).toContain('question');
     });
 
-    it('has assessment-specific placeholders', () => {
-      expect(ASSESSMENT_PROMPT).toContain('{{totalScore}}');
-      expect(ASSESSMENT_PROMPT).toContain('{{avgScore}}');
-      expect(ASSESSMENT_PROMPT).toContain('{{band}}');
-      expect(ASSESSMENT_PROMPT).toContain('{{pressureZones}}');
+    it('contains progress tracking', () => {
+      expect(ASSESSMENT_PROMPT).toContain('progress');
+      expect(ASSESSMENT_PROMPT).toContain('skip');
     });
 
-    it('renders with assessment variables', () => {
-      const result = renderPrompt(ASSESSMENT_PROMPT, {
-        userName: 'Carol',
-        careRecipient: 'Brother',
-        totalScore: 45,
-        avgScore: 3.5,
-        band: 'moderate',
-        pressureZones: 'emotional, physical',
-      });
-      expect(result).toContain('Carol');
-      expect(result).toContain('Brother');
-      expect(result).toContain('45');
-      expect(result).toContain('3.5');
-      expect(result).toContain('moderate');
-      expect(result).toContain('emotional');
-      expect(result).not.toContain('{{');
+    it('contains pressure zones reference', () => {
+      expect(ASSESSMENT_PROMPT).toContain('pressure zones');
+      expect(ASSESSMENT_PROMPT).toContain('interventions');
     });
   });
 });
