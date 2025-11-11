@@ -69,6 +69,35 @@ export declare const api: {
     };
   };
   assessments: {
+    answerAssessment: FunctionReference<
+      "mutation",
+      "public",
+      {
+        definition: "ema" | "bsfc" | "reach2" | "sdoh";
+        questionIndex: number;
+        userId: string;
+        value: number;
+      },
+      any
+    >;
+    finalizeAssessment: FunctionReference<
+      "mutation",
+      "public",
+      { definition: "ema" | "bsfc" | "reach2" | "sdoh"; userId: string },
+      any
+    >;
+    getActiveSession: FunctionReference<
+      "query",
+      "public",
+      { definition: "ema" | "bsfc" | "reach2" | "sdoh"; userId: string },
+      any
+    >;
+    getAnyActiveSession: FunctionReference<
+      "query",
+      "public",
+      { userId: string },
+      any
+    >;
     getAssessment: FunctionReference<
       "query",
       "public",
@@ -176,6 +205,18 @@ export declare const internal: {
       >;
     };
   };
+  assessments: {
+    handleInboundAnswer: FunctionReference<
+      "action",
+      "internal",
+      {
+        definition: "ema" | "bsfc" | "reach2" | "sdoh";
+        text: string;
+        userId: string;
+      },
+      any
+    >;
+  };
   inbound: {
     processInbound: FunctionReference<
       "action",
@@ -219,6 +260,19 @@ export declare const internal: {
         locale?: string;
         phone?: string;
       },
+      any
+    >;
+    getActiveSessionInternal: FunctionReference<
+      "query",
+      "internal",
+      { definition: "ema" | "bsfc" | "reach2" | "sdoh"; userId: Id<"users"> },
+      any
+    >;
+    getAllUsers: FunctionReference<"query", "internal", {}, any>;
+    getAssessmentById: FunctionReference<
+      "query",
+      "internal",
+      { assessmentId: Id<"assessments"> },
       any
     >;
     getByExternalIdQuery: FunctionReference<
@@ -317,6 +371,12 @@ export declare const internal: {
       },
       any
     >;
+    processStripeEvent: FunctionReference<
+      "mutation",
+      "internal",
+      { eventId: Id<"billing_events"> },
+      any
+    >;
     recordResourceLookup: FunctionReference<
       "mutation",
       "internal",
@@ -329,10 +389,39 @@ export declare const internal: {
       },
       any
     >;
+    recordStripeEvent: FunctionReference<
+      "mutation",
+      "internal",
+      { data: any; stripeEventId: string; type: string },
+      any
+    >;
+    startAssessmentInternal: FunctionReference<
+      "mutation",
+      "internal",
+      {
+        channel?: "sms" | "web";
+        definition: "ema" | "bsfc" | "reach2" | "sdoh";
+        userId: Id<"users">;
+      },
+      any
+    >;
     updateUserMetadata: FunctionReference<
       "mutation",
       "internal",
       { metadata: any; userId: Id<"users"> },
+      any
+    >;
+  };
+  interventions: {
+    recordInterventionEvent: FunctionReference<
+      "mutation",
+      "internal",
+      {
+        interventionId: string;
+        metadata?: any;
+        status: string;
+        userId: Id<"users">;
+      },
       any
     >;
   };
@@ -346,6 +435,28 @@ export declare const internal: {
     cleanupResourceCache: FunctionReference<"action", "internal", {}, any>;
   };
   workflows: {
+    checkIns: {
+      bumpNextRun: FunctionReference<
+        "mutation",
+        "internal",
+        { nextRun: number; triggerId: Id<"triggers"> },
+        any
+      >;
+      dispatchDue: FunctionReference<"action", "internal", {}, any>;
+      getTrigger: FunctionReference<
+        "query",
+        "internal",
+        { triggerId: Id<"triggers"> },
+        any
+      >;
+      listDueTriggers: FunctionReference<
+        "query",
+        "internal",
+        { now: number },
+        any
+      >;
+      sendEMACheckIn: FunctionReference<"mutation", "internal", any, any>;
+    };
     crisis: {
       checkRecentActivity: FunctionReference<
         "query",
@@ -391,6 +502,34 @@ export declare const internal: {
         any
       >;
     };
+    engagement: {
+      getRecentRuns: FunctionReference<
+        "query",
+        "internal",
+        { days: number; userId: Id<"users"> },
+        any
+      >;
+      monitorEngagement: FunctionReference<"action", "internal", {}, any>;
+    };
+    interventions: {
+      getInterventionsByZonesInternal: FunctionReference<
+        "query",
+        "internal",
+        {
+          limit?: number;
+          minEvidenceLevel?: "high" | "moderate" | "low";
+          zones: Array<string>;
+        },
+        any
+      >;
+      suggestInterventions: FunctionReference<"mutation", "internal", any, any>;
+      userPrefs: FunctionReference<
+        "query",
+        "internal",
+        { userId: Id<"users"> },
+        any
+      >;
+    };
     memory: {
       enrichMemory: FunctionReference<"mutation", "internal", any, any>;
     };
@@ -424,6 +563,23 @@ export declare const internal: {
     };
     resources: {
       refresh: FunctionReference<"mutation", "internal", any, any>;
+    };
+    scheduling: {
+      updateCheckInSchedule: FunctionReference<
+        "mutation",
+        "internal",
+        { userId: Id<"users"> },
+        any
+      >;
+    };
+    trends: {
+      detectScoreTrends: FunctionReference<"action", "internal", {}, any>;
+      getUserScores: FunctionReference<
+        "query",
+        "internal",
+        { userId: Id<"users"> },
+        any
+      >;
     };
   };
 };

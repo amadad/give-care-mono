@@ -14,9 +14,9 @@ import { internalAction } from '../_generated/server';
 import { internal, components } from '../_generated/api';
 import { v } from 'convex/values';
 import { Agent, saveMessage } from '@convex-dev/agent';
-import { google } from '@ai-sdk/google';
-import { openai } from '@ai-sdk/openai';
 import { WorkflowManager } from '@convex-dev/workflow';
+import { LANGUAGE_MODELS, EMBEDDING_MODELS } from '../lib/models';
+import { ensureAgentThread } from '../lib/agentHelpers';
 import { CRISIS_PROMPT } from '../lib/prompts';
 import { crisisResponse } from '../lib/policy';
 import { agentContextValidator, channelValidator } from '../lib/validators';
@@ -29,8 +29,8 @@ const workflow = new WorkflowManager(components.workflow);
 
 export const crisisAgent = new Agent(components.agent, {
   name: 'Crisis Support',
-  languageModel: google('gemini-2.5-flash-lite'), // Fastest model for crisis response
-  textEmbeddingModel: openai.embedding('text-embedding-3-small'), // Keep OpenAI embeddings
+  languageModel: LANGUAGE_MODELS.crisis,
+  textEmbeddingModel: EMBEDDING_MODELS.default,
   instructions: CRISIS_PROMPT,
   maxSteps: 1, // No tools - prioritize speed
 });
@@ -69,43 +69,13 @@ export const runCrisisAgent = internalAction({
     const userName = (profile.firstName as string) ?? 'friend';
 
     try {
-      // Priority 3: Use listThreads() instead of manual threadId storage
-      let thread;
-      let newThreadId: string;
-
-      if (threadId) {
-        // Continue existing thread
-        const threadResult = await crisisAgent.continueThread(ctx, {
-          threadId,
-          userId: context.userId,
-        });
-        thread = threadResult.thread;
-        newThreadId = threadId;
-      } else {
-        // Find existing thread or create new one
-        const existingThreadsResult = await ctx.runQuery(components.agent.threads.listThreadsByUserId, {
-          userId: context.userId,
-          paginationOpts: { cursor: null, numItems: 1 },
-          order: 'desc', // Most recent first
-        });
-
-        if (existingThreadsResult && existingThreadsResult.page && existingThreadsResult.page.length > 0) {
-          // Use most recent thread
-          const threadResult = await crisisAgent.continueThread(ctx, {
-            threadId: existingThreadsResult.page[0]._id,
-            userId: context.userId,
-          });
-          thread = threadResult.thread;
-          newThreadId = existingThreadsResult.page[0]._id;
-        } else {
-          // Create new thread
-          const threadResult = await crisisAgent.createThread(ctx, {
-            userId: context.userId,
-          });
-          thread = threadResult.thread;
-          newThreadId = threadResult.threadId;
-        }
-      }
+      // Get or create thread using shared helper
+      const { thread, threadId: newThreadId } = await ensureAgentThread(
+        ctx,
+        crisisAgent,
+        context.userId,
+        threadId
+      );
 
       // Priority 1: Save user message first (for idempotency)
       const { messageId } = await saveMessage(ctx, components.agent, {

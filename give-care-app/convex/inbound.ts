@@ -55,6 +55,31 @@ export const processInbound = internalAction({
       phone: args.phone,
     });
 
+    // Fast-path: Check for active assessment session and numeric/skip replies
+    const active = await ctx.runQuery(api.assessments.getAnyActiveSession, {
+      userId: user.externalId,
+    });
+
+    const maybeNumeric = /^\s*([1-5])\s*$/.test(args.text) || /^skip$/i.test(args.text);
+
+    if (active && maybeNumeric) {
+      // Fast-path: Process assessment answer directly
+      const result = await ctx.runAction(internal.assessments.handleInboundAnswer, {
+        userId: user.externalId,
+        definition: active.definitionId as any,
+        text: args.text,
+      });
+
+      if (result?.text) {
+        await ctx.runAction(internal.inbound.sendSmsResponse, {
+          to: args.phone,
+          text: result.text,
+          userId: user.externalId,
+        });
+        return { success: true, response: result, fastPath: true };
+      }
+    }
+
     // Detect crisis keywords
     const crisisDetection = detectCrisis(args.text);
     

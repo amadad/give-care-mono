@@ -6,6 +6,7 @@ import { internal, components } from './_generated/api';
 import { searchWithMapsGrounding } from './lib/maps';
 import { MS_PER_DAY, RACE_TIMEOUT_MS } from './lib/constants';
 import { WorkflowManager } from '@convex-dev/workflow';
+import type { ResourceResult } from './lib/types';
 
 const workflow = new WorkflowManager(components.workflow);
 
@@ -106,9 +107,23 @@ const resolveZipFromMetadata = (metadata: Record<string, unknown> | undefined): 
   const direct = metadata.zip as string | undefined;
   if (direct) return direct;
   const nestedProfile = metadata.profile as Record<string, unknown> | undefined;
-  if (nestedProfile?.zipCode) return String(nestedProfile.zipCode);
+  if (nestedProfile?.zipCode && (typeof nestedProfile.zipCode === 'string' || typeof nestedProfile.zipCode === 'number')) {
+    return String(nestedProfile.zipCode);
+  }
   return metadata.zipCode as string | undefined;
 };
+
+// Return type for resource search action
+type ResourceSearchResult =
+  | { error: string; message?: string; suggestion?: string }
+  | {
+      resources: string;
+      sources: ResourceResult[];
+      widgetToken: string;
+      cached: boolean;
+      expiresAt?: number;
+      stale?: boolean;
+    };
 
 export const searchResources = action({
   args: {
@@ -154,8 +169,28 @@ export const searchResources = action({
       zip: resolvedZip,
     });
 
-    // Stale-while-revalidate: Return expired cache immediately if available
-    // This prevents blocking while Maps Grounding refreshes in background
+    /**
+     * STALE-WHILE-REVALIDATE (SWR) CACHING PATTERN
+     *
+     * Convex docs note: "SWR and periodic invalidation are flawed strategies...
+     * only for loose consistency expectations."
+     *
+     * WHY THIS IS ACCEPTABLE HERE:
+     * - Resource data (local services) changes infrequently (weekly/monthly)
+     * - Stale data is better than slow responses for user experience
+     * - Maps Grounding API can be slow (>2s), we need <500ms response time
+     * - Category-based TTLs match data volatility (support groups: 7d, respite: 30d)
+     *
+     * IMPLEMENTATION:
+     * 1. Valid cache (< TTL): Return immediately
+     * 2. Stale cache (> TTL): Return immediately + refresh in background via workflow
+     * 3. No cache: Race Maps API (1.5s) vs stub fallback, return winner
+     *
+     * This provides:
+     * - Fast responses (<500ms) via cache or stub
+     * - Eventual freshness via background refresh
+     * - Graceful degradation when Maps API is slow/unavailable
+     */
     const isCacheValid = cache && cache.expiresAt && cache.expiresAt > now;
     const hasStaleCache = cache && cache.results && cache.results.length > 0;
 

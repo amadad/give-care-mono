@@ -46,13 +46,24 @@ http.route({
         return new Response('Invalid signature', { status: 403 });
       }
 
-      // Process verified event (billing.ts will be created later)
-      // await ctx.runMutation(api.billing.applyStripeEvent, {
-      //   id: event.id,
-      //   type: event.type,
-      //   payload: event as unknown as Record<string, unknown>,
-      // });
+      // Record event with idempotency check and schedule async processing
+      const { eventId, duplicate } = await ctx.runMutation(
+        internal.internal.recordStripeEvent,
+        {
+          stripeEventId: event.id,
+          type: event.type,
+          data: event as unknown as Record<string, unknown>,
+        }
+      );
 
+      // Schedule async processing (only if not duplicate)
+      if (!duplicate) {
+        await ctx.scheduler.runAfter(0, internal.internal.processStripeEvent, {
+          eventId,
+        });
+      }
+
+      // Return 200 immediately (Convex best practice for webhooks)
       return new Response(JSON.stringify({ received: true }), {
         status: 200,
         headers: { 'Content-Type': 'application/json' },

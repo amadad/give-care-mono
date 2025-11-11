@@ -46,8 +46,6 @@ find . -name "*.ts" -exec grep "export" {} \;
 - ✅ `npx convex dev` (dev deployment)
 - ❌ `npx convex deploy --prod` (flag doesn't exist)
 
-**Note**: give-care-app uses static API generation (`staticApi` + `staticDataModel` in `convex.json`) for performance. Deploy with `--typecheck=disable` due to TypeScript compiler memory limits on large projects.
-
 ## Monorepo Structure
 
 AI-powered SMS caregiving platform (pnpm workspace)

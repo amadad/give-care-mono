@@ -1,4 +1,4 @@
-import { query } from './_generated/server';
+import { query, internalMutation } from './_generated/server';
 import { v } from 'convex/values';
 import { DataModel, Id } from './_generated/dataModel';
 
@@ -94,6 +94,30 @@ export const getByZones = query({
       .map(({ overlapCount: _overlap, ...rest }) => rest);
 
     return scored;
+  },
+});
+
+// ============================================================================
+// INTERVENTION PREFERENCES
+// ============================================================================
+
+/**
+ * Record intervention event (tried, liked, disliked, helpful, not_helpful)
+ */
+export const recordInterventionEvent = internalMutation({
+  args: {
+    userId: v.id('users'),
+    interventionId: v.string(),
+    status: v.string(), // 'tried' | 'liked' | 'disliked' | 'helpful' | 'not_helpful'
+    metadata: v.optional(v.any()),
+  },
+  handler: async (ctx, args) => {
+    await ctx.db.insert('intervention_events', {
+      userId: args.userId,
+      interventionId: args.interventionId,
+      status: args.status,
+      metadata: args.metadata,
+    });
   },
 });
 

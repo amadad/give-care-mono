@@ -96,6 +96,67 @@ export const updateUserMetadata = internalMutation({
   },
 });
 
+export const getAllUsers = internalQuery({
+  args: {},
+  handler: async (ctx) => {
+    return await ctx.db.query('users').collect();
+  },
+});
+
+export const getAssessmentById = internalQuery({
+  args: { assessmentId: v.id('assessments') },
+  handler: async (ctx, { assessmentId }) => {
+    return await ctx.db.get(assessmentId);
+  },
+});
+
+export const getActiveSessionInternal = internalQuery({
+  args: {
+    userId: v.id('users'),
+    definition: v.union(v.literal('ema'), v.literal('bsfc'), v.literal('reach2'), v.literal('sdoh')),
+  },
+  handler: async (ctx, { userId, definition }) => {
+    return await ctx.db
+      .query('assessment_sessions')
+      .withIndex('by_user_definition', (q) => q.eq('userId', userId).eq('definitionId', definition))
+      .filter((q) => q.eq(q.field('status'), 'active'))
+      .order('desc')
+      .first();
+  },
+});
+
+export const startAssessmentInternal = internalMutation({
+  args: {
+    userId: v.id('users'),
+    definition: v.union(v.literal('ema'), v.literal('bsfc'), v.literal('reach2'), v.literal('sdoh')),
+    channel: v.optional(v.union(v.literal('sms'), v.literal('web'))),
+  },
+  handler: async (ctx, { userId, definition, channel }) => {
+    // Close existing active sessions
+    const existingSessions = await ctx.db
+      .query('assessment_sessions')
+      .withIndex('by_user_definition', (q) => q.eq('userId', userId).eq('definitionId', definition))
+      .filter((q) => q.eq(q.field('status'), 'active'))
+      .take(10);
+
+    for (const session of existingSessions) {
+      await ctx.db.patch(session._id, { status: 'completed' });
+    }
+
+    // Create new assessment session
+    const sessionId = await ctx.db.insert('assessment_sessions', {
+      userId,
+      definitionId: definition,
+      channel: channel ?? 'sms',
+      questionIndex: 0,
+      answers: [],
+      status: 'active',
+    });
+
+    return sessionId;
+  },
+});
+
 export const getUserById = internalQuery({
   args: {
     userId: v.id('users'),
@@ -220,6 +281,76 @@ export const handleIncomingMessage = internalMutation({
       text: message.body,
       messageSid: message.sid,
     });
+  },
+});
+
+// ============================================================================
+// STRIPE WEBHOOK PROCESSING
+// ============================================================================
+
+/**
+ * Record Stripe webhook event (idempotent)
+ * Called from HTTP handler to persist event, then schedule async processing
+ */
+export const recordStripeEvent = internalMutation({
+  args: {
+    stripeEventId: v.string(),
+    type: v.string(),
+    data: v.any(),
+  },
+  handler: async (ctx, { stripeEventId, type, data }) => {
+    // Check if already processed (idempotency)
+    const existing = await ctx.db
+      .query('billing_events')
+      .withIndex('by_event', (q) => q.eq('stripeEventId', stripeEventId))
+      .first();
+
+    if (existing) {
+      console.log(`[stripe] Event ${stripeEventId} already recorded`);
+      return { eventId: existing._id, duplicate: true };
+    }
+
+    // Insert new event
+    const eventId = await ctx.db.insert('billing_events', {
+      stripeEventId,
+      type,
+      data,
+      userId: undefined, // Will be populated during processing if applicable
+    });
+
+    console.log(`[stripe] Recorded event ${stripeEventId} (type: ${type})`);
+    return { eventId, duplicate: false };
+  },
+});
+
+/**
+ * Process Stripe webhook event asynchronously
+ * Handles different event types (subscriptions, payments, etc.)
+ */
+export const processStripeEvent = internalMutation({
+  args: {
+    eventId: v.id('billing_events'),
+  },
+  handler: async (ctx, { eventId }) => {
+    const event = await ctx.db.get(eventId);
+    if (!event) {
+      console.error(`[stripe] Event ${eventId} not found`);
+      return;
+    }
+
+    console.log(`[stripe] Processing event ${event.stripeEventId} (type: ${event.type})`);
+
+    // TODO: Implement event-specific handling based on event.type
+    // Examples:
+    // - customer.subscription.created
+    // - customer.subscription.updated
+    // - customer.subscription.deleted
+    // - invoice.payment_succeeded
+    // - invoice.payment_failed
+    // - checkout.session.completed
+
+    // For now, just log that processing would happen here
+    console.log(`[stripe] Event processing not yet implemented for type: ${event.type}`);
   },
 });
 

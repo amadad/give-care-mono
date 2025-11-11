@@ -12,11 +12,20 @@ export type AssessmentCatalogEntry = {
   items: Array<{ id: number; text: string; weight?: number }>;
   length: number;
   cooldownMs: number;
+  zoneBuckets?: Record<string, number[]>;
   score: (_answers: AssessmentAnswer[]) => {
     score: number;
     band: string;
     pressureZones: string[];
   };
+};
+
+export type ScoreDetails = {
+  composite: number;                // 0-100
+  band: string;                     // very_low | low | moderate | high
+  pressureZones: string[];          // as today
+  zoneAverages: Record<string, number>; // per zone (e.g., emotional: 3.8)
+  confidence: number;               // 0..1 based on answered/length
 };
 
 const clampLikert = (value: number) => Math.min(5, Math.max(1, value));
@@ -65,6 +74,7 @@ const createCatalogEntry = (
   items: questions.map((text, idx) => ({ id: idx, text })),
   length: questions.length,
   cooldownMs: cooldownDays * DAY_MS,
+  zoneBuckets,
   score: (answers: AssessmentAnswer[]) => {
     const { totals, count } = sumScores(answers, zoneBuckets);
     const averages: Record<string, number> = {};
@@ -207,4 +217,40 @@ export const CATALOG: Record<AssessmentSlug, AssessmentCatalogEntry> = {
     })
   ),
 };
+
+/**
+ * Compute score with detailed zone averages and confidence
+ * Used for creating scores table records
+ */
+export function scoreWithDetails(
+  definition: AssessmentSlug,
+  answers: AssessmentAnswer[]
+): ScoreDetails {
+  const catalog = CATALOG[definition];
+  const { score, band, pressureZones } = catalog.score(answers);
+  
+  // Compute zone averages (reuse existing sumScores logic)
+  const buckets = catalog.zoneBuckets || {};
+  const { totals, count } = sumScores(answers, buckets);
+  const zoneAverages: Record<string, number> = {};
+  
+  for (const zone of Object.keys(buckets)) {
+    if (!count[zone]) {
+      zoneAverages[zone] = 0;
+      continue;
+    }
+    zoneAverages[zone] = totals[zone] / count[zone];
+  }
+  
+  // Confidence based on answered questions vs total
+  const confidence = answers.length / catalog.length;
+  
+  return {
+    composite: score,
+    band,
+    pressureZones,
+    zoneAverages,
+    confidence: Math.min(1, Math.max(0, confidence)),
+  };
+}
 

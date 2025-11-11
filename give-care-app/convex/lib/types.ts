@@ -34,6 +34,7 @@ export interface UserProfile {
   firstName?: string;
   relationship?: string;
   careRecipientName?: string;
+  zipCode?: string; // ZIP code for finding local resources (contextually collected)
   [key: string]: unknown;
 }
 
@@ -70,4 +71,16 @@ export interface ResourceResult {
   category: string;
   placeId?: string;
   uri?: string;
+}
+
+// Tool Context Types
+// Agent Component tools receive a context with metadata at runtime
+// This type extends the base context with the runtime metadata property
+export interface AgentToolContext {
+  userId: string;
+  metadata?: {
+    context?: {
+      metadata?: AgentMetadata;
+    };
+  };
 }

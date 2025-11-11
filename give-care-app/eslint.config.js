@@ -8,11 +8,14 @@ export default tseslint.config(
   {
     ignores: [
       "dist",
+      "_archive",
+      "tests",
       "eslint.config.js",
       "convex/_generated",
       "postcss.config.js",
       "tailwind.config.js",
       "vite.config.ts",
+      "vitest.config.ts",
     ],
   },
   {
@@ -29,8 +32,7 @@ export default tseslint.config(
       },
       parserOptions: {
         project: [
-          "./tsconfig.node.json",
-          "./tsconfig.app.json",
+          "./tsconfig.json",
           "./convex/tsconfig.json",
         ],
         tsconfigRootDir: import.meta.dirname,

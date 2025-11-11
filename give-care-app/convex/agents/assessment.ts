@@ -8,11 +8,11 @@
  */
 
 import { action } from '../_generated/server';
-import { internal, components } from '../_generated/api';
+import { internal, components, api } from '../_generated/api';
 import { v } from 'convex/values';
 import { Agent, saveMessage } from '@convex-dev/agent';
-import { google } from '@ai-sdk/google';
-import { openai } from '@ai-sdk/openai';
+import { LANGUAGE_MODELS, EMBEDDING_MODELS } from '../lib/models';
+import { ensureAgentThread } from '../lib/agentHelpers';
 import { ASSESSMENT_PROMPT, renderPrompt } from '../lib/prompts';
 import { agentContextValidator, channelValidator } from '../lib/validators';
 import { getInterventions } from '../tools/getInterventions';
@@ -23,8 +23,8 @@ import { getInterventions } from '../tools/getInterventions';
 
 export const assessmentAgent = new Agent(components.agent, {
   name: 'Assessment Specialist',
-  languageModel: google('gemini-2.5-flash-lite'), // Fastest model for speed
-  textEmbeddingModel: openai.embedding('text-embedding-3-small'), // Keep OpenAI embeddings
+  languageModel: LANGUAGE_MODELS.assessment,
+  textEmbeddingModel: EMBEDDING_MODELS.default,
   instructions: ASSESSMENT_PROMPT,
   tools: { getInterventions },
   maxSteps: 2,
@@ -48,10 +48,40 @@ export const runAssessmentAgent = action({
     const startTime = Date.now();
 
     try {
+      // Get metadata for profile info (keep profile in metadata for now)
       const metadata = (context.metadata ?? {}) as Record<string, unknown>;
-      const answers = (metadata.assessmentAnswers as number[]) ?? [];
+      const profile = (metadata.profile as Record<string, unknown> | undefined) ?? {};
+      const userName = (profile.firstName as string) ?? 'caregiver';
+      const careRecipient = (profile.careRecipientName as string) ?? 'your loved one';
 
-      if (answers.length === 0) {
+      // Get active assessment session from DB (single source of truth)
+      const assessmentDefinition = (metadata.assessmentDefinitionId as string) ?? 'bsfc';
+      const session = await ctx.runQuery(api.assessments.getActiveSession, {
+        userId: context.userId,
+        definition: assessmentDefinition as any,
+      });
+
+      // Phase 3.10: Q&A Flow - If active session, guide through questions
+      if (session && session.status === 'active') {
+        const catalog = await import('../lib/assessmentCatalog').then((m) => m.CATALOG);
+        const assessmentCatalog = catalog[session.definitionId as 'ema' | 'bsfc' | 'reach2' | 'sdoh'];
+        const currentIndex = session.questionIndex ?? 0;
+
+        // If not finished, ask next question
+        if (currentIndex < assessmentCatalog.length) {
+          const question = assessmentCatalog.items[currentIndex];
+          const total = assessmentCatalog.length;
+          const questionText = `(${currentIndex + 1} of ${total}) ${question.text} (Reply "skip" to move on)`;
+
+          return {
+            text: questionText,
+            latencyMs: Date.now() - startTime,
+          };
+        }
+      }
+
+      // If no active session or session completed, interpret results
+      if (!session || session.answers.length === 0) {
         const errorMessage = 'No assessment answers found. Please complete an assessment first.';
         return {
           text: errorMessage,
@@ -59,59 +89,25 @@ export const runAssessmentAgent = action({
         };
       }
 
-      const profile = (metadata.profile as Record<string, unknown> | undefined) ?? {};
-      const userName = (profile.firstName as string) ?? 'caregiver';
-      const careRecipient = (profile.careRecipientName as string) ?? 'your loved one';
-      const assessmentName = (metadata.assessmentDefinitionId as string) ?? 'burnout assessment';
-      const questionNumber = String(answers.length);
-      const responsesCount = String(answers.length);
+      const questionNumber = String(session.answers.length);
+      const responsesCount = String(session.answers.length);
 
       const systemPrompt = renderPrompt(ASSESSMENT_PROMPT, {
         userName,
         careRecipient,
-        assessmentName,
-        assessmentType: assessmentName,
+        assessmentName: session.definitionId,
+        assessmentType: session.definitionId,
         questionNumber,
         responsesCount,
       });
 
-      // Priority 3: Use listThreads() instead of manual threadId storage
-      let thread;
-      let newThreadId: string;
-
-      if (threadId) {
-        // Continue existing thread
-        const threadResult = await assessmentAgent.continueThread(ctx, {
-          threadId,
-          userId: context.userId,
-        });
-        thread = threadResult.thread;
-        newThreadId = threadId;
-      } else {
-        // Find existing thread or create new one
-        const existingThreadsResult = await ctx.runQuery(components.agent.threads.listThreadsByUserId, {
-          userId: context.userId,
-          paginationOpts: { cursor: null, numItems: 1 },
-          order: 'desc', // Most recent first
-        });
-
-        if (existingThreadsResult && existingThreadsResult.page && existingThreadsResult.page.length > 0) {
-          // Use most recent thread
-          const threadResult = await assessmentAgent.continueThread(ctx, {
-            threadId: existingThreadsResult.page[0]._id,
-            userId: context.userId,
-          });
-          thread = threadResult.thread;
-          newThreadId = existingThreadsResult.page[0]._id;
-        } else {
-          // Create new thread
-          const threadResult = await assessmentAgent.createThread(ctx, {
-            userId: context.userId,
-          });
-          thread = threadResult.thread;
-          newThreadId = threadResult.threadId;
-        }
-      }
+      // Get or create thread using shared helper
+      const { thread, threadId: newThreadId } = await ensureAgentThread(
+        ctx,
+        assessmentAgent,
+        context.userId,
+        threadId
+      );
 
       const promptText = input.text || 'Please interpret my burnout assessment results and suggest interventions.';
 
@@ -125,7 +121,6 @@ export const runAssessmentAgent = action({
       const result = await thread.generateText({
         promptMessageId: messageId, // Reference saved message
         system: systemPrompt,
-        // @ts-expect-error - contextOptions not in types yet but supported per docs
         contextOptions: {
           // Built-in semantic search for assessment context
           searchOtherThreads: true,
@@ -201,4 +196,3 @@ export const runAssessmentAgent = action({
     }
   },
 });
-

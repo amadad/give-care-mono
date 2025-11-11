@@ -9,9 +9,9 @@
 import { internalAction } from '../_generated/server';
 import { internal, api } from '../_generated/api';
 import { v } from 'convex/values';
-import { google } from '@ai-sdk/google';
 import { generateObject, generateText } from 'ai';
 import { z } from 'zod';
+import { LANGUAGE_MODELS } from '../lib/models';
 import { FACT_EXTRACTION_TIMEOUT_MS, CONTEXT_BUILDING_TIMEOUT_MS, DEFAULT_MEMORY_LIMIT } from '../lib/constants';
 
 // ============================================================================
@@ -41,7 +41,7 @@ export const extractFacts = internalAction({
       });
 
       const extractionPromise = generateObject({
-        model: google('gemini-2.5-flash-lite'), // Fastest model for extraction
+        model: LANGUAGE_MODELS.memory,
         prompt: `Extract important long-term facts about this caregiver from the conversation below.
 Focus on:
 - Care recipient details (name, condition, relationship) - use 'family_health'
@@ -110,7 +110,7 @@ export const buildContext = internalAction({
       });
 
       const generationPromise = generateText({
-        model: google('gemini-2.5-flash-lite'), // Fastest model for context building
+        model: LANGUAGE_MODELS.memory,
         prompt: `Summarize these caregiver facts into a concise context paragraph (max 150 words) for use in future conversations:
 
 ${memoriesText}

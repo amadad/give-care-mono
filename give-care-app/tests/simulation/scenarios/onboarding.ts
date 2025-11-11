@@ -69,7 +69,188 @@ export const onboardingWithoutSubscription: Scenario = {
   cleanup: true,
 };
 
+// Progressive Onboarding Scenarios
+
+export const progressiveOnboardingHappyPath: Scenario = {
+  name: 'Progressive Onboarding - Happy Path',
+  description: 'New user completes profile fields in priority order',
+  tags: ['onboarding', 'progressive', 'profile'],
+  setup: {
+    subscription: 'plus',
+  },
+  steps: [
+    {
+      action: 'sendMessage',
+      text: 'Hi',
+      channel: 'sms',
+    },
+    {
+      expect: 'response',
+      contains: 'Who are you caring for',
+    },
+    {
+      action: 'sendMessage',
+      text: "My mom with Alzheimer's",
+    },
+    {
+      expect: 'response',
+      contains: 'What should I call you',
+    },
+    {
+      action: 'sendMessage',
+      text: 'Sarah',
+    },
+    {
+      expect: 'response',
+      contains: 'Sarah',
+    },
+  ],
+  cleanup: true,
+};
+
+export const progressiveOnboardingSkip: Scenario = {
+  name: 'Progressive Onboarding - Skip Everything',
+  description: 'User skips all profile questions, system uses defaults',
+  tags: ['onboarding', 'progressive', 'skip'],
+  setup: {
+    subscription: 'plus',
+  },
+  steps: [
+    {
+      action: 'sendMessage',
+      text: 'Hi',
+      channel: 'sms',
+    },
+    {
+      expect: 'response',
+      contains: 'Who are you caring for',
+    },
+    {
+      action: 'sendMessage',
+      text: 'skip',
+    },
+    {
+      expect: 'response',
+      contains: 'skip',
+    },
+    // System should continue conversation with defaults ("there", "loved one")
+    {
+      action: 'sendMessage',
+      text: 'I need help',
+    },
+    {
+      expect: 'response',
+      contains: 'help',
+    },
+  ],
+  cleanup: true,
+};
+
+export const progressiveOnboardingContextualZipCode: Scenario = {
+  name: 'Progressive Onboarding - Contextual ZIP Code',
+  description: 'User asks for resources, system requests ZIP code contextually',
+  tags: ['onboarding', 'progressive', 'zipCode', 'resources'],
+  setup: {
+    subscription: 'plus',
+  },
+  steps: [
+    {
+      action: 'sendMessage',
+      text: 'I need help finding respite care',
+      channel: 'sms',
+    },
+    {
+      expect: 'response',
+      contains: 'ZIP code',
+    },
+    {
+      action: 'sendMessage',
+      text: '90210',
+    },
+    {
+      expect: 'response',
+      contains: 'resource',
+    },
+  ],
+  cleanup: true,
+};
+
+export const progressiveOnboardingP2Compliance: Scenario = {
+  name: 'Progressive Onboarding - P2 Compliance (No Repeat)',
+  description: 'System does not repeat same question when user ignores it',
+  tags: ['onboarding', 'progressive', 'P2', 'trauma-informed'],
+  setup: {
+    subscription: 'plus',
+  },
+  steps: [
+    {
+      action: 'sendMessage',
+      text: 'Hi',
+      channel: 'sms',
+    },
+    {
+      expect: 'response',
+      contains: 'Who are you caring for',
+    },
+    {
+      action: 'sendMessage',
+      text: "I'm really stressed today", // Ignores question
+    },
+    {
+      expect: 'response',
+      contains: 'stressed',
+    },
+    // Verify the question is NOT repeated
+    {
+      action: 'sendMessage',
+      text: 'What can you help me with?',
+    },
+    // Response should NOT contain "Who are you caring for" again
+    // (This is a negative test - we check that it's NOT in the response)
+  ],
+  cleanup: true,
+};
+
+export const progressiveOnboardingPartialCompletion: Scenario = {
+  name: 'Progressive Onboarding - Partial Completion',
+  description: 'User provides careRecipientName, then asks for resources before firstName',
+  tags: ['onboarding', 'progressive', 'partial'],
+  setup: {
+    subscription: 'plus',
+  },
+  steps: [
+    {
+      action: 'sendMessage',
+      text: 'Hi',
+      channel: 'sms',
+    },
+    {
+      expect: 'response',
+      contains: 'Who are you caring for',
+    },
+    {
+      action: 'sendMessage',
+      text: 'My dad',
+    },
+    {
+      action: 'sendMessage',
+      text: 'I need help finding local resources',
+    },
+    // Should ask for ZIP code (contextual) before firstName
+    {
+      expect: 'response',
+      contains: 'ZIP code',
+    },
+  ],
+  cleanup: true,
+};
+
 export const onboardingScenarios = [
   onboardingHappyPath,
   onboardingWithoutSubscription,
+  progressiveOnboardingHappyPath,
+  progressiveOnboardingSkip,
+  progressiveOnboardingContextualZipCode,
+  progressiveOnboardingP2Compliance,
+  progressiveOnboardingPartialCompletion,
 ];

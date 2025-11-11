@@ -14,12 +14,13 @@ import { action } from '../_generated/server';
 import { internal, components, api } from '../_generated/api';
 import { v } from 'convex/values';
 import { Agent, saveMessage } from '@convex-dev/agent';
-import { google } from '@ai-sdk/google';
-import { openai } from '@ai-sdk/openai';
 import { WorkflowManager } from '@convex-dev/workflow';
+import { LANGUAGE_MODELS, EMBEDDING_MODELS } from '../lib/models';
+import { ensureAgentThread } from '../lib/agentHelpers';
 import { MAIN_PROMPT, renderPrompt } from '../lib/prompts';
 import { getTone } from '../lib/policy';
-import { extractProfileVariables, buildWellnessInfo } from '../lib/profile';
+import { extractProfileVariables, buildWellnessInfo, getNextMissingField } from '../lib/profile';
+import type { UserProfile } from '../lib/types';
 import { agentContextValidator, channelValidator } from '../lib/validators';
 import { searchResources } from '../tools/searchResources';
 import { recordMemory } from '../tools/recordMemory';
@@ -27,6 +28,7 @@ import { checkWellnessStatus } from '../tools/checkWellnessStatus';
 import { findInterventions } from '../tools/findInterventions';
 import { updateProfile } from '../tools/updateProfile';
 import { startAssessment } from '../tools/startAssessment';
+import { trackInterventionPreference } from '../tools/trackInterventionPreference';
 
 const workflow = new WorkflowManager(components.workflow);
 
@@ -36,8 +38,8 @@ const workflow = new WorkflowManager(components.workflow);
 
 export const mainAgent = new Agent(components.agent, {
   name: 'Caregiver Support',
-  languageModel: google('gemini-2.0-flash-lite'), // Stable model, no code execution interference
-  textEmbeddingModel: openai.embedding('text-embedding-3-small'), // Keep OpenAI embeddings (proven, separate from language model)
+  languageModel: LANGUAGE_MODELS.main,
+  textEmbeddingModel: EMBEDDING_MODELS.default,
   instructions: MAIN_PROMPT,
   tools: {
     searchResources,
@@ -46,6 +48,7 @@ export const mainAgent = new Agent(components.agent, {
     find_interventions: findInterventions,
     update_profile: updateProfile,
     start_assessment: startAssessment,
+    track_intervention_preference: trackInterventionPreference,
   },
   maxSteps: 5,
   // No custom contextHandler - use contextOptions in generateText()
@@ -70,12 +73,23 @@ export const runMainAgent = action({
 
     try {
       const metadata = (context.metadata ?? {}) as Record<string, unknown>;
-      const profile = (metadata.profile as Record<string, unknown> | undefined) ?? {};
+      const profile = (metadata.profile as UserProfile | undefined);
 
       const { userName, relationship, careRecipient } = extractProfileVariables(profile);
       const wellnessInfo = buildWellnessInfo(metadata);
       const journeyPhase = (metadata.journeyPhase as string) ?? 'active';
       const totalInteractionCount = String((metadata.totalInteractionCount as number) ?? 0);
+
+      // Progressive onboarding - simple check
+      // Detect if user is asking for local resources (contextual zipCode collection)
+      const needsLocalResources = input.text.match(/(respite|support group|local resource|near me|in my area|find.*near|help.*near)/i);
+      const nextField = getNextMissingField(profile, { needsLocalResources: !!needsLocalResources });
+
+      const missingFieldsSection = nextField
+        ? `\n\nPROFILE GUIDANCE:\n${nextField.prompt}\nCheck recent context - if already asked this session, skip.`
+        : '';
+
+      const profileComplete = nextField === null ? 'true' : 'false';
 
       const basePrompt = renderPrompt(MAIN_PROMPT, {
         userName,
@@ -84,58 +98,32 @@ export const runMainAgent = action({
         journeyPhase,
         totalInteractionCount,
         wellnessInfo,
-        profileComplete: 'true',
-        missingFieldsSection: '',
+        profileComplete,
+        missingFieldsSection,
       });
 
       const tone = getTone(context);
       const systemPrompt = `${basePrompt}\n\n${tone}`;
 
       // Priority 3: Use listThreads() instead of manual threadId storage
-      let thread;
-      let newThreadId: string;
-
-      if (threadId) {
-        // Continue existing thread
-        const threadResult = await mainAgent.continueThread(ctx, {
-          threadId,
-          userId: context.userId,
-        });
-        thread = threadResult.thread;
-        newThreadId = threadId;
-      } else {
-        // Find existing thread or create new one
-        const existingThreadsResult = await ctx.runQuery(components.agent.threads.listThreadsByUserId, {
-          userId: context.userId,
-          paginationOpts: { cursor: null, numItems: 1 },
-          order: 'desc', // Most recent first
-        });
-
-        if (existingThreadsResult && existingThreadsResult.page && existingThreadsResult.page.length > 0) {
-          // Use most recent thread
-          const threadResult = await mainAgent.continueThread(ctx, {
-            threadId: existingThreadsResult.page[0]._id,
-            userId: context.userId,
-          });
-          thread = threadResult.thread;
-          newThreadId = existingThreadsResult.page[0]._id;
-        } else {
-          // Create new thread
-          const threadResult = await mainAgent.createThread(ctx, {
-            userId: context.userId,
-          });
-          thread = threadResult.thread;
-          newThreadId = threadResult.threadId;
-        }
-      }
+      // Get or create thread using shared helper
+      const { thread, threadId: newThreadId } = await ensureAgentThread(
+        ctx,
+        mainAgent,
+        context.userId,
+        threadId
+      );
 
       // SPEED: Short input guard - skip heavy tools for throwaway inputs
+      // BUT: Allow onboarding even for short inputs if profile is incomplete
       const trimmedInput = input.text.trim();
       const isShortInput = trimmedInput.length < 5;
+      const needsOnboarding = nextField !== null;
       
-      if (isShortInput) {
+      if (isShortInput && !needsOnboarding) {
         // Fast path: Return empathetic response + 1 concrete next step
         // No LLM call, no tool calls, no context search
+        // Only use fast path if profile is complete (no onboarding needed)
         const fastResponse = `Hi ${userName}! I'm here to help. 
 
 What's on your mind today? You can ask me about:
@@ -222,7 +210,6 @@ What would be most helpful right now?`;
           thread.generateText({
             promptMessageId: messageId,
             system: systemPrompt,
-            // @ts-expect-error - contextOptions not in types yet but supported per docs
             contextOptions,
             // Let model decide when to use tools (natural conversation flow)
             // Using Gemini 2.0 Flash to avoid code execution interference
@@ -339,9 +326,9 @@ What's most urgent for you today?`;
       console.error('Main agent error:', error);
 
       const metadata = (context.metadata ?? {}) as Record<string, unknown>;
-      const profile = (metadata.profile as Record<string, unknown> | undefined) ?? {};
-      const userName = (profile.firstName as string) ?? 'caregiver';
-      const careRecipient = (profile.careRecipientName as string) ?? 'your loved one';
+      const profile = (metadata.profile as UserProfile | undefined);
+      const userName = profile?.firstName ?? 'caregiver';
+      const careRecipient = profile?.careRecipientName ?? 'your loved one';
 
       const fallbackResponse = `Hello ${userName}! I'm here to support you in caring for ${careRecipient}.
 
@@ -377,4 +364,3 @@ What's on your mind?`;
     }
   },
 });
-

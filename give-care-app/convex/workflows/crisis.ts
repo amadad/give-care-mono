@@ -191,7 +191,7 @@ export const notifyEmergencyContact = internalAction({
     }
 
     // Get emergency contact from user metadata
-    const emergencyContact: any = (user.metadata as any)?.emergencyContact;
+    const emergencyContact: any = user.metadata?.emergencyContact;
     if (!emergencyContact || !emergencyContact.email) {
       console.log(`[Crisis Workflow] No emergency contact configured`);
       return { sent: false };
@@ -288,7 +288,7 @@ export const sendFollowUpMessage = internalAction({
       return { sent: false };
     }
 
-    const userName = (user.metadata as any)?.profile?.firstName || 'there';
+    const userName = user.metadata?.profile?.firstName || 'there';
     const message = `Hi ${userName}, this is a follow-up from GiveCare. We wanted to check in and see how you're doing. If you need support, please reach out anytime. 988 Suicide & Crisis Lifeline is available 24/7.`;
 
     // Send SMS via inbound actions

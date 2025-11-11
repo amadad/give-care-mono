@@ -8,13 +8,20 @@
 import { createTool } from '@convex-dev/agent';
 import { z } from 'zod';
 import { internal } from '../_generated/api';
+import type { AgentToolContext } from '../lib/types';
 
 export const updateProfile = createTool({
   args: z.object({
     firstName: z.string().optional().describe('User\'s first name'),
     relationship: z.string().optional().describe('Relationship to care recipient (e.g., "daughter", "son", "spouse")'),
     careRecipientName: z.string().optional().describe('Name of person being cared for'),
-    zipCode: z.string().optional().describe('ZIP code for finding local resources'),
+    zipCode: z.string()
+      .optional()
+      .refine(
+        (val) => !val || /^\d{5}(-\d{4})?$/.test(val),
+        { message: 'ZIP code must be 5 digits or 5+4 format (e.g., 12345 or 12345-6789)' }
+      )
+      .describe('ZIP code for finding local resources (5 digits or 5+4 format)'),
   }),
   description: 'Update user profile information. Only include fields that are being updated.',
   handler: async (ctx, args: { firstName?: string; relationship?: string; careRecipientName?: string; zipCode?: string }): Promise<{ success: boolean; error?: string; profile?: Record<string, unknown>; message?: string }> => {
@@ -24,9 +31,17 @@ export const updateProfile = createTool({
       return { success: false, error: 'User ID not available' };
     }
 
-    // @ts-expect-error - metadata property exists at runtime
-    const contextData = ctx.metadata as { context?: { metadata?: Record<string, unknown> } };
-    const metadata = contextData?.context?.metadata || {};
+    // Validate zipCode format if provided (Zod validation should catch this, but double-check)
+    if (args.zipCode && !/^\d{5}(-\d{4})?$/.test(args.zipCode)) {
+      return {
+        success: false,
+        error: 'Invalid ZIP code format. Please use 5 digits (e.g., 12345) or 5+4 format (e.g., 12345-6789)',
+      };
+    }
+
+    // Type-safe access to runtime metadata from Agent Component
+    const toolCtx = ctx as unknown as AgentToolContext;
+    const metadata = toolCtx.metadata?.context?.metadata || {};
     const profile = (metadata.profile as Record<string, unknown>) || {};
 
     const updatedProfile = {
