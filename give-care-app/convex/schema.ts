@@ -1,5 +1,6 @@
 import { defineSchema, defineTable } from 'convex/server';
 import { v } from 'convex/values';
+import { agentMetadataValidator, demographicsValidator, preferencesValidator } from './lib/validators';
 
 // Validators
 const consentValidator = v.object({
@@ -38,7 +39,7 @@ export default defineSchema({
     locale: v.string(),
     consent: v.optional(consentValidator),
     address: v.optional(addressValidator),
-    metadata: v.optional(v.any()), // Profile, wellness, preferences, thread metadata
+    metadata: v.optional(agentMetadataValidator), // ✅ Typed instead of v.any()
   })
     .index('by_externalId', ['externalId'])
     .index('by_phone', ['phone']),
@@ -46,8 +47,8 @@ export default defineSchema({
   // Profiles (GiveCare-specific)
   profiles: defineTable({
     userId: v.id('users'),
-    demographics: v.optional(v.any()),
-    preferences: v.optional(v.any()),
+    demographics: v.optional(demographicsValidator), // ✅ Typed instead of v.any()
+    preferences: v.optional(preferencesValidator), // ✅ Typed instead of v.any()
   }).index('by_user', ['userId']),
 
   // Assessments (GiveCare-specific)

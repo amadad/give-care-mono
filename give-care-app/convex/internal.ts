@@ -5,7 +5,7 @@
 import { internalMutation, internalQuery } from './_generated/server';
 import { internal } from './_generated/api';
 import { v } from 'convex/values';
-import { logAgentRun, logGuardrail, getByExternalId, ensureUser } from './lib/core';
+import { logAgentRun, logGuardrail, getByExternalId, ensureUser } from './lib/utils';
 import { messageValidator } from '@convex-dev/twilio';
 
 // ============================================================================

@@ -1,18 +1,10 @@
 import { query } from './_generated/server';
 import { v } from 'convex/values';
 import type { Doc } from './_generated/dataModel';
-import { getByExternalId } from './lib/core';
-import { CATALOG, type AssessmentSlug, type AssessmentAnswer } from './lib/assessmentCatalog';
+import { CATALOG, type AssessmentSlug } from './lib/assessmentCatalog';
+import { getByExternalId, assessmentAnswersToArray } from './lib/utils';
 
 type StatusTrend = 'up' | 'down' | 'steady' | 'unknown';
-
-const toAssessmentAnswers = (answers: Doc<'assessments'>['answers']): AssessmentAnswer[] =>
-  answers.map((answer, idx) => ({
-    questionIndex: Number.isNaN(Number.parseInt(answer.questionId, 10))
-      ? idx
-      : Number.parseInt(answer.questionId, 10),
-    value: answer.value,
-  }));
 
 const computePressureZones = (
   definitionId: string,
@@ -21,7 +13,7 @@ const computePressureZones = (
   const catalog = CATALOG[definitionId as AssessmentSlug];
   if (!catalog) return [];
   try {
-    return catalog.score(toAssessmentAnswers(answers)).pressureZones;
+    return catalog.score(assessmentAnswersToArray(answers)).pressureZones;
   } catch (error) {
     console.warn('[wellness] Failed to compute pressure zones', {
       definitionId,

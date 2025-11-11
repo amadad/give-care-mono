@@ -22,7 +22,7 @@ crons.interval(
 crons.interval(
   "checkIns.dispatchDue",
   { minutes: 15 },
-  internal.workflows.checkIns.dispatchDue
+  internal.workflows.dispatchDue
 );
 
 // ============================================================================
@@ -33,7 +33,7 @@ crons.interval(
 crons.interval(
   "scores.detectTrends",
   { hours: 6 },
-  internal.workflows.trends.detectScoreTrends
+  internal.workflows.detectScoreTrends
 );
 
 // ============================================================================
@@ -44,7 +44,7 @@ crons.interval(
 crons.interval(
   "users.monitorEngagement",
   { hours: 24 },
-  internal.workflows.engagement.monitorEngagement
+  internal.workflows.monitorEngagement
 );
 
 export default crons;

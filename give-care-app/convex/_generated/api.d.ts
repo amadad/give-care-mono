@@ -21,52 +21,138 @@ import type { GenericId as Id } from "convex/values";
  */
 export declare const api: {
   agents: {
-    assessment: {
-      runAssessmentAgent: FunctionReference<
-        "action",
-        "public",
-        {
-          context: {
-            consent: { emergency: boolean; marketing: boolean };
-            crisisFlags?: { active: boolean; terms: Array<string> };
-            locale: string;
-            metadata?: any;
-            sessionId?: string;
-            userId: string;
-          };
-          input: {
-            channel: "sms" | "email" | "web";
-            text: string;
-            userId: string;
-          };
-          threadId?: string;
-        },
-        any
-      >;
-    };
-    main: {
-      runMainAgent: FunctionReference<
-        "action",
-        "public",
-        {
-          context: {
-            consent: { emergency: boolean; marketing: boolean };
-            crisisFlags?: { active: boolean; terms: Array<string> };
-            locale: string;
-            metadata?: any;
-            sessionId?: string;
-            userId: string;
-          };
-          input: {
-            channel: "sms" | "email" | "web";
-            text: string;
-            userId: string;
-          };
-          threadId?: string;
-        },
-        any
-      >;
-    };
+    runAssessmentAgent: FunctionReference<
+      "action",
+      "public",
+      {
+        context: {
+          consent: { emergency: boolean; marketing: boolean };
+          crisisFlags?: { active: boolean; terms: Array<string> };
+          locale: string;
+          metadata?:
+            | {
+                contextUpdatedAt?: number;
+                convex?: { threadId?: string; userId?: Id<"users"> };
+                enrichedContext?: string;
+                journeyPhase?: string;
+                pressureZones?: Array<string>;
+                profile?: {
+                  careRecipientName?: string;
+                  clinicalCoordination?: "good" | "poor";
+                  communityAccess?: "good" | "poor";
+                  financialStatus?: "struggling" | "stable" | "comfortable";
+                  firstName?: string;
+                  housingStability?: "stable" | "at_risk";
+                  preferredCheckInHour?: number;
+                  relationship?: string;
+                  transportationReliability?: "reliable" | "unreliable";
+                  zipCode?: string;
+                };
+                timezone?: string;
+                totalInteractionCount?: number;
+                wellnessScore?: number;
+              }
+            | {
+                contextUpdatedAt?: number;
+                convex?: { threadId?: string; userId?: Id<"users"> };
+                enrichedContext?: string;
+                journeyPhase?: string;
+                pressureZones?: Array<string>;
+                profile?: {
+                  careRecipientName?: string;
+                  clinicalCoordination?: "good" | "poor";
+                  communityAccess?: "good" | "poor";
+                  financialStatus?: "struggling" | "stable" | "comfortable";
+                  firstName?: string;
+                  housingStability?: "stable" | "at_risk";
+                  preferredCheckInHour?: number;
+                  relationship?: string;
+                  transportationReliability?: "reliable" | "unreliable";
+                  zipCode?: string;
+                };
+                threadId?: string;
+                timezone?: string;
+                totalInteractionCount?: number;
+                wellnessScore?: number;
+              };
+          sessionId?: string;
+          userId: string;
+        };
+        input: {
+          channel: "sms" | "email" | "web";
+          text: string;
+          userId: string;
+        };
+        threadId?: string;
+      },
+      any
+    >;
+    runMainAgent: FunctionReference<
+      "action",
+      "public",
+      {
+        context: {
+          consent: { emergency: boolean; marketing: boolean };
+          crisisFlags?: { active: boolean; terms: Array<string> };
+          locale: string;
+          metadata?:
+            | {
+                contextUpdatedAt?: number;
+                convex?: { threadId?: string; userId?: Id<"users"> };
+                enrichedContext?: string;
+                journeyPhase?: string;
+                pressureZones?: Array<string>;
+                profile?: {
+                  careRecipientName?: string;
+                  clinicalCoordination?: "good" | "poor";
+                  communityAccess?: "good" | "poor";
+                  financialStatus?: "struggling" | "stable" | "comfortable";
+                  firstName?: string;
+                  housingStability?: "stable" | "at_risk";
+                  preferredCheckInHour?: number;
+                  relationship?: string;
+                  transportationReliability?: "reliable" | "unreliable";
+                  zipCode?: string;
+                };
+                timezone?: string;
+                totalInteractionCount?: number;
+                wellnessScore?: number;
+              }
+            | {
+                contextUpdatedAt?: number;
+                convex?: { threadId?: string; userId?: Id<"users"> };
+                enrichedContext?: string;
+                journeyPhase?: string;
+                pressureZones?: Array<string>;
+                profile?: {
+                  careRecipientName?: string;
+                  clinicalCoordination?: "good" | "poor";
+                  communityAccess?: "good" | "poor";
+                  financialStatus?: "struggling" | "stable" | "comfortable";
+                  firstName?: string;
+                  housingStability?: "stable" | "at_risk";
+                  preferredCheckInHour?: number;
+                  relationship?: string;
+                  transportationReliability?: "reliable" | "unreliable";
+                  zipCode?: string;
+                };
+                threadId?: string;
+                timezone?: string;
+                totalInteractionCount?: number;
+                wellnessScore?: number;
+              };
+          sessionId?: string;
+          userId: string;
+        };
+        input: {
+          channel: "sms" | "email" | "web";
+          text: string;
+          userId: string;
+        };
+        threadId?: string;
+      },
+      any
+    >;
   };
   assessments: {
     answerAssessment: FunctionReference<
@@ -181,29 +267,72 @@ export declare const api: {
  */
 export declare const internal: {
   agents: {
-    crisis: {
-      runCrisisAgent: FunctionReference<
-        "action",
-        "internal",
-        {
-          context: {
-            consent: { emergency: boolean; marketing: boolean };
-            crisisFlags?: { active: boolean; terms: Array<string> };
-            locale: string;
-            metadata?: any;
-            sessionId?: string;
-            userId: string;
-          };
-          input: {
-            channel: "sms" | "email" | "web";
-            text: string;
-            userId: string;
-          };
-          threadId?: string;
-        },
-        any
-      >;
-    };
+    runCrisisAgent: FunctionReference<
+      "action",
+      "internal",
+      {
+        context: {
+          consent: { emergency: boolean; marketing: boolean };
+          crisisFlags?: { active: boolean; terms: Array<string> };
+          locale: string;
+          metadata?:
+            | {
+                contextUpdatedAt?: number;
+                convex?: { threadId?: string; userId?: Id<"users"> };
+                enrichedContext?: string;
+                journeyPhase?: string;
+                pressureZones?: Array<string>;
+                profile?: {
+                  careRecipientName?: string;
+                  clinicalCoordination?: "good" | "poor";
+                  communityAccess?: "good" | "poor";
+                  financialStatus?: "struggling" | "stable" | "comfortable";
+                  firstName?: string;
+                  housingStability?: "stable" | "at_risk";
+                  preferredCheckInHour?: number;
+                  relationship?: string;
+                  transportationReliability?: "reliable" | "unreliable";
+                  zipCode?: string;
+                };
+                timezone?: string;
+                totalInteractionCount?: number;
+                wellnessScore?: number;
+              }
+            | {
+                contextUpdatedAt?: number;
+                convex?: { threadId?: string; userId?: Id<"users"> };
+                enrichedContext?: string;
+                journeyPhase?: string;
+                pressureZones?: Array<string>;
+                profile?: {
+                  careRecipientName?: string;
+                  clinicalCoordination?: "good" | "poor";
+                  communityAccess?: "good" | "poor";
+                  financialStatus?: "struggling" | "stable" | "comfortable";
+                  firstName?: string;
+                  housingStability?: "stable" | "at_risk";
+                  preferredCheckInHour?: number;
+                  relationship?: string;
+                  transportationReliability?: "reliable" | "unreliable";
+                  zipCode?: string;
+                };
+                threadId?: string;
+                timezone?: string;
+                totalInteractionCount?: number;
+                wellnessScore?: number;
+              };
+          sessionId?: string;
+          userId: string;
+        };
+        input: {
+          channel: "sms" | "email" | "web";
+          text: string;
+          userId: string;
+        };
+        threadId?: string;
+      },
+      any
+    >;
   };
   assessments: {
     handleInboundAnswer: FunctionReference<
@@ -437,153 +566,133 @@ export declare const internal: {
     cleanupResourceCache: FunctionReference<"action", "internal", {}, any>;
   };
   workflows: {
-    checkIns: {
-      bumpNextRun: FunctionReference<
-        "mutation",
-        "internal",
-        { nextRun: number; triggerId: Id<"triggers"> },
-        any
-      >;
-      dispatchDue: FunctionReference<"action", "internal", {}, any>;
-      getTrigger: FunctionReference<
-        "query",
-        "internal",
-        { triggerId: Id<"triggers"> },
-        any
-      >;
-      listDueTriggers: FunctionReference<
-        "query",
-        "internal",
-        { now: number },
-        any
-      >;
-      sendEMACheckIn: FunctionReference<"mutation", "internal", any, any>;
-    };
-    crisis: {
-      checkRecentActivity: FunctionReference<
-        "query",
-        "internal",
-        { hoursAgo: number; userId: Id<"users"> },
-        any
-      >;
-      crisisEscalation: FunctionReference<"mutation", "internal", any, any>;
-      crisisFollowUp: FunctionReference<"mutation", "internal", any, any>;
-      logCrisisEvent: FunctionReference<
-        "mutation",
-        "internal",
-        {
-          messageText: string;
-          severity: "high" | "medium" | "low";
-          terms: Array<string>;
-          userId: Id<"users">;
-        },
-        any
-      >;
-      notifyEmergencyContact: FunctionReference<
-        "action",
-        "internal",
-        { alertId: Id<"alerts">; messageText: string; userId: Id<"users"> },
-        any
-      >;
-      scheduleFollowUp: FunctionReference<
-        "mutation",
-        "internal",
-        { alertId: Id<"alerts">; hoursFromNow: number; userId: Id<"users"> },
-        any
-      >;
-      sendFollowUpMessage: FunctionReference<
-        "action",
-        "internal",
-        { alertId: Id<"alerts">; userId: Id<"users"> },
-        any
-      >;
-      updateCrisisEvent: FunctionReference<
-        "mutation",
-        "internal",
-        { alertId: Id<"alerts">; status: string },
-        any
-      >;
-    };
-    engagement: {
-      getRecentRuns: FunctionReference<
-        "query",
-        "internal",
-        { days: number; userId: Id<"users"> },
-        any
-      >;
-      monitorEngagement: FunctionReference<"action", "internal", {}, any>;
-    };
-    interventions: {
-      getInterventionsByZonesInternal: FunctionReference<
-        "query",
-        "internal",
-        {
-          limit?: number;
-          minEvidenceLevel?: "high" | "moderate" | "low";
-          zones: Array<string>;
-        },
-        any
-      >;
-      suggestInterventions: FunctionReference<"mutation", "internal", any, any>;
-      userPrefs: FunctionReference<
-        "query",
-        "internal",
-        { userId: Id<"users"> },
-        any
-      >;
-    };
-    memory: {
-      enrichMemory: FunctionReference<"mutation", "internal", any, any>;
-    };
-    memoryActions: {
-      buildContext: FunctionReference<
-        "action",
-        "internal",
-        { threadId: string; userId: string },
-        any
-      >;
-      extractFacts: FunctionReference<
-        "action",
-        "internal",
-        { recentMessages: Array<any>; userId: string },
-        any
-      >;
-    };
-    memoryMutations: {
-      saveFacts: FunctionReference<
-        "mutation",
-        "internal",
-        { convexUserId: Id<"users">; facts: Array<any> },
-        any
-      >;
-      updateContext: FunctionReference<
-        "mutation",
-        "internal",
-        { convexUserId: Id<"users">; enrichedContext: string | null },
-        any
-      >;
-    };
-    resources: {
-      refresh: FunctionReference<"mutation", "internal", any, any>;
-    };
-    scheduling: {
-      updateCheckInSchedule: FunctionReference<
-        "mutation",
-        "internal",
-        { userId: Id<"users"> },
-        any
-      >;
-    };
-    trends: {
-      detectScoreTrends: FunctionReference<"action", "internal", {}, any>;
-      getAllUserScores: FunctionReference<"query", "internal", {}, any>;
-      getUserScores: FunctionReference<
-        "query",
-        "internal",
-        { userId: Id<"users"> },
-        any
-      >;
-    };
+    buildContext: FunctionReference<
+      "action",
+      "internal",
+      { threadId: string; userId: string },
+      any
+    >;
+    bumpNextRun: FunctionReference<
+      "mutation",
+      "internal",
+      { nextRun: number; triggerId: Id<"triggers"> },
+      any
+    >;
+    checkRecentActivity: FunctionReference<
+      "query",
+      "internal",
+      { hoursAgo: number; userId: Id<"users"> },
+      any
+    >;
+    crisisEscalation: FunctionReference<"mutation", "internal", any, any>;
+    crisisFollowUp: FunctionReference<"mutation", "internal", any, any>;
+    detectScoreTrends: FunctionReference<"action", "internal", {}, any>;
+    dispatchDue: FunctionReference<"action", "internal", {}, any>;
+    enrichMemory: FunctionReference<"mutation", "internal", any, any>;
+    extractFacts: FunctionReference<
+      "action",
+      "internal",
+      { recentMessages: Array<any>; userId: string },
+      any
+    >;
+    getAllUserScores: FunctionReference<"query", "internal", {}, any>;
+    getInterventionsByZonesInternal: FunctionReference<
+      "query",
+      "internal",
+      {
+        limit?: number;
+        minEvidenceLevel?: "high" | "moderate" | "low";
+        zones: Array<string>;
+      },
+      any
+    >;
+    getRecentRuns: FunctionReference<
+      "query",
+      "internal",
+      { days: number; userId: Id<"users"> },
+      any
+    >;
+    getTrigger: FunctionReference<
+      "query",
+      "internal",
+      { triggerId: Id<"triggers"> },
+      any
+    >;
+    getUserScores: FunctionReference<
+      "query",
+      "internal",
+      { userId: Id<"users"> },
+      any
+    >;
+    listDueTriggers: FunctionReference<
+      "query",
+      "internal",
+      { now: number },
+      any
+    >;
+    logCrisisEvent: FunctionReference<
+      "mutation",
+      "internal",
+      {
+        messageText: string;
+        severity: "high" | "medium" | "low";
+        terms: Array<string>;
+        userId: Id<"users">;
+      },
+      any
+    >;
+    monitorEngagement: FunctionReference<"action", "internal", {}, any>;
+    notifyEmergencyContact: FunctionReference<
+      "action",
+      "internal",
+      { alertId: Id<"alerts">; messageText: string; userId: Id<"users"> },
+      any
+    >;
+    refresh: FunctionReference<"mutation", "internal", any, any>;
+    saveFacts: FunctionReference<
+      "mutation",
+      "internal",
+      { convexUserId: Id<"users">; facts: Array<any> },
+      any
+    >;
+    scheduleFollowUp: FunctionReference<
+      "mutation",
+      "internal",
+      { alertId: Id<"alerts">; hoursFromNow: number; userId: Id<"users"> },
+      any
+    >;
+    sendEMACheckIn: FunctionReference<"mutation", "internal", any, any>;
+    sendFollowUpMessage: FunctionReference<
+      "action",
+      "internal",
+      { alertId: Id<"alerts">; userId: Id<"users"> },
+      any
+    >;
+    suggestInterventions: FunctionReference<"mutation", "internal", any, any>;
+    updateCheckInSchedule: FunctionReference<
+      "mutation",
+      "internal",
+      { userId: Id<"users"> },
+      any
+    >;
+    updateContext: FunctionReference<
+      "mutation",
+      "internal",
+      { convexUserId: Id<"users">; enrichedContext: string | null },
+      any
+    >;
+    updateCrisisEvent: FunctionReference<
+      "mutation",
+      "internal",
+      { alertId: Id<"alerts">; status: string },
+      any
+    >;
+    userPrefs: FunctionReference<
+      "query",
+      "internal",
+      { userId: Id<"users"> },
+      any
+    >;
   };
 };
 

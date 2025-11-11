@@ -2,7 +2,7 @@
 # give-care-app/convex
 
 **Purpose:** Concise technical map for AI agents and developers
-**Last Updated:** 2025-11-09 (v1.5.0 - Post-domain cleanup)
+**Last Updated:** 2025-01-11 (v1.7.0 - Post-consolidation)
 
 ---
 
@@ -25,36 +25,35 @@
 
 ```
 convex/
-├── actions/         # Node-only side effects (3 files)
-│   ├── embeddings.actions.ts  # Text embeddings for memory search
-│   ├── maps.actions.ts        # Google Maps resource grounding
-│   └── stripe.actions.ts      # Stripe billing integration
-├── agents/          # Agent tool helpers (now only guardrails)
-│   └── guardrails.tool.ts     # Trauma-informed compliance checking
-├── lib/             # Business logic utilities (10 files)
-│   ├── assessmentCatalog.ts   # Assessment definitions (EMA, BSFC, REACH2, SDOH)
-│   ├── assessments.ts         # Assessment scoring logic
-│   ├── pii.ts                 # PII redaction & hashing
-│   ├── policy.ts              # Crisis detection, tone guidance
-│   ├── profile.ts             # Profile completeness helpers
-│   ├── prompts.ts             # Agent system prompts (P1-P6 principles)
-│   ├── rateLimiting.ts        # SMS & token rate limits
-│   ├── tools.ts               # Shared tool utilities
-│   ├── types.ts               # Shared TypeScript types
-│   └── usage.ts               # LLM cost tracking config
-├── agents.ts        # Main agent implementations (3 agents)
-├── core.ts          # Core data operations (users, sessions, messages)
-├── crons.ts         # Scheduled jobs (resource cache cleanup)
+├── agents.ts        # All 3 agents consolidated (Main, Crisis, Assessment)
+├── workflows.ts     # All workflows consolidated (check-ins, trends, engagement, etc.)
+├── tools.ts         # All agent tools consolidated (8 tools)
+├── assessments.ts   # Assessment Q&A and scoring
+├── crons.ts         # Scheduled jobs
 ├── http.ts          # Webhook router (Twilio, Stripe)
-├── internal/        # Internal API barrel + compat shims
+├── inbound.ts       # SMS message processing
+├── inboundHelpers.ts # Batched queries for inbound processing
+├── internal.ts      # Internal API functions
+├── interventions.ts # Intervention queries and mutations
 ├── public.ts        # Public API surface
-├── resources.ts     # Resource search + cache access
+├── resources.ts     # Resource search + cache
 ├── schema.ts        # Database schema (36 tables)
-├── twilioClient.ts  # Twilio SDK configuration
-└── workflows.ts     # Durable workflows (crisis escalation)
+├── wellness.ts      # Wellness status queries
+├── setup.test.ts    # Test setup
+├── test.setup.ts    # Test configuration
+└── lib/
+    ├── assessmentCatalog.ts  # Assessment definitions (EMA, BSFC, REACH2, SDOH)
+    ├── billing.ts            # Stripe billing utilities
+    ├── maps.ts               # Google Maps integration
+    ├── models.ts             # LLM model configuration
+    ├── prompts.ts            # Agent system prompts (P1-P6)
+    ├── twilio.ts             # Twilio configuration
+    ├── types.ts              # TypeScript types
+    ├── utils.ts              # Consolidated utilities (helpers, constants, errors)
+    └── validators.ts          # Convex validators
 ```
 
-**Note:** `domains/` now contains slim compat shims (`wellness`, `interventions`, `messages`) that forward to `core`/`workflows` so existing `api.domains.*` entries remain callable during the refactor.
+**Note:** Consolidated from 58 files to 24 files (58% reduction). All agents, workflows, tools, and utilities merged into single files for simplicity.
 
 ---
 
@@ -64,41 +63,29 @@ convex/
 
 | File | LOC | Purpose | Key Exports |
 |------|-----|---------|-------------|
-| `agents.ts` | 777 | 3 agent implementations (Main, Crisis, Assessment) | `runMainAgent`, `runCrisisAgent`, `runAssessmentAgent` |
-| `core.ts` | 435 | User/session/message CRUD, context hydration | `ensureUser`, `ensureSession`, `hydrate`, `persist` |
-| `public.ts` | 137 | Public API surface for web/mobile clients | `hydrate`, `persist`, `recordMemory` |
-| `workflows.ts` | 389 | Durable workflows (crisis escalation, follow-ups) | `crisisEscalation`, `crisisFollowUp` |
-| `http.ts` | 191 | Webhook handlers (Twilio SMS, Stripe) | HTTP router |
-| `schema.ts` | 352 | Database schema (36 tables) | Schema definition |
-
-### Agent Files (`agents/`)
-
-| File | Purpose | Tools | Notes |
-|------|---------|-------|-------|
-| `guardrails.tool.ts` | Trauma-informed compliance checking | 1 tool (guardrails) | Logs via `api.internal.core.*` compat shims |
-
-### Action Files (`actions/`)
-
-| File | Purpose | Dependencies | Notes |
-|------|---------|--------------|-------|
-| `embeddings.actions.ts` | Text embeddings (text-embedding-3-small) | OpenAI | For memory search |
-| `maps.actions.ts` | Google Maps resource grounding | Google Maps, Gemini | Uses `resource_cache` + `internal.resources.*` |
-| `stripe.actions.ts` | Stripe subscription management | Stripe SDK | Checkout, webhooks |
+| `agents.ts` | ~600 | All 3 agents consolidated | `mainAgent`, `crisisAgent`, `assessmentAgent`, `runMainAgent`, `runCrisisAgent`, `runAssessmentAgent` |
+| `workflows.ts` | ~900 | All workflows consolidated | `dispatchDue`, `detectScoreTrends`, `monitorEngagement`, `suggestInterventions`, `crisisEscalation`, `enrichMemory`, `updateCheckInSchedule`, `refresh` |
+| `tools.ts` | ~400 | All 8 agent tools consolidated | `searchResources`, `startAssessment`, `checkWellnessStatus`, `findInterventions`, `getInterventions`, `recordMemory`, `updateProfile`, `trackInterventionPreference` |
+| `assessments.ts` | ~340 | Assessment Q&A and scoring | `startAssessment`, `handleInboundAnswer`, `finalizeAssessment` |
+| `internal.ts` | ~350 | Internal API functions | `logAgentRunInternal`, `getUserById`, `getAllUsers`, `getAssessmentById`, `getActiveSessionInternal`, `startAssessmentInternal` |
+| `public.ts` | ~140 | Public API surface | `recordMemory`, `listMemories` |
+| `resources.ts` | ~395 | Resource search + cache | `searchResources` |
+| `http.ts` | ~180 | Webhook handlers | Twilio, Stripe webhooks |
+| `schema.ts` | ~330 | Database schema | 36 tables |
 
 ### Library Files (`lib/`)
 
 | File | Purpose | Exports |
 |------|---------|---------|
-| `assessmentCatalog.ts` | Assessment definitions (EMA, BSFC, REACH2, SDOH) | Question sets, scoring logic |
-| `assessments.ts` | Assessment scoring & pressure zone calculation | `scoreAssessment()` |
-| `pii.ts` | PII redaction & phone hashing | `hashPhone()`, `redactPII()` |
-| `policy.ts` | Crisis detection, tone guidance | `detectCrisis()`, `getTone()` |
-| `profile.ts` | Profile completeness helpers | `extractProfileVariables()`, `getProfileCompleteness()` |
-| `prompts.ts` | Agent system prompts (P1-P6) | `MAIN_PROMPT`, `CRISIS_PROMPT`, `ASSESSMENT_PROMPT`, `renderPrompt()` |
-| `rateLimiting.ts` | Rate limit enforcement | `checkMessageRateLimit()` |
-| `tools.ts` | Shared tool utilities | Tool helper functions |
-| `types.ts` | TypeScript types | `Channel`, `Budget`, `HydratedContext` |
-| `usage.ts` | LLM cost tracking config | `sharedAgentConfig` |
+| `utils.ts` | Consolidated utilities | `ensureAgentThread`, `toAssessmentAnswers`, `mapToInterventionZones`, `extractProfileVariables`, `buildWellnessInfo`, `getNextMissingField`, `detectCrisis`, `crisisResponse`, `getTone`, `getByExternalId`, `ensureUser`, `logAgentRun`, constants, error classes |
+| `assessmentCatalog.ts` | Assessment definitions | `CATALOG`, question sets, scoring logic |
+| `prompts.ts` | Agent system prompts | `MAIN_PROMPT`, `CRISIS_PROMPT`, `ASSESSMENT_PROMPT`, `renderPrompt()` |
+| `models.ts` | LLM model configuration | `LANGUAGE_MODELS`, `EMBEDDING_MODELS` |
+| `types.ts` | TypeScript types | `UserProfile`, `AgentMetadata`, `AgentContext`, etc. |
+| `validators.ts` | Convex validators | `agentContextValidator`, `channelValidator`, `userProfileValidator`, etc. |
+| `billing.ts` | Stripe billing utilities | Billing helpers |
+| `maps.ts` | Google Maps integration | `searchWithMapsGrounding` |
+| `twilio.ts` | Twilio configuration | Twilio client setup |
 
 ---
 

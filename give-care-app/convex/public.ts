@@ -7,7 +7,7 @@
 
 import { query, mutation } from './_generated/server';
 import { v } from 'convex/values';
-import { getByExternalId, ensureUser } from './lib/core';
+import { getByExternalId, ensureUser } from './lib/utils';
 
 // ============================================================================
 // USERS

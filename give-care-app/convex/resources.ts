@@ -4,7 +4,7 @@ import { action, internalAction } from './_generated/server';
 import { v } from 'convex/values';
 import { internal, components } from './_generated/api';
 import { searchWithMapsGrounding } from './lib/maps';
-import { MS_PER_DAY, RACE_TIMEOUT_MS } from './lib/constants';
+import { MS_PER_DAY, RACE_TIMEOUT_MS } from './lib/utils';
 import { WorkflowManager } from '@convex-dev/workflow';
 import type { ResourceResult } from './lib/types';
 
@@ -221,7 +221,7 @@ export const searchResources = action({
         .join('\n');
 
       // Refresh in background via durable workflow (non-blocking, retriable)
-      void workflow.start(ctx, internal.workflows.resources.refresh, {
+      void workflow.start(ctx, internal.workflows.refresh, {
         query: args.query,
         category,
         zip: resolvedZip,
@@ -318,7 +318,7 @@ export const searchResources = action({
     const shouldRefreshInBackground = mapsPromise !== null && !usedMapsGrounding && !mapsCredentialError;
     if (shouldRefreshInBackground) {
       // Refresh in background via durable workflow (non-blocking, retriable)
-      void workflow.start(ctx, internal.workflows.resources.refresh, {
+      void workflow.start(ctx, internal.workflows.refresh, {
         query: args.query,
         category,
         zip: resolvedZip,

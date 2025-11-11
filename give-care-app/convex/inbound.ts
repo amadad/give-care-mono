@@ -10,7 +10,8 @@ import { internalAction } from './_generated/server';
 import { v } from 'convex/values';
 import { api, internal, components } from './_generated/api';
 import { twilio } from './lib/twilio';
-import { detectCrisis } from './lib/policy';
+import { detectCrisis } from './lib/utils';
+import { RateLimitError, UserNotFoundError } from './lib/utils';
 
 // ============================================================================
 // PROCESS INBOUND MESSAGE
@@ -36,13 +37,12 @@ export const processInbound = internalAction({
     }
 
     // Mark as seen (non-blocking, fire-and-forget)
-    ctx.runMutation(internal.internal._markMessage, { sid: args.messageSid }).catch(() => {
-      // Ignore errors - best effort
-    });
+    ctx.runMutation(internal.internal._markMessage, { sid: args.messageSid })
+      .catch((err) => console.error('[inbound] Failed to mark message:', err));
 
-    // Rate limiting check
+    // Rate limiting check - use ConvexError
     if (!context.rateLimitOk) {
-      throw new Error(`Rate limit exceeded. Retry after ${context.rateLimitRetryAfter}ms`);
+      throw new RateLimitError(context.rateLimitRetryAfter ?? 60000);
     }
 
     // Ensure user exists (mutation must be separate from query)
@@ -53,6 +53,10 @@ export const processInbound = internalAction({
         channel: 'sms' as const,
         phone: args.phone,
       });
+      
+      if (!user) {
+        throw new UserNotFoundError(args.phone);
+      }
     }
 
     // Fast-path: Check for active assessment session and numeric/skip replies
@@ -103,7 +107,7 @@ export const processInbound = internalAction({
     let response;
     if (crisisDetection.hit) {
       // Crisis agent
-      response = await ctx.runAction(internal.agents.crisis.runCrisisAgent, {
+      response = await ctx.runAction(internal.agents.runCrisisAgent, {
         input: {
           channel: 'sms' as const,
           text: args.text,
@@ -116,7 +120,7 @@ export const processInbound = internalAction({
       // OPTIMIZATION: Don't fetch threadId here - let agent handle it internally
       // This avoids redundant query since ensureAgentThread will do it anyway
       // If we want to optimize further, we'd need to cache threadId in user metadata
-      response = await ctx.runAction(api.agents.main.runMainAgent, {
+      response = await ctx.runAction(api.agents.runMainAgent, {
         input: {
           channel: 'sms' as const,
           text: args.text,

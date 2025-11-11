@@ -494,8 +494,18 @@ export type DataModel = {
   };
   profiles: {
     document: {
-      demographics?: any;
-      preferences?: any;
+      demographics?: {
+        age?: number;
+        education?: string;
+        ethnicity?: string;
+        gender?: string;
+      };
+      preferences?: {
+        notificationFrequency?: string;
+        preferredCheckInHour?: number;
+        preferredContactTime?: string;
+        timezone?: string;
+      };
       userId: Id<"users">;
       _id: Id<"profiles">;
       _creationTime: number;
@@ -504,7 +514,15 @@ export type DataModel = {
       | "_creationTime"
       | "_id"
       | "demographics"
+      | "demographics.age"
+      | "demographics.education"
+      | "demographics.ethnicity"
+      | "demographics.gender"
       | "preferences"
+      | "preferences.notificationFrequency"
+      | "preferences.preferredCheckInHour"
+      | "preferences.preferredContactTime"
+      | "preferences.timezone"
       | "userId";
     indexes: {
       by_id: ["_id"];
@@ -722,7 +740,52 @@ export type DataModel = {
       email?: string;
       externalId: string;
       locale: string;
-      metadata?: any;
+      metadata?:
+        | {
+            contextUpdatedAt?: number;
+            convex?: { threadId?: string; userId?: Id<"users"> };
+            enrichedContext?: string;
+            journeyPhase?: string;
+            pressureZones?: Array<string>;
+            profile?: {
+              careRecipientName?: string;
+              clinicalCoordination?: "good" | "poor";
+              communityAccess?: "good" | "poor";
+              financialStatus?: "struggling" | "stable" | "comfortable";
+              firstName?: string;
+              housingStability?: "stable" | "at_risk";
+              preferredCheckInHour?: number;
+              relationship?: string;
+              transportationReliability?: "reliable" | "unreliable";
+              zipCode?: string;
+            };
+            timezone?: string;
+            totalInteractionCount?: number;
+            wellnessScore?: number;
+          }
+        | {
+            contextUpdatedAt?: number;
+            convex?: { threadId?: string; userId?: Id<"users"> };
+            enrichedContext?: string;
+            journeyPhase?: string;
+            pressureZones?: Array<string>;
+            profile?: {
+              careRecipientName?: string;
+              clinicalCoordination?: "good" | "poor";
+              communityAccess?: "good" | "poor";
+              financialStatus?: "struggling" | "stable" | "comfortable";
+              firstName?: string;
+              housingStability?: "stable" | "at_risk";
+              preferredCheckInHour?: number;
+              relationship?: string;
+              transportationReliability?: "reliable" | "unreliable";
+              zipCode?: string;
+            };
+            threadId?: string;
+            timezone?: string;
+            totalInteractionCount?: number;
+            wellnessScore?: number;
+          };
       name?: string;
       phone?: string;
       _id: Id<"users">;
@@ -746,6 +809,28 @@ export type DataModel = {
       | "externalId"
       | "locale"
       | "metadata"
+      | "metadata.contextUpdatedAt"
+      | "metadata.convex"
+      | "metadata.convex.threadId"
+      | "metadata.convex.userId"
+      | "metadata.enrichedContext"
+      | "metadata.journeyPhase"
+      | "metadata.pressureZones"
+      | "metadata.profile"
+      | "metadata.profile.careRecipientName"
+      | "metadata.profile.clinicalCoordination"
+      | "metadata.profile.communityAccess"
+      | "metadata.profile.financialStatus"
+      | "metadata.profile.firstName"
+      | "metadata.profile.housingStability"
+      | "metadata.profile.preferredCheckInHour"
+      | "metadata.profile.relationship"
+      | "metadata.profile.transportationReliability"
+      | "metadata.profile.zipCode"
+      | "metadata.threadId"
+      | "metadata.timezone"
+      | "metadata.totalInteractionCount"
+      | "metadata.wellnessScore"
       | "name"
       | "phone";
     indexes: {

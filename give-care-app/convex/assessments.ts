@@ -1,10 +1,9 @@
 import { mutation, query, internalAction } from './_generated/server';
 import { v } from 'convex/values';
-import { getByExternalId } from './lib/core';
 import { CATALOG, type AssessmentAnswer, scoreWithDetails } from './lib/assessmentCatalog';
-import { extractSDOHProfile } from './lib/profile';
-import type { Doc } from './_generated/dataModel';
+import { getByExternalId, extractSDOHProfile, toAssessmentAnswers } from './lib/utils';
 import { internal, api } from './_generated/api';
+import type { Doc } from './_generated/dataModel';
 
 const assessmentDefinitionValidator = v.union(
   v.literal('ema'),
@@ -16,14 +15,6 @@ const assessmentDefinitionValidator = v.union(
 const channelValidator = v.union(v.literal('sms'), v.literal('web'));
 
 type SessionAnswer = Doc<'assessment_sessions'>['answers'][number];
-
-const toAssessmentAnswers = (answers: SessionAnswer[]): AssessmentAnswer[] =>
-  answers.map((answer, idx) => ({
-    questionIndex: Number.isNaN(Number.parseInt(answer.questionId, 10))
-      ? idx
-      : Number.parseInt(answer.questionId, 10),
-    value: answer.value,
-  }));
 
 export const startAssessment = mutation({
   args: {
@@ -233,7 +224,7 @@ export const finalizeAssessment = mutation({
     // Schedule update (fire-and-forget) - Phase 1.2
     void ctx.scheduler.runAfter(
       0,
-      internal.workflows.scheduling.updateCheckInSchedule,
+      internal.workflows.updateCheckInSchedule,
       { userId: user._id }
     );
 
@@ -254,7 +245,7 @@ export const finalizeAssessment = mutation({
 
     // Automatic intervention suggestions - Phase 2.6
     if (details.pressureZones.length > 0) {
-      void ctx.scheduler.runAfter(0, internal.workflows.interventions.suggestInterventions, {
+      void ctx.scheduler.runAfter(0, internal.workflows.suggestInterventions, {
         userId: user._id,
         assessmentId,
         zones: details.pressureZones,
