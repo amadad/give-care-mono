@@ -14,13 +14,4 @@ crons.interval(
   internal.resources.cleanupResourceCache
 );
 
-// ============================================================================
-// FUTURE CRON JOBS
-// ============================================================================
-
-// TODO: Add additional cron jobs as needed:
-// - Daily wellness check-ins (when implemented)
-// - Assessment reminders (when implemented)
-// - Engagement sweeps (when implemented)
-
 export default crons;

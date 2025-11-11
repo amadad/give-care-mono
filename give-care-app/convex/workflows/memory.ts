@@ -22,7 +22,7 @@ export const enrichMemory = workflow.define({
     recentMessages: v.array(v.any()), // Last few messages to analyze
   },
   handler: async (step, { userId, threadId, recentMessages }) => {
-    // ✅ Fix: Look up user once and reuse Convex ID
+    // Fix: Look up user once and reuse Convex ID
     const user = await step.runQuery(internal.internal.getByExternalIdQuery, {
       externalId: userId,
     });

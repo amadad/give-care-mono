@@ -36,7 +36,7 @@ const workflow = new WorkflowManager(components.workflow);
 
 export const mainAgent = new Agent(components.agent, {
   name: 'Caregiver Support',
-  languageModel: google('gemini-2.5-flash-lite'), // ✅ Fastest model for speed
+  languageModel: google('gemini-2.0-flash-lite'), // Stable model, no code execution interference
   textEmbeddingModel: openai.embedding('text-embedding-3-small'), // Keep OpenAI embeddings (proven, separate from language model)
   instructions: MAIN_PROMPT,
   tools: {
@@ -48,7 +48,7 @@ export const mainAgent = new Agent(components.agent, {
     start_assessment: startAssessment,
   },
   maxSteps: 5,
-  // ✅ No custom contextHandler - use contextOptions in generateText()
+  // No custom contextHandler - use contextOptions in generateText()
 });
 
 // ============================================================================
@@ -91,7 +91,7 @@ export const runMainAgent = action({
       const tone = getTone(context);
       const systemPrompt = `${basePrompt}\n\n${tone}`;
 
-      // ✅ Priority 3: Use listThreads() instead of manual threadId storage
+      // Priority 3: Use listThreads() instead of manual threadId storage
       let thread;
       let newThreadId: string;
 
@@ -129,7 +129,7 @@ export const runMainAgent = action({
         }
       }
 
-      // ✅ SPEED: Short input guard - skip heavy tools for throwaway inputs
+      // SPEED: Short input guard - skip heavy tools for throwaway inputs
       const trimmedInput = input.text.trim();
       const isShortInput = trimmedInput.length < 5;
       
@@ -175,13 +175,13 @@ What would be most helpful right now?`;
         };
       }
 
-      // ✅ Priority 1: Save user message first (for idempotency and retries)
+      // Priority 1: Save user message first (for idempotency and retries)
       const { messageId } = await saveMessage(ctx, components.agent, {
         threadId: newThreadId,
         prompt: input.text,
       });
 
-      // ✅ SPEED: Reduce contextOptions on first turns (fewer messages = faster)
+      // SPEED: Reduce contextOptions on first turns (fewer messages = faster)
       const isFirstTurn = !threadId;
       const contextOptions = isFirstTurn
         ? {
@@ -205,7 +205,7 @@ What would be most helpful right now?`;
             },
           };
 
-      // ✅ SPEED: LLM timeout wrapper (4s SLA) - prevents hanging responses
+      // SPEED: LLM timeout wrapper (4s SLA) - prevents hanging responses
       const LLM_TIMEOUT_MS = 4000; // 4 second SLA
       const timeoutPromise = new Promise<never>((_, reject) => {
         setTimeout(() => {
@@ -215,7 +215,7 @@ What would be most helpful right now?`;
 
       let result;
       let timedOut = false;
-      
+
       try {
         // Race LLM call against timeout
         result = await Promise.race([
@@ -224,18 +224,15 @@ What would be most helpful right now?`;
             system: systemPrompt,
             // @ts-expect-error - contextOptions not in types yet but supported per docs
             contextOptions,
-            // ✅ Force function calling mode to prevent code execution interference
-            // See: https://github.com/vercel/ai/issues/8258
-            // Gemini built-in tools (code execution, google_search) can interfere with custom tools
-            toolChoice: 'auto', // Changed from implicit 'auto' to explicit to ensure proper tool calling
+            // Let model decide when to use tools (natural conversation flow)
+            // Using Gemini 2.0 Flash to avoid code execution interference
+            toolChoice: 'auto',
             providerOptions: {
               google: {
                 temperature: 0.7,
                 topP: 0.95,
                 topK: 40,
                 maxOutputTokens: 300, // Keep SMS responses concise
-                // ✅ Disable code execution to prevent interference with custom tools
-                codeExecution: false,
                 safetySettings: [
                   { category: 'HARM_CATEGORY_HARASSMENT', threshold: 'BLOCK_MEDIUM_AND_ABOVE' },
                   { category: 'HARM_CATEGORY_HATE_SPEECH', threshold: 'BLOCK_MEDIUM_AND_ABOVE' },
@@ -285,13 +282,13 @@ What's most urgent for you today?`;
         throw error; // Re-throw non-timeout errors
       }
 
-      // ✅ Agent Component automatically saves message
+      // Agent Component automatically saves message
       // No manual recordOutbound needed!
 
       const responseText: string = result.text;
       const latencyMs = Date.now() - startTime;
 
-      // ✅ Log agent run for analytics (async, non-blocking)
+      // Log agent run for analytics (async, non-blocking)
       // Don't await - fire and forget to return response faster
       // Use void to suppress "outstanding mutation" warning
       void ctx.runMutation(internal.internal.logAgentRunInternal, {
@@ -310,7 +307,7 @@ What's most urgent for you today?`;
         console.error('[main-agent] Analytics logging failed:', error);
       });
 
-      // ✅ Async memory enrichment (non-blocking)
+      // Async memory enrichment (non-blocking)
       // Extracts facts from conversation and saves to memories table
       // Ready for next interaction without slowing down current response
       const recentMessages = [
@@ -318,7 +315,7 @@ What's most urgent for you today?`;
         { role: 'assistant', content: responseText },
       ];
 
-      // ✅ SPEED: Memory enrichment runs async AFTER response (non-blocking)
+      // SPEED: Memory enrichment runs async AFTER response (non-blocking)
       // Use workflow.start() for retryable background work (properly voided to avoid dangling promise)
       // Skip for first message to reduce overhead
       if (threadId && !timedOut) {

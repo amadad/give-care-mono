@@ -120,7 +120,7 @@ export const searchResources = action({
   },
   handler: async (ctx, args) => {
     const metadata = (args.metadata ?? {}) as Record<string, unknown>;
-    // ✅ Priority 1: Extract zip from query if provided (e.g., "support groups in 11576")
+    // Priority 1: Extract zip from query if provided (e.g., "support groups in 11576")
     let resolvedZip =
       normalizeZip(args.zip) ||
       extractZipFromQuery(args.query) ||
@@ -154,7 +154,7 @@ export const searchResources = action({
       zip: resolvedZip,
     });
 
-    // ✅ Stale-while-revalidate: Return expired cache immediately if available
+    // Stale-while-revalidate: Return expired cache immediately if available
     // This prevents blocking while Maps Grounding refreshes in background
     const isCacheValid = cache && cache.expiresAt && cache.expiresAt > now;
     const hasStaleCache = cache && cache.results && cache.results.length > 0;
@@ -176,7 +176,7 @@ export const searchResources = action({
       };
     }
 
-    // ✅ If stale cache exists, return it immediately and refresh in background
+    // If stale cache exists, return it immediately and refresh in background
     if (hasStaleCache) {
       const staleText = cache.results
         .map(
@@ -203,7 +203,7 @@ export const searchResources = action({
       };
     }
 
-    // ✅ SPEED: Race Maps Grounding (1.5s) against stub fallback - return winner immediately
+    // SPEED: Race Maps Grounding (1.5s) against stub fallback - return winner immediately
     // Users see results in <500ms; better results follow in background
     
     // Prepare stub fallback immediately (deterministic, instant)
@@ -254,7 +254,13 @@ export const searchResources = action({
       try {
         // Race: Return first to complete (Maps Grounding or timeout)
         const mapsResult = await Promise.race([mapsPromise, timeoutPromise]);
-        results = mapsResult.resources;
+        results = mapsResult.resources.map(r => ({
+          ...r,
+          source: 'maps' as const,
+          hours: r.hours ?? 'Hours not available',
+          rating: r.rating ?? 0,
+          phone: r.phone ?? 'Phone not available',
+        }));
         summaryText = mapsResult.text;
         widgetToken = mapsResult.widgetToken;
         usedMapsGrounding = true;
@@ -272,7 +278,7 @@ export const searchResources = action({
       }
     }
 
-    // ✅ SPEED: Return immediately with winner (stub or Maps result)
+    // SPEED: Return immediately with winner (stub or Maps result)
     // Schedule background refresh only when Maps Grounding was available but we returned stubs
     const shouldRefreshInBackground = mapsPromise !== null && !usedMapsGrounding && !mapsCredentialError;
     if (shouldRefreshInBackground) {

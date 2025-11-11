@@ -173,7 +173,7 @@ export const notifyEmergencyContact = internalAction({
     messageText: v.string(),
   },
   handler: async (ctx, args): Promise<{ sent: boolean; recipient?: string }> => {
-    // ✅ Fix: Use getUserById since args.userId is Id<"users">, not externalId
+    // Fix: Use getUserById since args.userId is Id<"users">, not externalId
     const user = await ctx.runQuery(internal.internal.getUserById, {
       userId: args.userId,
     });

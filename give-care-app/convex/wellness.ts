@@ -66,7 +66,7 @@ export const getStatus = query({
       .order('desc')
       .take(recentLimit);
 
-    // ✅ Fix N+1: Batch fetch all assessments in parallel
+    // Fix N+1: Batch fetch all assessments in parallel
     const assessments = await Promise.all(
       scoreDocs.map((score) => ctx.db.get(score.assessmentId))
     );

@@ -6,7 +6,7 @@ import Stripe from 'stripe';
 
 const http = httpRouter();
 
-// ✅ Register Twilio webhook routes automatically
+// Register Twilio webhook routes automatically
 // Registers: /twilio/incoming-message and /twilio/message-status
 twilio.registerRoutes(http);
 

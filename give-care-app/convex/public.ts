@@ -67,7 +67,7 @@ export const listMemories = query({
       return [];
     }
 
-    // ✅ Fix: Query with limit and proper ordering
+    // Fix: Query with limit and proper ordering
     // Note: Index doesn't support ordering, so we fetch more than needed and sort
     // For better performance, consider adding composite index on (userId, importance, _creationTime)
     const memories = await ctx.db

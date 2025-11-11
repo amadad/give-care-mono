@@ -20,7 +20,7 @@ export const getByZones = query({
     const targetZones = new Set(zones.map((zone) => zone.toLowerCase()));
     const minRank = evidenceRank(minEvidenceLevel);
 
-    // ✅ SPEED: Use indexed join table instead of full table scan
+    // SPEED: Use indexed join table instead of full table scan
     // O(log n) lookup per zone instead of O(n) scan
     if (targetZones.size === 0) {
       // No zones specified - return all interventions (still use index for evidence level)
@@ -38,7 +38,7 @@ export const getByZones = query({
         .slice(0, limit);
     }
 
-    // ✅ SPEED: Query intervention_zones by index for each target zone
+    // SPEED: Query intervention_zones by index for each target zone
     // Collect unique intervention IDs that match any target zone
     const matchingInterventionIds = new Set<Id<'interventions'>>();
     
@@ -46,7 +46,7 @@ export const getByZones = query({
       const zoneMatches = await ctx.db
         .query('intervention_zones')
         .withIndex('by_zone', (q) => q.eq('zone', zone))
-        .collect(); // ✅ Indexed lookup - fast!
+        .collect(); // Indexed lookup - fast!
       
       for (const match of zoneMatches) {
         matchingInterventionIds.add(match.interventionId);
@@ -57,7 +57,7 @@ export const getByZones = query({
       return [];
     }
 
-    // ✅ SPEED: Fetch interventions by ID (batch get) instead of full scan
+    // SPEED: Fetch interventions by ID (batch get) instead of full scan
     const interventionIds = Array.from(matchingInterventionIds);
     const interventions = await Promise.all(
       interventionIds.map((id) => ctx.db.get(id))

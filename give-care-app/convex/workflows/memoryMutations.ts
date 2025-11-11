@@ -13,11 +13,11 @@ import { v } from 'convex/values';
 
 export const saveFacts = internalMutation({
   args: {
-    convexUserId: v.id('users'), // ✅ Fix: Accept Convex ID directly
+    convexUserId: v.id('users'), // Fix: Accept Convex ID directly
     facts: v.array(v.any()),
   },
   handler: async (ctx, { convexUserId, facts }) => {
-    // ✅ Fix: No user lookup needed - use ID directly
+    // Fix: No user lookup needed - use ID directly
     // Save each fact to memories table
     for (const fact of facts) {
       await ctx.db.insert('memories', {
@@ -36,11 +36,11 @@ export const saveFacts = internalMutation({
 
 export const updateContext = internalMutation({
   args: {
-    convexUserId: v.id('users'), // ✅ Fix: Accept Convex ID directly
+    convexUserId: v.id('users'), // Fix: Accept Convex ID directly
     enrichedContext: v.union(v.string(), v.null()),
   },
   handler: async (ctx, { convexUserId, enrichedContext }) => {
-    // ✅ Fix: No user lookup needed - use ID directly
+    // Fix: No user lookup needed - use ID directly
     const user = await ctx.db.get(convexUserId);
     if (!user) return;
 

@@ -3,7 +3,7 @@
 /**
  * Find Interventions Tool
  * Get evidence-based interventions matched to pressure zones
- * ✅ Merged with getInterventions - uses same underlying query
+ * Merged with getInterventions - uses same underlying query
  */
 
 import { createTool } from '@convex-dev/agent';
@@ -26,7 +26,7 @@ export const findInterventions = createTool({
       return { error: 'User ID not available' };
     }
 
-    // ✅ Fix: Auto-fetch zones if not provided
+    // Fix: Auto-fetch zones if not provided
     let zones: string[] = args.zones || [];
     if (zones.length === 0) {
       const status = await ctx.runQuery(api.wellness.getStatus, {
@@ -35,7 +35,7 @@ export const findInterventions = createTool({
       zones = status.pressureZones || [...DEFAULT_ZONES];
     }
 
-    // ✅ Fix: Reuse getInterventions logic via shared query
+    // Fix: Reuse getInterventions logic via shared query
     const interventions = await ctx.runQuery(api.interventions.getByZones, {
       zones,
       minEvidenceLevel: args.minEvidenceLevel || 'moderate',

@@ -12,10 +12,10 @@ export const extractProfileVariables = (profile: UserProfile | undefined) => {
   };
 };
 
-// ✅ Fix: Removed unused getProfileCompleteness function
+// Fix: Removed unused getProfileCompleteness function
 
 export const buildWellnessInfo = (metadata: AgentMetadata | undefined): string => {
-  // ✅ Fix: Placeholder - can be expanded based on assessment scores, etc.
+  // Fix: Placeholder - can be expanded based on assessment scores, etc.
   // Currently returns empty string as wellness info is handled elsewhere
   return '';
 };

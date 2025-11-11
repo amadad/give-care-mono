@@ -23,7 +23,7 @@ import { getInterventions } from '../tools/getInterventions';
 
 export const assessmentAgent = new Agent(components.agent, {
   name: 'Assessment Specialist',
-  languageModel: google('gemini-2.5-flash-lite'), // ✅ Fastest model for speed
+  languageModel: google('gemini-2.5-flash-lite'), // Fastest model for speed
   textEmbeddingModel: openai.embedding('text-embedding-3-small'), // Keep OpenAI embeddings
   instructions: ASSESSMENT_PROMPT,
   tools: { getInterventions },
@@ -75,7 +75,7 @@ export const runAssessmentAgent = action({
         responsesCount,
       });
 
-      // ✅ Priority 3: Use listThreads() instead of manual threadId storage
+      // Priority 3: Use listThreads() instead of manual threadId storage
       let thread;
       let newThreadId: string;
 
@@ -115,15 +115,15 @@ export const runAssessmentAgent = action({
 
       const promptText = input.text || 'Please interpret my burnout assessment results and suggest interventions.';
 
-      // ✅ Priority 1: Save user message first (for idempotency)
+      // Priority 1: Save user message first (for idempotency)
       const { messageId } = await saveMessage(ctx, components.agent, {
         threadId: newThreadId,
         prompt: promptText,
       });
 
-      // ✅ Priority 2: Use contextOptions for built-in RAG
+      // Priority 2: Use contextOptions for built-in RAG
       const result = await thread.generateText({
-        promptMessageId: messageId, // ✅ Reference saved message
+        promptMessageId: messageId, // Reference saved message
         system: systemPrompt,
         // @ts-expect-error - contextOptions not in types yet but supported per docs
         contextOptions: {
@@ -151,7 +151,7 @@ export const runAssessmentAgent = action({
         },
       });
 
-      // ✅ Agent Component automatically saves message
+      // Agent Component automatically saves message
 
       const responseText: string = result.text;
       const latencyMs = Date.now() - startTime;

@@ -24,18 +24,18 @@ export const extractFacts = internalAction({
     recentMessages: v.array(v.any()),
   },
   handler: async (ctx, { userId, recentMessages }) => {
-    // ✅ Skip if no meaningful conversation (reduced threshold for speed)
+    // Skip if no meaningful conversation (reduced threshold for speed)
     if (recentMessages.length < 2) return [];
 
-    // ✅ Limit to last 3 messages for faster processing (reduced from all)
+    // Limit to last 3 messages for faster processing (reduced from all)
     const limitedMessages = recentMessages.slice(-3);
     const conversationText = limitedMessages
       .map((m: any) => `${m.role}: ${m.content}`)
       .join('\n');
 
     try {
-      // ✅ Use generateObject with Zod schema for structured output
-      // ✅ Optimized for speed: faster model, reduced tokens, timeout protection
+      // Use generateObject with Zod schema for structured output
+      // Optimized for speed: faster model, reduced tokens, timeout protection
       const timeoutPromise = new Promise<never>((_, reject) => {
         setTimeout(() => reject(new Error('Fact extraction timeout after 2s')), FACT_EXTRACTION_TIMEOUT_MS);
       });
@@ -62,14 +62,14 @@ ${conversationText}`,
         providerOptions: {
           google: {
             topP: 0.8,
-            maxOutputTokens: 300, // ✅ Reduced from 500 for faster responses
+            maxOutputTokens: 300, // Reduced from 500 for faster responses
           },
         },
       });
 
       const result = await Promise.race([extractionPromise, timeoutPromise]);
 
-      // ✅ generateObject returns structured data directly - no parsing needed!
+      // generateObject returns structured data directly - no parsing needed!
       return result.object;
     } catch (error) {
       console.error('[memory-enrichment] Fact extraction failed:', error);
@@ -88,7 +88,7 @@ export const buildContext = internalAction({
     threadId: v.string(),
   },
   handler: async (ctx, { userId, threadId }) => {
-    // ✅ Get fewer memories for faster processing (reduced from 10 to 5)
+    // Get fewer memories for faster processing (reduced from 10 to 5)
     const memories = await ctx.runQuery(api.public.listMemories, {
       userId,
       limit: DEFAULT_MEMORY_LIMIT,
@@ -104,7 +104,7 @@ export const buildContext = internalAction({
       .join('\n');
 
     try {
-      // ✅ Add timeout protection (2s max)
+      // Add timeout protection (2s max)
       const timeoutPromise = new Promise<never>((_, reject) => {
         setTimeout(() => reject(new Error('Context building timeout after 2s')), CONTEXT_BUILDING_TIMEOUT_MS);
       });
@@ -124,7 +124,7 @@ Focus on:
 Context summary:`,
         temperature: 0.3, // Low for consistent summaries
         topP: 0.9,
-        maxOutputTokens: 200, // ✅ Reduced from 300 for faster responses (~150 words)
+        maxOutputTokens: 200, // Reduced from 300 for faster responses (~150 words)
         providerOptions: {
           google: {
             // No special options needed for text summarization

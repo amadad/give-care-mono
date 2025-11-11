@@ -109,8 +109,8 @@ function zipToApproximateLatLng(zip: string): { latitude: number; longitude: num
 
 /**
  * Build caregiving-specific query for Maps Grounding
- * 
- * ✅ Optimized for Maps Grounding: zip code in query provides accurate location
+ *
+ * Optimized for Maps Grounding: zip code in query provides accurate location
  */
 function buildCaregivingQuery(query: string, category: string, zip: string): string {
   const categoryMap: Record<string, string> = {
@@ -129,8 +129,8 @@ function buildCaregivingQuery(query: string, category: string, zip: string): str
   };
 
   const searchTerm = categoryMap[category] || category;
-  
-  // ✅ Use zip code in query - Maps Grounding understands zip codes natively
+
+  // Use zip code in query - Maps Grounding understands zip codes natively
   // Format: "category near ZIP_CODE" for best results
   // If user provided additional context in query, include it
   const userQuery = query.trim();
@@ -203,7 +203,7 @@ export async function searchWithMapsGrounding(
   query: string,
   category: string,
   zip: string,
-  timeoutMs: number = 3000 // ✅ 3s timeout to prevent blocking
+  timeoutMs: number = 3000 // 3s timeout to prevent blocking
 ): Promise<{
   resources: Array<{
     name: string;
@@ -221,13 +221,13 @@ export async function searchWithMapsGrounding(
   try {
     // Build query with location context (zip code in query is sufficient for Maps Grounding)
     const mapsQuery = buildCaregivingQuery(query, category, zip);
-    
-    // ✅ Maps Grounding works best with zip code in query - lat/lng is optional
+
+    // Maps Grounding works best with zip code in query - lat/lng is optional
     // Only use approximate lat/lng if we want to prioritize it, but zip in query should be enough
     // Note: The rough approximation can cause inaccurate results, so we'll rely on zip in query
-    const location = null; // ✅ Disable rough approximation - let Maps Grounding use zip from query
-    
-    // ✅ Use @google/genai for Maps Grounding (cleaner than REST API)
+    const location = null; // Disable rough approximation - let Maps Grounding use zip from query
+
+    // Use @google/genai for Maps Grounding (cleaner than REST API)
     const apiKey = process.env.GOOGLE_GENERATIVE_AI_API_KEY || process.env.GEMINI_API_KEY;
     if (!apiKey) {
       throw new Error('GOOGLE_GENERATIVE_AI_API_KEY environment variable is required (or GEMINI_API_KEY for backward compatibility)');
@@ -239,20 +239,20 @@ export async function searchWithMapsGrounding(
 
     const config: any = {
       tools: [{ googleMaps: {} }],
-      // ✅ Optimize for speed
+      // Optimize for speed
       maxOutputTokens: 200, // Reduced from default for faster responses
     };
 
-    // ✅ Skip location config - Maps Grounding will use zip code from query for better accuracy
+    // Skip location config - Maps Grounding will use zip code from query for better accuracy
     // The rough approximation was causing inaccurate results
 
-    // ✅ Add timeout to prevent blocking
+    // Add timeout to prevent blocking
     const timeoutPromise = new Promise<never>((_, reject) => {
       setTimeout(() => reject(new Error('Maps Grounding timeout after 3s')), timeoutMs);
     });
 
     const apiPromise = ai.models.generateContent({
-      model: 'gemini-2.5-flash-lite', // ✅ Faster model for speed
+      model: 'gemini-2.5-flash-lite', // Faster model for speed
       contents: mapsQuery,
       config,
     });
@@ -268,9 +268,9 @@ export async function searchWithMapsGrounding(
     }
 
     const groundingMetadata = candidate.groundingMetadata as any;
-    
+
     if (!groundingMetadata || !groundingMetadata.groundingChunks || groundingMetadata.groundingChunks.length === 0) {
-      // ✅ Reduced logging - only log essential info, not full JSON
+      // Reduced logging - only log essential info, not full JSON
       console.error('[maps-grounding] No grounding chunks', { zip, category, hasResponse: !!response.text });
       throw new Error('No Maps Grounding results found. Try a more specific query or check your location.');
     }
@@ -297,7 +297,7 @@ export async function searchWithMapsGrounding(
       text,
     };
   } catch (error) {
-    // ✅ Only log error message, not full stack trace
+    // Only log error message, not full stack trace
     console.error('[maps-grounding] Error:', error instanceof Error ? error.message : String(error));
     throw error;
   }

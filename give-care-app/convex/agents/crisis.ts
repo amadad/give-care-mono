@@ -32,7 +32,7 @@ export const crisisAgent = new Agent(components.agent, {
   languageModel: google('gemini-2.5-flash-lite'), // Fastest model for crisis response
   textEmbeddingModel: openai.embedding('text-embedding-3-small'), // Keep OpenAI embeddings
   instructions: CRISIS_PROMPT,
-  maxSteps: 1, // ✅ No tools - prioritize speed
+  maxSteps: 1, // No tools - prioritize speed
 });
 
 // ============================================================================
@@ -69,7 +69,7 @@ export const runCrisisAgent = internalAction({
     const userName = (profile.firstName as string) ?? 'friend';
 
     try {
-      // ✅ Priority 3: Use listThreads() instead of manual threadId storage
+      // Priority 3: Use listThreads() instead of manual threadId storage
       let thread;
       let newThreadId: string;
 
@@ -107,15 +107,15 @@ export const runCrisisAgent = internalAction({
         }
       }
 
-      // ✅ Priority 1: Save user message first (for idempotency)
+      // Priority 1: Save user message first (for idempotency)
       const { messageId } = await saveMessage(ctx, components.agent, {
         threadId: newThreadId,
         prompt: input.text,
       });
 
-      // ✅ Fast response - no context search needed for speed (crisis requires immediate response)
+      // Fast response - no context search needed for speed (crisis requires immediate response)
       const result = await thread.generateText({
-        promptMessageId: messageId, // ✅ Reference saved message
+        promptMessageId: messageId, // Reference saved message
         system: CRISIS_PROMPT,
         providerOptions: {
           google: {
@@ -133,7 +133,7 @@ export const runCrisisAgent = internalAction({
         },
       });
 
-      // ✅ Agent Component automatically saves message
+      // Agent Component automatically saves message
 
       const responseText = result.text;
       const latencyMs = Date.now() - startTime;

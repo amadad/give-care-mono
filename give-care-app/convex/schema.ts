@@ -104,12 +104,12 @@ export default defineSchema({
     .index('by_evidence', ['evidenceLevel']),
 
   // Intervention Zones (join table for efficient zone-based queries)
-  // ✅ SPEED: Normalized for O(log n) queries instead of O(n) table scans
+  // SPEED: Normalized for O(log n) queries instead of O(n) table scans
   intervention_zones: defineTable({
     interventionId: v.id('interventions'),
     zone: v.string(), // 'emotional', 'physical', 'social', 'time', 'financial'
   })
-    .index('by_zone', ['zone']) // ✅ Fast zone lookups
+    .index('by_zone', ['zone']) // Fast zone lookups
     .index('by_intervention', ['interventionId']), // For cleanup/deletes
 
   // Intervention events (tracking user interactions with interventions)

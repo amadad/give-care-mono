@@ -23,7 +23,7 @@ export const startAssessment = mutation({
       throw new Error('User not found');
     }
 
-    // ✅ Fix: Only fetch active sessions, limit query
+    // Fix: Only fetch active sessions, limit query
     const existingSessions = await ctx.db
       .query('assessment_sessions')
       .withIndex('by_user_definition', (q) => q.eq('userId', user._id).eq('definitionId', definition))

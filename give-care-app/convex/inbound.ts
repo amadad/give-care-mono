@@ -23,14 +23,14 @@ export const processInbound = internalAction({
     messageSid: v.string(),
   },
   handler: async (ctx, args) => {
-    // ✅ Idempotency: Check if we've already processed this message
+    // Idempotency: Check if we've already processed this message
     const seen = await ctx.runQuery(internal.internal._seenMessage, { sid: args.messageSid });
     if (seen) {
       return { success: true, deduped: true };
     }
     await ctx.runMutation(internal.internal._markMessage, { sid: args.messageSid });
 
-    // ✅ Rate limiting: Enforce limits before expensive agent work
+    // Rate limiting: Enforce limits before expensive agent work
     const rateLimitCheck = await ctx.runQuery(components.rateLimiter.lib.checkRateLimit, {
       name: 'llmRequests',
       key: args.phone,
@@ -92,7 +92,7 @@ export const processInbound = internalAction({
       });
     } else {
       // Main agent
-      // ✅ Removed duplicate thread lookup - let main agent handle it internally
+      // Removed duplicate thread lookup - let main agent handle it internally
       // This saves ~229ms by avoiding duplicate query
       response = await ctx.runAction(api.agents.main.runMainAgent, {
         input: {
@@ -105,7 +105,7 @@ export const processInbound = internalAction({
       });
     }
 
-    // ✅ Priority 3: No need to save threadId manually - Agent Component manages it
+    // Priority 3: No need to save threadId manually - Agent Component manages it
 
     // Send SMS response
     if (response?.text) {
@@ -135,7 +135,7 @@ export const sendSmsResponse = internalAction({
       throw new Error('[inbound] Missing destination phone number');
     }
 
-    // ✅ Use Twilio component to send message
+    // Use Twilio component to send message
     const status = await twilio.sendMessage(ctx, {
       to: args.to,
       body: args.text,
