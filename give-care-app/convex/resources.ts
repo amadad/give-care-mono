@@ -2,9 +2,12 @@
 
 import { action, internalAction } from './_generated/server';
 import { v } from 'convex/values';
-import { internal } from './_generated/api';
+import { internal, components } from './_generated/api';
 import { searchWithMapsGrounding } from './lib/maps';
 import { MS_PER_DAY, RACE_TIMEOUT_MS } from './lib/constants';
+import { WorkflowManager } from '@convex-dev/workflow';
+
+const workflow = new WorkflowManager(components.workflow);
 
 const CATEGORY_TTLS_DAYS: Record<string, number> = {
   respite: 30,
@@ -173,14 +176,12 @@ export const searchResources = action({
         )
         .join('\n');
 
-      // Refresh in background (non-blocking)
-      ctx.runAction(internal.resources.refreshResourceCache, {
+      // Refresh in background via durable workflow (non-blocking, retriable)
+      void workflow.start(ctx, internal.workflows.resources.refresh, {
         query: args.query,
         category,
         zip: resolvedZip,
         ttlMs,
-      }).catch((error) => {
-        console.error('[resources] Background cache refresh failed:', error);
       });
 
       return {
@@ -241,26 +242,22 @@ export const searchResources = action({
     // ✅ SPEED: Return immediately with winner (stub or Maps result)
     // Schedule background refresh if we used stub or got partial results
     if (!usedMapsGrounding || fromRace) {
-      // Refresh in background (non-blocking) - better results will be cached for next time
-      ctx.runAction(internal.resources.refreshResourceCache, {
+      // Refresh in background via durable workflow (non-blocking, retriable)
+      void workflow.start(ctx, internal.workflows.resources.refresh, {
         query: args.query,
         category,
         zip: resolvedZip,
         ttlMs,
-      }).catch((error) => {
-        console.error('[resources] Background refresh failed:', error);
       });
     }
 
     // Cache results for future queries (async, non-blocking)
-    ctx.runMutation(internal.internal.recordResourceLookup, {
+    void ctx.runMutation(internal.internal.recordResourceLookup, {
       userId: undefined,
       category,
       zip: resolvedZip,
       results,
       expiresAt: now + ttlMs,
-    }).catch((error) => {
-      console.error('[resources] Cache update failed:', error);
     });
 
     return {
@@ -275,35 +272,21 @@ export const searchResources = action({
 });
 
 // ============================================================================
-// BACKGROUND CACHE REFRESH ACTION (stale-while-revalidate)
+// INTERNAL ACTION FOR WORKFLOW USE
 // ============================================================================
 
-export const refreshResourceCache = internalAction({
+/**
+ * Internal action for fetching Maps Grounding results
+ * Used by workflow only - pure fetch, no cache writes
+ */
+export const _fetchWithMaps = internalAction({
   args: {
     query: v.string(),
     category: v.string(),
     zip: v.string(),
-    ttlMs: v.number(),
   },
-  handler: async (ctx, args) => {
-    try {
-      // Fetch fresh results with timeout
-      const mapsResult = await searchWithMapsGrounding(args.query, args.category, args.zip, 3000);
-      
-      // Update cache
-      await ctx.runMutation(internal.internal.recordResourceLookup, {
-        userId: undefined,
-        category: args.category,
-        zip: args.zip,
-        results: mapsResult.resources,
-        expiresAt: Date.now() + args.ttlMs,
-      });
-
-      return { success: true };
-    } catch (error) {
-      console.error('[resources] Background cache refresh failed:', error);
-      return { success: false, error: String(error) };
-    }
+  handler: async (_ctx, args) => {
+    return await searchWithMapsGrounding(args.query, args.category, args.zip, 3000);
   },
 });
 

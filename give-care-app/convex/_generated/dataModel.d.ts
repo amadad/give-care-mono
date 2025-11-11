@@ -228,6 +228,21 @@ export type DataModel = {
     searchIndexes: {};
     vectorIndexes: {};
   };
+  inbound_receipts: {
+    document: {
+      messageSid: string;
+      _id: Id<"inbound_receipts">;
+      _creationTime: number;
+    };
+    fieldPaths: "_creationTime" | "_id" | "messageSid";
+    indexes: {
+      by_id: ["_id"];
+      by_creation_time: ["_creationTime"];
+      by_sid: ["messageSid", "_creationTime"];
+    };
+    searchIndexes: {};
+    vectorIndexes: {};
+  };
   intervention_events: {
     document: {
       interventionId: string;

@@ -147,8 +147,8 @@ export const runCrisisAgent = internalAction({
         traceId: `crisis-${Date.now()}`,
       });
 
-      // Trigger workflow for follow-up
-      await workflow.start(ctx, internal.workflows.crisis.crisisEscalation, {
+      // Trigger workflow for follow-up (non-blocking, fire-and-forget)
+      void workflow.start(ctx, internal.workflows.crisis.crisisEscalation, {
         userId: userId,
         threadId: newThreadId,
         messageText: input.text,

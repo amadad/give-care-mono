@@ -177,6 +177,34 @@ export const deleteResourceCacheBatch = internalMutation({
 });
 
 // ============================================================================
+// INBOUND IDEMPOTENCY HELPERS
+// ============================================================================
+
+/**
+ * Check if a message has already been processed
+ */
+export const _seenMessage = internalQuery({
+  args: { sid: v.string() },
+  handler: async (ctx, { sid }) => {
+    const existing = await ctx.db
+      .query('inbound_receipts')
+      .withIndex('by_sid', (q) => q.eq('messageSid', sid))
+      .unique();
+    return !!existing;
+  },
+});
+
+/**
+ * Mark a message as processed
+ */
+export const _markMessage = internalMutation({
+  args: { sid: v.string() },
+  handler: async (ctx, { sid }) => {
+    await ctx.db.insert('inbound_receipts', { messageSid: sid });
+  },
+});
+
+// ============================================================================
 // TWILIO
 // ============================================================================
 

@@ -23,6 +23,31 @@ export const processInbound = internalAction({
     messageSid: v.string(),
   },
   handler: async (ctx, args) => {
+    // ✅ Idempotency: Check if we've already processed this message
+    const seen = await ctx.runQuery(internal.internal._seenMessage, { sid: args.messageSid });
+    if (seen) {
+      return { success: true, deduped: true };
+    }
+    await ctx.runMutation(internal.internal._markMessage, { sid: args.messageSid });
+
+    // ✅ Rate limiting: Enforce limits before expensive agent work
+    const rateLimitCheck = await ctx.runQuery(components.rateLimiter.lib.checkRateLimit, {
+      name: 'llmRequests',
+      key: args.phone,
+      config: {
+        kind: 'fixed window',
+        rate: 20, // 20 requests per period
+        period: 60_000, // 1 minute window
+        capacity: 20,
+      },
+      count: 1,
+      throws: true, // Throw error if limit exceeded
+    });
+    
+    if (!rateLimitCheck.ok) {
+      throw new Error(`Rate limit exceeded. Retry after ${rateLimitCheck.retryAfter}ms`);
+    }
+
     // Ensure user exists
     const user = await ctx.runMutation(internal.internal.ensureUserMutation, {
       externalId: args.phone,
@@ -123,6 +148,10 @@ export const sendSmsResponse = internalAction({
 
 // ============================================================================
 // COMPATIBILITY ALIAS (for legacy callers during migration)
+// ============================================================================
+
+// ============================================================================
+// COMPATIBILITY ALIAS
 // ============================================================================
 
 // Legacy name support - if anything still schedules processInboundMessage, it will work

@@ -70,6 +70,9 @@ export default tseslint.config(
       // Allow async functions without await
       // for consistency (esp. Convex `handler`s)
       "@typescript-eslint/require-await": "off",
+
+      // Enforce explicit handling of promises (use void for fire-and-forget)
+      "@typescript-eslint/no-floating-promises": "error",
     },
   },
 );

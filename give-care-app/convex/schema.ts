@@ -180,6 +180,11 @@ export default defineSchema({
     traceId: v.string(),
   }).index('by_rule', ['ruleId']),
 
+  // Inbound message receipts (idempotency for Twilio retries)
+  inbound_receipts: defineTable({
+    messageSid: v.string(),
+  }).index('by_sid', ['messageSid']),
+
   // Alerts (crisis alerts, notifications)
   alerts: defineTable({
     userId: v.id('users'),

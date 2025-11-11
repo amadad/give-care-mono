@@ -358,7 +358,8 @@ What's on your mind?`;
 
       const latencyMs = Date.now() - startTime;
 
-      await ctx.runMutation(internal.internal.logAgentRunInternal, {
+      // Log error run (non-blocking, fire-and-forget)
+      void ctx.runMutation(internal.internal.logAgentRunInternal, {
         externalId: context.userId,
         agent: 'main',
         policyBundle: 'default_v1',
@@ -368,7 +369,7 @@ What's on your mind?`;
           toolCalls: 0,
         },
         latencyMs,
-        traceId: `main-${Date.now()}`,
+        traceId: `main-error-${Date.now()}`,
       });
 
       return {

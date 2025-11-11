@@ -197,6 +197,13 @@ export declare const internal: {
     >;
   };
   internal: {
+    _markMessage: FunctionReference<
+      "mutation",
+      "internal",
+      { sid: string },
+      any
+    >;
+    _seenMessage: FunctionReference<"query", "internal", { sid: string }, any>;
     deleteResourceCacheBatch: FunctionReference<
       "mutation",
       "internal",
@@ -330,13 +337,13 @@ export declare const internal: {
     >;
   };
   resources: {
-    cleanupResourceCache: FunctionReference<"action", "internal", {}, any>;
-    refreshResourceCache: FunctionReference<
+    _fetchWithMaps: FunctionReference<
       "action",
       "internal",
-      { category: string; query: string; ttlMs: number; zip: string },
+      { category: string; query: string; zip: string },
       any
     >;
+    cleanupResourceCache: FunctionReference<"action", "internal", {}, any>;
   };
   workflows: {
     crisis: {
@@ -414,6 +421,9 @@ export declare const internal: {
         { convexUserId: Id<"users">; enrichedContext: string | null },
         any
       >;
+    };
+    resources: {
+      refresh: FunctionReference<"mutation", "internal", any, any>;
     };
   };
 };
