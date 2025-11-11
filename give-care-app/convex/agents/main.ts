@@ -224,12 +224,18 @@ What would be most helpful right now?`;
             system: systemPrompt,
             // @ts-expect-error - contextOptions not in types yet but supported per docs
             contextOptions,
+            // ✅ Force function calling mode to prevent code execution interference
+            // See: https://github.com/vercel/ai/issues/8258
+            // Gemini built-in tools (code execution, google_search) can interfere with custom tools
+            toolChoice: 'auto', // Changed from implicit 'auto' to explicit to ensure proper tool calling
             providerOptions: {
               google: {
                 temperature: 0.7,
                 topP: 0.95,
                 topK: 40,
                 maxOutputTokens: 300, // Keep SMS responses concise
+                // ✅ Disable code execution to prevent interference with custom tools
+                codeExecution: false,
                 safetySettings: [
                   { category: 'HARM_CATEGORY_HARASSMENT', threshold: 'BLOCK_MEDIUM_AND_ABOVE' },
                   { category: 'HARM_CATEGORY_HATE_SPEECH', threshold: 'BLOCK_MEDIUM_AND_ABOVE' },
@@ -287,7 +293,8 @@ What's most urgent for you today?`;
 
       // ✅ Log agent run for analytics (async, non-blocking)
       // Don't await - fire and forget to return response faster
-      ctx.runMutation(internal.internal.logAgentRunInternal, {
+      // Use void to suppress "outstanding mutation" warning
+      void ctx.runMutation(internal.internal.logAgentRunInternal, {
         externalId: context.userId,
         agent: 'main',
         policyBundle: 'default_v1',
