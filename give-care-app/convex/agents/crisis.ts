@@ -118,12 +118,15 @@ export const runCrisisAgent = internalAction({
       });
 
       // Trigger workflow for follow-up (non-blocking, fire-and-forget)
-      void workflow.start(ctx, internal.workflows.crisis.crisisEscalation, {
+      // Properly handle promise to avoid dangling promise warning
+      workflow.start(ctx, internal.workflows.crisis.crisisEscalation, {
         userId: userId,
         threadId: newThreadId,
         messageText: input.text,
         crisisTerms: context.crisisFlags?.terms || [],
         severity: 'high', // Can be determined from crisis detection
+      }).catch((error) => {
+        console.error('[crisis-agent] Workflow start failed:', error);
       });
 
       return {

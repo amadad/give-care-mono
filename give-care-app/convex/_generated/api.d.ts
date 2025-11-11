@@ -224,16 +224,18 @@ export declare const internal: {
       { messageSid: string; phone: string; text: string },
       any
     >;
-    processInboundMessage: FunctionReference<
-      "action",
-      "internal",
-      { messageSid: string; phone: string; text: string },
-      any
-    >;
     sendSmsResponse: FunctionReference<
       "action",
       "internal",
       { text: string; to: string; userId: string },
+      any
+    >;
+  };
+  inboundHelpers: {
+    getInboundContext: FunctionReference<
+      "query",
+      "internal",
+      { messageSid: string; phone: string },
       any
     >;
   };
@@ -574,6 +576,7 @@ export declare const internal: {
     };
     trends: {
       detectScoreTrends: FunctionReference<"action", "internal", {}, any>;
+      getAllUserScores: FunctionReference<"query", "internal", {}, any>;
       getUserScores: FunctionReference<
         "query",
         "internal",

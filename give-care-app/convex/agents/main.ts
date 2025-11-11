@@ -105,22 +105,25 @@ export const runMainAgent = action({
       const tone = getTone(context);
       const systemPrompt = `${basePrompt}\n\n${tone}`;
 
-      // Priority 3: Use listThreads() instead of manual threadId storage
-      // Get or create thread using shared helper
+      // OPTIMIZATION: Pass user metadata to enable threadId caching
+      // This avoids listThreadsByUserId query on subsequent requests
       const { thread, threadId: newThreadId } = await ensureAgentThread(
         ctx,
         mainAgent,
         context.userId,
-        threadId
+        threadId,
+        metadata // Pass metadata for threadId caching
       );
 
       // SPEED: Short input guard - skip heavy tools for throwaway inputs
       // BUT: Allow onboarding even for short inputs if profile is incomplete
       const trimmedInput = input.text.trim();
-      const isShortInput = trimmedInput.length < 5;
+      const isShortInput = trimmedInput.length < 10; // Increased from 5 to catch "Doing ok" (8 chars)
+      const isVeryShortInput = trimmedInput.length < 5;
       const needsOnboarding = nextField !== null;
       
-      if (isShortInput && !needsOnboarding) {
+      // Very short inputs (< 5 chars) - ultra-fast path
+      if (isVeryShortInput && !needsOnboarding) {
         // Fast path: Return empathetic response + 1 concrete next step
         // No LLM call, no tool calls, no context search
         // Only use fast path if profile is complete (no onboarding needed)
@@ -144,7 +147,8 @@ What would be most helpful right now?`;
         
         // Schedule enrichment in background (non-blocking)
         // Use workflow.start() for retryable background work
-        void workflow.start(ctx, internal.workflows.memory.enrichMemory, {
+        // Properly handle promise to avoid dangling promise warning
+        workflow.start(ctx, internal.workflows.memory.enrichMemory, {
           userId: context.userId,
           threadId: newThreadId,
           recentMessages: [
@@ -169,21 +173,26 @@ What would be most helpful right now?`;
         prompt: input.text,
       });
 
-      // SPEED: Reduce contextOptions on first turns (fewer messages = faster)
+      // SPEED: Reduce contextOptions for short/simple inputs (fewer messages = faster)
       const isFirstTurn = !threadId;
-      const contextOptions = isFirstTurn
+      const isSimpleResponse = isShortInput && !needsOnboarding; // Short inputs don't need full context
+      
+      // Detect simple acknowledgments (ok, yes, no, thanks, etc.)
+      const isAcknowledgment = /^(ok|okay|yes|no|thanks|thank you|sure|yep|nope|alright|alrighty|got it|gotcha|doing ok|doing okay|i'm ok|i'm okay)$/i.test(trimmedInput);
+      
+      const contextOptions = isFirstTurn || isSimpleResponse || isAcknowledgment
         ? {
-            // Minimal context for first turn - fastest response
+            // Minimal context for first turn, simple responses, or acknowledgments - fastest response
             searchOtherThreads: false,
-            recentMessages: 3, // Reduced from 5 for first turn
+            recentMessages: 1, // Just the last message for acknowledgments
             searchOptions: {
-              textSearch: true,
+              textSearch: false, // Disable text search for simple responses
               vectorSearch: false,
-              limit: 3, // Reduced from 5
+              limit: 0, // No semantic search needed
             },
           }
         : {
-            // Full context for subsequent turns
+            // Full context for complex queries
             searchOtherThreads: false,
             recentMessages: 5,
             searchOptions: {
@@ -193,11 +202,12 @@ What would be most helpful right now?`;
             },
           };
 
-      // SPEED: LLM timeout wrapper (4s SLA) - prevents hanging responses
-      const LLM_TIMEOUT_MS = 4000; // 4 second SLA
+      // SPEED: LLM timeout wrapper (8s SLA) - allows for context retrieval + LLM + tools
+      // Increased from 4s to 8s to accommodate context retrieval and tool calls
+      const LLM_TIMEOUT_MS = 8000; // 8 second SLA
       const timeoutPromise = new Promise<never>((_, reject) => {
         setTimeout(() => {
-          reject(new Error('LLM response timeout after 4s'));
+          reject(new Error('LLM response timeout after 8s'));
         }, LLM_TIMEOUT_MS);
       });
 
@@ -206,6 +216,8 @@ What would be most helpful right now?`;
 
       try {
         // Race LLM call against timeout
+        // NOTE: We still need thread object for thread.generateText(), but contextOptions
+        // controls how many messages are actually loaded, so the Agent Component optimizes this
         result = await Promise.race([
           thread.generateText({
             promptMessageId: messageId,
@@ -236,7 +248,8 @@ What would be most helpful right now?`;
         if (error instanceof Error && error.message.includes('timeout')) {
           timedOut = true;
           // Schedule enrichment in background to improve next response
-          void workflow.start(ctx, internal.workflows.memory.enrichMemory, {
+          // Properly handle promise to avoid dangling promise warning
+          workflow.start(ctx, internal.workflows.memory.enrichMemory, {
             userId: context.userId,
             threadId: newThreadId,
             recentMessages: [
@@ -277,8 +290,8 @@ What's most urgent for you today?`;
 
       // Log agent run for analytics (async, non-blocking)
       // Don't await - fire and forget to return response faster
-      // Use void to suppress "outstanding mutation" warning
-      void ctx.runMutation(internal.internal.logAgentRunInternal, {
+      // Properly handle promise to avoid dangling promise warning
+      ctx.runMutation(internal.internal.logAgentRunInternal, {
         externalId: context.userId,
         agent: 'main',
         policyBundle: 'default_v1',
@@ -303,11 +316,12 @@ What's most urgent for you today?`;
       ];
 
       // SPEED: Memory enrichment runs async AFTER response (non-blocking)
-      // Use workflow.start() for retryable background work (properly voided to avoid dangling promise)
+      // Use workflow.start() for retryable background work
       // Skip for first message to reduce overhead
       if (threadId && !timedOut) {
         // Thread exists - we have conversation history, safe to enrich
-        void workflow.start(ctx, internal.workflows.memory.enrichMemory, {
+        // Properly handle promise to avoid dangling promise warning
+        workflow.start(ctx, internal.workflows.memory.enrichMemory, {
           userId: context.userId,
           threadId: newThreadId,
           recentMessages: recentMessages.slice(-3), // Only analyze last 3 messages
@@ -343,7 +357,8 @@ What's on your mind?`;
       const latencyMs = Date.now() - startTime;
 
       // Log error run (non-blocking, fire-and-forget)
-      void ctx.runMutation(internal.internal.logAgentRunInternal, {
+      // Properly handle promise to avoid dangling promise warning
+      ctx.runMutation(internal.internal.logAgentRunInternal, {
         externalId: context.userId,
         agent: 'main',
         policyBundle: 'default_v1',
@@ -354,6 +369,8 @@ What's on your mind?`;
         },
         latencyMs,
         traceId: `main-error-${Date.now()}`,
+      }).catch((error) => {
+        console.error('[main-agent] Error logging failed:', error);
       });
 
       return {

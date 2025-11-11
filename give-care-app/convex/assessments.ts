@@ -281,16 +281,13 @@ export const handleInboundAnswer = internalAction({
     text: v.string(),
   },
   handler: async (ctx, { userId, definition, text }) => {
-    const user = await ctx.runQuery(internal.internal.getByExternalIdQuery, { externalId: userId });
-    if (!user) return { text: null, done: false };
+    // OPTIMIZATION: Batch user lookup and session fetch
+    const [user, session] = await Promise.all([
+      ctx.runQuery(internal.internal.getByExternalIdQuery, { externalId: userId }),
+      ctx.runQuery(api.assessments.getActiveSession, { userId, definition }),
+    ]);
 
-    // Get active session
-    const session = await ctx.runQuery(api.assessments.getActiveSession, {
-      userId,
-      definition,
-    });
-
-    if (!session) return { text: null, done: false };
+    if (!user || !session) return { text: null, done: false };
 
     const catalog = CATALOG[definition];
     const currentIndex = session.questionIndex;
@@ -324,13 +321,11 @@ export const handleInboundAnswer = internalAction({
       }
     }
 
-    // Check if finished
-    const updatedSession = await ctx.runQuery(api.assessments.getActiveSession, {
-      userId,
-      definition,
-    });
+    // OPTIMIZATION: Compute next index instead of re-querying session
+    // answerAssessment increments questionIndex, so nextIndex = currentIndex + 1
+    const nextIndex = currentIndex + 1;
 
-    if (!updatedSession || updatedSession.questionIndex >= catalog.length) {
+    if (nextIndex >= catalog.length) {
       // Finalize assessment (creates score, schedules check-ins)
       const result = await ctx.runMutation(api.assessments.finalizeAssessment, {
         userId,
@@ -344,7 +339,6 @@ export const handleInboundAnswer = internalAction({
     }
 
     // Send next question
-    const nextIndex = updatedSession.questionIndex;
     const nextQuestion = catalog.items[nextIndex];
     const total = catalog.length;
 
