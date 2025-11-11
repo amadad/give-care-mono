@@ -121,11 +121,12 @@ export const sendEMACheckIn = wf.define({
 export const listDueTriggers = internalQuery({
   args: { now: v.number() },
   handler: async (ctx, { now }) => {
-    return await ctx.db
+    const triggers = await ctx.db
       .query('triggers')
       .withIndex('by_nextRun', (q) => q.lte('nextRun', now))
-      .filter((q) => q.eq(q.field('status'), 'active'))
       .collect();
+    
+    return triggers.filter(t => t.status === 'active');
   },
 });
 
@@ -197,7 +198,8 @@ export const getUserScores = internalQuery({
 export const getAllUserScores = internalQuery({
   args: {},
   handler: async (ctx) => {
-    const users = await ctx.db.query('users').collect();
+    // Limit to reasonable number - use take() instead of collect() for large datasets
+    const users = await ctx.db.query('users').take(1000);
     const scorePromises = users.map(async (user) => {
       const scores = await ctx.db
         .query('scores')
@@ -719,8 +721,16 @@ ${conversationText}`,
 export const buildContext = internalAction({
   args: { userId: v.string(), threadId: v.string() },
   handler: async (ctx, { userId, threadId }) => {
-    const memories = await ctx.runQuery(api.public.listMemories, {
-      userId,
+    // Get user by externalId first to convert to Id<"users">
+    const user = await ctx.runQuery(internal.internal.getByExternalIdQuery, {
+      externalId: userId,
+    });
+    if (!user) {
+      return null;
+    }
+    
+    const memories = await ctx.runQuery(internal.public.listMemoriesInternal, {
+      userId: user._id,
       limit: DEFAULT_MEMORY_LIMIT,
     });
 

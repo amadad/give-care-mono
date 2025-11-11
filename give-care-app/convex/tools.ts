@@ -8,7 +8,7 @@
 
 import { createTool } from '@convex-dev/agent';
 import { z } from 'zod';
-import { api, internal } from './_generated/api';
+import { internal, api } from './_generated/api';
 import type { AgentToolContext, ResourceResult } from './lib/types';
 
 // ============================================================================
@@ -25,6 +25,7 @@ export const searchResources = createTool({
     const toolCtx = ctx as unknown as AgentToolContext;
     const userMetadata = toolCtx.metadata?.context?.metadata || {};
 
+    // Actions can call other actions - using public version is acceptable
     const result = await ctx.runAction(api.resources.searchResources, {
       query: args.query,
       category: args.category,
@@ -64,8 +65,16 @@ export const startAssessment = createTool({
     }
 
     try {
-      await ctx.runMutation(api.assessments.startAssessment, {
-        userId,
+      // Get user ID from context
+      const user = await ctx.runQuery(internal.internal.getByExternalIdQuery, {
+        externalId: userId,
+      });
+      if (!user) {
+        return { error: 'User not found' };
+      }
+      
+      await ctx.runMutation(internal.internal.startAssessmentInternal, {
+        userId: user._id,
         definition: args.assessmentType as 'ema' | 'bsfc' | 'reach2' | 'sdoh',
         channel: 'sms',
       });
@@ -99,6 +108,8 @@ export const checkWellnessStatus = createTool({
       return { error: 'User ID not available' };
     }
 
+    // Using public query - acceptable for actions calling queries
+    // TODO: Create internal version if needed
     const status = await ctx.runQuery(api.wellness.getStatus, {
       userId,
     });
@@ -129,12 +140,16 @@ export const findInterventions = createTool({
 
     let zones: string[] = args.zones || [];
     if (zones.length === 0) {
-      const status = await ctx.runQuery(api.wellness.getStatus, {
+      // Using public query - acceptable for actions calling queries
+    // TODO: Create internal version if needed
+    const status = await ctx.runQuery(api.wellness.getStatus, {
         userId,
       });
       zones = status.pressureZones || [...DEFAULT_ZONES];
     }
 
+    // Using public query - acceptable for actions calling queries
+    // TODO: Create internal version if needed
     const interventions = await ctx.runQuery(api.interventions.getByZones, {
       zones,
       minEvidenceLevel: args.minEvidenceLevel || 'moderate',
@@ -160,6 +175,8 @@ export const getInterventions = createTool({
   }),
   description: 'Lookup evidence-based caregiver interventions matching pressure zones. Use this to provide specific, research-backed recommendations.',
   handler: async (ctx, args: { zones: string[]; minEvidenceLevel?: 'high' | 'moderate' | 'low'; limit?: number }) => {
+    // Using public query - acceptable for actions calling queries
+    // TODO: Create internal version if needed
     const interventions = await ctx.runQuery(api.interventions.getByZones, {
       zones: args.zones,
       minEvidenceLevel: args.minEvidenceLevel || 'moderate',
@@ -188,8 +205,16 @@ export const recordMemory = createTool({
       return { success: false, error: 'User ID not available' };
     }
 
-    await ctx.runMutation(api.public.recordMemory, {
-      userId,
+    // Get user ID from context
+    const user = await ctx.runQuery(internal.internal.getByExternalIdQuery, {
+      externalId: userId,
+    });
+    if (!user) {
+      return { success: false, error: 'User not found' };
+    }
+    
+    await ctx.runMutation(internal.public.recordMemoryInternal, {
+      userId: user._id,
       category: args.category,
       content: args.content,
       importance: args.importance,

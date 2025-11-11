@@ -335,6 +335,35 @@ export declare const internal: {
     >;
   };
   assessments: {
+    answerAssessmentInternal: FunctionReference<
+      "mutation",
+      "internal",
+      {
+        definition: "ema" | "bsfc" | "reach2" | "sdoh";
+        questionIndex: number;
+        userId: string;
+        value: number;
+      },
+      any
+    >;
+    finalizeAssessmentInternal: FunctionReference<
+      "mutation",
+      "internal",
+      { definition: "ema" | "bsfc" | "reach2" | "sdoh"; userId: string },
+      any
+    >;
+    getActiveSessionInternal: FunctionReference<
+      "query",
+      "internal",
+      { definition: "ema" | "bsfc" | "reach2" | "sdoh"; userId: string },
+      any
+    >;
+    getAnyActiveSessionInternal: FunctionReference<
+      "query",
+      "internal",
+      { userId: string },
+      any
+    >;
     handleInboundAnswer: FunctionReference<
       "action",
       "internal",
@@ -551,6 +580,25 @@ export declare const internal: {
         interventionId: string;
         metadata?: any;
         status: string;
+        userId: Id<"users">;
+      },
+      any
+    >;
+  };
+  public: {
+    listMemoriesInternal: FunctionReference<
+      "query",
+      "internal",
+      { limit?: number; userId: Id<"users"> },
+      any
+    >;
+    recordMemoryInternal: FunctionReference<
+      "mutation",
+      "internal",
+      {
+        category: string;
+        content: string;
+        importance: number;
         userId: Id<"users">;
       },
       any

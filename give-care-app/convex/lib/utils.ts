@@ -7,7 +7,7 @@
 
 import { Agent } from '@convex-dev/agent';
 import { ConvexError } from 'convex/values';
-import { components } from '../_generated/api';
+import { components, internal } from '../_generated/api';
 import type { ActionCtx, QueryCtx, MutationCtx } from '../_generated/server';
 import type { Id } from '../_generated/dataModel';
 import type { Doc } from '../_generated/dataModel';
@@ -18,63 +18,44 @@ import { AssessmentSlug, CATALOG, type AssessmentAnswer } from './assessmentCata
 // AGENT HELPERS
 // ============================================================================
 
-export async function ensureAgentThread(
+/**
+ * Get or create a threadId for a user, with caching in user metadata
+ * Returns threadId to use with agent.continueThread()
+ */
+export async function getOrCreateThreadId(
   ctx: ActionCtx,
   agent: Agent,
   userId: string,
   threadId?: string,
   userMetadata?: Record<string, unknown>
-): Promise<{ thread: any; threadId: string }> {
-  let finalThreadId = threadId;
-  if (!finalThreadId && userMetadata) {
+): Promise<string> {
+  // Use provided threadId if available
+  if (threadId) {
+    return threadId;
+  }
+
+  // Check cached threadId in user metadata
+  if (userMetadata) {
     const convexMetadata = userMetadata.convex as Record<string, unknown> | undefined;
     const cachedThreadId = convexMetadata?.threadId as string | undefined;
     if (cachedThreadId) {
-      const thread = await ctx.runQuery(components.agent.threads.getThread, {
-        threadId: cachedThreadId,
-      });
-      if (thread) {
-        finalThreadId = cachedThreadId;
+      // Verify thread still exists (quick check)
+      try {
+        const thread = await ctx.runQuery(components.agent.threads.getThread, {
+          threadId: cachedThreadId,
+        });
+        if (thread) {
+          return cachedThreadId;
+        }
+      } catch {
+        // Thread doesn't exist, will create new one below
       }
     }
   }
 
-  if (finalThreadId) {
-    const threadResult = await agent.continueThread(ctx, {
-      threadId: finalThreadId,
-      userId,
-    });
-    return {
-      thread: threadResult.thread,
-      threadId: finalThreadId,
-    };
-  }
-
-  const existingThreadsResult = await ctx.runQuery(
-    components.agent.threads.listThreadsByUserId,
-    {
-      userId,
-      paginationOpts: { cursor: null, numItems: 1 },
-      order: 'desc',
-    }
-  );
-
-  let foundThreadId: string;
-  if (existingThreadsResult?.page?.length > 0) {
-    foundThreadId = existingThreadsResult.page[0]._id;
-  } else {
-    const threadResult = await agent.createThread(ctx, { userId });
-    foundThreadId = threadResult.threadId;
-  }
-
-  const threadResult = await agent.continueThread(ctx, {
-    threadId: foundThreadId,
-    userId,
-  });
-  return {
-    thread: threadResult.thread,
-    threadId: foundThreadId,
-  };
+  // Create new thread
+  const threadResult = await agent.createThread(ctx, { userId });
+  return threadResult.threadId;
 }
 
 // ============================================================================
@@ -437,5 +418,51 @@ export class UserNotFoundError extends ConvexError<string> {
   constructor(externalId: string) {
     super(`User not found: ${externalId}`);
   }
+}
+
+// ============================================================================
+// ERROR HANDLING HELPERS
+// ============================================================================
+
+/**
+ * Common error handling pattern for agents
+ * Logs error and returns fallback response with error details
+ */
+export async function handleAgentError(
+  ctx: ActionCtx,
+  error: unknown,
+  options: {
+    agentName: string;
+    externalId: string;
+    policyBundle: string;
+    inputText: string;
+    fallbackResponse: string;
+    startTime: number;
+    traceId: string;
+  }
+): Promise<{ text: string; latencyMs: number; error: string }> {
+  console.error(`[${options.agentName}] Error:`, error);
+
+  const latencyMs = Date.now() - options.startTime;
+
+  // Log error (non-blocking)
+  ctx.runMutation(internal.internal.logAgentRunInternal, {
+    externalId: options.externalId,
+    agent: options.agentName,
+    policyBundle: options.policyBundle,
+    budgetResult: {
+      usedInputTokens: options.inputText.length,
+      usedOutputTokens: options.fallbackResponse.length,
+      toolCalls: 0,
+    },
+    latencyMs,
+    traceId: options.traceId,
+  }).catch((err) => console.error(`[${options.agentName}] Logging failed:`, err));
+
+  return {
+    text: options.fallbackResponse,
+    latencyMs,
+    error: error instanceof Error ? error.message : String(error),
+  };
 }
 

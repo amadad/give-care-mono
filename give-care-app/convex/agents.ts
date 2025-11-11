@@ -8,19 +8,20 @@
  */
 
 import { action, internalAction } from './_generated/server';
-import { internal, components, api } from './_generated/api';
+import { internal, components } from './_generated/api';
 import { v } from 'convex/values';
 import { Agent, saveMessage } from '@convex-dev/agent';
 import { WorkflowManager } from '@convex-dev/workflow';
 import { LANGUAGE_MODELS, EMBEDDING_MODELS } from './lib/models';
 import { MAIN_PROMPT, CRISIS_PROMPT, ASSESSMENT_PROMPT, renderPrompt } from './lib/prompts';
 import {
-  ensureAgentThread,
+  getOrCreateThreadId,
   getTone,
   crisisResponse,
   extractProfileVariables,
   buildWellnessInfo,
   getNextMissingField,
+  handleAgentError,
 } from './lib/utils';
 import type { UserProfile } from './lib/types';
 import { agentContextValidator, channelValidator } from './lib/validators';
@@ -93,13 +94,16 @@ export const runMainAgent = action({
     const startTime = Date.now();
     const traceId = `main-${Date.now()}`;
 
+    // Extract metadata once at start - reuse throughout handler
+    const metadata = (context.metadata ?? {}) as Record<string, unknown>;
+    const profile = (metadata.profile as UserProfile | undefined);
+    const { userName, relationship, careRecipient } = extractProfileVariables(profile);
+    const wellnessInfo = buildWellnessInfo(metadata);
+    const journeyPhase = (metadata.journeyPhase as string) ?? 'active';
+    const totalInteractionCount = String((metadata.totalInteractionCount as number) ?? 0);
+    const convexUserId = (metadata.convex as Record<string, unknown> | undefined)?.userId;
+
     try {
-      const metadata = (context.metadata ?? {}) as Record<string, unknown>;
-      const profile = (metadata.profile as UserProfile | undefined);
-      const { userName, relationship, careRecipient } = extractProfileVariables(profile);
-      const wellnessInfo = buildWellnessInfo(metadata);
-      const journeyPhase = (metadata.journeyPhase as string) ?? 'active';
-      const totalInteractionCount = String((metadata.totalInteractionCount as number) ?? 0);
 
       const needsLocalResources = input.text.match(/(respite|support group|local resource|near me|in my area|find.*near|help.*near)/i);
       const nextField = getNextMissingField(profile, { needsLocalResources: !!needsLocalResources });
@@ -121,7 +125,8 @@ export const runMainAgent = action({
 
       const systemPrompt = `${basePrompt}\n\n${getTone(context)}`;
 
-      const { thread, threadId: newThreadId } = await ensureAgentThread(
+      // Get or create threadId (with caching)
+      const finalThreadId = await getOrCreateThreadId(
         ctx,
         mainAgent,
         context.userId,
@@ -129,12 +134,33 @@ export const runMainAgent = action({
         metadata
       );
 
+      // Cache threadId in user metadata for next request (non-blocking)
+      if (!threadId && finalThreadId && convexUserId) {
+        const updatedMetadata = {
+          ...metadata,
+          convex: {
+            ...(metadata.convex as Record<string, unknown> | undefined),
+            threadId: finalThreadId,
+          },
+        };
+        ctx.runMutation(internal.internal.updateUserMetadata, {
+          userId: convexUserId as any,
+          metadata: updatedMetadata,
+        }).catch((err) => console.error('[main-agent] Failed to cache threadId:', err));
+      }
+
+      // Continue thread directly (Agent Component handles message loading)
+      const { thread } = await mainAgent.continueThread(ctx, {
+        threadId: finalThreadId,
+        userId: context.userId,
+      });
+
       const trimmedInput = input.text.trim();
-      const isShortInput = trimmedInput.length < 10;
       const isVeryShortInput = trimmedInput.length < 5;
       const needsOnboarding = nextField !== null;
 
-      // Very short inputs - fast path
+      // True fast path: Very short inputs without onboarding needs get simple deterministic response
+      // Saves ~2-3s by avoiding LLM call for simple greetings/acknowledgments
       if (isVeryShortInput && !needsOnboarding) {
         const fastResponse = `Hi ${userName}! I'm here to help. 
 
@@ -146,54 +172,39 @@ What's on your mind today? You can ask me about:
 
 What would be most helpful right now?`;
 
+        // Save user message and assistant response (Agent Component pattern)
         await saveMessage(ctx, components.agent, {
-          threadId: newThreadId,
+          threadId: finalThreadId,
           prompt: input.text,
         });
-
-        workflow.start(ctx, internal.workflows.enrichMemory, {
-          userId: context.userId,
-          threadId: newThreadId,
-          recentMessages: [
-            { role: 'user', content: input.text },
-            { role: 'assistant', content: fastResponse },
-          ],
-        }).catch((err) => console.error('[main-agent] Memory enrichment failed:', err));
+        await saveMessage(ctx, components.agent, {
+          threadId: finalThreadId,
+          message: { role: 'assistant', content: fastResponse },
+          agentName: 'Caregiver Support',
+        });
 
         return {
           text: fastResponse,
-          threadId: newThreadId,
+          threadId: finalThreadId,
           latencyMs: Date.now() - startTime,
           fastPath: true,
         };
       }
 
-      const { messageId } = await saveMessage(ctx, components.agent, {
-        threadId: newThreadId,
-        prompt: input.text,
-      });
-
+      // Simplified context options - use sensible defaults with minimal overrides
       const isFirstTurn = !threadId;
-      const isSimpleResponse = isShortInput && !needsOnboarding;
-      const isAcknowledgment = /^(ok|okay|yes|no|thanks|thank you|sure|yep|nope|alright|alrighty|got it|gotcha|doing ok|doing okay|i'm ok|i'm okay)$/i.test(trimmedInput);
-
-      const contextOptions = isFirstTurn || isSimpleResponse || isAcknowledgment
+      const contextOptions = isFirstTurn
         ? {
             searchOtherThreads: false,
             recentMessages: 1,
-            searchOptions: {
-              textSearch: false,
-              vectorSearch: false,
-              limit: 0,
-            },
           }
         : {
-            searchOtherThreads: false,
-            recentMessages: 5,
+            searchOtherThreads: true, // Built-in memory search across threads
+            recentMessages: 10,
             searchOptions: {
               textSearch: true,
-              vectorSearch: false,
-              limit: 5,
+              vectorSearch: true, // Uses embeddings automatically
+              limit: 10,
             },
           };
 
@@ -203,12 +214,11 @@ What would be most helpful right now?`;
       });
 
       let result;
-      let timedOut = false;
 
       try {
         result = await Promise.race([
           thread.generateText({
-            promptMessageId: messageId,
+            prompt: input.text, // Agent Component saves automatically
             system: systemPrompt,
             contextOptions,
             toolChoice: 'auto',
@@ -227,21 +237,11 @@ What would be most helpful right now?`;
                 ],
               },
             },
-          }),
+          } as any), // contextOptions is valid at runtime per Convex Agents docs
           timeoutPromise,
         ]);
       } catch (error) {
         if (error instanceof Error && error.message.includes('timeout')) {
-          timedOut = true;
-          workflow.start(ctx, internal.workflows.enrichMemory, {
-            userId: context.userId,
-            threadId: newThreadId,
-            recentMessages: [
-              { role: 'user', content: input.text },
-              { role: 'assistant', content: '' },
-            ],
-          }).catch((err) => console.error('[main-agent] Memory enrichment failed:', err));
-
           const timeoutResponse = `Hi ${userName}! I'm processing your message but it's taking longer than expected.
 
 Here's what I can help with right now:
@@ -253,7 +253,7 @@ What's most urgent for you today?`;
 
           return {
             text: timeoutResponse,
-            threadId: newThreadId,
+            threadId: finalThreadId,
             latencyMs: Date.now() - startTime,
             timeout: true,
           };
@@ -284,7 +284,7 @@ What's most urgent for you today?`;
 
       const latencyMs = Date.now() - startTime;
 
-      ctx.runMutation(internal.internal.logAgentRunInternal, {
+      const logPromise = ctx.runMutation(internal.internal.logAgentRunInternal, {
         externalId: context.userId,
         agent: 'main',
         policyBundle: 'default_v1',
@@ -295,31 +295,16 @@ What's most urgent for you today?`;
         },
         latencyMs,
         traceId,
-      }).catch((err) => console.error('[main-agent] Logging failed:', err));
-
-      if (threadId && !timedOut) {
-        workflow.start(ctx, internal.workflows.enrichMemory, {
-          userId: context.userId,
-          threadId: newThreadId,
-          recentMessages: [
-            { role: 'user', content: input.text },
-            { role: 'assistant', content: responseText },
-          ].slice(-3),
-        }).catch((err) => console.error('[main-agent] Memory enrichment failed:', err));
-      }
+      });
+      logPromise.catch((err) => console.error('[main-agent] Logging failed:', err));
 
       return {
         text: responseText,
-        threadId: newThreadId,
+        threadId: finalThreadId,
         latencyMs,
       };
     } catch (error) {
-      console.error('[main-agent] Error:', error);
-      const metadata = (context.metadata ?? {}) as Record<string, unknown>;
-      const profile = (metadata.profile as UserProfile | undefined);
-      const userName = profile?.firstName ?? 'caregiver';
-      const careRecipient = profile?.careRecipientName ?? 'your loved one';
-
+      // Use already-extracted variables (no need to re-extract metadata)
       const fallbackResponse = `Hello ${userName}! I'm here to support you in caring for ${careRecipient}.
 
 How can I help you today? I can:
@@ -330,24 +315,15 @@ How can I help you today? I can:
 
 What's on your mind?`;
 
-      ctx.runMutation(internal.internal.logAgentRunInternal, {
+      return await handleAgentError(ctx, error, {
+        agentName: 'main',
         externalId: context.userId,
-        agent: 'main',
         policyBundle: 'default_v1',
-        budgetResult: {
-          usedInputTokens: input.text.length,
-          usedOutputTokens: fallbackResponse.length,
-          toolCalls: 0,
-        },
-        latencyMs: Date.now() - startTime,
+        inputText: input.text,
+        fallbackResponse,
+        startTime,
         traceId,
-      }).catch(() => {});
-
-      return {
-        text: fallbackResponse,
-        latencyMs: Date.now() - startTime,
-        error: error instanceof Error ? error.message : String(error),
-      };
+      });
     }
   },
 });
@@ -386,20 +362,23 @@ export const runCrisisAgent = internalAction({
     const userName = (profile.firstName as string) ?? 'friend';
 
     try {
-      const { thread, threadId: newThreadId } = await ensureAgentThread(
+      // Get or create threadId
+      const finalThreadId = await getOrCreateThreadId(
         ctx,
         crisisAgent,
         context.userId,
-        threadId
+        threadId,
+        metadata
       );
 
-      const { messageId } = await saveMessage(ctx, components.agent, {
-        threadId: newThreadId,
-        prompt: input.text,
+      // Continue thread directly
+      const { thread } = await crisisAgent.continueThread(ctx, {
+        threadId: finalThreadId,
+        userId: context.userId,
       });
 
       const result = await thread.generateText({
-        promptMessageId: messageId,
+        prompt: input.text, // Agent Component saves automatically
         system: CRISIS_PROMPT,
         providerOptions: {
           google: {
@@ -427,30 +406,31 @@ export const runCrisisAgent = internalAction({
         traceId,
       });
 
-      workflow.start(ctx, internal.workflows.crisisEscalation, {
+      const crisisEscalationPromise = workflow.start(ctx, internal.workflows.crisisEscalation, {
         userId: userId,
-        threadId: newThreadId,
+        threadId: finalThreadId,
         messageText: input.text,
         crisisTerms: context.crisisFlags?.terms || [],
         severity: 'high',
-      }).catch((err) => console.error('[crisis-agent] Workflow failed:', err));
+      });
+      crisisEscalationPromise.catch((err) => console.error('[crisis-agent] Workflow failed:', err));
 
       return {
         text: responseText,
-        threadId: newThreadId,
+        threadId: finalThreadId,
         latencyMs,
       };
     } catch (error) {
-      console.error('[crisis-agent] Error:', error);
       const fallbackResponse = crisisResponse(userName);
 
+      // Crisis agent has special logging for crisis interactions
       await ctx.runMutation(internal.internal.logCrisisInteraction, {
         externalId: context.userId,
         input: input.text,
         response: fallbackResponse,
         timestamp: Date.now(),
         traceId,
-      });
+      }).catch((err) => console.error('[crisis-agent] Logging failed:', err));
 
       return {
         text: fallbackResponse,
@@ -486,8 +466,21 @@ export const runAssessmentAgent = action({
       const careRecipient = (profile.careRecipientName as string) ?? 'your loved one';
 
       const assessmentDefinition = (metadata.assessmentDefinitionId as string) ?? 'bsfc';
-      const session = await ctx.runQuery(api.assessments.getActiveSession, {
-        userId: context.userId,
+      // Query session early - needed for early returns in Q&A flow and validation
+      // Cannot be deferred as it determines the response path
+      // Use internal version from internal.ts (which wraps the assessment query)
+      const user = await ctx.runQuery(internal.internal.getByExternalIdQuery, {
+        externalId: context.userId,
+      });
+      if (!user) {
+        return {
+          text: 'I apologize, but I encountered an error. Please try again.',
+          latencyMs: Date.now() - startTime,
+        };
+      }
+      
+      const session = await ctx.runQuery(internal.internal.getActiveSessionInternal, {
+        userId: user._id,
         definition: assessmentDefinition as any,
       });
 
@@ -526,29 +519,32 @@ export const runAssessmentAgent = action({
         responsesCount,
       });
 
-      const { thread, threadId: newThreadId } = await ensureAgentThread(
+      // Get or create threadId
+      const finalThreadId = await getOrCreateThreadId(
         ctx,
         assessmentAgent,
         context.userId,
-        threadId
+        threadId,
+        metadata
       );
+
+      // Continue thread directly
+      const { thread } = await assessmentAgent.continueThread(ctx, {
+        threadId: finalThreadId,
+        userId: context.userId,
+      });
 
       const promptText = input.text || 'Please interpret my burnout assessment results and suggest interventions.';
 
-      const { messageId } = await saveMessage(ctx, components.agent, {
-        threadId: newThreadId,
-        prompt: promptText,
-      });
-
       const result = await thread.generateText({
-        promptMessageId: messageId,
+        prompt: promptText, // Agent Component saves automatically
         system: systemPrompt,
         contextOptions: {
-          searchOtherThreads: true,
+          searchOtherThreads: true, // Built-in memory search
           recentMessages: 10,
           searchOptions: {
             textSearch: true,
-            vectorSearch: true,
+            vectorSearch: true, // Uses embeddings automatically
             limit: 10,
           },
         },
@@ -565,12 +561,12 @@ export const runAssessmentAgent = action({
             ],
           },
         },
-      });
+      } as any);
 
       const responseText: string = result.text;
       const latencyMs = Date.now() - startTime;
 
-      ctx.runMutation(internal.internal.logAgentRunInternal, {
+      const assessmentLogPromise = ctx.runMutation(internal.internal.logAgentRunInternal, {
         externalId: context.userId,
         agent: 'assessment',
         policyBundle: 'assessment_v1',
@@ -581,36 +577,26 @@ export const runAssessmentAgent = action({
         },
         latencyMs,
         traceId,
-      }).catch((err) => console.error('[assessment-agent] Logging failed:', err));
+      });
+      assessmentLogPromise.catch((err) => console.error('[assessment-agent] Logging failed:', err));
 
       return {
         text: responseText,
-        threadId: newThreadId,
+        threadId: finalThreadId,
         latencyMs,
       };
     } catch (error) {
-      console.error('[assessment-agent] Error:', error);
       const errorMessage = 'I apologize, but I encountered an error processing your assessment. Please try again.';
-      const latencyMs = Date.now() - startTime;
 
-      ctx.runMutation(internal.internal.logAgentRunInternal, {
+      return await handleAgentError(ctx, error, {
+        agentName: 'assessment',
         externalId: context.userId,
-        agent: 'assessment',
         policyBundle: 'assessment_v1',
-        budgetResult: {
-          usedInputTokens: input.text.length,
-          usedOutputTokens: errorMessage.length,
-          toolCalls: 0,
-        },
-        latencyMs,
+        inputText: input.text,
+        fallbackResponse: errorMessage,
+        startTime,
         traceId,
-      }).catch(() => {});
-
-      return {
-        text: errorMessage,
-        latencyMs,
-        error: error instanceof Error ? error.message : String(error),
-      };
+      });
     }
   },
 });

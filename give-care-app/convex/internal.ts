@@ -99,7 +99,8 @@ export const updateUserMetadata = internalMutation({
 export const getAllUsers = internalQuery({
   args: {},
   handler: async (ctx) => {
-    return await ctx.db.query('users').collect();
+    // Limit to reasonable number - use take() instead of collect() for large datasets
+    return await ctx.db.query('users').take(1000);
   },
 });
 
@@ -116,12 +117,13 @@ export const getActiveSessionInternal = internalQuery({
     definition: v.union(v.literal('ema'), v.literal('bsfc'), v.literal('reach2'), v.literal('sdoh')),
   },
   handler: async (ctx, { userId, definition }) => {
-    return await ctx.db
+    const sessions = await ctx.db
       .query('assessment_sessions')
       .withIndex('by_user_definition', (q) => q.eq('userId', userId).eq('definitionId', definition))
-      .filter((q) => q.eq(q.field('status'), 'active'))
       .order('desc')
-      .first();
+      .collect();
+    
+    return sessions.find(s => s.status === 'active') ?? null;
   },
 });
 
@@ -132,12 +134,13 @@ export const startAssessmentInternal = internalMutation({
     channel: v.optional(v.union(v.literal('sms'), v.literal('web'))),
   },
   handler: async (ctx, { userId, definition, channel }) => {
-    // Close existing active sessions
-    const existingSessions = await ctx.db
+    // Close existing active sessions - filter in code instead of .filter()
+    const sessions = await ctx.db
       .query('assessment_sessions')
       .withIndex('by_user_definition', (q) => q.eq('userId', userId).eq('definitionId', definition))
-      .filter((q) => q.eq(q.field('status'), 'active'))
       .take(10);
+    
+    const existingSessions = sessions.filter(s => s.status === 'active');
 
     for (const session of existingSessions) {
       await ctx.db.patch(session._id, { status: 'completed' });

@@ -125,6 +125,7 @@ type ResourceSearchResult =
       stale?: boolean;
     };
 
+// Public version - actions can be called from other actions
 export const searchResources = action({
   args: {
     query: v.string(),

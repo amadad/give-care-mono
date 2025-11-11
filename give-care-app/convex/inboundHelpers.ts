@@ -7,7 +7,7 @@
 
 import { internalQuery } from './_generated/server';
 import { v } from 'convex/values';
-import { api, internal, components } from './_generated/api';
+import { internal, components } from './_generated/api';
 
 /**
  * Batches all inbound context queries into a single query
@@ -38,8 +38,8 @@ export const getInboundContext = internalQuery({
       }),
       // Ensure user exists (mutation, but we'll handle it separately)
       ctx.runQuery(internal.internal.getByExternalIdQuery, { externalId: phone }),
-      // Active assessment session
-      ctx.runQuery(api.assessments.getAnyActiveSession, { userId: phone }),
+      // Active assessment session - use internal version
+      ctx.runQuery(internal.assessments.getAnyActiveSessionInternal, { userId: phone }),
     ]);
 
     // Ensure user exists (mutation must be separate)
@@ -56,8 +56,8 @@ export const getInboundContext = internalQuery({
       };
     }
 
-    // Re-check active session with correct userId
-    const activeSessionCorrected = await ctx.runQuery(api.assessments.getAnyActiveSession, {
+    // Re-check active session with correct userId - use internal version
+    const activeSessionCorrected = await ctx.runQuery(internal.assessments.getAnyActiveSessionInternal, {
       userId: user.externalId,
     });
 

@@ -1,8 +1,8 @@
-import { mutation, query, internalAction } from './_generated/server';
+import { mutation, query, internalQuery, internalMutation, internalAction } from './_generated/server';
 import { v } from 'convex/values';
 import { CATALOG, type AssessmentAnswer, scoreWithDetails } from './lib/assessmentCatalog';
 import { getByExternalId, extractSDOHProfile, toAssessmentAnswers } from './lib/utils';
-import { internal, api } from './_generated/api';
+import { internal } from './_generated/api';
 import type { Doc } from './_generated/dataModel';
 
 const assessmentDefinitionValidator = v.union(
@@ -28,12 +28,13 @@ export const startAssessment = mutation({
       throw new Error('User not found');
     }
 
-    // Fix: Only fetch active sessions, limit query
-    const existingSessions = await ctx.db
+    // Fix: Only fetch active sessions, filter in code instead of .filter()
+    const sessions = await ctx.db
       .query('assessment_sessions')
       .withIndex('by_user_definition', (q) => q.eq('userId', user._id).eq('definitionId', definition))
-      .filter((q) => q.eq(q.field('status'), 'active'))
       .take(10); // Reasonable limit
+    
+    const existingSessions = sessions.filter(s => s.status === 'active');
 
     for (const session of existingSessions) {
       await ctx.db.patch(session._id, { status: 'completed' });
@@ -85,12 +86,14 @@ export const getActiveSession = query({
     const user = await getByExternalId(ctx, userId);
     if (!user) return null;
 
-    return ctx.db
+    // Filter in code instead of .filter() on query
+    const sessions = await ctx.db
       .query('assessment_sessions')
       .withIndex('by_user_definition', (q) => q.eq('userId', user._id).eq('definitionId', definition))
-      .filter((q) => q.eq(q.field('status'), 'active'))
       .order('desc')
-      .first();
+      .collect();
+    
+    return sessions.find(s => s.status === 'active') ?? null;
   },
 });
 
@@ -112,6 +115,199 @@ export const getAnyActiveSession = query({
   },
 });
 
+// ============================================================================
+// INTERNAL VERSIONS (for use within Convex only)
+// ============================================================================
+
+/**
+ * Internal version of getActiveSession - for use within Convex only
+ */
+export const getActiveSessionInternal = internalQuery({
+  args: {
+    userId: v.string(),
+    definition: assessmentDefinitionValidator,
+  },
+  handler: async (ctx, { userId, definition }) => {
+    const user = await getByExternalId(ctx, userId);
+    if (!user) return null;
+
+    // Filter in code instead of .filter() on query
+    const sessions = await ctx.db
+      .query('assessment_sessions')
+      .withIndex('by_user_definition', (q) => q.eq('userId', user._id).eq('definitionId', definition))
+      .order('desc')
+      .collect();
+    
+    return sessions.find(s => s.status === 'active') ?? null;
+  },
+});
+
+/**
+ * Internal version of getAnyActiveSession - for use within Convex only
+ */
+export const getAnyActiveSessionInternal = internalQuery({
+  args: { userId: v.string() },
+  handler: async (ctx, { userId }) => {
+    const user = await getByExternalId(ctx, userId);
+    if (!user) return null;
+
+    return ctx.db
+      .query('assessment_sessions')
+      .withIndex('by_user_status', (q) => q.eq('userId', user._id).eq('status', 'active'))
+      .order('desc')
+      .first();
+  },
+});
+
+/**
+ * Internal version of answerAssessment - for use within Convex only
+ */
+export const answerAssessmentInternal = internalMutation({
+  args: {
+    userId: v.string(),
+    definition: assessmentDefinitionValidator,
+    questionIndex: v.number(),
+    value: v.number(),
+  },
+  handler: async (ctx, { userId, definition, questionIndex, value }) => {
+    const user = await getByExternalId(ctx, userId);
+    if (!user) {
+      throw new Error('User not found');
+    }
+
+    // Get active session - filter in code instead of .filter()
+    const sessions = await ctx.db
+      .query('assessment_sessions')
+      .withIndex('by_user_definition', (q) => q.eq('userId', user._id).eq('definitionId', definition))
+      .order('desc')
+      .collect();
+    
+    const session = sessions.find(s => s.status === 'active');
+
+    if (!session) {
+      throw new Error('No active assessment session found');
+    }
+
+    // Append answer (mirror schema shape)
+    const newAnswer: SessionAnswer = {
+      questionId: questionIndex.toString(),
+      value,
+    };
+    const updatedAnswers = [...session.answers, newAnswer];
+
+    await ctx.db.patch(session._id, {
+      answers: updatedAnswers,
+      questionIndex: questionIndex + 1,
+    });
+
+    return { sessionId: session._id, currentIndex: questionIndex + 1 };
+  },
+});
+
+/**
+ * Internal version of finalizeAssessment - for use within Convex only
+ */
+export const finalizeAssessmentInternal = internalMutation({
+  args: {
+    userId: v.string(),
+    definition: assessmentDefinitionValidator,
+  },
+  handler: async (ctx, { userId, definition }) => {
+    const user = await getByExternalId(ctx, userId);
+    if (!user) {
+      throw new Error('User not found');
+    }
+
+    // Get active session - filter in code instead of .filter()
+    const sessions = await ctx.db
+      .query('assessment_sessions')
+      .withIndex('by_user_definition', (q) => q.eq('userId', user._id).eq('definitionId', definition))
+      .order('desc')
+      .collect();
+    
+    const session = sessions.find(s => s.status === 'active');
+
+    if (!session) {
+      throw new Error('No active assessment session found');
+    }
+
+    // Compute score using catalog (convert stored answers to catalog shape)
+    const catalog = CATALOG[definition];
+    const normalizedAnswers = toAssessmentAnswers(session.answers);
+    const details = scoreWithDetails(definition, normalizedAnswers);
+
+    // Create final assessment record matching schema fields
+    const assessmentId = await ctx.db.insert('assessments', {
+      userId: user._id,
+      definitionId: definition,
+      version: 'v1',
+      answers: session.answers,
+      completedAt: Date.now(),
+    });
+
+    // Create scores row
+    const zones = {
+      emotional: details.zoneAverages.emotional ?? 0,
+      physical: details.zoneAverages.physical ?? 0,
+      social: details.zoneAverages.social ?? 0,
+      time: details.zoneAverages.time ?? 0,
+      financial: details.zoneAverages.financial, // optional
+    };
+
+    const scoreId = await ctx.db.insert('scores', {
+      userId: user._id,
+      assessmentId,
+      composite: details.composite,
+      band: details.band,
+      zones,
+      confidence: details.confidence,
+    });
+
+    // Mark session as completed
+    await ctx.db.patch(session._id, {
+      status: 'completed',
+    });
+
+    // Schedule update (with error handling)
+    ctx.scheduler.runAfter(
+      0,
+      internal.workflows.updateCheckInSchedule,
+      { userId: user._id }
+    ).catch((err) => console.error('[assessments] Failed to schedule check-in:', err));
+
+    // SDOH → Profile enrichment
+    if (definition === 'sdoh') {
+      const sdoh = extractSDOHProfile(normalizedAnswers);
+      const meta = (user.metadata ?? {}) as Record<string, unknown>;
+      await ctx.db.patch(user._id, {
+        metadata: {
+          ...meta,
+          profile: {
+            ...((meta.profile as any) ?? {}),
+            ...sdoh,
+          },
+        },
+      });
+    }
+
+    // Automatic intervention suggestions
+    if (details.pressureZones.length > 0) {
+      ctx.scheduler.runAfter(0, internal.workflows.suggestInterventions, {
+        userId: user._id,
+        assessmentId,
+        zones: details.pressureZones,
+      }).catch((err) => console.error('[assessments] Failed to schedule interventions:', err));
+    }
+
+    return {
+      assessmentId,
+      score: details.composite,
+      band: details.band,
+      pressureZones: details.pressureZones,
+    };
+  },
+});
+
 /**
  * Answer a question in the active assessment session
  * Appends answer to session.answers array and increments questionIndex
@@ -129,13 +325,14 @@ export const answerAssessment = mutation({
       throw new Error('User not found');
     }
 
-    // Get active session
-    const session = await ctx.db
+    // Get active session - filter in code instead of .filter()
+    const sessions = await ctx.db
       .query('assessment_sessions')
       .withIndex('by_user_definition', (q) => q.eq('userId', user._id).eq('definitionId', definition))
-      .filter((q) => q.eq(q.field('status'), 'active'))
       .order('desc')
-      .first();
+      .collect();
+    
+    const session = sessions.find(s => s.status === 'active');
 
     if (!session) {
       throw new Error('No active assessment session found');
@@ -172,13 +369,14 @@ export const finalizeAssessment = mutation({
       throw new Error('User not found');
     }
 
-    // Get active session
-    const session = await ctx.db
+    // Get active session - filter in code instead of .filter()
+    const sessions = await ctx.db
       .query('assessment_sessions')
       .withIndex('by_user_definition', (q) => q.eq('userId', user._id).eq('definitionId', definition))
-      .filter((q) => q.eq(q.field('status'), 'active'))
       .order('desc')
-      .first();
+      .collect();
+    
+    const session = sessions.find(s => s.status === 'active');
 
     if (!session) {
       throw new Error('No active assessment session found');
@@ -221,12 +419,12 @@ export const finalizeAssessment = mutation({
       status: 'completed',
     });
 
-    // Schedule update (fire-and-forget) - Phase 1.2
-    void ctx.scheduler.runAfter(
+    // Schedule update (with error handling)
+    ctx.scheduler.runAfter(
       0,
       internal.workflows.updateCheckInSchedule,
       { userId: user._id }
-    );
+    ).catch((err) => console.error('[assessments] Failed to schedule check-in:', err));
 
     // SDOH → Profile enrichment - Phase 2.5
     if (definition === 'sdoh') {
@@ -245,11 +443,11 @@ export const finalizeAssessment = mutation({
 
     // Automatic intervention suggestions - Phase 2.6
     if (details.pressureZones.length > 0) {
-      void ctx.scheduler.runAfter(0, internal.workflows.suggestInterventions, {
+      ctx.scheduler.runAfter(0, internal.workflows.suggestInterventions, {
         userId: user._id,
         assessmentId,
         zones: details.pressureZones,
-      });
+      }).catch((err) => console.error('[assessments] Failed to schedule interventions:', err));
     }
 
     return {
@@ -275,7 +473,7 @@ export const handleInboundAnswer = internalAction({
     // OPTIMIZATION: Batch user lookup and session fetch
     const [user, session] = await Promise.all([
       ctx.runQuery(internal.internal.getByExternalIdQuery, { externalId: userId }),
-      ctx.runQuery(api.assessments.getActiveSession, { userId, definition }),
+      ctx.runQuery(internal.assessments.getActiveSessionInternal, { userId, definition }),
     ]);
 
     if (!user || !session) return { text: null, done: false };
@@ -286,7 +484,7 @@ export const handleInboundAnswer = internalAction({
     // Parse input
     if (/^skip$/i.test(text.trim())) {
       // Skip: advance without answer (use 0 as placeholder)
-      await ctx.runMutation(api.assessments.answerAssessment, {
+      await ctx.runMutation(internal.assessments.answerAssessmentInternal, {
         userId,
         definition,
         questionIndex: currentIndex,
@@ -296,7 +494,7 @@ export const handleInboundAnswer = internalAction({
       const match = text.trim().match(/^\s*([1-5])\s*$/);
       if (match) {
         const value = parseInt(match[1], 10);
-        await ctx.runMutation(api.assessments.answerAssessment, {
+        await ctx.runMutation(internal.assessments.answerAssessmentInternal, {
           userId,
           definition,
           questionIndex: currentIndex,
@@ -318,7 +516,7 @@ export const handleInboundAnswer = internalAction({
 
     if (nextIndex >= catalog.length) {
       // Finalize assessment (creates score, schedules check-ins)
-      const result = await ctx.runMutation(api.assessments.finalizeAssessment, {
+      const result = await ctx.runMutation(internal.assessments.finalizeAssessmentInternal, {
         userId,
         definition,
       });

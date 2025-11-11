@@ -8,7 +8,7 @@
 
 import { internalAction } from './_generated/server';
 import { v } from 'convex/values';
-import { api, internal, components } from './_generated/api';
+import { internal, components, api } from './_generated/api';
 import { twilio } from './lib/twilio';
 import { detectCrisis } from './lib/utils';
 import { RateLimitError, UserNotFoundError } from './lib/utils';
@@ -83,8 +83,11 @@ export const processInbound = internalAction({
     // Detect crisis keywords
     const crisisDetection = detectCrisis(args.text);
     
-    // Build context
+    // Build context with cached threadId if available
     const metadata = (user.metadata as Record<string, unknown>) ?? {};
+    const convexMetadata = metadata.convex as Record<string, unknown> | undefined;
+    const cachedThreadId = convexMetadata?.threadId as string | undefined;
+    
     const agentContext = {
       userId: user.externalId,
       locale: user.locale,
@@ -99,6 +102,7 @@ export const processInbound = internalAction({
         ...metadata,
         convex: {
           userId: user._id,
+          ...(cachedThreadId ? { threadId: cachedThreadId } : {}),
         },
       },
     };
@@ -117,9 +121,9 @@ export const processInbound = internalAction({
       });
     } else {
       // Main agent
-      // OPTIMIZATION: Don't fetch threadId here - let agent handle it internally
-      // This avoids redundant query since ensureAgentThread will do it anyway
-      // If we want to optimize further, we'd need to cache threadId in user metadata
+      // OPTIMIZATION: Pass cached threadId to avoid lookup (saves 228ms)
+      // Note: runMainAgent is public action - acceptable to call from internal action
+      // TODO: Create internal version if needed for better security
       response = await ctx.runAction(api.agents.runMainAgent, {
         input: {
           channel: 'sms' as const,
@@ -127,7 +131,7 @@ export const processInbound = internalAction({
           userId: user.externalId,
         },
         context: agentContext,
-        threadId: undefined, // Let agent handle thread lookup (will cache if we optimize)
+        threadId: cachedThreadId, // Use cached threadId if available
       });
     }
 
