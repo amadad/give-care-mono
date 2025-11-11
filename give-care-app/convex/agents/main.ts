@@ -148,14 +148,15 @@ What would be most helpful right now?`;
         // Schedule enrichment in background (non-blocking)
         // Use workflow.start() for retryable background work
         // Properly handle promise to avoid dangling promise warning
-        workflow.start(ctx, internal.workflows.memory.enrichMemory, {
+        const enrichPromise = workflow.start(ctx, internal.workflows.memory.enrichMemory, {
           userId: context.userId,
           threadId: newThreadId,
           recentMessages: [
             { role: 'user', content: input.text },
             { role: 'assistant', content: fastResponse },
           ],
-        }).catch((error) => {
+        });
+        enrichPromise.catch((error) => {
           console.error('[main-agent] Background enrichment failed:', error);
         });
         
@@ -228,10 +229,12 @@ What would be most helpful right now?`;
             toolChoice: 'auto',
             providerOptions: {
               google: {
-                temperature: 0.7,
-                topP: 0.95,
-                topK: 40,
+                temperature: 0.5, // Reduced from 0.7 to reduce creativity/hallucination (less code output)
+                topP: 0.9, // Reduced from 0.95 for more focused responses
+                topK: 20, // Reduced from 40 for more deterministic output
                 maxOutputTokens: 300, // Keep SMS responses concise
+                // Explicitly prevent code generation
+                responseMimeType: 'text/plain', // Force plain text, not code
                 safetySettings: [
                   { category: 'HARM_CATEGORY_HARASSMENT', threshold: 'BLOCK_MEDIUM_AND_ABOVE' },
                   { category: 'HARM_CATEGORY_HATE_SPEECH', threshold: 'BLOCK_MEDIUM_AND_ABOVE' },
@@ -249,14 +252,15 @@ What would be most helpful right now?`;
           timedOut = true;
           // Schedule enrichment in background to improve next response
           // Properly handle promise to avoid dangling promise warning
-          workflow.start(ctx, internal.workflows.memory.enrichMemory, {
+          const timeoutEnrichPromise = workflow.start(ctx, internal.workflows.memory.enrichMemory, {
             userId: context.userId,
             threadId: newThreadId,
             recentMessages: [
               { role: 'user', content: input.text },
               { role: 'assistant', content: '' }, // Will be enriched later
             ],
-          }).catch(() => {
+          });
+          timeoutEnrichPromise.catch(() => {
             // Ignore errors - best effort
           });
           
@@ -285,13 +289,29 @@ What's most urgent for you today?`;
       // Agent Component automatically saves message
       // No manual recordOutbound needed!
 
-      const responseText: string = result.text;
+      // CRITICAL FIX: Strip any code output from response
+      let responseText: string = result.text;
+      
+      // Remove code blocks, Python, JavaScript, or tool_code patterns
+      responseText = responseText
+        .replace(/```[\s\S]*?```/g, '') // Remove code blocks
+        .replace(/tool_code[\s\S]*?(?=\n\n|\n[A-Z]|$)/gi, '') // Remove tool_code sections
+        .replace(/print\([^)]*\)/g, '') // Remove print statements
+        .replace(/def\s+\w+\([^)]*\):/g, '') // Remove Python function definitions
+        .replace(/import\s+[\w\s,]+/g, '') // Remove import statements
+        .replace(/from\s+[\w\s]+\s+import/g, '') // Remove from imports
+        .trim();
+      
+      // If response was entirely code, provide fallback
+      if (!responseText || responseText.length < 10) {
+        responseText = `Hi ${userName}! I'm here to help. What's on your mind today?`;
+      }
+      
       const latencyMs = Date.now() - startTime;
 
       // Log agent run for analytics (async, non-blocking)
-      // Don't await - fire and forget to return response faster
       // Properly handle promise to avoid dangling promise warning
-      ctx.runMutation(internal.internal.logAgentRunInternal, {
+      const logPromise = ctx.runMutation(internal.internal.logAgentRunInternal, {
         externalId: context.userId,
         agent: 'main',
         policyBundle: 'default_v1',
@@ -302,7 +322,8 @@ What's most urgent for you today?`;
         },
         latencyMs,
         traceId: `main-${Date.now()}`,
-      }).catch((error) => {
+      });
+      logPromise.catch((error) => {
         // Log but don't block - analytics is best-effort
         console.error('[main-agent] Analytics logging failed:', error);
       });
@@ -321,11 +342,12 @@ What's most urgent for you today?`;
       if (threadId && !timedOut) {
         // Thread exists - we have conversation history, safe to enrich
         // Properly handle promise to avoid dangling promise warning
-        workflow.start(ctx, internal.workflows.memory.enrichMemory, {
+        const enrichPromise = workflow.start(ctx, internal.workflows.memory.enrichMemory, {
           userId: context.userId,
           threadId: newThreadId,
           recentMessages: recentMessages.slice(-3), // Only analyze last 3 messages
-        }).catch((error) => {
+        });
+        enrichPromise.catch((error) => {
           // Log but don't block - memory enrichment is best-effort
           console.error('[main-agent] Memory enrichment failed:', error);
         });
@@ -358,7 +380,7 @@ What's on your mind?`;
 
       // Log error run (non-blocking, fire-and-forget)
       // Properly handle promise to avoid dangling promise warning
-      ctx.runMutation(internal.internal.logAgentRunInternal, {
+      const errorLogPromise = ctx.runMutation(internal.internal.logAgentRunInternal, {
         externalId: context.userId,
         agent: 'main',
         policyBundle: 'default_v1',
@@ -369,7 +391,8 @@ What's on your mind?`;
         },
         latencyMs,
         traceId: `main-error-${Date.now()}`,
-      }).catch((error) => {
+      });
+      errorLogPromise.catch((error) => {
         console.error('[main-agent] Error logging failed:', error);
       });
 
