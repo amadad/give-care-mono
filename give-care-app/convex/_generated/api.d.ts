@@ -406,6 +406,38 @@ export declare const internal: {
       any
     >;
   };
+  twilioMutations: {
+    sendAgentResponseAction: FunctionReference<
+      "action",
+      "internal",
+      { text: string; userId: Id<"users"> },
+      any
+    >;
+    sendCrisisResponseAction: FunctionReference<
+      "action",
+      "internal",
+      { isDVHint: boolean; userId: Id<"users"> },
+      any
+    >;
+    sendHelpMessageAction: FunctionReference<
+      "action",
+      "internal",
+      { userId: Id<"users"> },
+      any
+    >;
+    sendResubscribeMessageAction: FunctionReference<
+      "action",
+      "internal",
+      { gracePeriodEndsAt?: number; userId: Id<"users"> },
+      any
+    >;
+    sendStopConfirmationAction: FunctionReference<
+      "action",
+      "internal",
+      { userId: Id<"users"> },
+      any
+    >;
+  };
   workflows: {
     checkInWorkflow: FunctionReference<"mutation", "internal", any, any>;
     engagementMonitoringWorkflow: FunctionReference<
