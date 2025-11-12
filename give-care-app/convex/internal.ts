@@ -36,20 +36,35 @@ export const ensureUserMutation = internalMutation({
 export const updateUserMetadata = internalMutation({
   args: {
     userId: v.id('users'),
-    metadata: v.record(v.string(), v.any()),
+    metadata: v.optional(v.record(v.string(), v.any())),
+    lastEngagementDate: v.optional(v.number()),
+    engagementFlags: v.optional(v.any()),
   },
-  handler: async (ctx, { userId, metadata }) => {
+  handler: async (ctx, { userId, metadata, lastEngagementDate, engagementFlags }) => {
     const user = await ctx.db.get(userId);
     if (!user) {
       throw new Error(`User ${userId} not found`);
     }
 
-    const updatedMetadata = {
-      ...user.metadata,
-      ...metadata,
-    };
+    const updates: any = {};
+    
+    if (metadata !== undefined) {
+      const updatedMetadata = {
+        ...user.metadata,
+        ...metadata,
+      };
+      updates.metadata = updatedMetadata;
+    }
+    
+    if (lastEngagementDate !== undefined) {
+      updates.lastEngagementDate = lastEngagementDate;
+    }
+    
+    if (engagementFlags !== undefined) {
+      updates.engagementFlags = engagementFlags;
+    }
 
-    await ctx.db.patch(userId, { metadata: updatedMetadata });
+    await ctx.db.patch(userId, updates);
     return await ctx.db.get(userId);
   },
 });
@@ -628,6 +643,21 @@ async function handleCheckoutCompleted(
 
     console.log(`[stripe] Linked customer ${customerId} to user ${user._id} (${phoneNumber})`);
 
+    // Track promo code usage if promo code was used
+    const sessionMetadata = session.metadata as Record<string, unknown> | undefined;
+    const promoCodeFromMetadata = sessionMetadata?.promoCode as string | undefined;
+    if (promoCodeFromMetadata) {
+      const promoCode = await ctx.runQuery(internal.internal.getPromoCode, {
+        code: promoCodeFromMetadata,
+      });
+      if (promoCode) {
+        await ctx.runMutation(internal.internal.incrementPromoCodeUsage, {
+          promoCodeId: promoCode._id,
+        });
+        console.log(`[stripe] Tracked promo code usage: ${promoCodeFromMetadata}`);
+      }
+    }
+
     // Send welcome SMS
     // Note: We send welcome SMS here, not in subscription.created, to ensure it happens once
     if (user.phone) {
@@ -646,6 +676,42 @@ async function handleCheckoutCompleted(
 // ============================================================================
 // INTERNAL QUERIES (for use within Convex only - not public API)
 // ============================================================================
+
+/**
+ * Get promo code by code string
+ * Used for validation in checkout flow
+ */
+export const getPromoCode = internalQuery({
+  args: {
+    code: v.string(),
+  },
+  handler: async (ctx, { code }) => {
+    return await ctx.db
+      .query('promo_codes')
+      .withIndex('by_code', (q) => q.eq('code', code.toUpperCase()))
+      .first();
+  },
+});
+
+/**
+ * Increment promo code usage count
+ * Called after successful checkout
+ */
+export const incrementPromoCodeUsage = internalMutation({
+  args: {
+    promoCodeId: v.id('promo_codes'),
+  },
+  handler: async (ctx, { promoCodeId }) => {
+    const promoCode = await ctx.db.get(promoCodeId);
+    if (!promoCode) {
+      throw new Error(`Promo code ${promoCodeId} not found`);
+    }
+
+    await ctx.db.patch(promoCodeId, {
+      usedCount: promoCode.usedCount + 1,
+    });
+  },
+});
 
 /**
  * Internal version of wellness.getStatus - for use within Convex only
