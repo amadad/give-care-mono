@@ -6,6 +6,69 @@ import { internalMutation, internalQuery } from "../_generated/server";
 import { v } from "convex/values";
 
 /**
+ * Create or update user from signup form
+ * Returns userId for checkout session
+ */
+export const upsertUserFromSignup = internalMutation({
+  args: {
+    phone: v.string(),
+    email: v.string(),
+    name: v.string(),
+  },
+  handler: async (ctx, { phone, email, name }) => {
+    // Normalize phone to E.164 format
+    let normalized: string;
+    if (phone.startsWith("+")) {
+      normalized = phone;
+    } else {
+      const digits = phone.replace(/\D/g, "");
+      if (digits.length === 10) {
+        normalized = `+1${digits}`;
+      } else if (digits.length === 11 && digits[0] === "1") {
+        normalized = `+${digits}`;
+      } else {
+        normalized = phone;
+      }
+    }
+
+    // Try to find existing user by phone
+    const existing = await ctx.db
+      .query("users")
+      .withIndex("by_phone", (q) => q.eq("phone", normalized))
+      .first();
+
+    if (existing) {
+      // Update existing user with new info
+      await ctx.db.patch(existing._id, {
+        email,
+        name,
+      });
+      return existing._id;
+    }
+
+    // Create new user
+    const userId = await ctx.db.insert("users", {
+      externalId: normalized,
+      phone: normalized,
+      email,
+      name,
+      channel: "sms",
+      locale: "en-US",
+      consent: {
+        emergency: true,
+        marketing: true,
+      },
+      metadata: {
+        onboardingStage: "new",
+        onboardingMilestones: [],
+      },
+    });
+
+    return userId;
+  },
+});
+
+/**
  * Update user profile metadata
  */
 export const updateProfile = internalMutation({

@@ -87,6 +87,8 @@ export const applyStripeEvent = internalMutation({
     }
 
     // Step 4: Upsert subscription (single mutation)
+    const isNewSubscription = !existingSubscription;
+
     if (existingSubscription) {
       // Update existing subscription
       await ctx.db.patch(existingSubscription._id, {
@@ -117,7 +119,17 @@ export const applyStripeEvent = internalMutation({
       data: eventData,
     });
 
-    return { status: "processed", userId };
+    // Step 6: Send welcome SMS for new subscriptions (checkout.session.completed)
+    if (isNewSubscription && eventType === "checkout.session.completed" && subscriptionState.status === "active") {
+      // Schedule welcome SMS to start onboarding
+      await ctx.scheduler.runAfter(
+        0,
+        internal.internal.sms.sendWelcomeSMS,
+        { userId: userId as any }
+      );
+    }
+
+    return { status: "processed", userId, isNewSubscription };
   },
 });
 

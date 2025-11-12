@@ -7,7 +7,15 @@
 import { internalMutation } from "./_generated/server";
 import { messageValidator } from "@convex-dev/twilio";
 import { internal } from "./_generated/api";
-import { detectCrisis, isStopRequest, isHelpRequest, isResubscribeRequest } from "./lib/utils";
+import {
+  detectCrisis,
+  isStopRequest,
+  isHelpRequest,
+  isResubscribeRequest,
+  isSignupRequest,
+  isBillingRequest,
+  isUpdatePaymentRequest
+} from "./lib/utils";
 import { getCrisisResponse } from "./lib/utils";
 import { checkSubscriptionAccess } from "./lib/services/subscriptionService";
 
@@ -49,7 +57,8 @@ export const handleIncomingMessage = internalMutation({
     // Note: Rate limiter component check would go here
     // For now, allowing all messages (can be enhanced later)
 
-    // Step 5: Handle HELP/STOP/RESUBSCRIBE keywords (before crisis detection)
+    // Step 5: Handle special keywords (before crisis detection)
+    // Note: Keywords are checked in priority order
     if (isStopRequest(body)) {
       await handleStop(ctx, user._id);
       return { status: "stopped" };
@@ -60,9 +69,25 @@ export const handleIncomingMessage = internalMutation({
       return { status: "help" };
     }
 
+    // Handle subscription-related keywords
+    if (isSignupRequest(body)) {
+      await handleSignup(ctx, user._id);
+      return { status: "signup_initiated" };
+    }
+
     if (isResubscribeRequest(body)) {
       await handleResubscribe(ctx, user._id);
       return { status: "resubscribe_initiated" };
+    }
+
+    if (isBillingRequest(body)) {
+      await handleBilling(ctx, user._id);
+      return { status: "billing_initiated" };
+    }
+
+    if (isUpdatePaymentRequest(body)) {
+      await handleUpdatePayment(ctx, user._id);
+      return { status: "update_payment_initiated" };
     }
 
     // Step 6: Crisis detection (deterministic, no LLM)
@@ -92,12 +117,13 @@ export const handleIncomingMessage = internalMutation({
     // Step 7: Check subscription access (crisis bypasses this)
     const access = await checkSubscriptionAccess(ctx, user._id);
     if (!access.hasAccess) {
-      // No access - send resubscribe message
-      await ctx.scheduler.runAfter(0, internal.twilioMutations.sendResubscribeMessageAction, {
+      // No access - send appropriate message based on scenario
+      await ctx.scheduler.runAfter(0, internal.twilioMutations.sendSubscriptionMessageAction, {
         userId: user._id,
+        scenario: access.scenario,
         gracePeriodEndsAt: access.gracePeriodEndsAt,
       });
-      return { status: "subscription_required" };
+      return { status: "subscription_required", scenario: access.scenario };
     }
 
     // Step 8: Update last engagement date
@@ -214,12 +240,43 @@ async function handleHelp(ctx: any, userId: any): Promise<void> {
 }
 
 /**
+ * Handle SIGNUP request (for new users)
+ * Creates Stripe checkout session and sends URL via SMS
+ */
+async function handleSignup(ctx: any, userId: any): Promise<void> {
+  // Use same handler as resubscribe - it handles both new and returning users
+  await ctx.scheduler.runAfter(0, internal.twilioMutations.handleResubscribeAction, {
+    userId,
+  });
+}
+
+/**
  * Handle RESUBSCRIBE request
  * Creates Stripe checkout session and sends URL via SMS
  */
 async function handleResubscribe(ctx: any, userId: any): Promise<void> {
   // Schedule action to handle resubscribe (creates checkout and sends SMS)
   await ctx.scheduler.runAfter(0, internal.twilioMutations.handleResubscribeAction, {
+    userId,
+  });
+}
+
+/**
+ * Handle BILLING request
+ * Sends Stripe billing portal link if user has Stripe customer ID
+ */
+async function handleBilling(ctx: any, userId: any): Promise<void> {
+  await ctx.scheduler.runAfter(0, internal.twilioMutations.handleBillingPortalAction, {
+    userId,
+  });
+}
+
+/**
+ * Handle UPDATE PAYMENT request
+ * Same as billing - sends portal link for updating payment method
+ */
+async function handleUpdatePayment(ctx: any, userId: any): Promise<void> {
+  await ctx.scheduler.runAfter(0, internal.twilioMutations.handleBillingPortalAction, {
     userId,
   });
 }

@@ -52,6 +52,49 @@ export const processWebhook = internalAction({
 });
 
 /**
+ * Create Stripe billing portal session
+ * Returns portal URL for managing subscription, updating payment method, etc.
+ * Only works for users with existing Stripe customer ID
+ */
+export const createBillingPortalSession = internalAction({
+  args: {
+    userId: v.id("users"),
+    returnUrl: v.string(),
+  },
+  handler: async (ctx, { userId, returnUrl }) => {
+    // Get Stripe secret key
+    const stripeSecretKey = process.env.STRIPE_SECRET_KEY;
+    if (!stripeSecretKey) {
+      throw new Error("STRIPE_SECRET_KEY not configured");
+    }
+
+    // Get existing subscription
+    const subscription = await ctx.runQuery(
+      internal.internal.subscriptions.getByUserId,
+      { userId }
+    );
+
+    if (!subscription?.stripeCustomerId) {
+      throw new Error("No Stripe customer found for this user");
+    }
+
+    // Import Stripe SDK
+    const Stripe = (await import("stripe")).default;
+    const stripe = new Stripe(stripeSecretKey, {
+      apiVersion: "2025-10-29.clover",
+    });
+
+    // Create billing portal session
+    const portalSession = await stripe.billingPortal.sessions.create({
+      customer: subscription.stripeCustomerId,
+      return_url: returnUrl,
+    });
+
+    return { url: portalSession.url };
+  },
+});
+
+/**
  * Create checkout session for resubscription
  * Internal action that can be called from mutations
  */
@@ -108,10 +151,10 @@ export const createCheckoutSessionForResubscribe = internalAction({
       },
     });
 
-    // Stripe price lookup keys
-    const STRIPE_PRICE_LOOKUP_KEYS = {
-      monthly: "givecare_standard_monthly",
-      annual: "givecare_standard_annual",
+    // Stripe price IDs (use actual price IDs, not lookup keys)
+    const STRIPE_PRICE_IDS = {
+      monthly: "price_1SH4eMAXk51qociduivShWb7",
+      annual: "price_1SH4eMAXk51qocidOhbWRDpk",
     } as const;
 
     // Create checkout session using existing Stripe prices
@@ -120,7 +163,7 @@ export const createCheckoutSessionForResubscribe = internalAction({
       mode: "subscription",
       line_items: [
         {
-          price: STRIPE_PRICE_LOOKUP_KEYS[planId],
+          price: STRIPE_PRICE_IDS[planId],
           quantity: 1,
         },
       ],

@@ -1,6 +1,7 @@
 "use client"
 
-import React, { useMemo, useState } from "react"
+import React, { useMemo, useState, useEffect } from "react"
+import { useSearchParams } from "next/navigation"
 import { usePhoneFormat } from "@/app/hooks/usePhoneFormat"
 import { useAction } from "convex/react"
 import { api } from "give-care-app/convex/_generated/api"
@@ -25,6 +26,17 @@ export function SignupFormConvex() {
   const [consentDisclaimer, setConsentDisclaimer] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+
+  // Get phone from URL params (for SMS flow)
+  const searchParams = useSearchParams()
+
+  // Pre-fill phone from URL param
+  useEffect(() => {
+    const urlPhone = searchParams?.get('phone')
+    if (urlPhone) {
+      phone.setValue(urlPhone)
+    }
+  }, [searchParams, phone])
 
   // Convex action to create checkout session
   const createCheckoutSession = useAction(api.stripe.createCheckoutSession)

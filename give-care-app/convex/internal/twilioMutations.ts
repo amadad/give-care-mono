@@ -98,23 +98,32 @@ export const sendAgentResponseAction = internalAction({
 
 /**
  * Handle resubscribe request (wrapper action)
- * Creates checkout session and sends URL via SMS
+ * Sends signup page link with phone pre-filled
  */
 export const handleResubscribeAction = internalAction({
   args: {
     userId: v.id("users"),
   },
   handler: async (ctx, args) => {
+    // Get user to extract phone
+    const user = await ctx.runQuery(internal.internal.users.getUser, { userId: args.userId });
+    if (!user?.phone) {
+      await ctx.runAction(internal.internal.sms.sendAgentResponse, {
+        userId: args.userId,
+        text: "Please visit givecareapp.com/signup to get started.",
+      });
+      return;
+    }
+
     // Check if user already has active subscription
-    // Get subscription directly via query
     const subscription = await ctx.runQuery(internal.internal.subscriptions.getByUserId, {
       userId: args.userId,
     });
 
     // Check if subscription is active
-    const hasAccess = subscription?.status === "active" || 
-      (subscription?.status === "canceled" && 
-       subscription.gracePeriodEndsAt && 
+    const hasAccess = subscription?.status === "active" ||
+      (subscription?.status === "canceled" &&
+       subscription.gracePeriodEndsAt &&
        Date.now() < subscription.gracePeriodEndsAt);
 
     if (hasAccess) {
@@ -126,31 +135,92 @@ export const handleResubscribeAction = internalAction({
       return;
     }
 
+    // Send signup page link with phone pre-filled
+    const siteUrl = process.env.SITE_URL || process.env.NEXT_PUBLIC_SITE_URL || "https://www.givecareapp.com";
+    const signupUrl = `${siteUrl}/signup?phone=${encodeURIComponent(user.phone)}`;
+
+    await ctx.runAction(internal.internal.sms.sendAgentResponse, {
+      userId: args.userId,
+      text: `Get started: ${signupUrl}`,
+    });
+  },
+});
+
+/**
+ * Handle billing portal request (wrapper action)
+ * Sends Stripe billing portal link for managing subscription
+ */
+export const handleBillingPortalAction = internalAction({
+  args: {
+    userId: v.id("users"),
+  },
+  handler: async (ctx, args) => {
+    // Get subscription to check for Stripe customer ID
+    const subscription = await ctx.runQuery(internal.internal.subscriptions.getByUserId, {
+      userId: args.userId,
+    });
+
+    if (!subscription?.stripeCustomerId) {
+      // User doesn't have a Stripe customer - can't access portal
+      await ctx.runAction(internal.internal.sms.sendAgentResponse, {
+        userId: args.userId,
+        text: "You don't have a billing account yet. Reply SIGNUP to create your subscription.",
+      });
+      return;
+    }
+
     try {
-      // Create checkout session
+      // Create billing portal session
+      const siteUrl = process.env.SITE_URL || process.env.NEXT_PUBLIC_SITE_URL || "https://www.givecareapp.com";
       const result = await ctx.runAction(
-        internal.internal.stripeActions.createCheckoutSessionForResubscribe,
+        internal.internal.stripeActions.createBillingPortalSession,
         {
           userId: args.userId,
-          successUrl: "https://www.givecareapp.com/signup?resubscribed=true",
-          cancelUrl: "https://www.givecareapp.com/signup?canceled=true",
+          returnUrl: `${siteUrl}/account`,
         }
       );
 
       if (result?.url) {
-        // Send checkout URL via SMS
+        // Send portal URL via SMS
         await ctx.runAction(internal.internal.sms.sendAgentResponse, {
           userId: args.userId,
-          text: `Click here to resubscribe: ${result.url}`,
+          text: `Manage your billing here: ${result.url}`,
         });
       }
     } catch (error) {
-      // Send error message if checkout creation fails
+      // Send error message if portal creation fails
       await ctx.runAction(internal.internal.sms.sendAgentResponse, {
         userId: args.userId,
-        text: "Sorry, we couldn't create your checkout session. Please try again later or visit givecareapp.com/signup",
+        text: "Sorry, we couldn't access your billing portal. Please try again later or visit givecareapp.com/account",
       });
-      console.error("Failed to create checkout session for resubscribe:", error);
+      console.error("Failed to create billing portal session:", error);
     }
+  },
+});
+
+/**
+ * Send subscription message based on scenario (wrapper action)
+ * Sends appropriate message for each subscription scenario
+ */
+export const sendSubscriptionMessageAction = internalAction({
+  args: {
+    userId: v.id("users"),
+    scenario: v.union(
+      v.literal("new_user"),
+      v.literal("active"),
+      v.literal("grace_period"),
+      v.literal("grace_expired"),
+      v.literal("past_due"),
+      v.literal("incomplete"),
+      v.literal("unknown")
+    ),
+    gracePeriodEndsAt: v.optional(v.number()),
+  },
+  handler: async (ctx, args) => {
+    await ctx.runAction(internal.internal.sms.sendSubscriptionMessage, {
+      userId: args.userId,
+      scenario: args.scenario,
+      gracePeriodEndsAt: args.gracePeriodEndsAt,
+    });
   },
 });

@@ -11,38 +11,51 @@ import { v } from "convex/values";
 import { internal } from "./_generated/api";
 
 /**
- * Stripe Price Lookup Keys
+ * Stripe Price IDs
  * Maps to existing products in Stripe
- * Monthly: $9.99/month
- * Annual: $99.00/year
+ * Monthly: $9.99/month (price_1SH4eMAXk51qociduivShWb7)
+ * Annual: $99.00/year (price_1SH4eMAXk51qocidOhbWRDpk)
  */
-const STRIPE_PRICE_LOOKUP_KEYS = {
-  monthly: "givecare_standard_monthly",
-  annual: "givecare_standard_annual",
+const STRIPE_PRICE_IDS = {
+  monthly: "price_1SH4eMAXk51qociduivShWb7",
+  annual: "price_1SH4eMAXk51qocidOhbWRDpk",
 } as const;
 
 /**
  * Create Stripe checkout session
  * Returns checkout URL for redirect
+ * Creates/updates user record before checkout
  */
 export const createCheckoutSession = action({
   args: {
-    userId: v.id("users"),
-    planId: v.union(v.literal("monthly"), v.literal("annual")),
-    successUrl: v.string(),
-    cancelUrl: v.string(),
+    fullName: v.string(),
+    email: v.string(),
+    phoneNumber: v.string(),
+    priceId: v.string(),
   },
-  handler: async (ctx, { userId, planId, successUrl, cancelUrl }) => {
-    // Get Stripe secret key from environment
+  handler: async (ctx, { fullName, email, phoneNumber, priceId }) => {
+    // Get environment variables
     const stripeSecretKey = process.env.STRIPE_SECRET_KEY;
+    const siteUrl = process.env.SITE_URL || process.env.NEXT_PUBLIC_SITE_URL || "https://www.givecareapp.com";
+
     if (!stripeSecretKey) {
       throw new Error("STRIPE_SECRET_KEY not configured");
     }
 
-    // Get user to find/create Stripe customer
-    const user = await ctx.runQuery(internal.users.getUser, { userId });
+    // Determine plan from price ID
+    const planId = priceId === STRIPE_PRICE_IDS.monthly ? "monthly" : "annual";
+
+    // Create or update user in Convex
+    const userId = await ctx.runMutation(internal.internal.users.upsertUserFromSignup, {
+      phone: phoneNumber,
+      email,
+      name: fullName,
+    });
+
+    // Get user record
+    const user = await ctx.runQuery(internal.internal.users.getUser, { userId });
     if (!user) {
-      throw new Error("User not found");
+      throw new Error("Failed to create user");
     }
 
     // Import Stripe SDK (Node.js runtime)
@@ -54,7 +67,7 @@ export const createCheckoutSession = action({
     // Find or create Stripe customer
     let customerId: string;
     const existingSubscription = await ctx.runQuery(
-      internal.subscriptions.getByUserId,
+      internal.internal.subscriptions.getByUserId,
       { userId }
     );
 
@@ -63,35 +76,41 @@ export const createCheckoutSession = action({
     } else {
       // Create new Stripe customer
       const customer = await stripe.customers.create({
-        email: user.email,
-        name: user.name,
+        email,
+        name: fullName,
+        phone: phoneNumber,
         metadata: {
-          userId: userId,
-          planId: planId,
+          userId,
+          planId,
         },
       });
       customerId = customer.id;
     }
 
-    // Create checkout session using existing Stripe prices
+    // Set success/cancel URLs
+    const successUrl = `${siteUrl}/signup/success`;
+    const cancelUrl = `${siteUrl}/signup?canceled=true`;
+
+    // Create checkout session using price ID
     const session = await stripe.checkout.sessions.create({
       customer: customerId,
       mode: "subscription",
       line_items: [
         {
-          price: STRIPE_PRICE_LOOKUP_KEYS[planId],
+          price: priceId,
           quantity: 1,
         },
       ],
       success_url: successUrl,
       cancel_url: cancelUrl,
       metadata: {
-        userId: userId,
-        planId: planId,
+        userId,
+        planId,
+        phone: phoneNumber,
       },
     });
 
-    return { url: session.url };
+    return session.url;
   },
 });
 

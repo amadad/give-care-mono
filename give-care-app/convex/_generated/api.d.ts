@@ -40,12 +40,7 @@ export declare const api: {
     createCheckoutSession: FunctionReference<
       "action",
       "public",
-      {
-        cancelUrl: string;
-        planId: "monthly" | "annual";
-        successUrl: string;
-        userId: Id<"users">;
-      },
+      { email: string; fullName: string; phoneNumber: string; priceId: string },
       any
     >;
   };
@@ -303,6 +298,29 @@ export declare const internal: {
         { userId: Id<"users"> },
         any
       >;
+      sendSubscriptionMessage: FunctionReference<
+        "action",
+        "internal",
+        {
+          gracePeriodEndsAt?: number;
+          scenario:
+            | "new_user"
+            | "active"
+            | "grace_period"
+            | "grace_expired"
+            | "past_due"
+            | "incomplete"
+            | "unknown";
+          userId: Id<"users">;
+        },
+        any
+      >;
+      sendWelcomeSMS: FunctionReference<
+        "action",
+        "internal",
+        { userId: Id<"users"> },
+        any
+      >;
     };
     stripe: {
       applyStripeEvent: FunctionReference<
@@ -313,6 +331,12 @@ export declare const internal: {
       >;
     };
     stripeActions: {
+      createBillingPortalSession: FunctionReference<
+        "action",
+        "internal",
+        { returnUrl: string; userId: Id<"users"> },
+        any
+      >;
       createCheckoutSessionForResubscribe: FunctionReference<
         "action",
         "internal",
@@ -335,6 +359,12 @@ export declare const internal: {
       >;
     };
     twilioMutations: {
+      handleBillingPortalAction: FunctionReference<
+        "action",
+        "internal",
+        { userId: Id<"users"> },
+        any
+      >;
       handleResubscribeAction: FunctionReference<
         "action",
         "internal",
@@ -371,6 +401,23 @@ export declare const internal: {
         { userId: Id<"users"> },
         any
       >;
+      sendSubscriptionMessageAction: FunctionReference<
+        "action",
+        "internal",
+        {
+          gracePeriodEndsAt?: number;
+          scenario:
+            | "new_user"
+            | "active"
+            | "grace_period"
+            | "grace_expired"
+            | "past_due"
+            | "incomplete"
+            | "unknown";
+          userId: Id<"users">;
+        },
+        any
+      >;
     };
     users: {
       getAllUsers: FunctionReference<"query", "internal", {}, any>;
@@ -391,6 +438,12 @@ export declare const internal: {
         "mutation",
         "internal",
         { field: string; userId: Id<"users">; value: any },
+        any
+      >;
+      upsertUserFromSignup: FunctionReference<
+        "mutation",
+        "internal",
+        { email: string; name: string; phone: string },
         any
       >;
     };
@@ -422,6 +475,12 @@ export declare const internal: {
     >;
   };
   twilioMutations: {
+    handleBillingPortalAction: FunctionReference<
+      "action",
+      "internal",
+      { userId: Id<"users"> },
+      any
+    >;
     handleResubscribeAction: FunctionReference<
       "action",
       "internal",
@@ -456,6 +515,23 @@ export declare const internal: {
       "action",
       "internal",
       { userId: Id<"users"> },
+      any
+    >;
+    sendSubscriptionMessageAction: FunctionReference<
+      "action",
+      "internal",
+      {
+        gracePeriodEndsAt?: number;
+        scenario:
+          | "new_user"
+          | "active"
+          | "grace_period"
+          | "grace_expired"
+          | "past_due"
+          | "incomplete"
+          | "unknown";
+        userId: Id<"users">;
+      },
       any
     >;
   };

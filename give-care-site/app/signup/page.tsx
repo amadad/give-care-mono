@@ -11,7 +11,7 @@ export const metadata: Metadata = {
     url: 'https://www.givecareapp.com/signup',
     images: [
       {
-        url: '/og.png',
+        url: 'https://www.givecareapp.com/og.png',
         width: 1200,
         height: 630,
         alt: 'GiveCare - Caregiver Support',
@@ -22,7 +22,7 @@ export const metadata: Metadata = {
     card: 'summary_large_image',
     title: 'Sign Up for GiveCare',
     description: 'Get personalized caregiver support through text messages.',
-    images: ['/og.png'],
+    images: ['https://www.givecareapp.com/og.png'],
   },
 }
 

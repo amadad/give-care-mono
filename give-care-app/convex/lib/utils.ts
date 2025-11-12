@@ -115,6 +115,47 @@ export function isResubscribeRequest(text: string): boolean {
 }
 
 /**
+ * Check if message is a SIGNUP request (for new users)
+ */
+export function isSignupRequest(text: string): boolean {
+  const signupPatterns = [
+    /\bsignup\b/i,
+    /\bsign\s+up\b/i,
+    /\bsubscribe\b/i,
+    /\bjoin\b/i,
+    /\bstart\b/i,
+  ];
+  return signupPatterns.some((pattern) => pattern.test(text));
+}
+
+/**
+ * Check if message is a BILLING request (to access billing portal)
+ */
+export function isBillingRequest(text: string): boolean {
+  const billingPatterns = [
+    /\bbilling\b/i,
+    /\baccount\b/i,
+    /\bmanage\b/i,
+    /\bportal\b/i,
+  ];
+  return billingPatterns.some((pattern) => pattern.test(text));
+}
+
+/**
+ * Check if message is an UPDATE PAYMENT request (for past_due subscriptions)
+ */
+export function isUpdatePaymentRequest(text: string): boolean {
+  const updatePaymentPatterns = [
+    /\bupdate\s*payment\b/i,
+    /\bupdatepayment\b/i,
+    /\bfix\s*payment\b/i,
+    /\bupdate\s*card\b/i,
+    /\bfix\s*billing\b/i,
+  ];
+  return updatePaymentPatterns.some((pattern) => pattern.test(text));
+}
+
+/**
  * Check if user is accepting an assessment offer
  */
 export function isAssessmentAcceptance(text: string): boolean {
