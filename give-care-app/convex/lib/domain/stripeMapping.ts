@@ -5,7 +5,7 @@
  */
 
 export type StripeSubscriptionStatus = "active" | "canceled" | "past_due";
-export type SubscriptionPlan = "free" | "plus" | "enterprise";
+export type SubscriptionPlan = "monthly" | "annual";
 
 export interface StripeEvent {
   id: string;
@@ -77,7 +77,7 @@ export function mapStripeEventToSubscription(
 
       return {
         stripeCustomerId: customerId,
-        planId: extractPlanFromMetadata(obj.metadata) || "plus",
+        planId: extractPlanFromMetadata(obj.metadata) || "monthly",
         status: subscriptionStatus,
         currentPeriodEnd,
         canceledAt,
@@ -92,7 +92,7 @@ export function mapStripeEventToSubscription(
 
       return {
         stripeCustomerId: customerId,
-        planId: extractPlanFromMetadata(obj.metadata) || "plus",
+        planId: extractPlanFromMetadata(obj.metadata) || "monthly",
         status: "canceled",
         currentPeriodEnd: (obj.current_period_end as number) * 1000,
         canceledAt,
@@ -117,11 +117,7 @@ function extractPlanFromMetadata(
   }
 
   const planId = metadata.planId || metadata.plan_id;
-  if (
-    planId === "free" ||
-    planId === "plus" ||
-    planId === "enterprise"
-  ) {
+  if (planId === "monthly" || planId === "annual") {
     return planId as SubscriptionPlan;
   }
 

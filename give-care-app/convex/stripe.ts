@@ -11,13 +11,24 @@ import { v } from "convex/values";
 import { internal } from "./_generated/api";
 
 /**
+ * Stripe Price Lookup Keys
+ * Maps to existing products in Stripe
+ * Monthly: $9.99/month
+ * Annual: $99.00/year
+ */
+const STRIPE_PRICE_LOOKUP_KEYS = {
+  monthly: "givecare_standard_monthly",
+  annual: "givecare_standard_annual",
+} as const;
+
+/**
  * Create Stripe checkout session
  * Returns checkout URL for redirect
  */
 export const createCheckoutSession = action({
   args: {
     userId: v.id("users"),
-    planId: v.union(v.literal("free"), v.literal("plus"), v.literal("enterprise")),
+    planId: v.union(v.literal("monthly"), v.literal("annual")),
     successUrl: v.string(),
     cancelUrl: v.string(),
   },
@@ -62,22 +73,13 @@ export const createCheckoutSession = action({
       customerId = customer.id;
     }
 
-    // Create checkout session
+    // Create checkout session using existing Stripe prices
     const session = await stripe.checkout.sessions.create({
       customer: customerId,
       mode: "subscription",
       line_items: [
         {
-          price_data: {
-            currency: "usd",
-            product_data: {
-              name: `GiveCare ${planId.charAt(0).toUpperCase() + planId.slice(1)} Plan`,
-            },
-            recurring: {
-              interval: "month",
-            },
-            unit_amount: planId === "free" ? 0 : planId === "plus" ? 2900 : 9900, // $0, $29, $99
-          },
+          price: STRIPE_PRICE_LOOKUP_KEYS[planId],
           quantity: 1,
         },
       ],

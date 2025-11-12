@@ -469,7 +469,7 @@ export type DataModel = {
       canceledAt?: number;
       currentPeriodEnd: number;
       gracePeriodEndsAt?: number;
-      planId: "free" | "plus" | "enterprise";
+      planId: "monthly" | "annual";
       status: "active" | "canceled" | "past_due";
       stripeCustomerId: string;
       userId: Id<"users">;

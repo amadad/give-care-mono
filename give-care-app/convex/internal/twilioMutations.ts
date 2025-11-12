@@ -129,7 +129,7 @@ export const handleResubscribeAction = internalAction({
     try {
       // Create checkout session
       const result = await ctx.runAction(
-        internal.internal.stripe.createCheckoutSessionForResubscribe,
+        internal.stripeActions.createCheckoutSessionForResubscribe,
         {
           userId: args.userId,
           successUrl: "https://www.givecareapp.com/signup?resubscribed=true",

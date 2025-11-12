@@ -190,7 +190,7 @@ export default defineSchema({
   subscriptions: defineTable({
     userId: v.id("users"),
     stripeCustomerId: v.string(),
-    planId: v.union(v.literal("free"), v.literal("plus"), v.literal("enterprise")),
+    planId: v.union(v.literal("monthly"), v.literal("annual")),
     status: v.union(
       v.literal("active"),
       v.literal("canceled"),

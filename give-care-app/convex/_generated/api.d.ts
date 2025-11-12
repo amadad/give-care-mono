@@ -42,7 +42,7 @@ export declare const api: {
       "public",
       {
         cancelUrl: string;
-        planId: "free" | "plus" | "enterprise";
+        planId: "monthly" | "annual";
         successUrl: string;
         userId: Id<"users">;
       },
@@ -310,6 +310,12 @@ export declare const internal: {
       >;
     };
     stripeActions: {
+      createCheckoutSessionForResubscribe: FunctionReference<
+        "action",
+        "internal",
+        { cancelUrl: string; successUrl: string; userId: Id<"users"> },
+        any
+      >;
       processWebhook: FunctionReference<
         "action",
         "internal",
@@ -326,6 +332,12 @@ export declare const internal: {
       >;
     };
     twilioMutations: {
+      handleResubscribeAction: FunctionReference<
+        "action",
+        "internal",
+        { userId: Id<"users"> },
+        any
+      >;
       sendAgentResponseAction: FunctionReference<
         "action",
         "internal",
@@ -407,6 +419,12 @@ export declare const internal: {
     >;
   };
   twilioMutations: {
+    handleResubscribeAction: FunctionReference<
+      "action",
+      "internal",
+      { userId: Id<"users"> },
+      any
+    >;
     sendAgentResponseAction: FunctionReference<
       "action",
       "internal",

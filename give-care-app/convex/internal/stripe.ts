@@ -3,9 +3,7 @@
  * Idempotent webhook processing
  */
 
-"use node";
-
-import { internalMutation, internalAction } from "../_generated/server";
+import { internalMutation } from "../_generated/server";
 import { v } from "convex/values";
 import {
   mapStripeEventToSubscription,
@@ -120,90 +118,6 @@ export const applyStripeEvent = internalMutation({
     });
 
     return { status: "processed", userId };
-  },
-});
-
-/**
- * Create checkout session for resubscription
- * Internal action that can be called from mutations
- */
-export const createCheckoutSessionForResubscribe = internalAction({
-  args: {
-    userId: v.id("users"),
-    successUrl: v.string(),
-    cancelUrl: v.string(),
-  },
-  handler: async (ctx, { userId, successUrl, cancelUrl }) => {
-    // Get Stripe secret key from environment
-    const stripeSecretKey = process.env.STRIPE_SECRET_KEY;
-    if (!stripeSecretKey) {
-      throw new Error("STRIPE_SECRET_KEY not configured");
-    }
-
-    // Get user
-    const user = await ctx.runQuery(internal.internal.users.getUser, { userId });
-    if (!user) {
-      throw new Error("User not found");
-    }
-
-    // Get existing subscription to determine plan (default to "plus" if none)
-    const existingSubscription = await ctx.runQuery(
-      internal.internal.subscriptions.getByUserId,
-      { userId }
-    );
-    const planId = existingSubscription?.planId || "plus";
-
-    // Import Stripe SDK (Node.js runtime)
-    const Stripe = (await import("stripe")).default;
-    const stripe = new Stripe(stripeSecretKey, {
-      apiVersion: "2024-12-18.acacia",
-    });
-
-    // Find or create Stripe customer
-    let customerId: string;
-    if (existingSubscription?.stripeCustomerId) {
-      customerId = existingSubscription.stripeCustomerId;
-    } else {
-      // Create new Stripe customer
-      const customer = await stripe.customers.create({
-        email: user.email,
-        name: user.name,
-        metadata: {
-          userId: userId,
-          planId: planId,
-        },
-      });
-      customerId = customer.id;
-    }
-
-    // Create checkout session
-    const session = await stripe.checkout.sessions.create({
-      customer: customerId,
-      mode: "subscription",
-      line_items: [
-        {
-          price_data: {
-            currency: "usd",
-            product_data: {
-              name: `GiveCare ${planId.charAt(0).toUpperCase() + planId.slice(1)} Plan`,
-            },
-            recurring: {
-              interval: "month",
-            },
-            unit_amount: planId === "free" ? 0 : planId === "plus" ? 2900 : 9900, // $0, $29, $99
-          },
-          quantity: 1,
-        },
-      ],
-      success_url: successUrl,
-      cancel_url: cancelUrl,
-      metadata: {
-        userId: userId,
-        planId: planId,
-      },
-    });
-
-    return { url: session.url };
   },
 });
 
