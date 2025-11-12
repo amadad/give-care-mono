@@ -23,7 +23,7 @@ export const sendStopConfirmationAction = internalAction({
   handler: async (ctx, args) => {
     // Call the action directly (action → action via ctx.runAction)
     // This avoids the scheduler path resolution bug
-    await ctx.runAction(internal.sms.sendStopConfirmation, {
+    await ctx.runAction(internal.internal.sms.sendStopConfirmation, {
       userId: args.userId,
     });
   },
@@ -38,7 +38,7 @@ export const sendHelpMessageAction = internalAction({
   },
   handler: async (ctx, args) => {
     // Call the action directly (action → action via ctx.runAction)
-    await ctx.runAction(internal.sms.sendHelpMessage, {
+    await ctx.runAction(internal.internal.sms.sendHelpMessage, {
       userId: args.userId,
     });
   },
@@ -54,7 +54,7 @@ export const sendCrisisResponseAction = internalAction({
   },
   handler: async (ctx, args) => {
     // Call the action directly (action → action via ctx.runAction)
-    await ctx.runAction(internal.sms.sendCrisisResponse, {
+    await ctx.runAction(internal.internal.sms.sendCrisisResponse, {
       userId: args.userId,
       isDVHint: args.isDVHint,
     });
@@ -71,7 +71,7 @@ export const sendResubscribeMessageAction = internalAction({
   },
   handler: async (ctx, args) => {
     // Call the action directly (action → action via ctx.runAction)
-    await ctx.runAction(internal.sms.sendResubscribeMessage, {
+    await ctx.runAction(internal.internal.sms.sendResubscribeMessage, {
       userId: args.userId,
       gracePeriodEndsAt: args.gracePeriodEndsAt,
     });
@@ -89,7 +89,7 @@ export const sendAgentResponseAction = internalAction({
   },
   handler: async (ctx, args) => {
     // Call the action directly (action → action via ctx.runAction)
-    await ctx.runAction(internal.sms.sendAgentResponse, {
+    await ctx.runAction(internal.internal.sms.sendAgentResponse, {
       userId: args.userId,
       text: args.text,
     });

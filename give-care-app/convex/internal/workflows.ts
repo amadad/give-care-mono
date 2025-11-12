@@ -20,7 +20,7 @@ export const runCheckIns = internalAction({
   args: {},
   handler: async (ctx) => {
     // Query users who need check-ins
-    const users = await ctx.runQuery(internal.users.getUsersWithCheckIns, {});
+    const users = await ctx.runQuery(internal.internal.users.getUsersWithCheckIns, {});
 
     if (users.length === 0) {
       return { processed: 0 };
@@ -51,7 +51,7 @@ export const runEngagementMonitoring = internalAction({
   args: {},
   handler: async (ctx) => {
     // Query inactive users (>5 days since last engagement)
-    const users = await ctx.runQuery(internal.users.getInactiveUsers, { days: 5 });
+    const users = await ctx.runQuery(internal.internal.users.getInactiveUsers, { days: 5 });
 
     if (users.length === 0) {
       return { processed: 0 };
@@ -84,7 +84,7 @@ export const scheduleCrisisFollowUp = internalAction({
   handler: async (ctx, { userId }) => {
     // Schedule follow-up check-in for next day
     // This is a placeholder - actual implementation would use workflow or scheduler
-    await ctx.scheduler.runAfter(86400000, internal.agents.processMainAgentMessage, {
+    await ctx.scheduler.runAfter(86400000, internal.internal.agents.processMainAgentMessage, {
       userId,
       body: "How are you doing today? I wanted to check in after our conversation yesterday.",
     });

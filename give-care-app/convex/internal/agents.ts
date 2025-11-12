@@ -48,7 +48,7 @@ export const processMainAgentMessage = internalAction({
 
     // Get relevant memories (optimized: importance ≥7, limit 5)
     // This is async but non-blocking - agent will use memories via contextOptions
-    const memories = await ctx.runQuery(internal.memories.getRelevantMemoriesQuery, {
+    const memories = await ctx.runQuery(internal.internal.memories.getRelevantMemoriesQuery, {
       userId,
       limit: 5,
     });
