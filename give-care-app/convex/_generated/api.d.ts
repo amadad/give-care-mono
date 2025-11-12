@@ -300,6 +300,12 @@ export declare const internal: {
         { isDVHint: boolean; userId: Id<"users"> },
         any
       >;
+      sendEngagementNudge: FunctionReference<
+        "action",
+        "internal",
+        { level: "day5" | "day7" | "day14"; userId: Id<"users"> },
+        any
+      >;
       sendHelpMessage: FunctionReference<
         "action",
         "internal",

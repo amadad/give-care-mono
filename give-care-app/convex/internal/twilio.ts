@@ -104,3 +104,32 @@ export const sendResubscribeMessage = internalAction({
     await sendSMS(ctx, user.phone, message);
   },
 });
+
+/**
+ * Send engagement nudge
+ */
+export const sendEngagementNudge = internalAction({
+  args: {
+    userId: v.id("users"),
+    level: v.union(v.literal("day5"), v.literal("day7"), v.literal("day14")),
+  },
+  handler: async (ctx, { userId, level }) => {
+    const user = await ctx.runQuery(getUser, { userId });
+    if (!user?.phone) return;
+
+    let message: string;
+    switch (level) {
+      case "day5":
+        message = "We haven't heard from you in a few days. How are you doing?";
+        break;
+      case "day7":
+        message = "Just checking in - we're here if you need support.";
+        break;
+      case "day14":
+        message = "We miss you! Text back anytime to continue your caregiving support.";
+        break;
+    }
+
+    await sendSMS(ctx, user.phone, message);
+  },
+});

@@ -1,5 +1,137 @@
 # Changelog - GiveCare App
 
+## [2.0.0] - 2025-11-12
+
+### 🏗️ Major Architecture Refactoring
+
+**Impact:** Complete migration to domain-driven design with clear separation of concerns. This is a breaking change that reorganizes the entire Convex codebase.
+
+#### Added
+
+**Domain-Driven Architecture:**
+- **`convex/internal/`** directory: All internal functions organized by domain
+  - `agents.ts`: Agent processing functions
+  - `assessments.ts`: Assessment management
+  - `cleanup.ts`: Data retention cleanup
+  - `events.ts`: Event emission and tracking
+  - `interventions.ts`: Intervention queries and events
+  - `memories.ts`: Memory management
+  - `onboarding.ts`: Onboarding policy enforcement
+  - `resources.ts`: Resource caching and search
+  - `stripe.ts`: Stripe webhook processing
+  - `stripeActions.ts`: Stripe action handlers
+  - `subscriptions.ts`: Subscription queries
+  - `twilio.ts`: SMS sending functions
+  - `users.ts`: User management
+  - `wellness.ts`: Wellness score queries
+  - `workflows.ts`: Cron job handlers (TODO)
+
+**Domain Logic Layer:**
+- **`convex/lib/domain/`** directory: Pure business logic
+  - `burnoutScoring.ts`: Burnout score calculations
+  - `learning.ts`: Learning algorithm logic
+  - `messageTemplates.ts`: Message template generation
+  - `messaging.ts`: Messaging logic
+  - `onboarding.ts`: Onboarding state management
+  - `profileEnrichment.ts`: Profile enrichment from assessments
+  - `stripeMapping.ts`: Stripe plan/product mappings
+  - `trendAnalysis.ts`: Trend detection algorithms
+  - `zoneMapping.ts`: Zone-to-category mappings
+
+**Infrastructure Layer:**
+- **`convex/lib/infrastructure/`** directory: Technical utilities
+  - `featureFlags.ts`: Feature flag management
+  - `queryBatching.ts`: Query batching utilities
+  - `smsUtils.ts`: SMS formatting utilities
+  - `trends.ts`: Trend calculation helpers
+
+**Service Layer:**
+- **`convex/lib/services/`** directory: Convex-aware service abstractions
+  - `assessmentService.ts`: Assessment operations
+  - `eventService.ts`: Event logging
+  - `learningService.ts`: Learning algorithm integration
+  - `memoryService.ts`: Memory retrieval and ranking
+  - `onboardingService.ts`: Onboarding orchestration
+  - `resourceService.ts`: Resource suggestion
+  - `subscriptionService.ts`: Subscription access checks
+  - `wellnessService.ts`: Wellness score recalculation
+
+**Centralized Internal API:**
+- **`convex/internal.ts`**: Single re-export point for all internal modules
+- Clean namespace pattern: `internal.agents.*`, `internal.users.*`, etc.
+
+#### Changed
+
+**Schema Updates:**
+- **Removed explicit `_creationTime` from indexes** (auto-added by Convex)
+  - Updated 11 indexes: assessments, scores, scores_composite, assessment_sessions, events, memories, resource_cache, alerts, inbound_receipts, agent_runs, guardrail_events
+- **Added backward-compatible fields** for migration:
+  - `agent_runs`: Legacy fields (agent, budgetResult, latencyMs, policyBundle, traceId)
+  - `inbound_receipts`: Optional userId and receivedAt
+  - `resource_cache`: Legacy results field
+  - `agentMetadataValidator`: Legacy context fields
+
+**Cron Jobs:**
+- Temporarily disabled all cron jobs (handlers need implementation)
+- Preserved cron definitions in `crons.ts` for future re-enabling
+- TODO: Implement `runCheckIns` and `runEngagementMonitoring` handlers
+
+**File Organization:**
+- Moved logic from flat `lib/` structure to organized domain/infrastructure/services
+- Split large files into focused single-purpose modules
+- Improved code discoverability and maintainability
+
+#### Fixed
+
+- **Import Path Errors**: All imports now use correct relative paths
+- **Schema Validation**: Fixed `_creationTime` index definition errors
+- **Type Safety**: Added proper validators for all legacy fields
+- **Deployment Blocking**: Removed cron references to non-existent functions
+
+#### Removed
+
+**Deprecated Files** (functionality preserved in new architecture):
+- `_convex/` directory: Legacy architecture (kept for reference during migration)
+- `inboundHelpers.ts`: Moved to `lib/infrastructure/queryBatching.ts`
+- `lib/billing.ts`: Functionality removed (entitlements logic to be restored)
+- `lib/enums.ts`: Types now inlined in schema and validators
+- `lib/features.ts`: Migrated to `lib/infrastructure/featureFlags.ts`
+- `lib/interventionSeeds.ts`: Seed data removed (to be restored)
+- `lib/nudgeMessages.ts`: Migrated to `lib/domain/messageTemplates.ts`
+- `lib/promoSeeds.ts`: Promo code functionality removed
+- `lib/seedInterventions.ts`: Migration script removed
+- `lib/seedPromoCodes.ts`: Migration script removed
+- `lib/subscription.ts`: Migrated to `lib/services/subscriptionService.ts`
+- `test.setup.ts`: Test setup removed (to be restored)
+- `setup.test.ts`: Test harness removed (to be restored)
+
+**Legacy Index Definitions:**
+- Removed 23 old indexes with explicit `_creationTime` references
+- Replaced with simplified index definitions (Convex auto-adds `_creationTime`)
+
+#### Migration Notes
+
+**Data Cleared:**
+- All tables in dev and prod deployments cleared for fresh start
+- No data migration performed (user requested "no migration")
+- Clean slate for new architecture
+
+**Known Gaps to Address:**
+1. Test setup files need restoration (`test.setup.ts`, `setup.test.ts`)
+2. Billing entitlements logic needs restoration (`lib/domain/billing.ts`)
+3. Intervention seed data needs restoration (`lib/domain/interventionSeeds.ts`)
+4. Cron job handlers need implementation (`internal/workflows.ts`)
+5. Promo code feature needs decision (restore or document removal)
+6. Legacy schema fields can be removed after migration confirmed
+
+**Breaking Changes:**
+- All function paths changed due to reorganization
+- Import paths updated throughout codebase
+- Schema indexes redefined (backward compatible)
+- Cron jobs disabled (will break scheduled tasks until re-enabled)
+
+---
+
 ## [1.7.0] - 2025-11-11
 
 ### 🎯 Onboarding Improvements
