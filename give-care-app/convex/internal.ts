@@ -5,6 +5,7 @@
 import { internalMutation, internalQuery } from './_generated/server';
 import { internal, api } from './_generated/api';
 import { v } from 'convex/values';
+import type { Doc } from './_generated/dataModel';
 import { logAgentRun, logGuardrail, getByExternalId, ensureUser } from './lib/utils';
 import { assessmentDefinitionValidator } from './lib/validators';
 import { messageValidator } from '@convex-dev/twilio';
@@ -464,7 +465,7 @@ async function handleSubscriptionChange(
   } else {
     // New subscription - find user by stripeCustomerId in metadata
     const users = await ctx.db.query('users').collect();
-    const user = users.find(u => u.metadata?.stripeCustomerId === customerId);
+    const user = users.find((u: Doc<'users'>) => u.metadata?.stripeCustomerId === customerId);
 
     if (user) {
       // Create subscription record

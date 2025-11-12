@@ -50,6 +50,9 @@ export const agentMetadataValidator = v.union(
     timezone: v.optional(v.string()),
     wellnessScore: v.optional(v.number()),
     pressureZones: v.optional(v.array(v.string())),
+    stripeCustomerId: v.optional(v.string()),
+    email: v.optional(v.string()),
+    fullName: v.optional(v.string()),
     convex: v.optional(v.object({
       userId: v.optional(v.id('users')),
       threadId: v.optional(v.string()),
@@ -65,6 +68,9 @@ export const agentMetadataValidator = v.union(
     timezone: v.optional(v.string()),
     wellnessScore: v.optional(v.number()),
     pressureZones: v.optional(v.array(v.string())),
+    stripeCustomerId: v.optional(v.string()),
+    email: v.optional(v.string()),
+    fullName: v.optional(v.string()),
     threadId: v.optional(v.string()), // Old location
     convex: v.optional(v.object({
       userId: v.optional(v.id('users')),
