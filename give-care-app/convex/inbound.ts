@@ -10,8 +10,9 @@ import { internalAction } from './_generated/server';
 import { v } from 'convex/values';
 import { internal, components, api } from './_generated/api';
 import { twilio } from './lib/twilio';
-import { detectCrisis } from './lib/utils';
+import { detectCrisis, extractProfileInfo, getNextMissingField } from './lib/utils';
 import { RateLimitError, UserNotFoundError } from './lib/utils';
+import type { UserProfile } from './lib/types';
 
 // ============================================================================
 // PROCESS INBOUND MESSAGE
@@ -80,11 +81,62 @@ export const processInbound = internalAction({
       }
     }
 
+    // Fast-path: Extract profile info from natural language before agent call
+    // This handles common patterns like "My name is Sarah" or "I'm caring for my mom"
+    const metadata = (user.metadata as Record<string, unknown>) ?? {};
+    const currentProfile = (metadata.profile as UserProfile | undefined);
+    const extractedProfile = extractProfileInfo(args.text, currentProfile);
+    
+    if (extractedProfile) {
+      // Check if this matches a missing field we're looking for
+      const needsLocalResources = args.text.match(/(respite|support group|local resource|near me|in my area|find.*near|help.*near)/i);
+      const nextField = getNextMissingField(currentProfile, { needsLocalResources: !!needsLocalResources });
+      
+      // Only auto-extract if it matches what we're looking for
+      if (nextField && extractedProfile[nextField.field as keyof UserProfile]) {
+        // Update profile directly via mutation (non-blocking)
+        const updatedProfile = {
+          ...currentProfile,
+          ...extractedProfile,
+        };
+        
+        ctx.runMutation(internal.internal.updateUserMetadata, {
+          userId: user._id,
+          metadata: { ...metadata, profile: updatedProfile },
+        }).catch((err) => console.error('[inbound] Failed to update profile:', err));
+        
+        // Continue to agent - it will see the updated profile and acknowledge
+        // This allows the agent to confirm and continue naturally
+      }
+    }
+
+    // Check subscription status (gate SMS access for non-subscribers)
+    // Users in grace period (3 days after cancellation) can still use the service
+    const subscription = await ctx.runQuery(internal.inboundHelpers.getUserSubscriptionStatus, {
+      userId: user._id,
+    });
+
+    if (!subscription.isActive) {
+      // User not subscribed or grace period expired - send redirect message
+      const frontendUrl = process.env.FRONTEND_URL || process.env.NEXT_PUBLIC_SITE_URL || 'https://givecare.com';
+      const signupUrl = `${frontendUrl}/signup`;
+      const message = subscription.inGracePeriod
+        ? `Your GiveCare subscription was recently canceled. You have ${subscription.gracePeriodDaysRemaining} days remaining to resubscribe at ${signupUrl}`
+        : `Thanks for reaching out! To continue using GiveCare, please subscribe at ${signupUrl}`;
+
+      await ctx.runAction(internal.inbound.sendSmsResponse, {
+        to: args.phone,
+        userId: user.externalId,
+        text: message,
+      });
+
+      return { success: true, gated: true, reason: subscription.inGracePeriod ? 'grace_period' : 'no_subscription' };
+    }
+
     // Detect crisis keywords
     const crisisDetection = detectCrisis(args.text);
     
-    // Build context with cached threadId if available
-    const metadata = (user.metadata as Record<string, unknown>) ?? {};
+    // Build context with cached threadId if available (metadata already declared above)
     const convexMetadata = metadata.convex as Record<string, unknown> | undefined;
     const cachedThreadId = convexMetadata?.threadId as string | undefined;
     

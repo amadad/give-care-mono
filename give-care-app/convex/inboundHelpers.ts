@@ -8,6 +8,7 @@
 import { internalQuery } from './_generated/server';
 import { v } from 'convex/values';
 import { internal, components } from './_generated/api';
+import { isSubscriptionActive, isInGracePeriod } from './lib/subscription';
 
 /**
  * Batches all inbound context queries into a single query
@@ -68,6 +69,38 @@ export const getInboundContext = internalQuery({
       user,
       activeSession: activeSessionCorrected ?? null,
       needsUserCreation: false,
+    };
+  },
+});
+
+/**
+ * Get user subscription status for SMS gating
+ * Returns subscription active status and grace period information
+ */
+export const getUserSubscriptionStatus = internalQuery({
+  args: {
+    userId: v.id('users'),
+  },
+  handler: async (ctx, { userId }) => {
+    const subscription = await ctx.db
+      .query('subscriptions')
+      .withIndex('by_user', (q) => q.eq('userId', userId))
+      .first();
+
+    const isActive = isSubscriptionActive(subscription);
+    const inGracePeriod = subscription ? isInGracePeriod(subscription) : false;
+
+    let gracePeriodDaysRemaining = 0;
+    if (inGracePeriod && subscription?.gracePeriodEndsAt) {
+      const msRemaining = subscription.gracePeriodEndsAt - Date.now();
+      gracePeriodDaysRemaining = Math.ceil(msRemaining / (24 * 60 * 60 * 1000));
+    }
+
+    return {
+      isActive,
+      inGracePeriod,
+      gracePeriodDaysRemaining,
+      status: subscription?.status ?? 'none',
     };
   },
 });

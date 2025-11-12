@@ -128,6 +128,8 @@ export default defineSchema({
     planId: v.string(),
     status: v.string(),
     currentPeriodEnd: v.number(),
+    canceledAt: v.optional(v.number()),
+    gracePeriodEndsAt: v.optional(v.number()),
   })
     .index('by_user', ['userId'])
     .index('by_customer', ['stripeCustomerId']),

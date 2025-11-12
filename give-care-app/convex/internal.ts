@@ -32,6 +32,27 @@ export const ensureUserMutation = internalMutation({
   },
 });
 
+export const updateUserMetadata = internalMutation({
+  args: {
+    userId: v.id('users'),
+    metadata: v.record(v.string(), v.any()),
+  },
+  handler: async (ctx, { userId, metadata }) => {
+    const user = await ctx.db.get(userId);
+    if (!user) {
+      throw new Error(`User ${userId} not found`);
+    }
+
+    const updatedMetadata = {
+      ...user.metadata,
+      ...metadata,
+    };
+
+    await ctx.db.patch(userId, { metadata: updatedMetadata });
+    return await ctx.db.get(userId);
+  },
+});
+
 export const logAgentRunInternal = internalMutation({
   args: {
     externalId: v.string(),
@@ -426,46 +447,57 @@ async function handleSubscriptionChange(
     return;
   }
 
-  // Find user by Stripe customer ID
+  // Extract planId from priceId (store priceId directly)
+  const planId = priceId || 'free';
+
+  // Find existing subscription by customerId
   const existingSubscription = await ctx.db
     .query('subscriptions')
     .withIndex('by_customer', (q: any) => q.eq('stripeCustomerId', customerId))
     .first();
 
-  // Extract planId from priceId (e.g., "price_123" -> "plus" or use priceId directly)
-  // For now, we'll store the priceId as planId - can be mapped later
-  const planId = priceId || 'free';
-
   if (existingSubscription) {
     // Update existing subscription
-    await ctx.db.patch(existingSubscription._id, {
+    // Clear grace period fields if subscription is reactivated
+    const updates: any = {
       status,
       currentPeriodEnd,
       planId,
-    });
+    };
+
+    if (status === 'active' || status === 'trialing') {
+      updates.canceledAt = undefined;
+      updates.gracePeriodEndsAt = undefined;
+    }
+
+    await ctx.db.patch(existingSubscription._id, updates);
     console.log(`[stripe] Updated subscription ${subscriptionId} for customer ${customerId}`);
   } else {
-    // New subscription - need to find or create user
-    // In a real system, customerId would be stored in user metadata during checkout
-    // For now, we'll try to find user by checking metadata or allow subscription without userId
-    // The subscription can be linked to a user later when they sign up
-    
-    // TODO: In a real implementation, you'd:
-    // 1. Store customerId in user.metadata.stripeCustomerId during checkout
-    // 2. Or use client_reference_id in checkout session to store userId/externalId
-    // 3. Or query Stripe API to get customer email and match to user
-    
-    // For now, we'll log a warning and skip creating the subscription
-    // The subscription will be created when the user signs up and links their account
-    console.warn(`[stripe] Cannot create subscription - no user found for customer ${customerId}. Subscription will be created when user links account.`);
-    
-    // Alternative: Create subscription record with a placeholder or null userId
-    // This requires making userId optional in schema, which we'll skip for now
+    // New subscription - find user by stripeCustomerId in metadata
+    const users = await ctx.db.query('users').collect();
+    const user = users.find(u => u.metadata?.stripeCustomerId === customerId);
+
+    if (user) {
+      // Create subscription record
+      await ctx.db.insert('subscriptions', {
+        userId: user._id,
+        stripeCustomerId: customerId,
+        planId,
+        status,
+        currentPeriodEnd,
+      });
+      console.log(`[stripe] Created subscription ${subscriptionId} for user ${user._id}`);
+    } else {
+      // User not found - this shouldn't happen if checkout flow is correct
+      // customerId should have been linked in handleCheckoutCompleted
+      console.warn(`[stripe] Cannot create subscription - no user found with stripeCustomerId ${customerId}`);
+    }
   }
 }
 
 /**
  * Helper: Handle subscription deleted event
+ * Sets grace period of 3 days before hard blocking access
  */
 async function handleSubscriptionDeleted(
   ctx: any,
@@ -485,10 +517,16 @@ async function handleSubscriptionDeleted(
     .first();
 
   if (existingSubscription) {
+    const now = Date.now();
+    const gracePeriodDays = 3;
+    const gracePeriodEndsAt = now + (gracePeriodDays * 24 * 60 * 60 * 1000);
+
     await ctx.db.patch(existingSubscription._id, {
       status: 'canceled',
+      canceledAt: now,
+      gracePeriodEndsAt,
     });
-    console.log(`[stripe] Marked subscription as canceled for customer ${customerId}`);
+    console.log(`[stripe] Marked subscription as canceled with ${gracePeriodDays}-day grace period for customer ${customerId}`);
   } else {
     console.warn(`[stripe] Subscription not found for customer ${customerId}`);
   }
@@ -561,6 +599,8 @@ async function handleInvoicePaymentFailed(
 
 /**
  * Helper: Handle checkout session completed
+ * Links Stripe customer to Convex user via client_reference_id (phoneNumber)
+ * Sends welcome SMS to user
  */
 async function handleCheckoutCompleted(
   ctx: any,
@@ -571,14 +611,45 @@ async function handleCheckoutCompleted(
   const subscriptionId = session.subscription as string | undefined;
   const clientReferenceId = session.client_reference_id as string | undefined;
 
-  // client_reference_id can be used to store userId or externalId
-  // For now, we'll rely on the subscription.created event to handle this
-  // But we can use this to link the customer to a user if needed
+  if (!customerId || !clientReferenceId) {
+    console.error('[stripe] Missing customerId or client_reference_id in checkout session');
+    return;
+  }
 
-  if (subscriptionId && customerId) {
-    // The subscription.created event should handle this, but we can ensure it's processed
-    console.log(`[stripe] Checkout completed for customer ${customerId}, subscription ${subscriptionId}`);
-    // The subscription will be created/updated by the subscription.created event
+  // client_reference_id contains the phoneNumber (externalId)
+  const phoneNumber = clientReferenceId;
+
+  try {
+    // Find user by phoneNumber (externalId)
+    const user = await getByExternalId(ctx, phoneNumber);
+
+    if (!user) {
+      console.error(`[stripe] User not found for phoneNumber ${phoneNumber}`);
+      return;
+    }
+
+    // Link Stripe customerId to user metadata
+    const updatedMetadata = {
+      ...user.metadata,
+      stripeCustomerId: customerId,
+    };
+
+    await ctx.db.patch(user._id, { metadata: updatedMetadata });
+
+    console.log(`[stripe] Linked customer ${customerId} to user ${user._id} (${phoneNumber})`);
+
+    // Send welcome SMS
+    // Note: We send welcome SMS here, not in subscription.created, to ensure it happens once
+    if (user.phone) {
+      await ctx.scheduler.runAfter(0, internal.inbound.sendSmsResponse, {
+        to: user.phone,
+        userId: user.externalId,
+        text: `Welcome to GiveCare! You're all set. Text me anytime for support. I'm here to help you on your caregiving journey.`,
+      });
+      console.log(`[stripe] Scheduled welcome SMS for ${user.phone}`);
+    }
+  } catch (error) {
+    console.error(`[stripe] Error handling checkout completion:`, error);
   }
 }
 
