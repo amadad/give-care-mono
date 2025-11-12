@@ -133,17 +133,6 @@ export const logAgentDecision = internalMutation({
   },
 });
 
-export const updateUserMetadata = internalMutation({
-  args: {
-    userId: v.id('users'),
-    metadata: v.any(),
-  },
-  handler: async (ctx, { userId, metadata }) => {
-    await ctx.db.patch(userId, { metadata });
-    return ctx.db.get(userId);
-  },
-});
-
 export const getAllUsers = internalQuery({
   args: {},
   handler: async (ctx) => {
