@@ -88,7 +88,7 @@ export const handleIncomingMessage = internalMutation({
     const access = await checkSubscriptionAccess(ctx, user._id);
     if (!access.hasAccess) {
       // No access - send resubscribe message
-      await ctx.scheduler.runAfter(0, internal.twilio.sendResubscribeMessage, {
+      await ctx.scheduler.runAfter(0, internal.twilioMutations.sendResubscribeMessageMutation, {
         userId: user._id,
         gracePeriodEndsAt: access.gracePeriodEndsAt,
       });
@@ -193,7 +193,7 @@ async function handleStop(ctx: any, userId: any): Promise<void> {
   }
 
   // Send confirmation (async)
-  await ctx.scheduler.runAfter(0, internal.twilio.sendStopConfirmation, {
+  await ctx.scheduler.runAfter(0, internal.twilioMutations.sendStopConfirmationMutation, {
     userId,
   });
 }
@@ -203,7 +203,7 @@ async function handleStop(ctx: any, userId: any): Promise<void> {
  */
 async function handleHelp(ctx: any, userId: any): Promise<void> {
   // Send help message (async)
-  await ctx.scheduler.runAfter(0, internal.twilio.sendHelpMessage, {
+  await ctx.scheduler.runAfter(0, internal.twilioMutations.sendHelpMessageMutation, {
     userId,
   });
 }
@@ -245,7 +245,7 @@ async function handleCrisis(
 
   // Send crisis response immediately (0 delay scheduler = immediate)
   // This is async but doesn't block the mutation response
-  await ctx.scheduler.runAfter(0, internal.twilio.sendCrisisResponse, {
+  await ctx.scheduler.runAfter(0, internal.twilioMutations.sendCrisisResponseMutation, {
     userId,
     isDVHint: crisisResult.isDVHint,
   });

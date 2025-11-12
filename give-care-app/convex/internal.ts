@@ -22,4 +22,5 @@ export * as onboarding from "./internal/onboarding";
 export * as events from "./internal/events";
 export * as workflows from "./internal/workflows";
 export * as cleanup from "./internal/cleanup";
+export * as twilioMutations from "./internal/twilioMutations";
 
