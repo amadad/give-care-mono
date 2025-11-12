@@ -29,7 +29,7 @@ export const processWebhook = internalAction({
     // Import Stripe SDK for signature verification
     const Stripe = (await import("stripe")).default;
     const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || "", {
-      apiVersion: "2024-12-18.acacia",
+      apiVersion: "2025-10-29.clover",
     });
 
     let event;
@@ -41,7 +41,7 @@ export const processWebhook = internalAction({
     }
 
     // Process event via idempotent mutation
-    await ctx.runMutation(internal.stripe.applyStripeEvent, {
+    await ctx.runMutation(internal.internal.stripe.applyStripeEvent, {
       stripeEventId: event.id,
       eventType: event.type,
       eventData: event.data.object,
@@ -69,14 +69,14 @@ export const createCheckoutSessionForResubscribe = internalAction({
     }
 
     // Get user
-    const user = await ctx.runQuery(internal.users.getUser, { userId });
+    const user = await ctx.runQuery(internal.internal.users.getUser, { userId });
     if (!user) {
       throw new Error("User not found");
     }
 
     // Get existing subscription to determine plan (default to "monthly" if none)
     const existingSubscription = await ctx.runQuery(
-      internal.subscriptions.getByUserId,
+      internal.internal.subscriptions.getByUserId,
       { userId }
     );
     const planId = existingSubscription?.planId || "monthly";
@@ -84,7 +84,7 @@ export const createCheckoutSessionForResubscribe = internalAction({
     // Import Stripe SDK (Node.js runtime)
     const Stripe = (await import("stripe")).default;
     const stripe = new Stripe(stripeSecretKey, {
-      apiVersion: "2024-12-18.acacia",
+      apiVersion: "2025-10-29.clover",
     });
 
     // If user has existing Stripe customer, use Customer Portal
