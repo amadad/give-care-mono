@@ -197,5 +197,5 @@ npx convex data --prod entitlements
 
 ---
 
-**Last Updated:** 2025-11-07
+**Last Updated:** 2025-11-11
 **Deployment:** prod:doting-tortoise-411

@@ -241,7 +241,7 @@ export const updateProfile = createTool({
       )
       .describe('ZIP code for finding local resources (5 digits or 5+4 format)'),
   }),
-  description: 'Update user profile information. Only include fields that are being updated.',
+  description: 'Update user profile information. Use this tool IMMEDIATELY when user answers onboarding questions (name, who they care for, relationship, ZIP code). Extract the answer from their natural language response and save it right away. Only include fields that are being updated.',
   handler: async (ctx, args: { firstName?: string; relationship?: string; careRecipientName?: string; zipCode?: string }): Promise<{ success: boolean; error?: string; profile?: Record<string, unknown>; message?: string }> => {
     const userId = ctx.userId;
 

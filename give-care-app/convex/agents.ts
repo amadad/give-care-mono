@@ -21,6 +21,8 @@ import {
   extractProfileVariables,
   buildWellnessInfo,
   getNextMissingField,
+  getUserFriendlyPrompt,
+  buildProfileStateSection,
   handleAgentError,
 } from './lib/utils';
 import type { UserProfile } from './lib/types';
@@ -107,10 +109,9 @@ export const runMainAgent = action({
 
       const needsLocalResources = input.text.match(/(respite|support group|local resource|near me|in my area|find.*near|help.*near)/i);
       const nextField = getNextMissingField(profile, { needsLocalResources: !!needsLocalResources });
-      const missingFieldsSection = nextField
-        ? `\n\nPROFILE GUIDANCE:\n${nextField.prompt}\nCheck recent context - if already asked this session, skip.`
-        : '';
-      const profileComplete = nextField === null ? 'true' : 'false';
+      
+      // Build explicit profile state section showing what's known vs missing
+      const profileStateSection = buildProfileStateSection(profile, nextField);
 
       const basePrompt = renderPrompt(MAIN_PROMPT, {
         userName,
@@ -119,8 +120,7 @@ export const runMainAgent = action({
         journeyPhase,
         totalInteractionCount,
         wellnessInfo,
-        profileComplete,
-        missingFieldsSection,
+        profileStateSection,
       });
 
       const systemPrompt = `${basePrompt}\n\n${getTone(context)}`;
@@ -166,7 +166,9 @@ export const runMainAgent = action({
 
         // Include next missing field prompt if profile is incomplete
         if (needsOnboarding && nextField) {
-          fastResponse += `\n\nTo better support you, ${nextField.prompt}`;
+          // Use user-friendly prompt instead of internal LLM instructions
+          const userPrompt = getUserFriendlyPrompt(nextField.field, profile);
+          fastResponse += `\n\nTo better support you, ${userPrompt}`;
         } else {
           fastResponse += `
 

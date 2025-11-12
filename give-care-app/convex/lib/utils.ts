@@ -165,6 +165,146 @@ export function getProfileFromMetadata(
   return undefined;
 }
 
+/**
+ * Get user-friendly prompt for a missing profile field
+ * Returns natural, conversational questions for direct user communication
+ */
+export function getUserFriendlyPrompt(field: string, profile?: UserProfile): string {
+  switch (field) {
+    case 'careRecipientName':
+      return "Who are you caring for? (Reply 'skip' to move on)";
+    case 'firstName':
+      return "What should I call you? (Reply 'skip' to move on)";
+    case 'zipCode':
+      return "What's your ZIP code so I can find resources near you? (Reply 'skip' to move on)";
+    case 'relationship':
+      const name = profile?.careRecipientName || 'them';
+      return `What's your relationship to ${name}? (Reply 'skip' to move on)`;
+    default:
+      return "I'd like to get to know you better. (Reply 'skip' to move on)";
+  }
+}
+
+/**
+ * Build explicit profile state section for agent prompt
+ * Shows what's known vs missing, and what action is required
+ */
+export function buildProfileStateSection(
+  profile: UserProfile | undefined,
+  nextField: { field: string; prompt: string } | null
+): string {
+  const known: string[] = [];
+  const missing: string[] = [];
+
+  if (profile?.firstName) {
+    known.push(`firstName: "${profile.firstName}"`);
+  } else {
+    missing.push('firstName');
+  }
+
+  if (profile?.careRecipientName) {
+    known.push(`careRecipientName: "${profile.careRecipientName}"`);
+  } else {
+    missing.push('careRecipientName');
+  }
+
+  if (profile?.relationship) {
+    known.push(`relationship: "${profile.relationship}"`);
+  } else {
+    missing.push('relationship');
+  }
+
+  if (profile?.zipCode) {
+    known.push(`zipCode: "${profile.zipCode}"`);
+  } else {
+    missing.push('zipCode');
+  }
+
+  let section = '\n\nPROFILE STATE:\n';
+  section += `Known: ${known.length > 0 ? known.join(', ') : 'none'}\n`;
+  section += `Missing: ${missing.length > 0 ? missing.join(', ') : 'none'}\n`;
+
+  if (nextField) {
+    const userPrompt = getUserFriendlyPrompt(nextField.field, profile);
+    section += `\nACTION REQUIRED: Ask for ${nextField.field} using natural conversation.\n`;
+    section += `Question to ask: "${userPrompt}"\n`;
+    section += `When user answers, IMMEDIATELY call update_profile tool with the extracted information.\n`;
+    section += `Extract the answer from their response and save it - don't wait for confirmation.\n`;
+  } else {
+    section += '\nProfile complete - no onboarding needed.\n';
+  }
+
+  return section;
+}
+
+/**
+ * Fast-path: Extract profile information from natural language
+ * Returns extracted profile fields if patterns match, null otherwise
+ */
+export function extractProfileInfo(text: string, currentProfile?: UserProfile): Partial<UserProfile> | null {
+  const extracted: Partial<UserProfile> = {};
+  const lowerText = text.toLowerCase().trim();
+  let found = false;
+
+  // Extract firstName patterns
+  const firstNamePatterns = [
+    /(?:my name is|i'm|i am|call me|name's|name is)\s+([a-z]+)/i,
+    /^([a-z]+)$/i, // Just a single word name
+  ];
+  for (const pattern of firstNamePatterns) {
+    const match = text.match(pattern);
+    if (match && match[1] && match[1].length > 1 && !currentProfile?.firstName) {
+      extracted.firstName = match[1].trim();
+      found = true;
+      break;
+    }
+  }
+
+  // Extract careRecipientName patterns
+  const careRecipientPatterns = [
+    /(?:caring for|taking care of|helping|looking after)\s+(?:my\s+)?(mom|mother|dad|father|husband|wife|spouse|partner|son|daughter|brother|sister|parent|grandma|grandpa|grandmother|grandfather|[a-z]+)/i,
+    /(?:my\s+)?(mom|mother|dad|father|husband|wife|spouse|partner|son|daughter|brother|sister|parent|grandma|grandpa|grandmother|grandfather)\s+(?:needs|has|is)/i,
+  ];
+  for (const pattern of careRecipientPatterns) {
+    const match = text.match(pattern);
+    if (match && match[1] && !currentProfile?.careRecipientName) {
+      extracted.careRecipientName = match[1].trim();
+      found = true;
+      break;
+    }
+  }
+
+  // Extract relationship patterns
+  const relationshipPatterns = [
+    /(?:i'm|i am|their|his|her)\s+(daughter|son|spouse|wife|husband|partner|sister|brother|child|parent)/i,
+    /(?:their|his|her)\s+(daughter|son|spouse|wife|husband|partner|sister|brother|child|parent)/i,
+  ];
+  for (const pattern of relationshipPatterns) {
+    const match = text.match(pattern);
+    if (match && match[1] && !currentProfile?.relationship) {
+      extracted.relationship = match[1].trim();
+      found = true;
+      break;
+    }
+  }
+
+  // Extract ZIP code patterns
+  const zipPatterns = [
+    /(?:zip|zip code|postal code|postcode)\s*(?:is|:)?\s*(\d{5}(?:-\d{4})?)/i,
+    /\b(\d{5}(?:-\d{4})?)\b/, // Standalone 5-digit ZIP
+  ];
+  for (const pattern of zipPatterns) {
+    const match = text.match(pattern);
+    if (match && match[1] && !currentProfile?.zipCode) {
+      extracted.zipCode = match[1].trim();
+      found = true;
+      break;
+    }
+  }
+
+  return found ? extracted : null;
+}
+
 export function getNextMissingField(
   profile: UserProfile | undefined,
   context: { needsLocalResources?: boolean }

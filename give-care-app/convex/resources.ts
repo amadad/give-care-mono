@@ -63,35 +63,6 @@ const inferCategory = (query: string, fallback = 'respite') => {
   return fallback;
 };
 
-const buildStubResults = (category: string, zip: string) => [
-  {
-    name: `${category} Care Collective`,
-    address: `${zip.slice(0, 3)}12 Oak Street`,
-    hours: 'Mon-Sat 8a-8p',
-    rating: 4.8,
-    source: 'stubbed',
-    phone: '(555) 123-0000',
-    category,
-  },
-  {
-    name: `${category} Support Hub`,
-    address: `${zip.slice(0, 3)}45 Maple Ave`,
-    hours: '24/7 hotline',
-    rating: 4.7,
-    source: 'stubbed',
-    phone: '(555) 234-1111',
-    category,
-  },
-  {
-    name: `${category} Community Center`,
-    address: `${zip.slice(0, 3)}78 Elm Blvd`,
-    hours: 'Mon-Fri 9a-6p',
-    rating: 4.6,
-    source: 'stubbed',
-    phone: '(555) 678-2222',
-    category,
-  },
-];
 
 const isCredentialErrorMessage = (message: string) => {
   const lower = message.toLowerCase();
@@ -185,12 +156,12 @@ export const searchResources = action({
      * IMPLEMENTATION:
      * 1. Valid cache (< TTL): Return immediately
      * 2. Stale cache (> TTL): Return immediately + refresh in background via workflow
-     * 3. No cache: Race Maps API (1.5s) vs stub fallback, return winner
+     * 3. No cache: Call Maps API (1.5s timeout), return results or error
      *
      * This provides:
-     * - Fast responses (<500ms) via cache or stub
+     * - Fast responses (<500ms) via cache
      * - Eventual freshness via background refresh
-     * - Graceful degradation when Maps API is slow/unavailable
+     * - Clear error messages when Maps API fails (no stubs)
      */
     const isCacheValid = cache && cache.expiresAt && cache.expiresAt > now;
     const hasStaleCache = cache && cache.results && cache.results.length > 0;
@@ -239,23 +210,7 @@ export const searchResources = action({
       };
     }
 
-    // SPEED: Race Maps Grounding (1.5s) against stub fallback - return winner immediately
-    // Users see results in <500ms; better results follow in background
-    
-    // Gate stub responses behind beta flag - only return stubs if explicitly enabled
-    const BETA_STUB_ENABLED = process.env.BETA_STUB_RESOURCES === 'true';
-    
-    // Prepare stub fallback immediately (deterministic, instant) - but only if beta flag enabled
-    const stubResults = BETA_STUB_ENABLED ? buildStubResults(category, resolvedZip) : [];
-    const stubText = stubResults.length > 0
-      ? stubResults
-          .map(
-            (resource, idx) =>
-              `${idx + 1}. ${resource.name} — ${resource.address} (${resource.hours}, rating ${resource.rating})`
-          )
-          .join('\n')
-      : '';
-    
+    // Call Maps Grounding API (1.5s timeout) - no stub fallbacks
     type MapsRaceResult = {
       resources: Array<{
         name: string;
@@ -277,16 +232,15 @@ export const searchResources = action({
       mapsPromise = searchWithMapsGrounding(args.query, category, resolvedZip, RACE_TIMEOUT_MS);
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : String(error);
-      console.error('[resources] Failed to start Maps Grounding race:', errorMessage);
+      console.error('[resources] Failed to start Maps Grounding:', errorMessage);
       mapsCredentialError = isCredentialErrorMessage(errorMessage);
     }
 
-    let results = stubResults;
-    let summaryText = stubText;
+    let results: ResourceResult[] = [];
+    let summaryText = '';
     let widgetToken: string | undefined;
     let usedMapsGrounding = false;
     let fromRace = false;
-    let isStubResponse = false;
 
     if (mapsPromise) {
       const timeoutPromise = new Promise<never>((_, reject) => {
@@ -294,7 +248,7 @@ export const searchResources = action({
       });
 
       try {
-        // Race: Return first to complete (Maps Grounding or timeout)
+        // Call Maps API with timeout
         const mapsResult = await Promise.race([mapsPromise, timeoutPromise]);
         results = mapsResult.resources.map(r => ({
           ...r,
@@ -308,49 +262,39 @@ export const searchResources = action({
         usedMapsGrounding = true;
         fromRace = true;
       } catch (error) {
-        // Timeout or error - fall back to stub only if beta flag enabled
+        // Timeout or error - return clear error message (no stubs)
         fromRace = true;
 
-        // Log only if not a timeout (timeout is expected)
+        // Log error for debugging
         const message = error instanceof Error ? error.message : String(error);
         if (!(error instanceof Error && error.message.includes('timeout'))) {
           console.error('[resources] Maps Grounding failed:', message);
         }
         mapsCredentialError ||= isCredentialErrorMessage(message);
         
-        // If beta flag disabled and Maps failed, return "still searching" message
-        if (!BETA_STUB_ENABLED && stubResults.length === 0) {
-          isStubResponse = false; // Not a stub, but no results yet
-          summaryText = `I'm still searching for ${category} resources near ${resolvedZip}. Real results will be available shortly - please check back in a moment.`;
-          results = [];
-        } else if (BETA_STUB_ENABLED && stubResults.length > 0) {
-          isStubResponse = true;
-          // Add disclaimer for stub results
-          summaryText = `[Beta - Still searching for verified results]\n\n${stubText}\n\nNote: These are placeholder results. Verified locations are being searched and will be available shortly.`;
+        // Return clear error message - no stub fallback
+        if (mapsCredentialError) {
+          summaryText = `I'm having trouble connecting to the resource search service. Please try again in a moment.`;
+        } else {
+          summaryText = `I'm still searching for ${category} resources near ${resolvedZip}. Please check back in a moment - real results are being fetched.`;
+          // Schedule background refresh for timeout cases
+          void workflow.start(ctx, internal.workflows.refresh, {
+            query: args.query,
+            category,
+            zip: resolvedZip,
+            ttlMs,
+          });
         }
-      }
-    } else {
-      // No Maps promise - if beta enabled, return stubs; otherwise return "still searching"
-      if (BETA_STUB_ENABLED && stubResults.length > 0) {
-        isStubResponse = true;
-        summaryText = `[Beta - Still searching for verified results]\n\n${stubText}\n\nNote: These are placeholder results. Verified locations are being searched and will be available shortly.`;
-      } else {
-        summaryText = `I'm searching for ${category} resources near ${resolvedZip}. Results will be available shortly - please check back in a moment.`;
         results = [];
       }
-    }
-
-    // SPEED: Return immediately with winner (stub or Maps result)
-    // Schedule background refresh only when Maps Grounding was available but we returned stubs
-    const shouldRefreshInBackground = mapsPromise !== null && !usedMapsGrounding && !mapsCredentialError;
-    if (shouldRefreshInBackground) {
-      // Refresh in background via durable workflow (non-blocking, retriable)
-      void workflow.start(ctx, internal.workflows.refresh, {
-        query: args.query,
-        category,
-        zip: resolvedZip,
-        ttlMs,
-      });
+    } else {
+      // No Maps promise (credential error or missing API key)
+      if (mapsCredentialError) {
+        summaryText = `I'm having trouble connecting to the resource search service. Please try again later.`;
+      } else {
+        summaryText = `I'm searching for ${category} resources near ${resolvedZip}. Results will be available shortly - please check back in a moment.`;
+      }
+      results = [];
     }
 
     // Cache results for future queries (async, non-blocking)
@@ -369,7 +313,6 @@ export const searchResources = action({
       cached: false,
       expiresAt: now + ttlMs,
       fromRace, // Indicates this was a race result
-      isStub: isStubResponse, // Indicates if these are stub/placeholder results
     };
   },
 });

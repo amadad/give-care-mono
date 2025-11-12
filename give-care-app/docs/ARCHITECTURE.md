@@ -2,7 +2,7 @@
 # give-care-app/convex
 
 **Purpose:** Concise technical map for AI agents and developers
-**Last Updated:** 2025-01-11 (v1.7.0 - Post-consolidation)
+**Last Updated:** 2025-11-11 (v1.7.0 - Post-consolidation)
 
 ---
 
@@ -397,7 +397,7 @@ workflow.define({
 1. **Convex Typecheck Disabled** - `convex/tsconfig.json` was removed; `npx convex codegen --typecheck enable` currently fails. Reintroduce a tsconfig to re-enable type safety.
 
 ### High Priority
-1. **Resource Lookup Data** - `api.resources.searchResources` still returns stubbed results; wire the real Google Maps/Gemini lookup before GA.
+(None - all GA blockers resolved)
 
 ### Medium Priority
 1. **Assessment Responses** - `recordAssessmentResponse` mutation still missing. Add it when wiring EMA/BSFC answer ingestion back to public API.
@@ -457,7 +457,7 @@ To restore full functionality:
 
 ---
 
-**Last Updated:** v1.5.0 (2025-11-09)
+**Last Updated:** v1.7.0 (2025-11-11)
 **Total LOC:** ~3,000 (Convex backend)
 **Test Coverage:** Unknown (tests may need updates)
 **Production Status:** ⚠️ Deploy requires `--typecheck=disable` until Convex tsconfig is restored

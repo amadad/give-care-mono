@@ -636,7 +636,9 @@ export type DataModel = {
   };
   subscriptions: {
     document: {
+      canceledAt?: number;
       currentPeriodEnd: number;
+      gracePeriodEndsAt?: number;
       planId: string;
       status: string;
       stripeCustomerId: string;
@@ -647,7 +649,9 @@ export type DataModel = {
     fieldPaths:
       | "_creationTime"
       | "_id"
+      | "canceledAt"
       | "currentPeriodEnd"
+      | "gracePeriodEndsAt"
       | "planId"
       | "status"
       | "stripeCustomerId"
@@ -778,7 +782,9 @@ export type DataModel = {
         | {
             contextUpdatedAt?: number;
             convex?: { threadId?: string; userId?: Id<"users"> };
+            email?: string;
             enrichedContext?: string;
+            fullName?: string;
             journeyPhase?: string;
             pressureZones?: Array<string>;
             profile?: {
@@ -793,6 +799,7 @@ export type DataModel = {
               transportationReliability?: "reliable" | "unreliable";
               zipCode?: string;
             };
+            stripeCustomerId?: string;
             timezone?: string;
             totalInteractionCount?: number;
             wellnessScore?: number;
@@ -800,7 +807,9 @@ export type DataModel = {
         | {
             contextUpdatedAt?: number;
             convex?: { threadId?: string; userId?: Id<"users"> };
+            email?: string;
             enrichedContext?: string;
+            fullName?: string;
             journeyPhase?: string;
             pressureZones?: Array<string>;
             profile?: {
@@ -815,6 +824,7 @@ export type DataModel = {
               transportationReliability?: "reliable" | "unreliable";
               zipCode?: string;
             };
+            stripeCustomerId?: string;
             threadId?: string;
             timezone?: string;
             totalInteractionCount?: number;
@@ -847,7 +857,9 @@ export type DataModel = {
       | "metadata.convex"
       | "metadata.convex.threadId"
       | "metadata.convex.userId"
+      | "metadata.email"
       | "metadata.enrichedContext"
+      | "metadata.fullName"
       | "metadata.journeyPhase"
       | "metadata.pressureZones"
       | "metadata.profile"
@@ -861,6 +873,7 @@ export type DataModel = {
       | "metadata.profile.relationship"
       | "metadata.profile.transportationReliability"
       | "metadata.profile.zipCode"
+      | "metadata.stripeCustomerId"
       | "metadata.threadId"
       | "metadata.timezone"
       | "metadata.totalInteractionCount"

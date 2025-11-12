@@ -1,6 +1,7 @@
-# Production Deployment - v1.0.0
+# Production Deployment Guide
 
-**Date:** 2025-11-07
+**Last Updated:** 2025-11-11  
+**Current Version:** v1.7.0
 **Status:** 🟢 Deployed & Functional
 **Deployment:** prod:doting-tortoise-411
 **HTTP URL:** https://doting-tortoise-411.convex.site

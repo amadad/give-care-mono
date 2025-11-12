@@ -33,7 +33,9 @@ export declare const api: {
             | {
                 contextUpdatedAt?: number;
                 convex?: { threadId?: string; userId?: Id<"users"> };
+                email?: string;
                 enrichedContext?: string;
+                fullName?: string;
                 journeyPhase?: string;
                 pressureZones?: Array<string>;
                 profile?: {
@@ -48,6 +50,7 @@ export declare const api: {
                   transportationReliability?: "reliable" | "unreliable";
                   zipCode?: string;
                 };
+                stripeCustomerId?: string;
                 timezone?: string;
                 totalInteractionCount?: number;
                 wellnessScore?: number;
@@ -55,7 +58,9 @@ export declare const api: {
             | {
                 contextUpdatedAt?: number;
                 convex?: { threadId?: string; userId?: Id<"users"> };
+                email?: string;
                 enrichedContext?: string;
+                fullName?: string;
                 journeyPhase?: string;
                 pressureZones?: Array<string>;
                 profile?: {
@@ -70,6 +75,7 @@ export declare const api: {
                   transportationReliability?: "reliable" | "unreliable";
                   zipCode?: string;
                 };
+                stripeCustomerId?: string;
                 threadId?: string;
                 timezone?: string;
                 totalInteractionCount?: number;
@@ -99,7 +105,9 @@ export declare const api: {
             | {
                 contextUpdatedAt?: number;
                 convex?: { threadId?: string; userId?: Id<"users"> };
+                email?: string;
                 enrichedContext?: string;
+                fullName?: string;
                 journeyPhase?: string;
                 pressureZones?: Array<string>;
                 profile?: {
@@ -114,6 +122,7 @@ export declare const api: {
                   transportationReliability?: "reliable" | "unreliable";
                   zipCode?: string;
                 };
+                stripeCustomerId?: string;
                 timezone?: string;
                 totalInteractionCount?: number;
                 wellnessScore?: number;
@@ -121,7 +130,9 @@ export declare const api: {
             | {
                 contextUpdatedAt?: number;
                 convex?: { threadId?: string; userId?: Id<"users"> };
+                email?: string;
                 enrichedContext?: string;
+                fullName?: string;
                 journeyPhase?: string;
                 pressureZones?: Array<string>;
                 profile?: {
@@ -136,6 +147,7 @@ export declare const api: {
                   transportationReliability?: "reliable" | "unreliable";
                   zipCode?: string;
                 };
+                stripeCustomerId?: string;
                 threadId?: string;
                 timezone?: string;
                 totalInteractionCount?: number;
@@ -259,6 +271,14 @@ export declare const api: {
       any
     >;
   };
+  stripe: {
+    createCheckoutSession: FunctionReference<
+      "action",
+      "public",
+      { email: string; fullName: string; phoneNumber: string; priceId: string },
+      any
+    >;
+  };
   wellness: {
     getStatus: FunctionReference<
       "query",
@@ -291,7 +311,9 @@ export declare const internal: {
             | {
                 contextUpdatedAt?: number;
                 convex?: { threadId?: string; userId?: Id<"users"> };
+                email?: string;
                 enrichedContext?: string;
+                fullName?: string;
                 journeyPhase?: string;
                 pressureZones?: Array<string>;
                 profile?: {
@@ -306,6 +328,7 @@ export declare const internal: {
                   transportationReliability?: "reliable" | "unreliable";
                   zipCode?: string;
                 };
+                stripeCustomerId?: string;
                 timezone?: string;
                 totalInteractionCount?: number;
                 wellnessScore?: number;
@@ -313,7 +336,9 @@ export declare const internal: {
             | {
                 contextUpdatedAt?: number;
                 convex?: { threadId?: string; userId?: Id<"users"> };
+                email?: string;
                 enrichedContext?: string;
+                fullName?: string;
                 journeyPhase?: string;
                 pressureZones?: Array<string>;
                 profile?: {
@@ -328,6 +353,7 @@ export declare const internal: {
                   transportationReliability?: "reliable" | "unreliable";
                   zipCode?: string;
                 };
+                stripeCustomerId?: string;
                 threadId?: string;
                 timezone?: string;
                 totalInteractionCount?: number;
@@ -357,7 +383,9 @@ export declare const internal: {
             | {
                 contextUpdatedAt?: number;
                 convex?: { threadId?: string; userId?: Id<"users"> };
+                email?: string;
                 enrichedContext?: string;
+                fullName?: string;
                 journeyPhase?: string;
                 pressureZones?: Array<string>;
                 profile?: {
@@ -372,6 +400,7 @@ export declare const internal: {
                   transportationReliability?: "reliable" | "unreliable";
                   zipCode?: string;
                 };
+                stripeCustomerId?: string;
                 timezone?: string;
                 totalInteractionCount?: number;
                 wellnessScore?: number;
@@ -379,7 +408,9 @@ export declare const internal: {
             | {
                 contextUpdatedAt?: number;
                 convex?: { threadId?: string; userId?: Id<"users"> };
+                email?: string;
                 enrichedContext?: string;
+                fullName?: string;
                 journeyPhase?: string;
                 pressureZones?: Array<string>;
                 profile?: {
@@ -394,6 +425,7 @@ export declare const internal: {
                   transportationReliability?: "reliable" | "unreliable";
                   zipCode?: string;
                 };
+                stripeCustomerId?: string;
                 threadId?: string;
                 timezone?: string;
                 totalInteractionCount?: number;
@@ -472,6 +504,12 @@ export declare const internal: {
       "query",
       "internal",
       { messageSid: string; phone: string },
+      any
+    >;
+    getUserSubscriptionStatus: FunctionReference<
+      "query",
+      "internal",
+      { userId: Id<"users"> },
       any
     >;
   };
@@ -676,7 +714,7 @@ export declare const internal: {
     updateUserMetadata: FunctionReference<
       "mutation",
       "internal",
-      { metadata: any; userId: Id<"users"> },
+      { metadata: Record<string, any>; userId: Id<"users"> },
       any
     >;
   };

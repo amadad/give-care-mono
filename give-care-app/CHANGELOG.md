@@ -1,6 +1,121 @@
 # Changelog - GiveCare App
 
-## [1.7.0] - 2025-01-11
+## [1.7.0] - 2025-11-11
+
+### 🎯 Onboarding Improvements
+
+**Impact:** Agent now has explicit awareness of profile state and actively collects missing information. Fast-path extraction handles common patterns automatically.
+
+#### Added
+
+**Profile State Awareness:**
+- **`buildProfileStateSection()`** (`convex/lib/utils.ts`): Explicit profile state section showing what's known vs missing
+- **`extractProfileInfo()`** (`convex/lib/utils.ts`): Fast-path extraction for common patterns ("My name is Sarah", "I'm caring for my mom", etc.)
+- **`getUserFriendlyPrompt()`** (`convex/lib/utils.ts`): User-friendly questions for missing fields (prevents prompt instruction leakage)
+
+**Enhanced Prompt Instructions:**
+- Updated `MAIN_PROMPT` with explicit "PROFILE ONBOARDING RULES" section
+- Clear instructions to check profile state and ask for missing fields
+- Explicit guidance to use `update_profile` tool immediately when user answers
+- Examples of how to extract answers from natural language
+
+**Fast-Path Extraction:**
+- Auto-extracts profile info from natural language before agent call
+- Handles patterns: firstName, careRecipientName, relationship, zipCode
+- Updates profile directly if pattern matches missing field
+
+#### Changed
+
+**Agent Prompt Structure:**
+- Replaced `{{missingFieldsSection}}` with `{{profileStateSection}}` showing explicit state
+- Removed internal LLM instructions from user-facing messages
+- Added explicit onboarding rules section
+
+**Tool Descriptions:**
+- Updated `updateProfile` tool description to explicitly mention onboarding use case
+- Clearer instructions for when and how to use the tool
+
+#### Fixed
+
+- **Prompt Instruction Leakage**: Agent no longer leaks internal LLM instructions to users
+- **Profile Awareness**: Agent now explicitly knows what it knows and what's missing
+- **Onboarding Reliability**: Fast-path extraction improves reliability for common answer formats
+
+---
+
+### 🗺️ Google Maps Grounding Integration Complete
+
+**Impact:** Removed all stub fallbacks. Resource search now uses real Google Maps data exclusively with proper attribution.
+
+#### Added
+
+**Maps Grounding API Integration:**
+- **`toolConfig.retrievalConfig.latLng`** support per official Google Maps Grounding docs
+- ZIP-to-lat/lng conversion using existing `zipToApproximateLatLng()` function
+- Google Maps attribution per service requirements (sources follow content immediately)
+
+**Response Extraction:**
+- Updated to match official API structure (`groundingChunks`, `placeId`, `uri`)
+- Proper handling of `googleMapsWidgetContextToken`
+- Source links included in SMS responses
+
+#### Changed
+
+**Resource Search (`convex/resources.ts`):**
+- Removed `buildStubResults()` function entirely
+- Removed all `BETA_STUB_RESOURCES` flag checks
+- Removed stub fallback paths
+- Removed `isStub` field from return type
+
+**Error Handling:**
+- Clear error messages when Maps API fails (no stubs)
+- Background refresh scheduled for timeout cases
+- Credential errors return user-friendly messages
+
+**Maps Grounding (`convex/lib/maps.ts`):**
+- Added `toolConfig.retrievalConfig.latLng` for better location context
+- Enabled ZIP-to-lat/lng conversion (was previously disabled)
+- Updated response extraction to match official API structure
+- Added Google Maps attribution with source links
+
+#### Fixed
+
+- **GA Blocker Resolved**: Resource Lookup Data no longer returns stubbed results
+- **Attribution Compliance**: Google Maps sources now properly attributed per requirements
+- **Location Accuracy**: Using lat/lng coordinates improves search relevance
+
+#### Removed
+
+- All stub result generation (`buildStubResults()`)
+- `BETA_STUB_RESOURCES` environment variable checks
+- Stub fallback logic throughout `resources.ts`
+- `isStub` field from resource search return type
+
+---
+
+### 📚 Documentation Updates
+
+**Impact:** Cleaned up and updated documentation for clarity and accuracy.
+
+#### Changed
+
+**FEATURES.md:**
+- Updated to "Product Source of Truth" with purpose statement
+- Removed technical code snippets (replaced with plain language)
+- Removed implementation details (Agent Component, semantic search references)
+- Updated dates and version (2025-11-11, v1.7.0)
+- Added Google Maps attribution note
+
+**ARCHITECTURE.md:**
+- Removed "Resource Lookup Data" from High Priority GA blockers
+- Marked as "(None - all GA blockers resolved)"
+
+**Root Documentation:**
+- Updated `README.md` dates and versions (2025-11-11, v1.7.0)
+- Archived `TASKS.md` (outdated, points to current sources)
+- Updated `AGENTS.md` dates and versions
+
+---
 
 ### 🔧 Code Quality Improvements
 

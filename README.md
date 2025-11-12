@@ -8,7 +8,7 @@ This monorepo contains 5 core applications:
 
 | App | Description | Tech Stack | Status |
 |-----|-------------|------------|--------|
-| **give-care-app** | Multi-agent SMS backend | TypeScript, Convex, OpenAI Agents SDK | ✅ Production (v1.5.0) |
+| **give-care-app** | Multi-agent SMS backend | TypeScript, Convex, OpenAI Agents SDK | ✅ Production (v1.7.0) |
 | **give-care-admin** | Real-time admin dashboard | Vite, React 19, TanStack Router | ✅ Stable |
 | **give-care-site** | Marketing website | Next.js 15, Tailwind CSS v4 | 🚧 Active development |
 | **give-care-story** | Presentation system | Next.js 15, Framer Motion | ✅ Stable (v1.0.0) |
@@ -244,7 +244,7 @@ See `.env.example` in each project directory.
 
 | Project | Version | Tests | Status |
 |---------|---------|-------|--------|
-| give-care-app | 1.5.0 | 235+ passing | ✅ Production |
+| give-care-app | 1.7.0 | 235+ passing | ✅ Production |
 | give-care-admin | 0.1.0 | In progress | ✅ Stable |
 | give-care-site | 0.1.0 | Active dev | 🚧 Development |
 | give-care-story | 1.0.0 | N/A | ✅ Stable |
@@ -290,4 +290,4 @@ Proprietary - GiveCare Platform
 
 ---
 
-**Last Updated**: 2025-11-10 (v1.5.0 production release)
+**Last Updated**: 2025-11-11 (v1.7.0)

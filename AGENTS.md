@@ -1,7 +1,7 @@
 # Agent Guidelines
 
-**Purpose:** Quick reference for AI agents working on GiveCare
-**Last Updated:** 2025-01-08 (v1.4.0)
+**Purpose:** Quick reference for AI agents working on GiveCare  
+**Last Updated:** 2025-11-11 (v1.7.0)
 
 ---
 

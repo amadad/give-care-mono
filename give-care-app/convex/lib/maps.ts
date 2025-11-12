@@ -143,6 +143,7 @@ function buildCaregivingQuery(query: string, category: string, zip: string): str
 
 /**
  * Extract structured results from Maps Grounding response
+ * Matches official API structure: groundingChunks with maps data
  */
 function extractMapsResults(groundingMetadata: any): ResourceResult[] {
   if (!groundingMetadata?.groundingChunks) {
@@ -162,12 +163,13 @@ function extractMapsResults(groundingMetadata: any): ResourceResult[] {
       }
 
       // Handle different possible field names from Google Maps API
+      // Per official docs: maps.title, maps.uri, maps.placeId
       const title = maps.title || maps.name || `Resource ${idx + 1}`;
       const address = maps.formattedAddress || maps.address || 'Address not available';
       const rating = typeof maps.rating === 'number' ? maps.rating : undefined;
       const phone = maps.nationalPhoneNumber || maps.phoneNumber || maps.internationalPhoneNumber || undefined;
-      const placeId = maps.id || maps.placeId;
-      const uri = maps.googleMapsUri || maps.uri;
+      const placeId = maps.placeId || maps.id; // Official docs use placeId
+      const uri = maps.uri || maps.googleMapsUri; // Official docs use uri
 
       // Handle hours - check for different possible structures
       let hours: string | undefined = undefined;
@@ -223,10 +225,9 @@ export async function searchWithMapsGrounding(
     // Build query with location context (zip code in query is sufficient for Maps Grounding)
     const mapsQuery = buildCaregivingQuery(query, category, zip);
 
-    // Maps Grounding works best with zip code in query - lat/lng is optional
-    // Only use approximate lat/lng if we want to prioritize it, but zip in query should be enough
-    // Note: The rough approximation can cause inaccurate results, so we'll rely on zip in query
-    const location = null; // Disable rough approximation - let Maps Grounding use zip from query
+    // Convert ZIP to lat/lng for toolConfig.retrievalConfig.latLng (per official docs)
+    // This provides better location context for Maps Grounding
+    const approximateLocation = zipToApproximateLatLng(zip);
 
     // Use @google/genai for Maps Grounding (cleaner than REST API)
     const apiKey = process.env.GOOGLE_GENERATIVE_AI_API_KEY || process.env.GEMINI_API_KEY;
@@ -238,14 +239,25 @@ export async function searchWithMapsGrounding(
       apiKey,
     });
 
+    // Build config per official docs: https://ai.google.dev/gemini-api/docs/maps-grounding
     const config: any = {
       tools: [{ googleMaps: {} }],
       // Optimize for speed
       maxOutputTokens: 200, // Reduced from default for faster responses
     };
 
-    // Skip location config - Maps Grounding will use zip code from query for better accuracy
-    // The rough approximation was causing inaccurate results
+    // Add toolConfig.retrievalConfig.latLng if we have approximate location
+    // Per docs: "For the most relevant and personalized responses, always include the user_location"
+    if (approximateLocation) {
+      config.toolConfig = {
+        retrievalConfig: {
+          latLng: {
+            latitude: approximateLocation.latitude,
+            longitude: approximateLocation.longitude,
+          },
+        },
+      };
+    }
 
     // Add timeout to prevent blocking
     const timeoutPromise = new Promise<never>((_, reject) => {
@@ -278,19 +290,33 @@ export async function searchWithMapsGrounding(
 
     const resources = extractMapsResults(groundingMetadata);
     
-    // Get widget token if available
+    // Get widget token if available (per official docs)
     const widgetToken = groundingMetadata?.googleMapsWidgetContextToken;
 
-    // Format for SMS
-    const text = resources.length > 0
-      ? resources
-          .slice(0, 5) // Limit to 5 for SMS
-          .map(
-            (r, idx) =>
-              `${idx + 1}. ${r.name} — ${r.address}${r.hours ? ` (${r.hours})` : ''}${r.rating ? `, rating ${r.rating}` : ''}`
-          )
-          .join('\n')
-      : `I couldn't find specific ${category} resources near ${zip}. Try searching with a more specific query or check your zip code.`;
+    // Format for SMS with Google Maps attribution
+    // Per requirements: "Google Maps sources must immediately follow the generated content"
+    let text = '';
+    if (resources.length > 0) {
+      const resourceList = resources
+        .slice(0, 5) // Limit to 5 for SMS
+        .map(
+          (r, idx) =>
+            `${idx + 1}. ${r.name} — ${r.address}${r.hours ? ` (${r.hours})` : ''}${r.rating ? `, rating ${r.rating}` : ''}`
+        )
+        .join('\n');
+      
+      // Add Google Maps attribution per requirements
+      // Format: "Sources: [Title](uri)" - must be viewable within one user interaction
+      const sources = resources
+        .slice(0, 5)
+        .filter(r => r.uri && r.name)
+        .map((r, idx) => `${idx + 1}. ${r.name} - ${r.uri}`)
+        .join('\n');
+      
+      text = `${resourceList}\n\nSources (Google Maps):\n${sources}`;
+    } else {
+      text = `I couldn't find specific ${category} resources near ${zip}. Try searching with a more specific query or check your zip code.`;
+    }
 
     return {
       resources,

@@ -1,8 +1,9 @@
-# GiveCare Features - Product Requirements
+# GiveCare Features - Product Source of Truth
 
-**Document Type**: User-Centered Feature Specifications
-**Last Updated**: 2025-11-09
-**Status**: Production (v1.2.0)
+**Document Type**: User-Centered Feature Specifications  
+**Last Updated**: 2025-11-11  
+**Status**: Production (v1.7.0)  
+**Purpose**: Non-technical reference for features, experiences, scenarios, and use cases
 
 ---
 
@@ -189,27 +190,27 @@ Want to try one of these, or talk through what's hardest right now?"
 
 **Week 1**:
 - Sarah: "Mom gets really agitated in the evenings around 6pm"
-- **System quietly saves**: `recordMemory(category: 'crisis_trigger', content: 'Mom agitated evenings around 6pm', importance: 9)`
+- **System remembers**: Mom's evening agitation pattern
 
 **Week 4**:
 - Sarah: "The morning bath at 9am works really well for her"
-- **System quietly saves**: `recordMemory(category: 'care_routine', content: 'Morning bath 9am works well', importance: 8)`
+- **System remembers**: Morning bath routine that works
 
 **Week 8**:
 - Sarah: "I've been doing yoga on Tuesday mornings and it really helps"
-- **System quietly saves**: `recordMemory(category: 'preference', content: 'Yoga Tuesdays reduces stress', importance: 7)`
+- **System remembers**: Sarah's yoga routine and its positive impact
 
 **Week 12**:
 - Sarah texts at 6:15pm: "She's really agitated again"
-- **System retrieves memories semantically**: Finds "Mom agitated evenings 6pm" from Week 1
+- **System remembers**: Finds the evening agitation pattern from Week 1
 - System: "I remember you mentioned she often gets agitated around this time. Have you tried the calming music technique we talked about?"
 
 **Key Features**:
 - **Automatic memory recording** - No "should I remember this?" prompts, just saves important info
-- **4 categories** - care_routine, preference, intervention_result, crisis_trigger
-- **Importance scoring (1-10)** - Prioritizes what matters most
-- **Semantic search** - Retrieves memories by meaning, not exact keyword match
-- **Context-aware responses** - References past conversations naturally
+- **Smart categorization** - Remembers care routines, preferences, what works, and crisis triggers
+- **Prioritizes what matters** - Important details surface when relevant
+- **Understands context** - Finds related memories by meaning, not just keywords
+- **Natural references** - References past conversations naturally
 
 **Outcome**: Sarah feels truly heard. The AI doesn't just respond—it remembers her life.
 
@@ -258,8 +259,8 @@ Want to try one of these, or talk through what's hardest right now?"
 
 **Conversation Persistence**
 - Thread continuity across days/weeks
-- Messages saved for analytics and audit trail
-- Agent Component manages full conversation history automatically
+- Full conversation history maintained automatically
+- Context preserved for natural, ongoing dialogue
 
 ---
 
@@ -294,15 +295,11 @@ Want to try one of these, or talk through what's hardest right now?"
 - Micro-commitments: 2-5 minute activities, not hour-long programs
 
 **Local Resource Search**
-- Google Maps grounding via Gemini 2.0 Flash
+- Real-time Google Maps integration for verified locations
 - 10 predefined categories (respite, support groups, meal delivery, etc.)
-- Zip-code first (no re-asking for location)
+- Zip-code remembered (no re-asking for location)
 - Results include hours, ratings, reviews, and map links
-
-**Knowledge Base** (future)
-- 290+ curated articles with semantic search
-- Embedded vector search for "find me info about dementia wandering"
-- Cited sources, no hallucination
+- Google Maps attribution included per service requirements
 
 ---
 
@@ -314,16 +311,16 @@ Want to try one of these, or talk through what's hardest right now?"
 - All crisis interactions logged for human review
 - Follow-up check-in next day
 
-**HIPAA Compliance**
-- Phone numbers hashed before storage
-- PII redaction in message logs
+**Privacy & Compliance**
+- Secure data handling and storage
+- Protected health information safeguards
 - No medical advice given (only support + resources)
-- Audit trail for all interactions
+- Complete audit trail for all interactions
 
 **Rate Limiting**
 - 10 SMS per user per day (prevents spam/abuse)
-- $1,200 daily token budget globally
-- Graceful degradation if budget hit
+- Cost controls to ensure sustainable service
+- Graceful handling of high-demand periods
 
 ---
 
@@ -337,9 +334,9 @@ Want to try one of these, or talk through what's hardest right now?"
 
 **Admin Dashboard**
 - Real-time metrics (active users, response times, crisis alerts)
-- User lookup by phone
-- Burnout distribution charts
-- Subscription health
+- User lookup and support tools
+- Burnout distribution analytics
+- Subscription management
 
 **Proactive Messaging**
 - Daily check-ins for crisis/moderate users
