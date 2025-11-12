@@ -95,3 +95,62 @@ export const sendAgentResponseAction = internalAction({
     });
   },
 });
+
+/**
+ * Handle resubscribe request (wrapper action)
+ * Creates checkout session and sends URL via SMS
+ */
+export const handleResubscribeAction = internalAction({
+  args: {
+    userId: v.id("users"),
+  },
+  handler: async (ctx, args) => {
+    // Check if user already has active subscription
+    // Get subscription directly via query
+    const subscription = await ctx.runQuery(internal.internal.subscriptions.getByUserId, {
+      userId: args.userId,
+    });
+
+    // Check if subscription is active
+    const hasAccess = subscription?.status === "active" || 
+      (subscription?.status === "canceled" && 
+       subscription.gracePeriodEndsAt && 
+       Date.now() < subscription.gracePeriodEndsAt);
+
+    if (hasAccess) {
+      // User already has access - send confirmation message
+      await ctx.runAction(internal.internal.sms.sendAgentResponse, {
+        userId: args.userId,
+        text: "You're already subscribed! You have full access to GiveCare.",
+      });
+      return;
+    }
+
+    try {
+      // Create checkout session
+      const result = await ctx.runAction(
+        internal.internal.stripe.createCheckoutSessionForResubscribe,
+        {
+          userId: args.userId,
+          successUrl: "https://www.givecareapp.com/signup?resubscribed=true",
+          cancelUrl: "https://www.givecareapp.com/signup?canceled=true",
+        }
+      );
+
+      if (result?.url) {
+        // Send checkout URL via SMS
+        await ctx.runAction(internal.internal.sms.sendAgentResponse, {
+          userId: args.userId,
+          text: `Click here to resubscribe: ${result.url}`,
+        });
+      }
+    } catch (error) {
+      // Send error message if checkout creation fails
+      await ctx.runAction(internal.internal.sms.sendAgentResponse, {
+        userId: args.userId,
+        text: "Sorry, we couldn't create your checkout session. Please try again later or visit givecareapp.com/signup",
+      });
+      console.error("Failed to create checkout session for resubscribe:", error);
+    }
+  },
+});

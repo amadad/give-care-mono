@@ -7,7 +7,7 @@
 import { internalMutation } from "./_generated/server";
 import { messageValidator } from "@convex-dev/twilio";
 import { internal } from "./_generated/api";
-import { detectCrisis, isStopRequest, isHelpRequest } from "./lib/utils";
+import { detectCrisis, isStopRequest, isHelpRequest, isResubscribeRequest } from "./lib/utils";
 import { getCrisisResponse } from "./lib/utils";
 import { checkSubscriptionAccess } from "./lib/services/subscriptionService";
 
@@ -49,7 +49,7 @@ export const handleIncomingMessage = internalMutation({
     // Note: Rate limiter component check would go here
     // For now, allowing all messages (can be enhanced later)
 
-    // Step 5: Handle HELP/STOP keywords (before crisis detection)
+    // Step 5: Handle HELP/STOP/RESUBSCRIBE keywords (before crisis detection)
     if (isStopRequest(body)) {
       await handleStop(ctx, user._id);
       return { status: "stopped" };
@@ -58,6 +58,11 @@ export const handleIncomingMessage = internalMutation({
     if (isHelpRequest(body)) {
       await handleHelp(ctx, user._id);
       return { status: "help" };
+    }
+
+    if (isResubscribeRequest(body)) {
+      await handleResubscribe(ctx, user._id);
+      return { status: "resubscribe_initiated" };
     }
 
     // Step 6: Crisis detection (deterministic, no LLM)
@@ -204,6 +209,17 @@ async function handleStop(ctx: any, userId: any): Promise<void> {
 async function handleHelp(ctx: any, userId: any): Promise<void> {
   // Send help message (async)
   await ctx.scheduler.runAfter(0, internal.twilioMutations.sendHelpMessageAction, {
+    userId,
+  });
+}
+
+/**
+ * Handle RESUBSCRIBE request
+ * Creates Stripe checkout session and sends URL via SMS
+ */
+async function handleResubscribe(ctx: any, userId: any): Promise<void> {
+  // Schedule action to handle resubscribe (creates checkout and sends SMS)
+  await ctx.scheduler.runAfter(0, internal.twilioMutations.handleResubscribeAction, {
     userId,
   });
 }

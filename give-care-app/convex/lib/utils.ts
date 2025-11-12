@@ -107,6 +107,14 @@ export function isHelpRequest(text: string): boolean {
 }
 
 /**
+ * Check if message is a RESUBSCRIBE request
+ */
+export function isResubscribeRequest(text: string): boolean {
+  const resubscribePatterns = [/\bresubscribe\b/i];
+  return resubscribePatterns.some((pattern) => pattern.test(text));
+}
+
+/**
  * Check if user is accepting an assessment offer
  */
 export function isAssessmentAcceptance(text: string): boolean {
