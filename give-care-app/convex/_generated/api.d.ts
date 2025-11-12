@@ -263,31 +263,7 @@ export declare const internal: {
         any
       >;
     };
-    stripe: {
-      applyStripeEvent: FunctionReference<
-        "mutation",
-        "internal",
-        { eventData: any; eventType: string; stripeEventId: string },
-        any
-      >;
-    };
-    stripeActions: {
-      processWebhook: FunctionReference<
-        "action",
-        "internal",
-        { body: string; signature: string },
-        any
-      >;
-    };
-    subscriptions: {
-      getByUserId: FunctionReference<
-        "query",
-        "internal",
-        { userId: Id<"users"> },
-        any
-      >;
-    };
-    twilio: {
+    sms: {
       sendAgentResponse: FunctionReference<
         "action",
         "internal",
@@ -320,6 +296,30 @@ export declare const internal: {
       >;
       sendStopConfirmation: FunctionReference<
         "action",
+        "internal",
+        { userId: Id<"users"> },
+        any
+      >;
+    };
+    stripe: {
+      applyStripeEvent: FunctionReference<
+        "mutation",
+        "internal",
+        { eventData: any; eventType: string; stripeEventId: string },
+        any
+      >;
+    };
+    stripeActions: {
+      processWebhook: FunctionReference<
+        "action",
+        "internal",
+        { body: string; signature: string },
+        any
+      >;
+    };
+    subscriptions: {
+      getByUserId: FunctionReference<
+        "query",
         "internal",
         { userId: Id<"users"> },
         any

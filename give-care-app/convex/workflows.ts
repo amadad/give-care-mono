@@ -57,7 +57,7 @@ export const engagementMonitoringWorkflow = workflow.define({
     
     // Day 5: Gentle nudge
     if (daysSince >= 5 && daysSince < 7) {
-      await step.runAction(internal.twilio.sendEngagementNudge, {
+      await step.runAction(internal.sms.sendEngagementNudge, {
         userId,
         level: "day5",
       });
@@ -65,7 +65,7 @@ export const engagementMonitoringWorkflow = workflow.define({
     
     // Day 7: Escalation
     if (daysSince >= 7 && daysSince < 14) {
-      await step.runAction(internal.twilio.sendEngagementNudge, {
+      await step.runAction(internal.sms.sendEngagementNudge, {
         userId,
         level: "day7",
       });
@@ -73,7 +73,7 @@ export const engagementMonitoringWorkflow = workflow.define({
     
     // Day 14: Final check-in
     if (daysSince >= 14) {
-      await step.runAction(internal.twilio.sendEngagementNudge, {
+      await step.runAction(internal.sms.sendEngagementNudge, {
         userId,
         level: "day14",
       });

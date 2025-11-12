@@ -8,7 +8,7 @@ export { processInboundSMS } from "./inbound";
 
 // Re-export internal modules
 export * as agents from "./internal/agents";
-export * as twilio from "./internal/twilio";
+export * as sms from "./internal/sms";
 export * as users from "./internal/users";
 export * as memories from "./internal/memories";
 export * as wellness from "./internal/wellness";
@@ -23,4 +23,3 @@ export * as events from "./internal/events";
 export * as workflows from "./internal/workflows";
 export * as cleanup from "./internal/cleanup";
 export * as twilioMutations from "./internal/twilioMutations";
-
