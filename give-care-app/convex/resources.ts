@@ -10,19 +10,18 @@ import type { ResourceResult } from './lib/types';
 
 const workflow = new WorkflowManager(components.workflow);
 
+// Category TTLs (days) - matches 10 distinct categories from CAREGIVING_QUERIES
 const CATEGORY_TTLS_DAYS: Record<string, number> = {
-  respite: 30,
-  respite_care: 30,
-  support: 14,
-  support_group: 7,
-  daycare: 30,
-  homecare: 30,
-  medical: 14,
-  community: 14,
-  meals: 7,
-  transport: 7,
-  hospice: 30,
-  memory: 30,
+  respite: 30, // Respite care facilities
+  support: 14, // Support groups
+  daycare: 30, // Adult day care
+  homecare: 30, // Home health care
+  medical: 14, // Medical supplies
+  community: 14, // Senior centers
+  meals: 7, // Meal delivery
+  transport: 7, // Transportation
+  hospice: 30, // Hospice care
+  memory: 30, // Memory care
 };
 
 const CATEGORY_KEYWORDS: Record<string, RegExp> = {

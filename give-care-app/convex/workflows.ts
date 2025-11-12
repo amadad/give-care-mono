@@ -228,21 +228,65 @@ export const monitorEngagement = internalAction({
     const users = await ctx.runQuery(internal.internal.getAllUsers, {});
 
     for (const u of users) {
-      const recent = await ctx.runQuery(internal.workflows.getRecentRuns, {
-        userId: u._id,
-        days: 7,
+      if (!u.phone) continue;
+
+      const engagementFlags = (u.engagementFlags as {
+        lastNudgeDate?: number;
+        nudgeCount?: number;
+        escalationLevel?: 'none' | 'day5' | 'day7' | 'day14';
+      }) || {};
+      const lastNudgeDate = engagementFlags.lastNudgeDate;
+      const nudgeCount = engagementFlags.nudgeCount || 0;
+
+      // Calculate days since last engagement
+      const lastEngagement = u.lastEngagementDate;
+      const lastActivity = lastEngagement || u._creationTime;
+      const daysSince = Math.floor((Date.now() - lastActivity) / (24 * 60 * 60 * 1000));
+
+      // Cooldown: Don't nudge if already nudged in last 2 days
+      if (lastNudgeDate && Date.now() - lastNudgeDate < 2 * 24 * 60 * 60 * 1000) {
+        continue;
+      }
+
+      // Determine escalation level and message
+      const { getDay5Nudge, getDay7Nudge, getDay14Nudge } = await import('./lib/nudgeMessages');
+      const name = ((u.metadata as any)?.profile?.firstName as string) || 'there';
+      
+      let message: string;
+      let escalationLevel: 'day5' | 'day7' | 'day14';
+
+      if (daysSince >= 14) {
+        message = getDay14Nudge(name);
+        escalationLevel = 'day14';
+      } else if (daysSince >= 7) {
+        message = getDay7Nudge(name);
+        escalationLevel = 'day7';
+      } else if (daysSince >= 5) {
+        message = getDay5Nudge(name);
+        escalationLevel = 'day5';
+      } else {
+        continue; // Too soon - don't nudge
+      }
+
+      // Send message
+      await ctx.runAction(internal.inbound.sendSmsResponse, {
+        to: u.phone,
+        userId: u.externalId,
+        text: message,
       });
 
-      if (recent.length === 0 && u.phone) {
-        const name = ((u.metadata as any)?.profile?.firstName as string) || 'there';
-        const msg = `Hi ${name}, we haven't heard from you in a while. How are you doing? Reply anytime if you need support.`;
-
-        await ctx.runAction(internal.inbound.sendSmsResponse, {
-          to: u.phone,
-          userId: u.externalId,
-          text: msg,
-        });
-      }
+      // Update engagement flags
+      await ctx.runMutation(internal.internal.updateUserMetadata, {
+        userId: u._id,
+        metadata: {
+          ...u.metadata,
+        },
+        engagementFlags: {
+          lastNudgeDate: Date.now(),
+          nudgeCount: nudgeCount + 1,
+          escalationLevel,
+        },
+      });
     }
   },
 });

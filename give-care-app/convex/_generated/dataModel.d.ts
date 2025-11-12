@@ -566,6 +566,37 @@ export type DataModel = {
     searchIndexes: {};
     vectorIndexes: {};
   };
+  promo_codes: {
+    document: {
+      active: boolean;
+      code: string;
+      discountType: "percent" | "amount";
+      discountValue: number;
+      expiresAt?: number;
+      maxUses?: number;
+      usedCount: number;
+      _id: Id<"promo_codes">;
+      _creationTime: number;
+    };
+    fieldPaths:
+      | "_creationTime"
+      | "_id"
+      | "active"
+      | "code"
+      | "discountType"
+      | "discountValue"
+      | "expiresAt"
+      | "maxUses"
+      | "usedCount";
+    indexes: {
+      by_id: ["_id"];
+      by_creation_time: ["_creationTime"];
+      by_active: ["active", "_creationTime"];
+      by_code: ["code", "_creationTime"];
+    };
+    searchIndexes: {};
+    vectorIndexes: {};
+  };
   resource_cache: {
     document: {
       category: string;
@@ -776,7 +807,13 @@ export type DataModel = {
       channel: "sms" | "email" | "web";
       consent?: { emergency: boolean; marketing: boolean };
       email?: string;
+      engagementFlags?: {
+        escalationLevel?: "none" | "day5" | "day7" | "day14";
+        lastNudgeDate?: number;
+        nudgeCount?: number;
+      };
       externalId: string;
+      lastEngagementDate?: number;
       locale: string;
       metadata?:
         | {
@@ -850,7 +887,12 @@ export type DataModel = {
       | "consent.emergency"
       | "consent.marketing"
       | "email"
+      | "engagementFlags"
+      | "engagementFlags.escalationLevel"
+      | "engagementFlags.lastNudgeDate"
+      | "engagementFlags.nudgeCount"
       | "externalId"
+      | "lastEngagementDate"
       | "locale"
       | "metadata"
       | "metadata.contextUpdatedAt"

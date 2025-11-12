@@ -18,6 +18,7 @@ export const createCheckoutSession = action({
     email: v.string(),
     phoneNumber: v.string(),
     priceId: v.string(),
+    promoCode: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     const stripeSecretKey = process.env.STRIPE_SECRET_KEY;
@@ -73,8 +74,45 @@ export const createCheckoutSession = action({
         customerId = customer.id;
       }
 
+      // Validate and apply promo code if provided
+      let discounts: Array<{ coupon: string }> | undefined;
+      let promoCodeId: string | undefined;
+      
+      if (args.promoCode) {
+        // Validate promo code
+        const promoCode = await ctx.runQuery(internal.internal.getPromoCode, {
+          code: args.promoCode,
+        });
+
+        if (!promoCode || !promoCode.active) {
+          throw new Error(`Promo code ${args.promoCode} is not valid or inactive`);
+        }
+
+        // Check expiration
+        if (promoCode.expiresAt && promoCode.expiresAt < Date.now()) {
+          throw new Error(`Promo code ${args.promoCode} has expired`);
+        }
+
+        // Check usage limits
+        if (promoCode.maxUses && promoCode.usedCount >= promoCode.maxUses) {
+          throw new Error(`Promo code ${args.promoCode} has reached its usage limit`);
+        }
+
+        // Create Stripe coupon from promo code
+        const coupon = await stripe.coupons.create({
+          percent_off: promoCode.discountType === 'percent' ? promoCode.discountValue : undefined,
+          amount_off: promoCode.discountType === 'amount' ? promoCode.discountValue : undefined,
+          currency: 'usd',
+          duration: 'once', // One-time discount
+          name: promoCode.code,
+        });
+
+        discounts = [{ coupon: coupon.id }];
+        promoCodeId = promoCode._id;
+      }
+
       // Create checkout session with client_reference_id for webhook linking
-      const session = await stripe.checkout.sessions.create({
+      const sessionParams: Stripe.Checkout.SessionCreateParams = {
         mode: 'subscription',
         customer: customerId,
         client_reference_id: args.phoneNumber, // Key for webhook user linking
@@ -88,6 +126,7 @@ export const createCheckoutSession = action({
           metadata: {
             phoneNumber: args.phoneNumber,
             fullName: args.fullName,
+            ...(promoCodeId ? { promoCodeId } : {}),
           },
         },
         success_url: `${frontendUrl}/welcome?session_id={CHECKOUT_SESSION_ID}`,
@@ -97,8 +136,15 @@ export const createCheckoutSession = action({
         metadata: {
           phoneNumber: args.phoneNumber,
           fullName: args.fullName,
+          ...(args.promoCode ? { promoCode: args.promoCode } : {}),
         },
-      });
+      };
+
+      if (discounts) {
+        sessionParams.discounts = discounts;
+      }
+
+      const session = await stripe.checkout.sessions.create(sessionParams);
 
       if (!session.url) {
         throw new Error('Failed to create checkout session URL');

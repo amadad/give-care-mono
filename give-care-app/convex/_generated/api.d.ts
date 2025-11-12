@@ -226,10 +226,53 @@ export declare const api: {
     >;
   };
   public: {
+    getAssessmentCompletionRate: FunctionReference<
+      "query",
+      "public",
+      { dateRange?: { end: number; start: number }; userId?: string },
+      any
+    >;
+    getBurnoutScoreTrends: FunctionReference<
+      "query",
+      "public",
+      { dateRange?: { end: number; start: number }; userId?: string },
+      any
+    >;
     getByExternalIdQuery: FunctionReference<
       "query",
       "public",
       { externalId: string },
+      any
+    >;
+    getCrisisResponseLatency: FunctionReference<
+      "query",
+      "public",
+      { dateRange?: { end: number; start: number } },
+      any
+    >;
+    getOverallMetrics: FunctionReference<
+      "query",
+      "public",
+      { dateRange: { end: number; start: number } },
+      any
+    >;
+    getPressureZoneReduction: FunctionReference<
+      "query",
+      "public",
+      { dateRange?: { end: number; start: number }; userId?: string },
+      any
+    >;
+    getPromoCodeStats: FunctionReference<"query", "public", {}, any>;
+    getUserMetrics: FunctionReference<
+      "query",
+      "public",
+      { userId: string },
+      any
+    >;
+    getUserRetention: FunctionReference<
+      "query",
+      "public",
+      { days: number },
       any
     >;
     listMemories: FunctionReference<
@@ -256,6 +299,8 @@ export declare const api: {
       { category: string; content: string; importance: number; userId: string },
       any
     >;
+    seedInterventionsAdmin: FunctionReference<"mutation", "public", {}, any>;
+    seedPromoCodesAdmin: FunctionReference<"mutation", "public", {}, any>;
   };
   resources: {
     searchResources: FunctionReference<
@@ -275,7 +320,13 @@ export declare const api: {
     createCheckoutSession: FunctionReference<
       "action",
       "public",
-      { email: string; fullName: string; phoneNumber: string; priceId: string },
+      {
+        email: string;
+        fullName: string;
+        phoneNumber: string;
+        priceId: string;
+        promoCode?: string;
+      },
       any
     >;
   };
@@ -567,6 +618,7 @@ export declare const internal: {
       },
       any
     >;
+    getPromoCode: FunctionReference<"query", "internal", { code: string }, any>;
     getResourceLookupCache: FunctionReference<
       "query",
       "internal",
@@ -614,6 +666,12 @@ export declare const internal: {
           uri: string;
         };
       },
+      any
+    >;
+    incrementPromoCodeUsage: FunctionReference<
+      "mutation",
+      "internal",
+      { promoCodeId: Id<"promo_codes"> },
       any
     >;
     listExpiredResourceCache: FunctionReference<
@@ -714,7 +772,12 @@ export declare const internal: {
     updateUserMetadata: FunctionReference<
       "mutation",
       "internal",
-      { metadata: Record<string, any>; userId: Id<"users"> },
+      {
+        engagementFlags?: any;
+        lastEngagementDate?: number;
+        metadata?: Record<string, any>;
+        userId: Id<"users">;
+      },
       any
     >;
   };
@@ -730,6 +793,14 @@ export declare const internal: {
       },
       any
     >;
+  };
+  lib: {
+    seedInterventions: {
+      seedInterventions: FunctionReference<"mutation", "internal", {}, any>;
+    };
+    seedPromoCodes: {
+      seedPromoCodes: FunctionReference<"mutation", "internal", {}, any>;
+    };
   };
   public: {
     listMemoriesInternal: FunctionReference<

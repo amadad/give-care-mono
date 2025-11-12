@@ -40,6 +40,17 @@ export default defineSchema({
     consent: v.optional(consentValidator),
     address: v.optional(addressValidator),
     metadata: v.optional(agentMetadataValidator), // ✅ Typed instead of v.any()
+    lastEngagementDate: v.optional(v.number()), // Timestamp of last message
+    engagementFlags: v.optional(v.object({
+      lastNudgeDate: v.optional(v.number()),
+      nudgeCount: v.optional(v.number()),
+      escalationLevel: v.optional(v.union(
+        v.literal('none'),
+        v.literal('day5'),
+        v.literal('day7'),
+        v.literal('day14')
+      )),
+    })),
   })
     .index('by_externalId', ['externalId'])
     .index('by_phone', ['phone']),
@@ -133,6 +144,19 @@ export default defineSchema({
   })
     .index('by_user', ['userId'])
     .index('by_customer', ['stripeCustomerId']),
+
+  // Promo Codes (GiveCare-specific)
+  promo_codes: defineTable({
+    code: v.string(), // e.g., "PARTNER2025"
+    discountType: v.union(v.literal('percent'), v.literal('amount')),
+    discountValue: v.number(), // percent (0-100) or amount in cents
+    maxUses: v.optional(v.number()), // null = unlimited
+    usedCount: v.number(), // starts at 0
+    expiresAt: v.optional(v.number()), // timestamp, null = never expires
+    active: v.boolean(), // can disable without deleting
+  })
+    .index('by_code', ['code'])
+    .index('by_active', ['active']),
 
   // Structured memories (lightweight, for category queries only)
   // Semantic search handled by Agent Component via contextOptions

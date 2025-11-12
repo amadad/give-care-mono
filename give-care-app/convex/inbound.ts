@@ -236,6 +236,24 @@ export const processInbound = internalAction({
       });
     }
 
+    // Update last engagement date and reset escalation level
+    const currentEngagementFlags = (user.engagementFlags as any) || {};
+    await ctx.runMutation(internal.internal.updateUserMetadata, {
+      userId: user._id,
+      metadata: {
+        ...metadata,
+        engagementFlags: {
+          ...currentEngagementFlags,
+          escalationLevel: 'none', // Reset on engagement
+        },
+      },
+      lastEngagementDate: Date.now(),
+      engagementFlags: {
+        ...currentEngagementFlags,
+        escalationLevel: 'none',
+      },
+    }).catch((err) => console.error('[inbound] Failed to update engagement:', err));
+
     return { success: true, response };
   },
 });
