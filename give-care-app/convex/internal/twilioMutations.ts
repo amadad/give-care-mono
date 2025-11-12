@@ -79,3 +79,21 @@ export const sendResubscribeMessageMutation = internalMutation({
   },
 });
 
+/**
+ * Send agent response (wrapper mutation)
+ * Used by internal/agents.ts to avoid scheduler path resolution issues
+ */
+export const sendAgentResponseMutation = internalMutation({
+  args: {
+    userId: v.id("users"),
+    text: v.string(),
+  },
+  handler: async (ctx, args) => {
+    // Call the action directly (mutation → action via ctx.runAction)
+    await ctx.runAction(internal.twilio.sendAgentResponse, {
+      userId: args.userId,
+      text: args.text,
+    });
+  },
+});
+

@@ -66,8 +66,8 @@ export const processMainAgentMessage = internalAction({
     );
 
     // Response is automatically saved by Agent Component
-    // Send SMS response (async)
-    await ctx.scheduler.runAfter(0, internal.twilio.sendAgentResponse, {
+    // Send SMS response (async via wrapper mutation to avoid scheduler path bug)
+    await ctx.scheduler.runAfter(0, internal.twilioMutations.sendAgentResponseMutation, {
       userId,
       text: result.text,
     });
@@ -113,8 +113,8 @@ export const processAssessmentCompletion = internalAction({
       { prompt }
     );
 
-    // Send response
-    await ctx.scheduler.runAfter(0, internal.twilio.sendAgentResponse, {
+    // Send response (via wrapper mutation to avoid scheduler path bug)
+    await ctx.scheduler.runAfter(0, internal.twilioMutations.sendAgentResponseMutation, {
       userId,
       text: result.text,
     });
