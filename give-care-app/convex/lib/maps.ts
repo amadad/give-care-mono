@@ -13,6 +13,7 @@
 
 import { GoogleGenAI } from '@google/genai';
 import { MapsGroundingMetadata, MapsGroundingChunk, ResourceResult } from './types';
+import { MAPS_FETCH_TIMEOUT_MS } from './utils';
 
 // ============================================================================
 // LOCATION EXTRACTION
@@ -203,7 +204,7 @@ export async function searchWithMapsGrounding(
   query: string,
   category: string,
   zip: string,
-  timeoutMs: number = 3000 // 3s timeout to prevent blocking
+  timeoutMs: number = MAPS_FETCH_TIMEOUT_MS
 ): Promise<{
   resources: Array<{
     name: string;

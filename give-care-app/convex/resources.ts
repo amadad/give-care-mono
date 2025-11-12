@@ -242,14 +242,19 @@ export const searchResources = action({
     // SPEED: Race Maps Grounding (1.5s) against stub fallback - return winner immediately
     // Users see results in <500ms; better results follow in background
     
-    // Prepare stub fallback immediately (deterministic, instant)
-    const stubResults = buildStubResults(category, resolvedZip);
-    const stubText = stubResults
-      .map(
-        (resource, idx) =>
-          `${idx + 1}. ${resource.name} — ${resource.address} (${resource.hours}, rating ${resource.rating})`
-      )
-      .join('\n');
+    // Gate stub responses behind beta flag - only return stubs if explicitly enabled
+    const BETA_STUB_ENABLED = process.env.BETA_STUB_RESOURCES === 'true';
+    
+    // Prepare stub fallback immediately (deterministic, instant) - but only if beta flag enabled
+    const stubResults = BETA_STUB_ENABLED ? buildStubResults(category, resolvedZip) : [];
+    const stubText = stubResults.length > 0
+      ? stubResults
+          .map(
+            (resource, idx) =>
+              `${idx + 1}. ${resource.name} — ${resource.address} (${resource.hours}, rating ${resource.rating})`
+          )
+          .join('\n')
+      : '';
     
     type MapsRaceResult = {
       resources: Array<{
@@ -281,6 +286,7 @@ export const searchResources = action({
     let widgetToken: string | undefined;
     let usedMapsGrounding = false;
     let fromRace = false;
+    let isStubResponse = false;
 
     if (mapsPromise) {
       const timeoutPromise = new Promise<never>((_, reject) => {
@@ -302,7 +308,7 @@ export const searchResources = action({
         usedMapsGrounding = true;
         fromRace = true;
       } catch (error) {
-        // Timeout or error - fall back to stub immediately
+        // Timeout or error - fall back to stub only if beta flag enabled
         fromRace = true;
 
         // Log only if not a timeout (timeout is expected)
@@ -311,6 +317,26 @@ export const searchResources = action({
           console.error('[resources] Maps Grounding failed:', message);
         }
         mapsCredentialError ||= isCredentialErrorMessage(message);
+        
+        // If beta flag disabled and Maps failed, return "still searching" message
+        if (!BETA_STUB_ENABLED && stubResults.length === 0) {
+          isStubResponse = false; // Not a stub, but no results yet
+          summaryText = `I'm still searching for ${category} resources near ${resolvedZip}. Real results will be available shortly - please check back in a moment.`;
+          results = [];
+        } else if (BETA_STUB_ENABLED && stubResults.length > 0) {
+          isStubResponse = true;
+          // Add disclaimer for stub results
+          summaryText = `[Beta - Still searching for verified results]\n\n${stubText}\n\nNote: These are placeholder results. Verified locations are being searched and will be available shortly.`;
+        }
+      }
+    } else {
+      // No Maps promise - if beta enabled, return stubs; otherwise return "still searching"
+      if (BETA_STUB_ENABLED && stubResults.length > 0) {
+        isStubResponse = true;
+        summaryText = `[Beta - Still searching for verified results]\n\n${stubText}\n\nNote: These are placeholder results. Verified locations are being searched and will be available shortly.`;
+      } else {
+        summaryText = `I'm searching for ${category} resources near ${resolvedZip}. Results will be available shortly - please check back in a moment.`;
+        results = [];
       }
     }
 
@@ -343,6 +369,7 @@ export const searchResources = action({
       cached: false,
       expiresAt: now + ttlMs,
       fromRace, // Indicates this was a race result
+      isStub: isStubResponse, // Indicates if these are stub/placeholder results
     };
   },
 });

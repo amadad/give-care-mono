@@ -1,14 +1,7 @@
 import { query, internalMutation } from './_generated/server';
 import { v } from 'convex/values';
 import { DataModel, Id } from './_generated/dataModel';
-
-const EVIDENCE_ORDER: Record<string, number> = {
-  high: 3,
-  moderate: 2,
-  low: 1,
-};
-
-const evidenceRank = (level: string) => EVIDENCE_ORDER[level] ?? 0;
+import { evidenceRank } from './lib/enums';
 
 export const getByZones = query({
   args: {
@@ -23,14 +16,24 @@ export const getByZones = query({
     // SPEED: Use indexed join table instead of full table scan
     // O(log n) lookup per zone instead of O(n) scan
     if (targetZones.size === 0) {
-      // No zones specified - return all interventions (still use index for evidence level)
-      const interventions = await ctx.db
-        .query('interventions')
-        .withIndex('by_evidence', (q) => q.eq('evidenceLevel', minEvidenceLevel))
-        .take(limit * 2); // Fetch extra for sorting
-      
+      // No zones specified - fetch interventions by evidence tier
+      // Query each tier >= minEvidenceLevel sequentially, prioritizing higher tiers
+      const interventions: any[] = [];
+      const tiers = ['high', 'moderate', 'low'] as const;
+
+      for (const tier of tiers) {
+        if (evidenceRank(tier) < minRank) continue;
+        if (interventions.length >= limit) break;
+
+        const tierResults = await ctx.db
+          .query('interventions')
+          .withIndex('by_evidence', (q) => q.eq('evidenceLevel', tier))
+          .take(limit - interventions.length);
+
+        interventions.push(...tierResults);
+      }
+
       return interventions
-        .filter((intervention) => evidenceRank(intervention.evidenceLevel) >= minRank)
         .sort((a, b) => {
           const evidenceDiff = evidenceRank(b.evidenceLevel) - evidenceRank(a.evidenceLevel);
           return evidenceDiff !== 0 ? evidenceDiff : a.title.localeCompare(b.title);

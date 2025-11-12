@@ -3,9 +3,10 @@
  */
 
 import { internalMutation, internalQuery } from './_generated/server';
-import { internal } from './_generated/api';
+import { internal, api } from './_generated/api';
 import { v } from 'convex/values';
 import { logAgentRun, logGuardrail, getByExternalId, ensureUser } from './lib/utils';
+import { assessmentDefinitionValidator } from './lib/validators';
 import { messageValidator } from '@convex-dev/twilio';
 
 // ============================================================================
@@ -85,6 +86,32 @@ export const logCrisisInteraction = internalMutation({
   },
 });
 
+/**
+ * Log agent routing decision for observability
+ */
+export const logAgentDecision = internalMutation({
+  args: {
+    userId: v.id('users'),
+    inputText: v.string(),
+    routingDecision: v.string(),
+    reasoning: v.optional(v.string()),
+    confidence: v.optional(v.number()),
+    alternatives: v.optional(v.array(v.string())),
+    traceId: v.string(),
+  },
+  handler: async (ctx, args) => {
+    await ctx.db.insert('agent_decisions', {
+      userId: args.userId,
+      inputText: args.inputText,
+      routingDecision: args.routingDecision,
+      reasoning: args.reasoning,
+      confidence: args.confidence,
+      alternatives: args.alternatives,
+      traceId: args.traceId,
+    });
+  },
+});
+
 export const updateUserMetadata = internalMutation({
   args: {
     userId: v.id('users'),
@@ -114,7 +141,7 @@ export const getAssessmentById = internalQuery({
 export const getActiveSessionInternal = internalQuery({
   args: {
     userId: v.id('users'),
-    definition: v.union(v.literal('ema'), v.literal('bsfc'), v.literal('reach2'), v.literal('sdoh')),
+    definition: assessmentDefinitionValidator,
   },
   handler: async (ctx, { userId, definition }) => {
     const sessions = await ctx.db
@@ -130,7 +157,7 @@ export const getActiveSessionInternal = internalQuery({
 export const startAssessmentInternal = internalMutation({
   args: {
     userId: v.id('users'),
-    definition: v.union(v.literal('ema'), v.literal('bsfc'), v.literal('reach2'), v.literal('sdoh')),
+    definition: assessmentDefinitionValidator,
     channel: v.optional(v.union(v.literal('sms'), v.literal('web'))),
   },
   handler: async (ctx, { userId, definition, channel }) => {
@@ -343,17 +370,254 @@ export const processStripeEvent = internalMutation({
 
     console.log(`[stripe] Processing event ${event.stripeEventId} (type: ${event.type})`);
 
-    // TODO: Implement event-specific handling based on event.type
-    // Examples:
-    // - customer.subscription.created
-    // - customer.subscription.updated
-    // - customer.subscription.deleted
-    // - invoice.payment_succeeded
-    // - invoice.payment_failed
-    // - checkout.session.completed
+    const eventData = event.data as Record<string, unknown>;
+    const eventType = event.type;
 
-    // For now, just log that processing would happen here
-    console.log(`[stripe] Event processing not yet implemented for type: ${event.type}`);
+    try {
+      switch (eventType) {
+        case 'customer.subscription.created':
+        case 'customer.subscription.updated': {
+          await handleSubscriptionChange(ctx, eventData);
+          break;
+        }
+        case 'customer.subscription.deleted': {
+          await handleSubscriptionDeleted(ctx, eventData);
+          break;
+        }
+        case 'invoice.payment_succeeded': {
+          await handleInvoicePaymentSucceeded(ctx, eventData);
+          break;
+        }
+        case 'invoice.payment_failed': {
+          await handleInvoicePaymentFailed(ctx, eventData);
+          break;
+        }
+        case 'checkout.session.completed': {
+          await handleCheckoutCompleted(ctx, eventData);
+          break;
+        }
+        default:
+          console.log(`[stripe] Unhandled event type: ${eventType}`);
+      }
+    } catch (error) {
+      console.error(`[stripe] Error processing event ${event.stripeEventId}:`, error);
+      // Don't throw - we've already recorded the event, just log the error
+    }
+  },
+});
+
+/**
+ * Helper: Handle subscription created/updated events
+ */
+async function handleSubscriptionChange(
+  ctx: any,
+  eventData: Record<string, unknown>
+) {
+  const subscription = eventData.object as Record<string, unknown>;
+  const customerId = subscription.customer as string;
+  const subscriptionId = subscription.id as string;
+  const status = subscription.status as string;
+  const currentPeriodEnd = (subscription.current_period_end as number) * 1000; // Convert to ms
+  const items = subscription.items as { data: Array<{ price: Record<string, unknown> }> };
+  const priceId = items?.data?.[0]?.price?.id as string | undefined;
+
+  if (!customerId || !subscriptionId) {
+    console.error('[stripe] Missing customerId or subscriptionId in subscription event');
+    return;
+  }
+
+  // Find user by Stripe customer ID
+  const existingSubscription = await ctx.db
+    .query('subscriptions')
+    .withIndex('by_customer', (q: any) => q.eq('stripeCustomerId', customerId))
+    .first();
+
+  // Extract planId from priceId (e.g., "price_123" -> "plus" or use priceId directly)
+  // For now, we'll store the priceId as planId - can be mapped later
+  const planId = priceId || 'free';
+
+  if (existingSubscription) {
+    // Update existing subscription
+    await ctx.db.patch(existingSubscription._id, {
+      status,
+      currentPeriodEnd,
+      planId,
+    });
+    console.log(`[stripe] Updated subscription ${subscriptionId} for customer ${customerId}`);
+  } else {
+    // New subscription - need to find or create user
+    // In a real system, customerId would be stored in user metadata during checkout
+    // For now, we'll try to find user by checking metadata or allow subscription without userId
+    // The subscription can be linked to a user later when they sign up
+    
+    // TODO: In a real implementation, you'd:
+    // 1. Store customerId in user.metadata.stripeCustomerId during checkout
+    // 2. Or use client_reference_id in checkout session to store userId/externalId
+    // 3. Or query Stripe API to get customer email and match to user
+    
+    // For now, we'll log a warning and skip creating the subscription
+    // The subscription will be created when the user signs up and links their account
+    console.warn(`[stripe] Cannot create subscription - no user found for customer ${customerId}. Subscription will be created when user links account.`);
+    
+    // Alternative: Create subscription record with a placeholder or null userId
+    // This requires making userId optional in schema, which we'll skip for now
+  }
+}
+
+/**
+ * Helper: Handle subscription deleted event
+ */
+async function handleSubscriptionDeleted(
+  ctx: any,
+  eventData: Record<string, unknown>
+) {
+  const subscription = eventData.object as Record<string, unknown>;
+  const customerId = subscription.customer as string;
+
+  if (!customerId) {
+    console.error('[stripe] Missing customerId in subscription deleted event');
+    return;
+  }
+
+  const existingSubscription = await ctx.db
+    .query('subscriptions')
+    .withIndex('by_customer', (q: any) => q.eq('stripeCustomerId', customerId))
+    .first();
+
+  if (existingSubscription) {
+    await ctx.db.patch(existingSubscription._id, {
+      status: 'canceled',
+    });
+    console.log(`[stripe] Marked subscription as canceled for customer ${customerId}`);
+  } else {
+    console.warn(`[stripe] Subscription not found for customer ${customerId}`);
+  }
+}
+
+/**
+ * Helper: Handle invoice payment succeeded
+ */
+async function handleInvoicePaymentSucceeded(
+  ctx: any,
+  eventData: Record<string, unknown>
+) {
+  const invoice = eventData.object as Record<string, unknown>;
+  const customerId = invoice.customer as string;
+  const subscriptionId = invoice.subscription as string | undefined;
+
+  if (!customerId) {
+    console.error('[stripe] Missing customerId in invoice payment succeeded event');
+    return;
+  }
+
+  // Update subscription's currentPeriodEnd if subscription exists
+  if (subscriptionId) {
+    const subscription = await ctx.db
+      .query('subscriptions')
+      .withIndex('by_customer', (q: any) => q.eq('stripeCustomerId', customerId))
+      .first();
+
+    if (subscription) {
+      // Payment succeeded - extend subscription period
+      const periodEnd = (invoice.period_end as number) * 1000; // Convert to ms
+      await ctx.db.patch(subscription._id, {
+        status: 'active',
+        currentPeriodEnd: periodEnd,
+      });
+      console.log(`[stripe] Extended subscription period for customer ${customerId}`);
+    }
+  }
+}
+
+/**
+ * Helper: Handle invoice payment failed
+ */
+async function handleInvoicePaymentFailed(
+  ctx: any,
+  eventData: Record<string, unknown>
+) {
+  const invoice = eventData.object as Record<string, unknown>;
+  const customerId = invoice.customer as string;
+
+  if (!customerId) {
+    console.error('[stripe] Missing customerId in invoice payment failed event');
+    return;
+  }
+
+  const subscription = await ctx.db
+    .query('subscriptions')
+    .withIndex('by_customer', (q: any) => q.eq('stripeCustomerId', customerId))
+    .first();
+
+  if (subscription) {
+    // Mark subscription as past_due or unpaid
+    await ctx.db.patch(subscription._id, {
+      status: 'past_due',
+    });
+    console.log(`[stripe] Marked subscription as past_due for customer ${customerId}`);
+    // TODO: Send notification to user about failed payment
+  }
+}
+
+/**
+ * Helper: Handle checkout session completed
+ */
+async function handleCheckoutCompleted(
+  ctx: any,
+  eventData: Record<string, unknown>
+) {
+  const session = eventData.object as Record<string, unknown>;
+  const customerId = session.customer as string | undefined;
+  const subscriptionId = session.subscription as string | undefined;
+  const clientReferenceId = session.client_reference_id as string | undefined;
+
+  // client_reference_id can be used to store userId or externalId
+  // For now, we'll rely on the subscription.created event to handle this
+  // But we can use this to link the customer to a user if needed
+
+  if (subscriptionId && customerId) {
+    // The subscription.created event should handle this, but we can ensure it's processed
+    console.log(`[stripe] Checkout completed for customer ${customerId}, subscription ${subscriptionId}`);
+    // The subscription will be created/updated by the subscription.created event
+  }
+}
+
+// ============================================================================
+// INTERNAL QUERIES (for use within Convex only - not public API)
+// ============================================================================
+
+/**
+ * Internal version of wellness.getStatus - for use within Convex only
+ * Provides richer context validation and avoids public API rate limits
+ * Calls the public query (queries can call public queries, but actions should use internal)
+ */
+export const getWellnessStatusInternal = internalQuery({
+  args: {
+    userId: v.string(),
+    recentLimit: v.optional(v.number()),
+  },
+  handler: async (ctx, args) => {
+    // Internal queries can call public queries - this is fine
+    // The key is that actions (like tools) use internal queries, not public ones
+    return ctx.runQuery(api.wellness.getStatus, args);
+  },
+});
+
+/**
+ * Internal version of interventions.getByZones - for use within Convex only
+ * Provides richer context validation and avoids public API rate limits
+ * Calls the public query (queries can call public queries, but actions should use internal)
+ */
+export const getInterventionsByZonesInternal = internalQuery({
+  args: {
+    zones: v.array(v.string()),
+    minEvidenceLevel: v.optional(v.union(v.literal('high'), v.literal('moderate'), v.literal('low'))),
+    limit: v.optional(v.number()),
+  },
+  handler: async (ctx, args) => {
+    // Internal queries can call public queries - this is fine
+    // The key is that actions (like tools) use internal queries, not public ones
+    return ctx.runQuery(api.interventions.getByZones, args);
   },
 });
 

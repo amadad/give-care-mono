@@ -2,15 +2,9 @@ import { mutation, query, internalQuery, internalMutation, internalAction } from
 import { v } from 'convex/values';
 import { CATALOG, type AssessmentAnswer, scoreWithDetails } from './lib/assessmentCatalog';
 import { getByExternalId, extractSDOHProfile, toAssessmentAnswers } from './lib/utils';
+import { assessmentDefinitionValidator } from './lib/validators';
 import { internal } from './_generated/api';
 import type { Doc } from './_generated/dataModel';
-
-const assessmentDefinitionValidator = v.union(
-  v.literal('ema'),
-  v.literal('bsfc'),
-  v.literal('reach2'),
-  v.literal('sdoh')
-);
 
 const channelValidator = v.union(v.literal('sms'), v.literal('web'));
 

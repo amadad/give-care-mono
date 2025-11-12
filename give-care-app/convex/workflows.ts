@@ -10,6 +10,7 @@ import { components, internal, api } from './_generated/api';
 import { internalAction, internalQuery, internalMutation } from './_generated/server';
 import { v } from 'convex/values';
 import { CATALOG } from './lib/assessmentCatalog';
+import { evidenceRank } from './lib/enums';
 import { DataModel, Id } from './_generated/dataModel';
 import { RRule } from 'rrule';
 import { DateTime } from 'luxon';
@@ -255,12 +256,8 @@ export const getRecentRuns = internalQuery({
     const cutoff = Date.now() - days * 24 * 60 * 60 * 1000;
     return await ctx.db
       .query('agent_runs')
-      .filter((q) =>
-        q.and(
-          q.eq(q.field('userId'), user.externalId),
-          q.gte(q.field('_creationTime'), cutoff)
-        )
-      )
+      .withIndex('by_user', (q) => q.eq('userId', userId))
+      .filter((q) => q.gte(q.field('_creationTime'), cutoff))
       .collect();
   },
 });
@@ -356,19 +353,27 @@ export const getInterventionsByZonesInternal = internalQuery({
     limit: v.optional(v.number()),
   },
   handler: async (ctx, { zones, minEvidenceLevel = 'moderate', limit = 5 }) => {
-    const EVIDENCE_ORDER: Record<string, number> = { high: 3, moderate: 2, low: 1 };
-    const evidenceRank = (level: string) => EVIDENCE_ORDER[level] ?? 0;
     const targetZones = new Set(zones.map((zone) => zone.toLowerCase()));
     const minRank = evidenceRank(minEvidenceLevel);
 
     if (targetZones.size === 0) {
-      const interventions = await ctx.db
-        .query('interventions')
-        .withIndex('by_evidence', (q) => q.eq('evidenceLevel', minEvidenceLevel))
-        .take(limit * 2);
+      // Fetch interventions by evidence tier sequentially, prioritizing higher tiers
+      const interventions: any[] = [];
+      const tiers = ['high', 'moderate', 'low'] as const;
+
+      for (const tier of tiers) {
+        if (evidenceRank(tier) < minRank) continue;
+        if (interventions.length >= limit) break;
+
+        const tierResults = await ctx.db
+          .query('interventions')
+          .withIndex('by_evidence', (q) => q.eq('evidenceLevel', tier))
+          .take(limit - interventions.length);
+
+        interventions.push(...tierResults);
+      }
 
       return interventions
-        .filter((intervention) => evidenceRank(intervention.evidenceLevel) >= minRank)
         .sort((a, b) => {
           const evidenceDiff = evidenceRank(b.evidenceLevel) - evidenceRank(a.evidenceLevel);
           return evidenceDiff !== 0 ? evidenceDiff : a.title.localeCompare(b.title);

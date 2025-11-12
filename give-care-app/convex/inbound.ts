@@ -108,9 +108,30 @@ export const processInbound = internalAction({
     };
 
     // Route to appropriate agent
+    const traceId = `inbound-${Date.now()}-${Math.random().toString(36).substring(7)}`;
+    let routingDecision: 'main' | 'crisis' | 'assessment';
+    let reasoning: string | undefined;
+    let alternatives: string[] | undefined;
+
     let response;
     if (crisisDetection.hit) {
       // Crisis agent
+      routingDecision = 'crisis';
+      reasoning = `Crisis keywords detected: ${crisisDetection.keyword || 'general crisis indicators'}`;
+      alternatives = ['main'];
+      const confidence = crisisDetection.severity === 'high' ? 0.95 : 0.75;
+
+      // Log routing decision
+      ctx.runMutation(internal.internal.logAgentDecision, {
+        userId: user._id,
+        inputText: args.text,
+        routingDecision,
+        reasoning,
+        confidence,
+        alternatives,
+        traceId,
+      }).catch((err) => console.error('[inbound] Failed to log agent decision:', err));
+
       response = await ctx.runAction(internal.agents.runCrisisAgent, {
         input: {
           channel: 'sms' as const,
@@ -121,10 +142,27 @@ export const processInbound = internalAction({
       });
     } else {
       // Main agent
+      routingDecision = 'main';
+      reasoning = context.activeSession
+        ? 'Active assessment session exists but non-numeric input - routing to main agent'
+        : 'Standard routing to main agent';
+      alternatives = context.activeSession ? ['assessment'] : undefined;
+      const confidence = 0.55;
+
+      // Log routing decision
+      ctx.runMutation(internal.internal.logAgentDecision, {
+        userId: user._id,
+        inputText: args.text,
+        routingDecision,
+        reasoning,
+        confidence,
+        alternatives,
+        traceId,
+      }).catch((err) => console.error('[inbound] Failed to log agent decision:', err));
+
       // OPTIMIZATION: Pass cached threadId to avoid lookup (saves 228ms)
-      // Note: runMainAgent is public action - acceptable to call from internal action
-      // TODO: Create internal version if needed for better security
-      response = await ctx.runAction(api.agents.runMainAgent, {
+      // Use internal version for better security and context validation
+      response = await ctx.runAction(internal.agents.runMainAgentInternal, {
         input: {
           channel: 'sms' as const,
           text: args.text,

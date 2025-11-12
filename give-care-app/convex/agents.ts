@@ -159,10 +159,16 @@ export const runMainAgent = action({
       const isVeryShortInput = trimmedInput.length < 5;
       const needsOnboarding = nextField !== null;
 
-      // True fast path: Very short inputs without onboarding needs get simple deterministic response
+      // True fast path: Very short inputs get simple deterministic response
       // Saves ~2-3s by avoiding LLM call for simple greetings/acknowledgments
-      if (isVeryShortInput && !needsOnboarding) {
-        const fastResponse = `Hi ${userName}! I'm here to help. 
+      if (isVeryShortInput) {
+        let fastResponse = `Hi ${userName}! I'm here to help.`;
+
+        // Include next missing field prompt if profile is incomplete
+        if (needsOnboarding && nextField) {
+          fastResponse += `\n\nTo better support you, ${nextField.prompt}`;
+        } else {
+          fastResponse += `
 
 What's on your mind today? You can ask me about:
 - Caregiving tips
@@ -171,6 +177,7 @@ What's on your mind today? You can ask me about:
 - Or anything else you need support with
 
 What would be most helpful right now?`;
+        }
 
         // Save user message and assistant response (Agent Component pattern)
         await saveMessage(ctx, components.agent, {
@@ -208,9 +215,9 @@ What would be most helpful right now?`;
             },
           };
 
-      const LLM_TIMEOUT_MS = 8000;
+      const LLM_TIMEOUT_MS = 4000; // 4s timeout per plan
       const timeoutPromise = new Promise<never>((_, reject) => {
-        setTimeout(() => reject(new Error('LLM response timeout after 8s')), LLM_TIMEOUT_MS);
+        setTimeout(() => reject(new Error('LLM response timeout after 4s')), LLM_TIMEOUT_MS);
       });
 
       let result;
@@ -329,6 +336,31 @@ What's on your mind?`;
 });
 
 // ============================================================================
+// INTERNAL VERSION OF MAIN AGENT (for use within Convex only)
+// ============================================================================
+
+/**
+ * Internal version of runMainAgent - for use within Convex only
+ * Provides richer context validation and avoids public API rate limits
+ */
+export const runMainAgentInternal = internalAction({
+  args: {
+    input: v.object({
+      channel: channelValidator,
+      text: v.string(),
+      userId: v.string(),
+    }),
+    context: agentContextValidator,
+    threadId: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    // Call the public action via runAction - internal actions can call public actions
+    const { api } = await import('./_generated/api');
+    return ctx.runAction(api.agents.runMainAgent, args);
+  },
+});
+
+// ============================================================================
 // CRISIS AGENT
 // ============================================================================
 
@@ -377,23 +409,61 @@ export const runCrisisAgent = internalAction({
         userId: context.userId,
       });
 
-      const result = await thread.generateText({
-        prompt: input.text, // Agent Component saves automatically
-        system: CRISIS_PROMPT,
-        providerOptions: {
-          google: {
-            temperature: 0.3,
-            topP: 0.9,
-            maxOutputTokens: 200,
-            safetySettings: [
-              { category: 'HARM_CATEGORY_HARASSMENT', threshold: 'BLOCK_ONLY_HIGH' },
-              { category: 'HARM_CATEGORY_HATE_SPEECH', threshold: 'BLOCK_ONLY_HIGH' },
-              { category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT', threshold: 'BLOCK_ONLY_HIGH' },
-              { category: 'HARM_CATEGORY_DANGEROUS_CONTENT', threshold: 'BLOCK_MEDIUM_AND_ABOVE' },
-            ],
-          },
-        },
+      const LLM_TIMEOUT_MS = 4000; // 4s timeout per plan
+      const timeoutPromise = new Promise<never>((_, reject) => {
+        setTimeout(() => reject(new Error('LLM response timeout after 4s')), LLM_TIMEOUT_MS);
       });
+
+      let result;
+      try {
+        result = await Promise.race([
+          thread.generateText({
+            prompt: input.text, // Agent Component saves automatically
+            system: CRISIS_PROMPT,
+            providerOptions: {
+              google: {
+                temperature: 0.3,
+                topP: 0.9,
+                maxOutputTokens: 200,
+                safetySettings: [
+                  { category: 'HARM_CATEGORY_HARASSMENT', threshold: 'BLOCK_ONLY_HIGH' },
+                  { category: 'HARM_CATEGORY_HATE_SPEECH', threshold: 'BLOCK_ONLY_HIGH' },
+                  { category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT', threshold: 'BLOCK_ONLY_HIGH' },
+                  { category: 'HARM_CATEGORY_DANGEROUS_CONTENT', threshold: 'BLOCK_MEDIUM_AND_ABOVE' },
+                ],
+              },
+            },
+          }),
+          timeoutPromise,
+        ]);
+      } catch (error) {
+        if (error instanceof Error && error.message.includes('timeout')) {
+          const timeoutResponse = `I'm having trouble processing that right now. Can you try rephrasing? If this is an emergency, please call 911 or your local crisis hotline.`;
+          const latencyMs = Date.now() - startTime;
+
+          // Log timeout for observability
+          ctx.runMutation(internal.internal.logAgentRunInternal, {
+            externalId: context.userId,
+            agent: 'crisis',
+            policyBundle: 'crisis_v1',
+            budgetResult: {
+              usedInputTokens: input.text.length,
+              usedOutputTokens: timeoutResponse.length,
+              toolCalls: 0,
+            },
+            latencyMs,
+            traceId,
+          }).catch((err) => console.error('[crisis-agent] Timeout logging failed:', err));
+
+          return {
+            text: timeoutResponse,
+            threadId: finalThreadId,
+            latencyMs,
+            timeout: true,
+          };
+        }
+        throw error;
+      }
 
       const responseText = result.text;
       const latencyMs = Date.now() - startTime;
@@ -405,6 +475,20 @@ export const runCrisisAgent = internalAction({
         timestamp: Date.now(),
         traceId,
       });
+
+      // Log agent run for observability
+      ctx.runMutation(internal.internal.logAgentRunInternal, {
+        externalId: context.userId,
+        agent: 'crisis',
+        policyBundle: 'crisis_v1',
+        budgetResult: {
+          usedInputTokens: input.text.length,
+          usedOutputTokens: responseText.length,
+          toolCalls: 0,
+        },
+        latencyMs,
+        traceId,
+      }).catch((err) => console.error('[crisis-agent] Run logging failed:', err));
 
       const crisisEscalationPromise = workflow.start(ctx, internal.workflows.crisisEscalation, {
         userId: userId,
@@ -536,32 +620,70 @@ export const runAssessmentAgent = action({
 
       const promptText = input.text || 'Please interpret my burnout assessment results and suggest interventions.';
 
-      const result = await thread.generateText({
-        prompt: promptText, // Agent Component saves automatically
-        system: systemPrompt,
-        contextOptions: {
-          searchOtherThreads: true, // Built-in memory search
-          recentMessages: 10,
-          searchOptions: {
-            textSearch: true,
-            vectorSearch: true, // Uses embeddings automatically
-            limit: 10,
-          },
-        },
-        providerOptions: {
-          google: {
-            temperature: 0.5,
-            topP: 0.9,
-            maxOutputTokens: 400,
-            safetySettings: [
-              { category: 'HARM_CATEGORY_HARASSMENT', threshold: 'BLOCK_MEDIUM_AND_ABOVE' },
-              { category: 'HARM_CATEGORY_HATE_SPEECH', threshold: 'BLOCK_MEDIUM_AND_ABOVE' },
-              { category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT', threshold: 'BLOCK_MEDIUM_AND_ABOVE' },
-              { category: 'HARM_CATEGORY_DANGEROUS_CONTENT', threshold: 'BLOCK_MEDIUM_AND_ABOVE' },
-            ],
-          },
-        },
-      } as any);
+      const LLM_TIMEOUT_MS = 4000; // 4s timeout per plan
+      const timeoutPromise = new Promise<never>((_, reject) => {
+        setTimeout(() => reject(new Error('LLM response timeout after 4s')), LLM_TIMEOUT_MS);
+      });
+
+      let result;
+      try {
+        result = await Promise.race([
+          thread.generateText({
+            prompt: promptText, // Agent Component saves automatically
+            system: systemPrompt,
+            contextOptions: {
+              searchOtherThreads: true, // Built-in memory search
+              recentMessages: 10,
+              searchOptions: {
+                textSearch: true,
+                vectorSearch: true, // Uses embeddings automatically
+                limit: 10,
+              },
+            },
+            providerOptions: {
+              google: {
+                temperature: 0.5,
+                topP: 0.9,
+                maxOutputTokens: 400,
+                safetySettings: [
+                  { category: 'HARM_CATEGORY_HARASSMENT', threshold: 'BLOCK_MEDIUM_AND_ABOVE' },
+                  { category: 'HARM_CATEGORY_HATE_SPEECH', threshold: 'BLOCK_MEDIUM_AND_ABOVE' },
+                  { category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT', threshold: 'BLOCK_MEDIUM_AND_ABOVE' },
+                  { category: 'HARM_CATEGORY_DANGEROUS_CONTENT', threshold: 'BLOCK_MEDIUM_AND_ABOVE' },
+                ],
+              },
+            },
+          } as any),
+          timeoutPromise,
+        ]);
+      } catch (error) {
+        if (error instanceof Error && error.message.includes('timeout')) {
+          const timeoutResponse = `I'm having trouble processing that right now. Can you try rephrasing?`;
+          const latencyMs = Date.now() - startTime;
+
+          // Log timeout for observability
+          ctx.runMutation(internal.internal.logAgentRunInternal, {
+            externalId: context.userId,
+            agent: 'assessment',
+            policyBundle: 'assessment_v1',
+            budgetResult: {
+              usedInputTokens: input.text.length,
+              usedOutputTokens: timeoutResponse.length,
+              toolCalls: 0,
+            },
+            latencyMs,
+            traceId,
+          }).catch((err) => console.error('[assessment-agent] Timeout logging failed:', err));
+
+          return {
+            text: timeoutResponse,
+            threadId: finalThreadId,
+            latencyMs,
+            timeout: true,
+          };
+        }
+        throw error;
+      }
 
       const responseText: string = result.text;
       const latencyMs = Date.now() - startTime;

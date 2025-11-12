@@ -309,3 +309,4 @@ if (input.text.match(/find|search|near me/i)) {
 
 The key is **matching the approach to the use case** - not everything needs full thread history.
 
+

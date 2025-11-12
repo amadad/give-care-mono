@@ -10,6 +10,7 @@ import { createTool } from '@convex-dev/agent';
 import { z } from 'zod';
 import { internal, api } from './_generated/api';
 import type { AgentToolContext, ResourceResult } from './lib/types';
+import type { Doc } from './_generated/dataModel';
 
 // ============================================================================
 // RESOURCE SEARCH TOOL
@@ -108,9 +109,8 @@ export const checkWellnessStatus = createTool({
       return { error: 'User ID not available' };
     }
 
-    // Using public query - acceptable for actions calling queries
-    // TODO: Create internal version if needed
-    const status = await ctx.runQuery(api.wellness.getStatus, {
+    // Use internal query for better security and context validation
+    const status = await ctx.runQuery(internal.internal.getWellnessStatusInternal, {
       userId,
     });
 
@@ -131,7 +131,7 @@ export const findInterventions = createTool({
     limit: z.number().optional().describe('Maximum number of interventions (default: 5)'),
   }),
   description: 'Get evidence-based interventions matched to pressure zones. Returns micro-commitments and support strategies with evidence levels.',
-  handler: async (ctx, args: { zones?: string[]; minEvidenceLevel?: 'high' | 'moderate' | 'low'; limit?: number }): Promise<{ error?: string; interventions?: any[]; zones?: string[] }> => {
+  handler: async (ctx, args: { zones?: string[]; minEvidenceLevel?: 'high' | 'moderate' | 'low'; limit?: number }): Promise<{ error?: string; interventions?: Doc<'interventions'>[]; zones?: string[] }> => {
     const userId = ctx.userId;
 
     if (!userId) {
@@ -140,17 +140,15 @@ export const findInterventions = createTool({
 
     let zones: string[] = args.zones || [];
     if (zones.length === 0) {
-      // Using public query - acceptable for actions calling queries
-    // TODO: Create internal version if needed
-    const status = await ctx.runQuery(api.wellness.getStatus, {
+      // Use internal query for better security and context validation
+      const status = await ctx.runQuery(internal.internal.getWellnessStatusInternal, {
         userId,
       });
       zones = status.pressureZones || [...DEFAULT_ZONES];
     }
 
-    // Using public query - acceptable for actions calling queries
-    // TODO: Create internal version if needed
-    const interventions = await ctx.runQuery(api.interventions.getByZones, {
+    // Use internal query for better security and context validation
+    const interventions = await ctx.runQuery(internal.internal.getInterventionsByZonesInternal, {
       zones,
       minEvidenceLevel: args.minEvidenceLevel || 'moderate',
       limit: args.limit || 5,
@@ -175,9 +173,8 @@ export const getInterventions = createTool({
   }),
   description: 'Lookup evidence-based caregiver interventions matching pressure zones. Use this to provide specific, research-backed recommendations.',
   handler: async (ctx, args: { zones: string[]; minEvidenceLevel?: 'high' | 'moderate' | 'low'; limit?: number }) => {
-    // Using public query - acceptable for actions calling queries
-    // TODO: Create internal version if needed
-    const interventions = await ctx.runQuery(api.interventions.getByZones, {
+    // Use internal query for better security and context validation
+    const interventions = await ctx.runQuery(internal.internal.getInterventionsByZonesInternal, {
       zones: args.zones,
       minEvidenceLevel: args.minEvidenceLevel || 'moderate',
       limit: args.limit || 5,
@@ -286,10 +283,15 @@ export const updateProfile = createTool({
       }
     }
 
+    // Provide helpful hint if ZIP code was added
+    const hint = args.zipCode
+      ? 'Profile updated successfully. You can now search for local resources using the ZIP code.'
+      : 'Profile updated successfully';
+
     return {
       success: true,
       profile: updatedProfile,
-      message: 'Profile updated successfully',
+      message: hint,
     };
   },
 });

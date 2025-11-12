@@ -168,9 +168,24 @@ export default defineSchema({
     }),
     latencyMs: v.number(),
     traceId: v.string(),
+    timeout: v.optional(v.boolean()), // Track timeout occurrences
   })
     .index('by_user', ['userId'])
     .index('by_trace', ['traceId']),
+
+  // Agent decisions (routing observability)
+  agent_decisions: defineTable({
+    userId: v.id('users'),
+    inputText: v.string(),
+    routingDecision: v.string(), // 'main' | 'crisis' | 'assessment'
+    reasoning: v.optional(v.string()),
+    confidence: v.optional(v.number()),
+    alternatives: v.optional(v.array(v.string())),
+    traceId: v.string(),
+  })
+    .index('by_user', ['userId'])
+    .index('by_trace', ['traceId'])
+    .index('by_decision', ['routingDecision']),
 
   // Guardrail events (safety tracking)
   guardrail_events: defineTable({

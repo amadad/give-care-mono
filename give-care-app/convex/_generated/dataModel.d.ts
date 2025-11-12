@@ -27,6 +27,38 @@ import type { GenericId } from "convex/values";
  */
 
 export type DataModel = {
+  agent_decisions: {
+    document: {
+      alternatives?: Array<string>;
+      confidence?: number;
+      inputText: string;
+      reasoning?: string;
+      routingDecision: string;
+      traceId: string;
+      userId: Id<"users">;
+      _id: Id<"agent_decisions">;
+      _creationTime: number;
+    };
+    fieldPaths:
+      | "_creationTime"
+      | "_id"
+      | "alternatives"
+      | "confidence"
+      | "inputText"
+      | "reasoning"
+      | "routingDecision"
+      | "traceId"
+      | "userId";
+    indexes: {
+      by_id: ["_id"];
+      by_creation_time: ["_creationTime"];
+      by_decision: ["routingDecision", "_creationTime"];
+      by_trace: ["traceId", "_creationTime"];
+      by_user: ["userId", "_creationTime"];
+    };
+    searchIndexes: {};
+    vectorIndexes: {};
+  };
   agent_runs: {
     document: {
       agent: string;
@@ -37,6 +69,7 @@ export type DataModel = {
       };
       latencyMs: number;
       policyBundle: string;
+      timeout?: boolean;
       traceId: string;
       userId: Id<"users">;
       _id: Id<"agent_runs">;
@@ -52,6 +85,7 @@ export type DataModel = {
       | "budgetResult.usedOutputTokens"
       | "latencyMs"
       | "policyBundle"
+      | "timeout"
       | "traceId"
       | "userId";
     indexes: {

@@ -8,7 +8,7 @@
   "scripts": {
     "dev": "convex dev",
     "deploy": "convex deploy",
-    "codegen": "convex codegen --typecheck enable --once",
+    "codegen": "convex codegen --typecheck enable",
     "test": "vitest",
     "test:eval": "evalite watch",
     "test:simulate": "vitest tests/simulation/simulation.test.ts",

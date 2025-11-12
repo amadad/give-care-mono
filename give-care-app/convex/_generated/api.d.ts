@@ -226,6 +226,18 @@ export declare const api: {
       { limit?: number; userId: string },
       any
     >;
+    recordAssessmentResponse: FunctionReference<
+      "mutation",
+      "public",
+      {
+        answer: number | string;
+        definitionId: "ema" | "bsfc" | "reach2" | "sdoh";
+        questionIndex: number;
+        sessionId?: Id<"assessment_sessions">;
+        userId: string;
+      },
+      any
+    >;
     recordMemory: FunctionReference<
       "mutation",
       "public",
@@ -268,6 +280,72 @@ export declare const api: {
 export declare const internal: {
   agents: {
     runCrisisAgent: FunctionReference<
+      "action",
+      "internal",
+      {
+        context: {
+          consent: { emergency: boolean; marketing: boolean };
+          crisisFlags?: { active: boolean; terms: Array<string> };
+          locale: string;
+          metadata?:
+            | {
+                contextUpdatedAt?: number;
+                convex?: { threadId?: string; userId?: Id<"users"> };
+                enrichedContext?: string;
+                journeyPhase?: string;
+                pressureZones?: Array<string>;
+                profile?: {
+                  careRecipientName?: string;
+                  clinicalCoordination?: "good" | "poor";
+                  communityAccess?: "good" | "poor";
+                  financialStatus?: "struggling" | "stable" | "comfortable";
+                  firstName?: string;
+                  housingStability?: "stable" | "at_risk";
+                  preferredCheckInHour?: number;
+                  relationship?: string;
+                  transportationReliability?: "reliable" | "unreliable";
+                  zipCode?: string;
+                };
+                timezone?: string;
+                totalInteractionCount?: number;
+                wellnessScore?: number;
+              }
+            | {
+                contextUpdatedAt?: number;
+                convex?: { threadId?: string; userId?: Id<"users"> };
+                enrichedContext?: string;
+                journeyPhase?: string;
+                pressureZones?: Array<string>;
+                profile?: {
+                  careRecipientName?: string;
+                  clinicalCoordination?: "good" | "poor";
+                  communityAccess?: "good" | "poor";
+                  financialStatus?: "struggling" | "stable" | "comfortable";
+                  firstName?: string;
+                  housingStability?: "stable" | "at_risk";
+                  preferredCheckInHour?: number;
+                  relationship?: string;
+                  transportationReliability?: "reliable" | "unreliable";
+                  zipCode?: string;
+                };
+                threadId?: string;
+                timezone?: string;
+                totalInteractionCount?: number;
+                wellnessScore?: number;
+              };
+          sessionId?: string;
+          userId: string;
+        };
+        input: {
+          channel: "sms" | "email" | "web";
+          text: string;
+          userId: string;
+        };
+        threadId?: string;
+      },
+      any
+    >;
+    runMainAgentInternal: FunctionReference<
       "action",
       "internal",
       {
@@ -441,6 +519,16 @@ export declare const internal: {
       { externalId: string },
       any
     >;
+    getInterventionsByZonesInternal: FunctionReference<
+      "query",
+      "internal",
+      {
+        limit?: number;
+        minEvidenceLevel?: "high" | "moderate" | "low";
+        zones: Array<string>;
+      },
+      any
+    >;
     getResourceLookupCache: FunctionReference<
       "query",
       "internal",
@@ -451,6 +539,12 @@ export declare const internal: {
       "query",
       "internal",
       { userId: Id<"users"> },
+      any
+    >;
+    getWellnessStatusInternal: FunctionReference<
+      "query",
+      "internal",
+      { recentLimit?: number; userId: string },
       any
     >;
     handleIncomingMessage: FunctionReference<
@@ -488,6 +582,20 @@ export declare const internal: {
       "query",
       "internal",
       { limit?: number; now: number },
+      any
+    >;
+    logAgentDecision: FunctionReference<
+      "mutation",
+      "internal",
+      {
+        alternatives?: Array<string>;
+        confidence?: number;
+        inputText: string;
+        reasoning?: string;
+        routingDecision: string;
+        traceId: string;
+        userId: Id<"users">;
+      },
       any
     >;
     logAgentRunInternal: FunctionReference<

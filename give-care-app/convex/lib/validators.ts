@@ -112,3 +112,11 @@ export const preferencesValidator = v.object({
   preferredCheckInHour: v.optional(v.number()),
   timezone: v.optional(v.string()),
 });
+
+// Assessment Definition Validator
+export const assessmentDefinitionValidator = v.union(
+  v.literal('ema'),
+  v.literal('bsfc'),
+  v.literal('reach2'),
+  v.literal('sdoh')
+);

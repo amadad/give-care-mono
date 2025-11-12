@@ -258,20 +258,29 @@ export function extractSDOHProfile(answers: AssessmentAnswer[]): Partial<UserPro
 
 export type CrisisSeverity = 'low' | 'medium' | 'high';
 
-const crisisKeywordMap: Array<{ keyword: string; severity: CrisisSeverity }> = [
+export const CRISIS_KEYWORDS: Array<{ keyword: string; severity: CrisisSeverity }> = [
+  // High severity - immediate danger
   { keyword: 'kill myself', severity: 'high' },
+  { keyword: 'kms', severity: 'high' }, // SMS shorthand
   { keyword: 'suicide', severity: 'high' },
+  { keyword: 'kys', severity: 'high' }, // SMS shorthand
   { keyword: 'i want to die', severity: 'high' },
   { keyword: 'end my life', severity: 'high' },
+  { keyword: 'end it all', severity: 'high' },
+  { keyword: 'overdose', severity: 'high' },
+  { keyword: 'cant go on', severity: 'high' }, // Common misspelling
+
+  // Medium severity - serious distress
   { keyword: 'hurt myself', severity: 'medium' },
   { keyword: 'self harm', severity: 'medium' },
   { keyword: "can't go on", severity: 'medium' },
   { keyword: 'hopeless', severity: 'medium' },
   { keyword: 'done with life', severity: 'medium' },
   { keyword: 'make it stop', severity: 'medium' },
-  { keyword: 'panic attack', severity: 'low' },
-  { keyword: 'overdose', severity: 'high' },
   { keyword: 'lost control', severity: 'medium' },
+
+  // Low severity - distress signals
+  { keyword: 'panic attack', severity: 'low' },
 ];
 
 export type CrisisDetection = {
@@ -282,7 +291,7 @@ export type CrisisDetection = {
 
 export const detectCrisis = (text: string): CrisisDetection => {
   const lower = text.toLowerCase();
-  const match = crisisKeywordMap.find(({ keyword }) => lower.includes(keyword));
+  const match = CRISIS_KEYWORDS.find(({ keyword }) => lower.includes(keyword));
   if (!match) return { hit: false };
   return { hit: true, severity: match.severity, keyword: match.keyword };
 };
@@ -396,7 +405,12 @@ export const SECONDS_PER_MINUTE = 60;
 export const MINUTES_PER_HOUR = 60;
 export const HOURS_PER_DAY = 24;
 export const MS_PER_DAY = HOURS_PER_DAY * MINUTES_PER_HOUR * SECONDS_PER_MINUTE * MS_PER_SECOND;
-export const RACE_TIMEOUT_MS = 1500;
+
+// Maps configuration (configurable via env vars)
+export const RACE_TIMEOUT_MS = Number(process.env.MAPS_RACE_MS ?? 1500);
+export const MAPS_FETCH_TIMEOUT_MS = Number(process.env.MAPS_FETCH_MS ?? 3000);
+
+// Memory/context timeouts
 export const FACT_EXTRACTION_TIMEOUT_MS = 2000;
 export const CONTEXT_BUILDING_TIMEOUT_MS = 2000;
 export const DEFAULT_MEMORY_LIMIT = 5;

@@ -8,6 +8,7 @@
 import { query, mutation, internalQuery, internalMutation } from './_generated/server';
 import { v } from 'convex/values';
 import { getByExternalId, ensureUser } from './lib/utils';
+import { assessmentDefinitionValidator } from './lib/validators';
 
 // ============================================================================
 // USERS
@@ -143,6 +144,89 @@ export const listMemoriesInternal = internalQuery({
         content: m.content,
         importance: m.importance,
       }));
+  },
+});
+
+// ============================================================================
+// ASSESSMENTS
+// ============================================================================
+
+/**
+ * Record assessment response - public-facing mutation for agents/admin flows
+ * Records a structured answer to an assessment question
+ * 
+ * This mutation is designed for programmatic use (agents, admin flows, EMA/BSFC ingestion)
+ * For user-facing flows, use answerAssessment mutation directly
+ */
+export const recordAssessmentResponse = mutation({
+  args: {
+    userId: v.string(),
+    sessionId: v.optional(v.id('assessment_sessions')),
+    questionIndex: v.number(),
+    answer: v.union(v.number(), v.string()),
+    definitionId: assessmentDefinitionValidator,
+  },
+  handler: async (ctx, { userId, sessionId, questionIndex, answer, definitionId }) => {
+    // Note: For SMS-only app, userId = phone number
+    // Caller must know phone number (acceptable for SMS-only)
+    // For web users, add auth check: const identity = await ctx.auth.getUserIdentity();
+    const user = await getByExternalId(ctx, userId);
+    if (!user) {
+      throw new Error('User not found');
+    }
+
+    // Normalize answer to number (string answers like "skip" become 0)
+    const value = typeof answer === 'string' 
+      ? (answer.toLowerCase() === 'skip' ? 0 : parseInt(answer, 10) || 0)
+      : answer;
+
+    // Validate value is in valid range (1-5 for most assessments)
+    if (value < 0 || value > 5) {
+      throw new Error('Answer value must be between 0 and 5');
+    }
+
+    // Find active session if sessionId not provided
+    let session;
+    if (sessionId) {
+      session = await ctx.db.get(sessionId);
+      if (!session || session.userId !== user._id || session.definitionId !== definitionId) {
+        throw new Error('Invalid session');
+      }
+    } else {
+      // Find active session for this user and definition
+      const sessions = await ctx.db
+        .query('assessment_sessions')
+        .withIndex('by_user_definition', (q) => q.eq('userId', user._id).eq('definitionId', definitionId))
+        .order('desc')
+        .collect();
+      
+      session = sessions.find(s => s.status === 'active');
+      if (!session) {
+        throw new Error('No active assessment session found');
+      }
+    }
+
+    // Validate questionIndex matches session's current question
+    if (session.questionIndex !== questionIndex) {
+      throw new Error(`Question index mismatch: expected ${session.questionIndex}, got ${questionIndex}`);
+    }
+
+    // Append answer to session
+    const newAnswer = {
+      questionId: questionIndex.toString(),
+      value,
+    };
+    const updatedAnswers = [...session.answers, newAnswer];
+
+    await ctx.db.patch(session._id, {
+      answers: updatedAnswers,
+      questionIndex: questionIndex + 1,
+    });
+
+    return { 
+      sessionId: session._id, 
+      currentIndex: questionIndex + 1,
+    };
   },
 });
 
