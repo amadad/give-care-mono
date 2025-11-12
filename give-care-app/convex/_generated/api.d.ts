@@ -120,6 +120,9 @@ export declare const internal: {
     >;
   };
   internal: {
+    agentRuns: {
+      migrateAgentRuns: FunctionReference<"mutation", "internal", {}, any>;
+    };
     agents: {
       processAssessmentCompletion: FunctionReference<
         "action",

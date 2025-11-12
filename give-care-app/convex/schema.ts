@@ -281,14 +281,18 @@ export default defineSchema({
     .index("by_messageSid", ["messageSid"]) // Unique index
     .index("by_user", ["userId"]),
 
-  // Agent runs - Agent execution tracking (fields optional for migration)
+  // Agent runs - Agent execution tracking
+  // Preferred fields: agentName, threadId, toolCalls, createdAt
+  // Legacy fields (deprecated): agent, budgetResult, latencyMs, policyBundle, traceId
+  // Note: Records are created automatically by Convex Agent Component
   agent_runs: defineTable({
     userId: v.id("users"),
-    threadId: v.optional(v.id("threads")),
+    // Preferred: Use agentName instead of agent
     agentName: v.optional(v.union(v.literal("main"), v.literal("assessment"))),
+    threadId: v.optional(v.id("threads")),
     toolCalls: v.optional(v.array(v.any())),
     createdAt: v.optional(v.number()),
-    // Legacy fields
+    // Legacy fields (deprecated - use agentName, createdAt instead)
     agent: v.optional(v.string()),
     budgetResult: v.optional(v.any()),
     latencyMs: v.optional(v.number()),
