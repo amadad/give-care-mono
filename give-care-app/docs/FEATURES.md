@@ -207,7 +207,13 @@ Want to try one of these, or talk through what's hardest right now?"
 
 **Key Features**:
 - **Automatic memory recording** - No "should I remember this?" prompts, just saves important info
-- **Smart categorization** - Remembers care routines, preferences, what works, and crisis triggers
+- **Smart categorization** - Five memory types help organize information:
+  - **Care Routine**: Daily schedules, routines that work (e.g., "morning bath at 9am works well")
+  - **Preference**: User choices and preferences (e.g., "prefers text check-ins in the evening")
+  - **Intervention Result**: Outcomes of strategies tried (e.g., "yoga on Tuesdays really helps")
+  - **Crisis Trigger**: Warning signs and patterns that precede crisis (e.g., "gets agitated around 6pm")
+  - **Family Health**: Care recipient conditions and diagnoses (e.g., "mom has Alzheimer's")
+- **Importance scoring** - Memories ranked 1-10 (critical=9-10, important=6-8, useful=3-5, minor=1-2)
 - **Prioritizes what matters** - Important details surface when relevant
 - **Understands context** - Finds related memories by meaning, not just keywords
 - **Natural references** - References past conversations naturally
@@ -268,9 +274,22 @@ Want to try one of these, or talk through what's hardest right now?"
 
 **4 Validated Assessments**
 1. **EMA** (3 questions, 2 min) - Daily stress pulse check
-2. **BSFC** (10 questions, 5 min) - Comprehensive burden across 4 zones
+   - Cooldown: 1 day (can retake daily)
+   - Zones: Emotional, Physical, Social
+2. **BSFC** (10 questions, 5 min) - Comprehensive burden across 4 zones // web only
+   - Cooldown: 14 days (prevents over-assessment, ensures meaningful data)
+   - Zones: Emotional, Physical, Social, Time, Financial
 3. **REACH-II** (16 questions, 8 min) - Caregiver strain risk assessment
+   - Cooldown: 21 days
+   - Zones: Emotional, Physical, Social, Time, plus Informational and Spiritual
 4. **SDOH** (28 questions, 15 min) - Social determinants of health (adds financial zone)
+   - Cooldown: 30 days (most comprehensive, longest cooldown)
+   - Zones: Financial, Transportation, Housing, Community, Clinical
+
+**Why Cooldowns?** Prevents users from retaking assessments too frequently, which could:
+- Lead to gaming the system (trying to improve scores artificially)
+- Create assessment fatigue
+- Generate less meaningful data (scores need time to reflect real changes)
 
 **5 Pressure Zones**
 - Emotional: Anxiety, depression, overwhelm
@@ -280,9 +299,15 @@ Want to try one of these, or talk through what's hardest right now?"
 - Financial: Care costs, income loss, insurance battles (SDOH only)
 
 **Scoring Logic**
-- 0-100 burnout score across 5 bands (Crisis → Thriving)
+- 0-100 burnout score across 4 bands (Very Low → High)
+- **Very Low** (0-40): Minimal stress, caregiver managing well
+- **Low** (40-60): Some stress present, but manageable
+- **Moderate** (60-80): Significant stress requiring attention
+- **High** (80-100): Severe burnout, immediate support needed
 - Zone-specific sub-scores for targeted interventions
 - Historical tracking to show trends over weeks/months
+- Confidence score reflects how many questions were answered (partial assessments have lower confidence)
+- Pressure zones flagged when zone average reaches 3.5 or higher (on 1-5 scale)
 
 ---
 
@@ -296,20 +321,36 @@ Want to try one of these, or talk through what's hardest right now?"
 
 **Local Resource Search**
 - Real-time Google Maps integration for verified locations
-- 10 predefined categories (respite, support groups, meal delivery, etc.)
+- 10 predefined categories:
+  - **Respite**: Temporary care facilities and services
+  - **Support**: Caregiver support groups (in-person and online)
+  - **Daycare**: Adult day care centers
+  - **Homecare**: In-home health care services
+  - **Medical**: Medical supplies and equipment
+  - **Community**: Senior centers and community resources
+  - **Meals**: Meal delivery services
+  - **Transport**: Transportation services for appointments
+  - **Hospice**: End-of-life care services
+  - **Memory**: Memory care and Alzheimer's-specific facilities
 - Zip-code remembered (no re-asking for location)
 - Results include hours, ratings, reviews, and map links
 - Google Maps attribution included per service requirements
+- **Smart caching**: Results cached by category and zip code to reduce API calls and improve response time
+- Cache duration varies by category (respite care cached longer than meal delivery, which changes more frequently)
 
 ---
 
 ### Layer 4: Safety & Guardrails
 
 **Crisis Detection**
-- 15+ crisis keywords (suicide, self-harm, "can't go on", etc.)
-- <600ms response with 988/741741/911
+- 19+ crisis keywords across three severity levels
+- **High Severity** (immediate danger): "kill myself", "suicide", "end my life", "overdose", "can't go on"
+- **Medium Severity** (serious distress): "hurt myself", "self harm", "hopeless", "done with life", "lost control"
+- **Low Severity** (distress signals): "panic attack"
+- <600ms response with 988/741741/911 (all severity levels receive immediate crisis resources)
+- Severity level determines follow-up urgency and resource emphasis
 - All crisis interactions logged for human review
-- Follow-up check-in next day
+- Follow-up check-in next day for high/medium severity cases
 
 **Privacy & Compliance**
 - Secure data handling and storage
@@ -327,10 +368,15 @@ Want to try one of these, or talk through what's hardest right now?"
 ### Layer 5: Business Operations
 
 **Subscription Management**
-- $9.99/month or $99/year
-- 7-day free trial
+- **Three Plan Tiers**:
+  - **Free**: Basic access, assessments available, interventions limited
+  - **Plus** ($9.99/month or $99/year): Full access to assessments and interventions
+  - **Enterprise**: All Plus features plus live coach access (future)
+- 7-day free trial for Plus plan
 - Stripe-powered checkout
 - 15 promo codes for partners/press
+- **Grace Period**: When subscription is canceled, users retain access for a grace period to resubscribe without losing continuity
+- **Subscription Gating**: Inactive subscriptions receive redirect messages to resubscribe, but crisis support always remains available regardless of subscription status
 
 **Admin Dashboard**
 - Real-time metrics (active users, response times, crisis alerts)

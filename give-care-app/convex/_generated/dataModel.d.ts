@@ -27,50 +27,17 @@ import type { GenericId } from "convex/values";
  */
 
 export type DataModel = {
-  agent_decisions: {
-    document: {
-      alternatives?: Array<string>;
-      confidence?: number;
-      inputText: string;
-      reasoning?: string;
-      routingDecision: string;
-      traceId: string;
-      userId: Id<"users">;
-      _id: Id<"agent_decisions">;
-      _creationTime: number;
-    };
-    fieldPaths:
-      | "_creationTime"
-      | "_id"
-      | "alternatives"
-      | "confidence"
-      | "inputText"
-      | "reasoning"
-      | "routingDecision"
-      | "traceId"
-      | "userId";
-    indexes: {
-      by_id: ["_id"];
-      by_creation_time: ["_creationTime"];
-      by_decision: ["routingDecision", "_creationTime"];
-      by_trace: ["traceId", "_creationTime"];
-      by_user: ["userId", "_creationTime"];
-    };
-    searchIndexes: {};
-    vectorIndexes: {};
-  };
   agent_runs: {
     document: {
-      agent: string;
-      budgetResult: {
-        toolCalls: number;
-        usedInputTokens: number;
-        usedOutputTokens: number;
-      };
-      latencyMs: number;
-      policyBundle: string;
-      timeout?: boolean;
-      traceId: string;
+      agent?: string;
+      agentName?: "main" | "assessment";
+      budgetResult?: any;
+      createdAt?: number;
+      latencyMs?: number;
+      policyBundle?: string;
+      threadId?: Id<"threads">;
+      toolCalls?: Array<any>;
+      traceId?: string;
       userId: Id<"users">;
       _id: Id<"agent_runs">;
       _creationTime: number;
@@ -79,19 +46,18 @@ export type DataModel = {
       | "_creationTime"
       | "_id"
       | "agent"
+      | "agentName"
       | "budgetResult"
-      | "budgetResult.toolCalls"
-      | "budgetResult.usedInputTokens"
-      | "budgetResult.usedOutputTokens"
+      | "createdAt"
       | "latencyMs"
       | "policyBundle"
-      | "timeout"
+      | "threadId"
+      | "toolCalls"
       | "traceId"
       | "userId";
     indexes: {
       by_id: ["_id"];
       by_creation_time: ["_creationTime"];
-      by_trace: ["traceId", "_creationTime"];
       by_user: ["userId", "_creationTime"];
     };
     searchIndexes: {};
@@ -102,7 +68,6 @@ export type DataModel = {
       channel: "sms" | "email";
       context: any;
       message: string;
-      payload?: any;
       severity: "low" | "medium" | "high" | "critical";
       status: "pending" | "processed";
       type: string;
@@ -116,7 +81,6 @@ export type DataModel = {
       | "channel"
       | "context"
       | "message"
-      | "payload"
       | "severity"
       | "status"
       | "type"
@@ -124,7 +88,8 @@ export type DataModel = {
     indexes: {
       by_id: ["_id"];
       by_creation_time: ["_creationTime"];
-      by_type: ["type", "severity", "_creationTime"];
+      by_severity: ["severity", "_creationTime"];
+      by_type: ["type", "_creationTime"];
       by_user: ["userId", "_creationTime"];
     };
     searchIndexes: {};
@@ -153,7 +118,7 @@ export type DataModel = {
     indexes: {
       by_id: ["_id"];
       by_creation_time: ["_creationTime"];
-      by_user_definition: ["userId", "definitionId", "_creationTime"];
+      by_user_and_type: ["userId", "definitionId", "_creationTime"];
       by_user_status: ["userId", "status", "_creationTime"];
     };
     searchIndexes: {};
@@ -163,7 +128,8 @@ export type DataModel = {
     document: {
       answers: Array<{ questionId: string; value: number }>;
       completedAt: number;
-      definitionId: string;
+      definitionId: "ema" | "cwbs" | "reach2" | "sdoh";
+      rawScores?: any;
       userId: Id<"users">;
       version: string;
       _id: Id<"assessments">;
@@ -175,13 +141,14 @@ export type DataModel = {
       | "answers"
       | "completedAt"
       | "definitionId"
+      | "rawScores"
       | "userId"
       | "version";
     indexes: {
       by_id: ["_id"];
       by_creation_time: ["_creationTime"];
       by_user: ["userId", "_creationTime"];
-      by_user_definition: ["userId", "definitionId", "_creationTime"];
+      by_user_and_type: ["userId", "definitionId", "_creationTime"];
     };
     searchIndexes: {};
     vectorIndexes: {};
@@ -210,27 +177,29 @@ export type DataModel = {
     searchIndexes: {};
     vectorIndexes: {};
   };
-  emails: {
+  events: {
     document: {
-      status: string;
-      subject: string;
-      to: string;
-      traceId: string;
-      userId?: Id<"users">;
-      _id: Id<"emails">;
+      payload: any;
+      type:
+        | "intervention.try"
+        | "intervention.success"
+        | "intervention.skip"
+        | "resource.open"
+        | "resource.search"
+        | "assessment.completed"
+        | "assessment.started"
+        | "profile.updated"
+        | "memory.recorded"
+        | "check_in.completed";
+      userId: Id<"users">;
+      _id: Id<"events">;
       _creationTime: number;
     };
-    fieldPaths:
-      | "_creationTime"
-      | "_id"
-      | "status"
-      | "subject"
-      | "to"
-      | "traceId"
-      | "userId";
+    fieldPaths: "_creationTime" | "_id" | "payload" | "type" | "userId";
     indexes: {
       by_id: ["_id"];
       by_creation_time: ["_creationTime"];
+      by_type: ["type", "_creationTime"];
       by_user: ["userId", "_creationTime"];
     };
     searchIndexes: {};
@@ -238,10 +207,10 @@ export type DataModel = {
   };
   guardrail_events: {
     document: {
-      action: string;
-      context?: any;
-      ruleId: string;
-      traceId: string;
+      context: any;
+      createdAt: number;
+      severity: "low" | "medium" | "high";
+      type: "crisis" | "false_positive" | "dv_hint";
       userId?: Id<"users">;
       _id: Id<"guardrail_events">;
       _creationTime: number;
@@ -249,15 +218,16 @@ export type DataModel = {
     fieldPaths:
       | "_creationTime"
       | "_id"
-      | "action"
       | "context"
-      | "ruleId"
-      | "traceId"
+      | "createdAt"
+      | "severity"
+      | "type"
       | "userId";
     indexes: {
       by_id: ["_id"];
       by_creation_time: ["_creationTime"];
-      by_rule: ["ruleId", "_creationTime"];
+      by_severity: ["severity", "_creationTime"];
+      by_user: ["userId", "_creationTime"];
     };
     searchIndexes: {};
     vectorIndexes: {};
@@ -265,14 +235,22 @@ export type DataModel = {
   inbound_receipts: {
     document: {
       messageSid: string;
+      receivedAt?: number;
+      userId?: Id<"users">;
       _id: Id<"inbound_receipts">;
       _creationTime: number;
     };
-    fieldPaths: "_creationTime" | "_id" | "messageSid";
+    fieldPaths:
+      | "_creationTime"
+      | "_id"
+      | "messageSid"
+      | "receivedAt"
+      | "userId";
     indexes: {
       by_id: ["_id"];
       by_creation_time: ["_creationTime"];
-      by_sid: ["messageSid", "_creationTime"];
+      by_messageSid: ["messageSid", "_creationTime"];
+      by_user: ["userId", "_creationTime"];
     };
     searchIndexes: {};
     vectorIndexes: {};
@@ -324,7 +302,7 @@ export type DataModel = {
       content: string;
       description: string;
       duration: string;
-      evidenceLevel: string;
+      evidenceLevel: "high" | "moderate" | "low";
       tags: Array<string>;
       targetZones: Array<string>;
       title: string;
@@ -351,45 +329,14 @@ export type DataModel = {
     searchIndexes: {};
     vectorIndexes: {};
   };
-  llm_usage: {
-    document: {
-      agentName?: string;
-      billingPeriod: string;
-      model: string;
-      provider: string;
-      providerMetadata?: any;
-      threadId?: string;
-      traceId?: string;
-      usage: any;
-      userId?: Id<"users">;
-      _id: Id<"llm_usage">;
-      _creationTime: number;
-    };
-    fieldPaths:
-      | "_creationTime"
-      | "_id"
-      | "agentName"
-      | "billingPeriod"
-      | "model"
-      | "provider"
-      | "providerMetadata"
-      | "threadId"
-      | "traceId"
-      | "usage"
-      | "userId";
-    indexes: {
-      by_id: ["_id"];
-      by_creation_time: ["_creationTime"];
-      by_period: ["billingPeriod", "_creationTime"];
-      by_trace: ["traceId", "_creationTime"];
-      by_user_period: ["userId", "billingPeriod", "_creationTime"];
-    };
-    searchIndexes: {};
-    vectorIndexes: {};
-  };
   memories: {
     document: {
-      category: string;
+      category:
+        | "care_routine"
+        | "preference"
+        | "intervention_result"
+        | "crisis_trigger"
+        | "family_health";
       content: string;
       importance: number;
       userId: Id<"users">;
@@ -406,193 +353,7 @@ export type DataModel = {
     indexes: {
       by_id: ["_id"];
       by_creation_time: ["_creationTime"];
-      by_user_category: ["userId", "category", "_creationTime"];
-    };
-    searchIndexes: {};
-    vectorIndexes: {};
-  };
-  metrics_burnout_distribution: {
-    document: {
-      bucket: string;
-      count: number;
-      updatedAt: number;
-      _id: Id<"metrics_burnout_distribution">;
-      _creationTime: number;
-    };
-    fieldPaths: "_creationTime" | "_id" | "bucket" | "count" | "updatedAt";
-    indexes: {
-      by_id: ["_id"];
-      by_creation_time: ["_creationTime"];
-      by_bucket: ["bucket", "_creationTime"];
-    };
-    searchIndexes: {};
-    vectorIndexes: {};
-  };
-  metrics_daily: {
-    document: {
-      activeUsers: number;
-      avgBurnoutScore: number;
-      avgResponseLatencyMs: number;
-      crisisAlerts: number;
-      date: string;
-      inboundMessages?: number;
-      newUsers: number;
-      outboundMessages?: number;
-      p95ResponseLatencyMs: number;
-      totalMessages: number;
-      totalUsers: number;
-      _id: Id<"metrics_daily">;
-      _creationTime: number;
-    };
-    fieldPaths:
-      | "_creationTime"
-      | "_id"
-      | "activeUsers"
-      | "avgBurnoutScore"
-      | "avgResponseLatencyMs"
-      | "crisisAlerts"
-      | "date"
-      | "inboundMessages"
-      | "newUsers"
-      | "outboundMessages"
-      | "p95ResponseLatencyMs"
-      | "totalMessages"
-      | "totalUsers";
-    indexes: {
-      by_id: ["_id"];
-      by_creation_time: ["_creationTime"];
-      by_date: ["date", "_creationTime"];
-    };
-    searchIndexes: {};
-    vectorIndexes: {};
-  };
-  metrics_journey_funnel: {
-    document: {
-      active: number;
-      churned: number;
-      crisis: number;
-      maintenance: number;
-      onboarding: number;
-      updatedAt: number;
-      _id: Id<"metrics_journey_funnel">;
-      _creationTime: number;
-    };
-    fieldPaths:
-      | "_creationTime"
-      | "_id"
-      | "active"
-      | "churned"
-      | "crisis"
-      | "maintenance"
-      | "onboarding"
-      | "updatedAt";
-    indexes: {
-      by_id: ["_id"];
-      by_creation_time: ["_creationTime"];
-    };
-    searchIndexes: {};
-    vectorIndexes: {};
-  };
-  metrics_subscriptions: {
-    document: {
-      active: number;
-      canceled: number;
-      enterprise: number;
-      free: number;
-      pastDue: number;
-      plus: number;
-      total: number;
-      trialing: number;
-      updatedAt: number;
-      _id: Id<"metrics_subscriptions">;
-      _creationTime: number;
-    };
-    fieldPaths:
-      | "_creationTime"
-      | "_id"
-      | "active"
-      | "canceled"
-      | "enterprise"
-      | "free"
-      | "pastDue"
-      | "plus"
-      | "total"
-      | "trialing"
-      | "updatedAt";
-    indexes: {
-      by_id: ["_id"];
-      by_creation_time: ["_creationTime"];
-    };
-    searchIndexes: {};
-    vectorIndexes: {};
-  };
-  profiles: {
-    document: {
-      demographics?: {
-        age?: number;
-        education?: string;
-        ethnicity?: string;
-        gender?: string;
-      };
-      preferences?: {
-        notificationFrequency?: string;
-        preferredCheckInHour?: number;
-        preferredContactTime?: string;
-        timezone?: string;
-      };
-      userId: Id<"users">;
-      _id: Id<"profiles">;
-      _creationTime: number;
-    };
-    fieldPaths:
-      | "_creationTime"
-      | "_id"
-      | "demographics"
-      | "demographics.age"
-      | "demographics.education"
-      | "demographics.ethnicity"
-      | "demographics.gender"
-      | "preferences"
-      | "preferences.notificationFrequency"
-      | "preferences.preferredCheckInHour"
-      | "preferences.preferredContactTime"
-      | "preferences.timezone"
-      | "userId";
-    indexes: {
-      by_id: ["_id"];
-      by_creation_time: ["_creationTime"];
-      by_user: ["userId", "_creationTime"];
-    };
-    searchIndexes: {};
-    vectorIndexes: {};
-  };
-  promo_codes: {
-    document: {
-      active: boolean;
-      code: string;
-      discountType: "percent" | "amount";
-      discountValue: number;
-      expiresAt?: number;
-      maxUses?: number;
-      usedCount: number;
-      _id: Id<"promo_codes">;
-      _creationTime: number;
-    };
-    fieldPaths:
-      | "_creationTime"
-      | "_id"
-      | "active"
-      | "code"
-      | "discountType"
-      | "discountValue"
-      | "expiresAt"
-      | "maxUses"
-      | "usedCount";
-    indexes: {
-      by_id: ["_id"];
-      by_creation_time: ["_creationTime"];
-      by_active: ["active", "_creationTime"];
-      by_code: ["code", "_creationTime"];
+      by_user_and_importance: ["userId", "importance", "_creationTime"];
     };
     searchIndexes: {};
     vectorIndexes: {};
@@ -602,8 +363,8 @@ export type DataModel = {
       category: string;
       createdAt: number;
       expiresAt?: number;
+      placeIds?: Array<string>;
       results?: any;
-      userId?: Id<"users">;
       zip: string;
       _id: Id<"resource_cache">;
       _creationTime: number;
@@ -614,31 +375,42 @@ export type DataModel = {
       | "category"
       | "createdAt"
       | "expiresAt"
+      | "placeIds"
       | "results"
-      | "userId"
       | "zip";
     indexes: {
       by_id: ["_id"];
       by_creation_time: ["_creationTime"];
-      by_category_zip: ["category", "zip", "createdAt", "_creationTime"];
       by_expiresAt: ["expiresAt", "_creationTime"];
+      by_zip_cat: ["zip", "category", "_creationTime"];
     };
     searchIndexes: {};
     vectorIndexes: {};
   };
   scores: {
     document: {
+      answeredRatio: number;
       assessmentId: Id<"assessments">;
-      band: string;
-      composite: number;
+      band: "very_low" | "low" | "moderate" | "high";
       confidence: number;
+      gcBurnout: number;
+      instrument: "ema" | "cwbs" | "reach2" | "sdoh";
+      rawComposite: number;
+      reach2Domains?: {
+        burden?: number;
+        depression?: number;
+        problemBehaviors?: number;
+        safety?: number;
+        selfCare?: number;
+        socialSupport?: number;
+      };
       userId: Id<"users">;
       zones: {
-        emotional: number;
-        financial?: number;
-        physical: number;
-        social: number;
-        time: number;
+        zone_emotional?: number;
+        zone_financial?: number;
+        zone_physical?: number;
+        zone_social?: number;
+        zone_time?: number;
       };
       _id: Id<"scores">;
       _creationTime: number;
@@ -646,17 +418,44 @@ export type DataModel = {
     fieldPaths:
       | "_creationTime"
       | "_id"
+      | "answeredRatio"
       | "assessmentId"
       | "band"
-      | "composite"
       | "confidence"
+      | "gcBurnout"
+      | "instrument"
+      | "rawComposite"
+      | "reach2Domains"
+      | "reach2Domains.burden"
+      | "reach2Domains.depression"
+      | "reach2Domains.problemBehaviors"
+      | "reach2Domains.safety"
+      | "reach2Domains.selfCare"
+      | "reach2Domains.socialSupport"
       | "userId"
       | "zones"
-      | "zones.emotional"
-      | "zones.financial"
-      | "zones.physical"
-      | "zones.social"
-      | "zones.time";
+      | "zones.zone_emotional"
+      | "zones.zone_financial"
+      | "zones.zone_physical"
+      | "zones.zone_social"
+      | "zones.zone_time";
+    indexes: {
+      by_id: ["_id"];
+      by_creation_time: ["_creationTime"];
+      by_user_and_type: ["userId", "instrument", "_creationTime"];
+    };
+    searchIndexes: {};
+    vectorIndexes: {};
+  };
+  scores_composite: {
+    document: {
+      band: string;
+      gcBurnout: number;
+      userId: Id<"users">;
+      _id: Id<"scores_composite">;
+      _creationTime: number;
+    };
+    fieldPaths: "_creationTime" | "_id" | "band" | "gcBurnout" | "userId";
     indexes: {
       by_id: ["_id"];
       by_creation_time: ["_creationTime"];
@@ -670,8 +469,8 @@ export type DataModel = {
       canceledAt?: number;
       currentPeriodEnd: number;
       gracePeriodEndsAt?: number;
-      planId: string;
-      status: string;
+      planId: "free" | "plus" | "enterprise";
+      status: "active" | "canceled" | "past_due";
       stripeCustomerId: string;
       userId: Id<"users">;
       _id: Id<"subscriptions">;
@@ -692,39 +491,7 @@ export type DataModel = {
       by_creation_time: ["_creationTime"];
       by_customer: ["stripeCustomerId", "_creationTime"];
       by_user: ["userId", "_creationTime"];
-    };
-    searchIndexes: {};
-    vectorIndexes: {};
-  };
-  tool_calls: {
-    document: {
-      agent: string;
-      args?: any;
-      cost: number;
-      durationMs: number;
-      name: string;
-      success: boolean;
-      traceId: string;
-      userId: Id<"users">;
-      _id: Id<"tool_calls">;
-      _creationTime: number;
-    };
-    fieldPaths:
-      | "_creationTime"
-      | "_id"
-      | "agent"
-      | "args"
-      | "cost"
-      | "durationMs"
-      | "name"
-      | "success"
-      | "traceId"
-      | "userId";
-    indexes: {
-      by_id: ["_id"];
-      by_creation_time: ["_creationTime"];
-      by_trace: ["traceId", "_creationTime"];
-      by_user: ["userId", "_creationTime"];
+      by_user_status: ["userId", "status", "_creationTime"];
     };
     searchIndexes: {};
     vectorIndexes: {};
@@ -762,45 +529,12 @@ export type DataModel = {
     searchIndexes: {};
     vectorIndexes: {};
   };
-  usage_invoices: {
-    document: {
-      billingPeriod: string;
-      breakdown: { byAgent?: any; byModel?: any };
-      status: "pending" | "paid" | "failed" | "waived";
-      stripeInvoiceId?: string;
-      totalCost: number;
-      totalTokens: number;
-      userId: Id<"users">;
-      _id: Id<"usage_invoices">;
-      _creationTime: number;
-    };
-    fieldPaths:
-      | "_creationTime"
-      | "_id"
-      | "billingPeriod"
-      | "breakdown"
-      | "breakdown.byAgent"
-      | "breakdown.byModel"
-      | "status"
-      | "stripeInvoiceId"
-      | "totalCost"
-      | "totalTokens"
-      | "userId";
-    indexes: {
-      by_id: ["_id"];
-      by_creation_time: ["_creationTime"];
-      by_user_period: ["userId", "billingPeriod", "_creationTime"];
-    };
-    searchIndexes: {};
-    vectorIndexes: {};
-  };
   users: {
     document: {
       address?: {
         city?: string;
         country?: string;
         line1?: string;
-        line2?: string;
         postalCode?: string;
         state?: string;
       };
@@ -815,58 +549,29 @@ export type DataModel = {
       externalId: string;
       lastEngagementDate?: number;
       locale: string;
-      metadata?:
-        | {
-            contextUpdatedAt?: number;
-            convex?: { threadId?: string; userId?: Id<"users"> };
-            email?: string;
-            enrichedContext?: string;
-            fullName?: string;
-            journeyPhase?: string;
-            pressureZones?: Array<string>;
-            profile?: {
-              careRecipientName?: string;
-              clinicalCoordination?: "good" | "poor";
-              communityAccess?: "good" | "poor";
-              financialStatus?: "struggling" | "stable" | "comfortable";
-              firstName?: string;
-              housingStability?: "stable" | "at_risk";
-              preferredCheckInHour?: number;
-              relationship?: string;
-              transportationReliability?: "reliable" | "unreliable";
-              zipCode?: string;
-            };
-            stripeCustomerId?: string;
-            timezone?: string;
-            totalInteractionCount?: number;
-            wellnessScore?: number;
-          }
-        | {
-            contextUpdatedAt?: number;
-            convex?: { threadId?: string; userId?: Id<"users"> };
-            email?: string;
-            enrichedContext?: string;
-            fullName?: string;
-            journeyPhase?: string;
-            pressureZones?: Array<string>;
-            profile?: {
-              careRecipientName?: string;
-              clinicalCoordination?: "good" | "poor";
-              communityAccess?: "good" | "poor";
-              financialStatus?: "struggling" | "stable" | "comfortable";
-              firstName?: string;
-              housingStability?: "stable" | "at_risk";
-              preferredCheckInHour?: number;
-              relationship?: string;
-              transportationReliability?: "reliable" | "unreliable";
-              zipCode?: string;
-            };
-            stripeCustomerId?: string;
-            threadId?: string;
-            timezone?: string;
-            totalInteractionCount?: number;
-            wellnessScore?: number;
-          };
+      metadata?: {
+        careRecipient?: string;
+        checkInFrequency?: "daily" | "weekly";
+        checkInTime?: string;
+        contextUpdatedAt?: number;
+        convex?: any;
+        enrichedContext?: string;
+        firstAssessmentCompletedAt?: number;
+        firstBand?: string;
+        firstResourceSearchedAt?: number;
+        firstScore?: number;
+        gcBurnout?: number;
+        onboardingCompletedAt?: number;
+        onboardingMilestones?: Array<{
+          completedAt: number;
+          milestone: string;
+        }>;
+        onboardingStage?: string;
+        primaryStressor?: string;
+        threadId?: string;
+        timezone?: string;
+        zipCode?: string;
+      };
       name?: string;
       phone?: string;
       _id: Id<"users">;
@@ -879,7 +584,6 @@ export type DataModel = {
       | "address.city"
       | "address.country"
       | "address.line1"
-      | "address.line2"
       | "address.postalCode"
       | "address.state"
       | "channel"
@@ -895,31 +599,24 @@ export type DataModel = {
       | "lastEngagementDate"
       | "locale"
       | "metadata"
+      | "metadata.careRecipient"
+      | "metadata.checkInFrequency"
+      | "metadata.checkInTime"
       | "metadata.contextUpdatedAt"
       | "metadata.convex"
-      | "metadata.convex.threadId"
-      | "metadata.convex.userId"
-      | "metadata.email"
       | "metadata.enrichedContext"
-      | "metadata.fullName"
-      | "metadata.journeyPhase"
-      | "metadata.pressureZones"
-      | "metadata.profile"
-      | "metadata.profile.careRecipientName"
-      | "metadata.profile.clinicalCoordination"
-      | "metadata.profile.communityAccess"
-      | "metadata.profile.financialStatus"
-      | "metadata.profile.firstName"
-      | "metadata.profile.housingStability"
-      | "metadata.profile.preferredCheckInHour"
-      | "metadata.profile.relationship"
-      | "metadata.profile.transportationReliability"
-      | "metadata.profile.zipCode"
-      | "metadata.stripeCustomerId"
+      | "metadata.firstAssessmentCompletedAt"
+      | "metadata.firstBand"
+      | "metadata.firstResourceSearchedAt"
+      | "metadata.firstScore"
+      | "metadata.gcBurnout"
+      | "metadata.onboardingCompletedAt"
+      | "metadata.onboardingMilestones"
+      | "metadata.onboardingStage"
+      | "metadata.primaryStressor"
       | "metadata.threadId"
       | "metadata.timezone"
-      | "metadata.totalInteractionCount"
-      | "metadata.wellnessScore"
+      | "metadata.zipCode"
       | "name"
       | "phone";
     indexes: {
@@ -927,23 +624,6 @@ export type DataModel = {
       by_creation_time: ["_creationTime"];
       by_externalId: ["externalId", "_creationTime"];
       by_phone: ["phone", "_creationTime"];
-    };
-    searchIndexes: {};
-    vectorIndexes: {};
-  };
-  watcher_state: {
-    document: {
-      cursor?: Id<"users">;
-      lastRun: number;
-      watcherName: string;
-      _id: Id<"watcher_state">;
-      _creationTime: number;
-    };
-    fieldPaths: "_creationTime" | "_id" | "cursor" | "lastRun" | "watcherName";
-    indexes: {
-      by_id: ["_id"];
-      by_creation_time: ["_creationTime"];
-      by_watcher: ["watcherName", "_creationTime"];
     };
     searchIndexes: {};
     vectorIndexes: {};

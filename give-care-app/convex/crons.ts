@@ -1,50 +1,14 @@
+/**
+ * Scheduled Jobs
+ * Check-ins, cleanup, engagement monitoring
+ */
+
 import { cronJobs } from "convex/server";
-import { internal } from "./_generated/api";
+// import { internal } from "./_generated/api";
 
 const crons = cronJobs();
 
-// ============================================================================
-// RESOURCE CACHE CLEANUP
-// ============================================================================
-
-// Clean up expired resource cache entries every 6 hours
-crons.interval(
-  "resources.cleanupCache",
-  { hours: 6 },
-  internal.resources.cleanupResourceCache
-);
-
-// ============================================================================
-// CHECK-INS DISPATCH
-// ============================================================================
-
-// Dispatch due check-ins every 15 minutes
-crons.interval(
-  "checkIns.dispatchDue",
-  { minutes: 15 },
-  internal.workflows.dispatchDue
-);
-
-// ============================================================================
-// TREND DETECTION
-// ============================================================================
-
-// Detect score trends every 6 hours
-crons.interval(
-  "scores.detectTrends",
-  { hours: 6 },
-  internal.workflows.detectScoreTrends
-);
-
-// ============================================================================
-// ENGAGEMENT MONITORING
-// ============================================================================
-
-// Monitor engagement every 24 hours
-crons.interval(
-  "users.monitorEngagement",
-  { hours: 24 },
-  internal.workflows.monitorEngagement
-);
+// Crons disabled - handler functions need implementation
+// TODO: Implement runCheckIns and runEngagementMonitoring in internal/workflows.ts
 
 export default crons;

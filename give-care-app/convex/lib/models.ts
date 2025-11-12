@@ -1,26 +1,15 @@
-import { google } from '@ai-sdk/google';
-import { openai } from '@ai-sdk/openai';
-
 /**
- * Centralized model configuration for all agents and workflows.
- *
- * Using gemini-2.5-flash-lite across all agents for:
- * - Fast response times (~1-2s)
- * - Cost efficiency
- * - Consistent behavior across agent types
- *
- * Text embeddings use OpenAI text-embedding-3-small for:
- * - Proven semantic search quality
- * - Compatibility with existing vector indexes
+ * LLM Model Configuration
  */
 
-export const LANGUAGE_MODELS = {
-  main: google('gemini-2.5-flash-lite'),
-  crisis: google('gemini-2.5-flash-lite'),
-  assessment: google('gemini-2.5-flash-lite'),
-  memory: google('gemini-2.5-flash-lite'),
-} as const;
+import { openai } from "@ai-sdk/openai";
 
-export const EMBEDDING_MODELS = {
-  default: openai.embedding('text-embedding-3-small'),
-} as const;
+// Main Agent: Cost-effective for high volume (95% of traffic)
+export const MAIN_MODEL = openai.chat("gpt-4o-mini");
+
+// Assessment Agent: Same model for consistency
+export const ASSESSMENT_MODEL = openai.chat("gpt-4o-mini");
+
+// Embedding model for vector search (Agent Component uses this)
+export const EMBEDDING_MODEL = openai.embedding("text-embedding-3-small");
+

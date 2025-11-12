@@ -1,99 +1,46 @@
-import { query } from './_generated/server';
-import { v } from 'convex/values';
-import type { Doc } from './_generated/dataModel';
-import { CATALOG, type AssessmentSlug } from './lib/assessmentCatalog';
-import { getByExternalId, assessmentAnswersToArray } from './lib/utils';
+/**
+ * Wellness Status Queries
+ */
 
-type StatusTrend = 'up' | 'down' | 'steady' | 'unknown';
+import { query } from "./_generated/server";
+import { v } from "convex/values";
+import { getCompositeScore } from "./lib/services/wellnessService";
 
-const computePressureZones = (
-  definitionId: string,
-  answers: Doc<'assessments'>['answers']
-): string[] => {
-  const catalog = CATALOG[definitionId as AssessmentSlug];
-  if (!catalog) return [];
-  try {
-    return catalog.score(assessmentAnswersToArray(answers)).pressureZones;
-  } catch (error) {
-    console.warn('[wellness] Failed to compute pressure zones', {
-      definitionId,
-      error,
-    });
-    return [];
-  }
-};
-
-const trendFromHistory = (history: Array<{ score: number }>): StatusTrend => {
-  if (history.length === 0) return 'unknown';
-  if (history.length === 1) return 'steady';
-
-  const [latest, previous] = history;
-  if (latest.score > previous.score) return 'up';
-  if (latest.score < previous.score) return 'down';
-  return 'steady';
-};
-
-export const getStatus = query({
+/**
+ * Get wellness status (public query)
+ * Returns composite burnout score
+ */
+export const getWellnessStatus = query({
   args: {
-    userId: v.string(),
-    recentLimit: v.optional(v.number()),
+    userId: v.id("users"),
   },
-  handler: async (ctx, { userId, recentLimit = 5 }) => {
-    const user = await getByExternalId(ctx, userId);
-    if (!user) {
+  handler: async (ctx, { userId }) => {
+    // Get composite score (uses denormalized value from metadata)
+    const composite = await getCompositeScore(ctx, userId);
+
+    if (!composite) {
       return {
-        hasData: false,
-        pressureZones: [],
-        latestScore: null,
-        latestBand: null,
-        averageScore: null,
-        trend: 'unknown' as StatusTrend,
-        dataPoints: [],
+        score: 0,
+        band: "unknown",
+        zones: {},
+        lastAssessment: "never",
       };
     }
 
-    const scoreDocs = await ctx.db
-      .query('scores')
-      .withIndex('by_user', (q) => q.eq('userId', user._id))
-      .order('desc')
-      .take(recentLimit);
-
-    // Fix N+1: Batch fetch all assessments in parallel
-    const assessments = await Promise.all(
-      scoreDocs.map((score) => ctx.db.get(score.assessmentId))
-    );
-
-    const history = [];
-    for (let i = 0; i < scoreDocs.length; i++) {
-      const score = scoreDocs[i];
-      const assessment = assessments[i];
-      if (!assessment) continue;
-      history.push({
-        assessmentId: score.assessmentId,
-        definitionId: assessment.definitionId,
-        score: score.composite,
-        band: score.band,
-        pressureZones: computePressureZones(assessment.definitionId, assessment.answers),
-        updatedAt: assessment._creationTime,
-      });
-    }
-
-    const latest = history[0];
-    const averageScore =
-      history.length === 0
-        ? null
-        : Number(
-            (history.reduce((sum, entry) => sum + entry.score, 0) / history.length).toFixed(2)
-          );
+    // Get latest individual score for zones
+    const latestScore = await ctx.db
+      .query("scores")
+      .withIndex("by_user_and_type_time", (q) => q.eq("userId", userId))
+      .order("desc")
+      .first();
 
     return {
-      hasData: history.length > 0,
-      pressureZones: latest?.pressureZones ?? [],
-      latestScore: latest?.score ?? null,
-      latestBand: latest?.band ?? null,
-      averageScore,
-      trend: trendFromHistory(history),
-      dataPoints: history,
+      score: composite.gcBurnout,
+      band: composite.band,
+      zones: latestScore?.zones || {},
+      lastAssessment: latestScore
+        ? new Date(latestScore._creationTime).toISOString()
+        : "never",
     };
   },
 });

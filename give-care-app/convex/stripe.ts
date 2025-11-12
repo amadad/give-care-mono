@@ -1,162 +1,95 @@
-"use node";
-
 /**
- * Stripe integration - checkout session creation
- *
- * Uses Stripe SDK to create checkout sessions for subscriptions.
- * Links users via client_reference_id (phoneNumber) for webhook processing.
+ * Stripe Integration
+ * - createCheckoutSession: Creates Stripe checkout session (action)
+ * - processWebhook: Moved to internal/stripe.ts (internal action)
  */
 
-import { action } from './_generated/server';
-import { internal } from './_generated/api';
-import { v } from 'convex/values';
-import Stripe from 'stripe';
+"use node";
 
+import { action } from "./_generated/server";
+import { v } from "convex/values";
+import { internal } from "./_generated/api";
+
+/**
+ * Create Stripe checkout session
+ * Returns checkout URL for redirect
+ */
 export const createCheckoutSession = action({
   args: {
-    fullName: v.string(),
-    email: v.string(),
-    phoneNumber: v.string(),
-    priceId: v.string(),
-    promoCode: v.optional(v.string()),
+    userId: v.id("users"),
+    planId: v.union(v.literal("free"), v.literal("plus"), v.literal("enterprise")),
+    successUrl: v.string(),
+    cancelUrl: v.string(),
   },
-  handler: async (ctx, args) => {
+  handler: async (ctx, { userId, planId, successUrl, cancelUrl }) => {
+    // Get Stripe secret key from environment
     const stripeSecretKey = process.env.STRIPE_SECRET_KEY;
     if (!stripeSecretKey) {
-      throw new Error('STRIPE_SECRET_KEY not configured');
+      throw new Error("STRIPE_SECRET_KEY not configured");
     }
 
-    const frontendUrl = process.env.FRONTEND_URL || process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000';
+    // Get user to find/create Stripe customer
+    const user = await ctx.runQuery(internal.users.getUser, { userId });
+    if (!user) {
+      throw new Error("User not found");
+    }
 
+    // Import Stripe SDK (Node.js runtime)
+    const Stripe = (await import("stripe")).default;
     const stripe = new Stripe(stripeSecretKey, {
-      apiVersion: '2025-10-29.clover' as any,
+      apiVersion: "2024-12-18.acacia",
     });
 
-    try {
-      // Ensure user exists in Convex before creating checkout session
-      // phoneNumber is used as externalId
-      const user = await ctx.runMutation(internal.internal.ensureUserMutation, {
-        externalId: args.phoneNumber,
-        phone: args.phoneNumber,
-        channel: 'sms' as const,
-        locale: 'en-US',
-      });
+    // Find or create Stripe customer
+    let customerId: string;
+    const existingSubscription = await ctx.runQuery(
+      internal.subscriptions.getByUserId,
+      { userId }
+    );
 
-      // Update user metadata with email and name
-      if (user) {
-        await ctx.runMutation(internal.internal.updateUserMetadata, {
-          userId: user._id,
-          metadata: {
-            email: args.email,
-            fullName: args.fullName,
-          },
-        });
-      }
-
-      // Create or retrieve Stripe customer by email
-      const customers = await stripe.customers.list({
-        email: args.email,
-        limit: 1,
-      });
-
-      let customerId: string;
-      if (customers.data.length > 0) {
-        customerId = customers.data[0].id;
-      } else {
-        const customer = await stripe.customers.create({
-          email: args.email,
-          name: args.fullName,
-          metadata: {
-            phoneNumber: args.phoneNumber,
-            fullName: args.fullName,
-          },
-        });
-        customerId = customer.id;
-      }
-
-      // Validate and apply promo code if provided
-      let discounts: Array<{ coupon: string }> | undefined;
-      let promoCodeId: string | undefined;
-      
-      if (args.promoCode) {
-        // Validate promo code
-        const promoCode = await ctx.runQuery(internal.internal.getPromoCode, {
-          code: args.promoCode,
-        });
-
-        if (!promoCode || !promoCode.active) {
-          throw new Error(`Promo code ${args.promoCode} is not valid or inactive`);
-        }
-
-        // Check expiration
-        if (promoCode.expiresAt && promoCode.expiresAt < Date.now()) {
-          throw new Error(`Promo code ${args.promoCode} has expired`);
-        }
-
-        // Check usage limits
-        if (promoCode.maxUses && promoCode.usedCount >= promoCode.maxUses) {
-          throw new Error(`Promo code ${args.promoCode} has reached its usage limit`);
-        }
-
-        // Create Stripe coupon from promo code
-        const coupon = await stripe.coupons.create({
-          percent_off: promoCode.discountType === 'percent' ? promoCode.discountValue : undefined,
-          amount_off: promoCode.discountType === 'amount' ? promoCode.discountValue : undefined,
-          currency: 'usd',
-          duration: 'once', // One-time discount
-          name: promoCode.code,
-        });
-
-        discounts = [{ coupon: coupon.id }];
-        promoCodeId = promoCode._id;
-      }
-
-      // Create checkout session with client_reference_id for webhook linking
-      const sessionParams: Stripe.Checkout.SessionCreateParams = {
-        mode: 'subscription',
-        customer: customerId,
-        client_reference_id: args.phoneNumber, // Key for webhook user linking
-        line_items: [
-          {
-            price: args.priceId,
-            quantity: 1,
-          },
-        ],
-        subscription_data: {
-          metadata: {
-            phoneNumber: args.phoneNumber,
-            fullName: args.fullName,
-            ...(promoCodeId ? { promoCodeId } : {}),
-          },
-        },
-        success_url: `${frontendUrl}/welcome?session_id={CHECKOUT_SESSION_ID}`,
-        cancel_url: `${frontendUrl}/signup?canceled=true`,
-        allow_promotion_codes: true, // Enables promo codes (including trial promo codes)
-        billing_address_collection: 'required',
+    if (existingSubscription?.stripeCustomerId) {
+      customerId = existingSubscription.stripeCustomerId;
+    } else {
+      // Create new Stripe customer
+      const customer = await stripe.customers.create({
+        email: user.email,
+        name: user.name,
         metadata: {
-          phoneNumber: args.phoneNumber,
-          fullName: args.fullName,
-          ...(args.promoCode ? { promoCode: args.promoCode } : {}),
+          userId: userId,
+          planId: planId,
         },
-      };
-
-      if (discounts) {
-        sessionParams.discounts = discounts;
-      }
-
-      const session = await stripe.checkout.sessions.create(sessionParams);
-
-      if (!session.url) {
-        throw new Error('Failed to create checkout session URL');
-      }
-
-      return session.url;
-    } catch (error) {
-      console.error('[stripe] Checkout session creation error:', error);
-      if (error instanceof Error) {
-        throw new Error(`Stripe error: ${error.message}`);
-      }
-      throw new Error('Failed to create checkout session');
+      });
+      customerId = customer.id;
     }
+
+    // Create checkout session
+    const session = await stripe.checkout.sessions.create({
+      customer: customerId,
+      mode: "subscription",
+      line_items: [
+        {
+          price_data: {
+            currency: "usd",
+            product_data: {
+              name: `GiveCare ${planId.charAt(0).toUpperCase() + planId.slice(1)} Plan`,
+            },
+            recurring: {
+              interval: "month",
+            },
+            unit_amount: planId === "free" ? 0 : planId === "plus" ? 2900 : 9900, // $0, $29, $99
+          },
+          quantity: 1,
+        },
+      ],
+      success_url: successUrl,
+      cancel_url: cancelUrl,
+      metadata: {
+        userId: userId,
+        planId: planId,
+      },
+    });
+
+    return { url: session.url };
   },
 });
+

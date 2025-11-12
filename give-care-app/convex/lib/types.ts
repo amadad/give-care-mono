@@ -1,86 +1,46 @@
 /**
- * Shared Type Definitions
- *
- * Application-wide interfaces and types
+ * TypeScript types for GiveCare
  */
 
-// Agent Context Types
-export interface AgentContext {
-  userId: string;
-  sessionId?: string;
-  locale: string;
-  consent: {
-    emergency: boolean;
-    marketing: boolean;
-  };
-  crisisFlags?: {
-    active: boolean;
-    terms: string[];
-  };
-  metadata?: AgentMetadata;
+import type { Id } from "../_generated/dataModel";
+
+export type AssessmentType = "ema" | "cwbs" | "reach2" | "sdoh";
+
+export type BurnoutBand = "very_low" | "low" | "moderate" | "high";
+
+export type ZoneName =
+  | "zone_emotional"
+  | "zone_physical"
+  | "zone_social"
+  | "zone_time"
+  | "zone_financial";
+
+export type OnboardingStage =
+  | "new"
+  | "care_recipient"
+  | "primary_stressor"
+  | "assessment_offer"
+  | "assessment_in_progress"
+  | "first_assessment_complete"
+  | "resource_discovery_offered"
+  | "complete";
+
+export interface OnboardingMilestone {
+  milestone: string;
+  completedAt: number;
 }
 
-export interface AgentMetadata {
-  profile?: UserProfile;
-  journeyPhase?: string;
-  totalInteractionCount?: number;
-  enrichedContext?: string;
-  contextUpdatedAt?: number;
-  [key: string]: unknown;
-}
-
-// Profile Types
-export interface UserProfile {
-  firstName?: string;
-  relationship?: string;
-  careRecipientName?: string;
-  zipCode?: string; // ZIP code for finding local resources (contextually collected)
-  [key: string]: unknown;
-}
-
-// Maps Grounding Types
-export interface MapsGroundingChunk {
-  maps?: MapsData;
-  [key: string]: unknown;
-}
-
-export interface MapsData {
-  title?: string;
-  formattedAddress?: string;
-  regularOpeningHours?: {
-    weekdayDescriptions?: string[];
-  };
-  rating?: number;
-  nationalPhoneNumber?: string;
-  id?: string;
-  googleMapsUri?: string;
-  [key: string]: unknown;
-}
-
-export interface MapsGroundingMetadata {
-  groundingChunks?: MapsGroundingChunk[];
-  [key: string]: unknown;
+export interface CrisisDetectionResult {
+  isCrisis: boolean;
+  severity?: "high" | "medium" | "low";
+  isFalsePositive: boolean;
+  isDVHint: boolean;
 }
 
 export interface ResourceResult {
+  placeId: string;
   name: string;
-  address: string;
-  hours?: string;
-  rating?: number;
-  phone?: string;
-  category: string;
-  placeId?: string;
-  uri?: string;
+  address?: string;
+  types?: string[];
 }
 
-// Tool Context Types
-// Agent Component tools receive a context with metadata at runtime
-// This type extends the base context with the runtime metadata property
-export interface AgentToolContext {
-  userId: string;
-  metadata?: {
-    context?: {
-      metadata?: AgentMetadata;
-    };
-  };
-}

@@ -1,287 +1,259 @@
-"use node";
-
 /**
  * Inbound SMS Processing
- *
- * Processes incoming SMS messages and generates agent responses
+ * Entry point for all incoming SMS messages
+ * Called by Twilio Component via incomingMessageCallback
  */
 
-import { internalAction } from './_generated/server';
-import { v } from 'convex/values';
-import { internal, components, api } from './_generated/api';
-import { twilio } from './lib/twilio';
-import { detectCrisis, extractProfileInfo, getNextMissingField } from './lib/utils';
-import { RateLimitError, UserNotFoundError } from './lib/utils';
-import type { UserProfile } from './lib/types';
+import { internalMutation } from "./_generated/server";
+import { messageValidator } from "@convex-dev/twilio";
+import { internal } from "./_generated/api";
+import { detectCrisis, isStopRequest, isHelpRequest } from "./lib/utils";
+import { getCrisisResponse } from "./lib/utils";
+import { checkSubscriptionAccess } from "./lib/services/subscriptionService";
 
-// ============================================================================
-// PROCESS INBOUND MESSAGE
-// ============================================================================
-
-export const processInbound = internalAction({
+/**
+ * Handle incoming message from Twilio Component
+ * Component automatically saves message and verifies signature
+ */
+export const handleIncomingMessage = internalMutation({
   args: {
-    phone: v.string(),
-    text: v.string(),
-    messageSid: v.string(),
+    message: messageValidator,
   },
-  handler: async (ctx, args) => {
-    // OPTIMIZATION: Batch all context queries into a single query
-    // This replaces 5 sequential queries with 1, saving ~200-400ms
-    const context = await ctx.runQuery(internal.inboundHelpers.getInboundContext, {
-      messageSid: args.messageSid,
-      phone: args.phone,
+  handler: async (ctx, { message }) => {
+    // Component automatically saves message to its sandboxed table
+    // We process it here for routing and agent execution
+
+    const messageSid = message.sid;
+    const from = message.from;
+    const body = message.body;
+
+    // Step 1: Idempotency check (using our own receipts table)
+    const existingReceipt = await ctx.db
+      .query("inbound_receipts")
+      .withIndex("by_messageSid", (q) => q.eq("messageSid", messageSid))
+      .first();
+
+    if (existingReceipt) {
+      // Duplicate - already processed
+      return { status: "duplicate" };
+    }
+
+    // Step 2: User resolution (can be optimized with caching)
+    const user = await getUserOrCreate(ctx, from);
+
+    // Step 3: Create receipt record (idempotency) - done in parallel with crisis check
+    // For crisis path, we'll create receipt after crisis handling to minimize latency
+    // For non-crisis path, create receipt before processing
+
+    // Step 4: Rate limiting (10 SMS/day)
+    // Note: Rate limiter component check would go here
+    // For now, allowing all messages (can be enhanced later)
+
+    // Step 5: Handle HELP/STOP keywords (before crisis detection)
+    if (isStopRequest(body)) {
+      await handleStop(ctx, user._id);
+      return { status: "stopped" };
+    }
+
+    if (isHelpRequest(body)) {
+      await handleHelp(ctx, user._id);
+      return { status: "help" };
+    }
+
+    // Step 6: Crisis detection (deterministic, no LLM)
+    // Fast-path: Check crisis BEFORE creating receipt to minimize latency
+    const crisisResult = detectCrisis(body);
+    if (crisisResult.isCrisis) {
+      // Crisis always available - bypass subscription check
+      // Create receipt in parallel with crisis handling
+      await Promise.all([
+        ctx.db.insert("inbound_receipts", {
+          messageSid,
+          userId: user._id,
+          receivedAt: Date.now(),
+        }),
+        handleCrisis(ctx, user._id, crisisResult),
+      ]);
+      return { status: "crisis" };
+    }
+
+    // Step 3 (non-crisis): Create receipt record (idempotency)
+    await ctx.db.insert("inbound_receipts", {
+      messageSid,
+      userId: user._id,
+      receivedAt: Date.now(),
     });
 
-    // Idempotency check
-    if (context.seen) {
-      return { success: true, deduped: true };
-    }
-
-    // Mark as seen (non-blocking, fire-and-forget)
-    ctx.runMutation(internal.internal._markMessage, { sid: args.messageSid })
-      .catch((err) => console.error('[inbound] Failed to mark message:', err));
-
-    // Rate limiting check - use ConvexError
-    if (!context.rateLimitOk) {
-      throw new RateLimitError(context.rateLimitRetryAfter ?? 60000);
-    }
-
-    // Ensure user exists (mutation must be separate from query)
-    let user = context.user;
-    if (!user || context.needsUserCreation) {
-      user = await ctx.runMutation(internal.internal.ensureUserMutation, {
-        externalId: args.phone,
-        channel: 'sms' as const,
-        phone: args.phone,
-      });
-      
-      if (!user) {
-        throw new UserNotFoundError(args.phone);
-      }
-    }
-
-    // Fast-path: Check for active assessment session and numeric/skip replies
-    const maybeNumeric = /^\s*([1-5])\s*$/.test(args.text) || /^skip$/i.test(args.text);
-
-    if (context.activeSession && maybeNumeric) {
-      // Fast-path: Process assessment answer directly
-      const result = await ctx.runAction(internal.assessments.handleInboundAnswer, {
-        userId: user.externalId,
-        definition: context.activeSession.definitionId as any,
-        text: args.text,
-      });
-
-      if (result?.text) {
-        await ctx.runAction(internal.inbound.sendSmsResponse, {
-          to: args.phone,
-          text: result.text,
-          userId: user.externalId,
-        });
-        return { success: true, response: result, fastPath: true };
-      }
-    }
-
-    // Fast-path: Extract profile info from natural language before agent call
-    // This handles common patterns like "My name is Sarah" or "I'm caring for my mom"
-    const metadata = (user.metadata as Record<string, unknown>) ?? {};
-    const currentProfile = (metadata.profile as UserProfile | undefined);
-    const extractedProfile = extractProfileInfo(args.text, currentProfile);
-    
-    if (extractedProfile) {
-      // Check if this matches a missing field we're looking for
-      const needsLocalResources = args.text.match(/(respite|support group|local resource|near me|in my area|find.*near|help.*near)/i);
-      const nextField = getNextMissingField(currentProfile, { needsLocalResources: !!needsLocalResources });
-      
-      // Only auto-extract if it matches what we're looking for
-      if (nextField && extractedProfile[nextField.field as keyof UserProfile]) {
-        // Update profile directly via mutation (non-blocking)
-        const updatedProfile = {
-          ...currentProfile,
-          ...extractedProfile,
-        };
-        
-        ctx.runMutation(internal.internal.updateUserMetadata, {
-          userId: user._id,
-          metadata: { ...metadata, profile: updatedProfile },
-        }).catch((err) => console.error('[inbound] Failed to update profile:', err));
-        
-        // Continue to agent - it will see the updated profile and acknowledge
-        // This allows the agent to confirm and continue naturally
-      }
-    }
-
-    // Check subscription status (gate SMS access for non-subscribers)
-    // Users in grace period (3 days after cancellation) can still use the service
-    const subscription = await ctx.runQuery(internal.inboundHelpers.getUserSubscriptionStatus, {
-      userId: user._id,
-    });
-
-    if (!subscription.isActive) {
-      // User not subscribed or grace period expired - send redirect message
-      const frontendUrl = process.env.FRONTEND_URL || process.env.NEXT_PUBLIC_SITE_URL || 'https://givecare.com';
-      const signupUrl = `${frontendUrl}/signup`;
-      const message = subscription.inGracePeriod
-        ? `Your GiveCare subscription was recently canceled. You have ${subscription.gracePeriodDaysRemaining} days remaining to resubscribe at ${signupUrl}`
-        : `Thanks for reaching out! To continue using GiveCare, please subscribe at ${signupUrl}`;
-
-      await ctx.runAction(internal.inbound.sendSmsResponse, {
-        to: args.phone,
-        userId: user.externalId,
-        text: message,
-      });
-
-      return { success: true, gated: true, reason: subscription.inGracePeriod ? 'grace_period' : 'no_subscription' };
-    }
-
-    // Detect crisis keywords
-    const crisisDetection = detectCrisis(args.text);
-    
-    // Build context with cached threadId if available (metadata already declared above)
-    const convexMetadata = metadata.convex as Record<string, unknown> | undefined;
-    const cachedThreadId = convexMetadata?.threadId as string | undefined;
-    
-    const agentContext = {
-      userId: user.externalId,
-      locale: user.locale,
-      consent: user.consent ?? { emergency: false, marketing: false },
-      crisisFlags: crisisDetection.hit
-        ? {
-            active: true,
-            terms: crisisDetection.keyword ? [crisisDetection.keyword] : [],
-          }
-        : undefined,
-      metadata: {
-        ...metadata,
-        convex: {
-          userId: user._id,
-          ...(cachedThreadId ? { threadId: cachedThreadId } : {}),
-        },
-      },
-    };
-
-    // Route to appropriate agent
-    const traceId = `inbound-${Date.now()}-${Math.random().toString(36).substring(7)}`;
-    let routingDecision: 'main' | 'crisis' | 'assessment';
-    let reasoning: string | undefined;
-    let alternatives: string[] | undefined;
-
-    let response;
-    if (crisisDetection.hit) {
-      // Crisis agent
-      routingDecision = 'crisis';
-      reasoning = `Crisis keywords detected: ${crisisDetection.keyword || 'general crisis indicators'}`;
-      alternatives = ['main'];
-      const confidence = crisisDetection.severity === 'high' ? 0.95 : 0.75;
-
-      // Log routing decision
-      ctx.runMutation(internal.internal.logAgentDecision, {
+    // Step 7: Check subscription access (crisis bypasses this)
+    const access = await checkSubscriptionAccess(ctx, user._id);
+    if (!access.hasAccess) {
+      // No access - send resubscribe message
+      await ctx.scheduler.runAfter(0, internal.twilio.sendResubscribeMessage, {
         userId: user._id,
-        inputText: args.text,
-        routingDecision,
-        reasoning,
-        confidence,
-        alternatives,
-        traceId,
-      }).catch((err) => console.error('[inbound] Failed to log agent decision:', err));
-
-      response = await ctx.runAction(internal.agents.runCrisisAgent, {
-        input: {
-          channel: 'sms' as const,
-          text: args.text,
-          userId: user.externalId,
-        },
-        context: agentContext,
+        gracePeriodEndsAt: access.gracePeriodEndsAt,
       });
-    } else {
-      // Main agent
-      routingDecision = 'main';
-      reasoning = context.activeSession
-        ? 'Active assessment session exists but non-numeric input - routing to main agent'
-        : 'Standard routing to main agent';
-      alternatives = context.activeSession ? ['assessment'] : undefined;
-      const confidence = 0.55;
-
-      // Log routing decision
-      ctx.runMutation(internal.internal.logAgentDecision, {
-        userId: user._id,
-        inputText: args.text,
-        routingDecision,
-        reasoning,
-        confidence,
-        alternatives,
-        traceId,
-      }).catch((err) => console.error('[inbound] Failed to log agent decision:', err));
-
-      // OPTIMIZATION: Pass cached threadId to avoid lookup (saves 228ms)
-      // Use internal version for better security and context validation
-      response = await ctx.runAction(internal.agents.runMainAgentInternal, {
-        input: {
-          channel: 'sms' as const,
-          text: args.text,
-          userId: user.externalId,
-        },
-        context: agentContext,
-        threadId: cachedThreadId, // Use cached threadId if available
-      });
+      return { status: "subscription_required" };
     }
 
-    // Priority 3: No need to save threadId manually - Agent Component manages it
-
-    // Send SMS response
-    if (response?.text) {
-      await ctx.runAction(internal.inbound.sendSmsResponse, {
-        to: args.phone,
-        text: response.text,
-        userId: user.externalId,
-      });
-    }
-
-    // Update last engagement date and reset escalation level
-    const currentEngagementFlags = (user.engagementFlags as any) || {};
-    await ctx.runMutation(internal.internal.updateUserMetadata, {
-      userId: user._id,
-      metadata: {
-        ...metadata,
-        engagementFlags: {
-          ...currentEngagementFlags,
-          escalationLevel: 'none', // Reset on engagement
-        },
-      },
+    // Step 8: Update last engagement date
+    await ctx.db.patch(user._id, {
       lastEngagementDate: Date.now(),
-      engagementFlags: {
-        ...currentEngagementFlags,
-        escalationLevel: 'none',
-      },
-    }).catch((err) => console.error('[inbound] Failed to update engagement:', err));
-
-    return { success: true, response };
-  },
-});
-
-// ============================================================================
-// SEND SMS RESPONSE
-// ============================================================================
-
-export const sendSmsResponse = internalAction({
-  args: {
-    to: v.string(),
-    text: v.string(),
-    userId: v.string(),
-  },
-  handler: async (ctx, args) => {
-    // Use Twilio component to send SMS
-    const message = await ctx.runAction(components.twilio.messages.create, {
-      to: args.to,
-      from: process.env.TWILIO_PHONE_NUMBER!,
-      body: args.text,
-      account_sid: process.env.TWILIO_ACCOUNT_SID!,
-      auth_token: process.env.TWILIO_AUTH_TOKEN!,
-      status_callback: `${process.env.CONVEX_SITE_URL}/twilio/message-status`,
     });
 
-    // Note: Messages are automatically saved by Twilio component
-    // No need to manually save to components.messages
+    // Step 9: Route to agent (async)
+    await ctx.scheduler.runAfter(0, internal.agents.processMainAgentMessage, {
+      userId: user._id,
+      body,
+    });
 
-    return { sid: message.sid };
+    return { status: "processed" };
   },
 });
+
+/**
+ * Get or create user by phone number
+ * Preserves E.164 format from Twilio
+ */
+async function getUserOrCreate(ctx: any, phoneNumber: string): Promise<any> {
+  // Normalize phone number to E.164 format
+  // Twilio sends E.164 format (+1XXXXXXXXXX), preserve it
+  let normalized: string;
+  if (phoneNumber.startsWith("+")) {
+    // Already E.164 format
+    normalized = phoneNumber;
+  } else {
+    // Add +1 prefix for US numbers (remove all non-digits first)
+    const digits = phoneNumber.replace(/\D/g, "");
+    if (digits.length === 10) {
+      normalized = `+1${digits}`;
+    } else if (digits.length === 11 && digits[0] === "1") {
+      normalized = `+${digits}`;
+    } else {
+      // Fallback: use as-is if doesn't match expected format
+      normalized = phoneNumber;
+    }
+  }
+
+  // Try to find existing user by phone
+  const existing = await ctx.db
+    .query("users")
+    .withIndex("by_phone", (q) => q.eq("phone", normalized))
+    .first();
+
+  if (existing) {
+    return existing;
+  }
+
+  // Also check by externalId (for backward compatibility)
+  const existingByExternalId = await ctx.db
+    .query("users")
+    .withIndex("by_externalId", (q) => q.eq("externalId", normalized))
+    .first();
+
+  if (existingByExternalId) {
+    // Update phone field to E.164 format
+    await ctx.db.patch(existingByExternalId._id, {
+      phone: normalized,
+    });
+    return await ctx.db.get(existingByExternalId._id);
+  }
+
+  // Create new user
+  const userId = await ctx.db.insert("users", {
+    externalId: normalized,
+    phone: normalized,
+    channel: "sms",
+    locale: "en-US",
+    consent: {
+      emergency: true,
+      marketing: true,
+    },
+    metadata: {
+      onboardingStage: "new",
+      onboardingMilestones: [],
+    },
+  });
+
+  return await ctx.db.get(userId);
+}
+
+/**
+ * Handle STOP request
+ */
+async function handleStop(ctx: any, userId: any): Promise<void> {
+  // Update consent
+  const user = await ctx.db.get(userId);
+  if (user) {
+    await ctx.db.patch(userId, {
+      consent: {
+        emergency: user.consent?.emergency ?? true,
+        marketing: false,
+      },
+    });
+  }
+
+  // Send confirmation (async)
+  await ctx.scheduler.runAfter(0, internal.twilio.sendStopConfirmation, {
+    userId,
+  });
+}
+
+/**
+ * Handle HELP request
+ */
+async function handleHelp(ctx: any, userId: any): Promise<void> {
+  // Send help message (async)
+  await ctx.scheduler.runAfter(0, internal.twilio.sendHelpMessage, {
+    userId,
+  });
+}
+
+/**
+ * Handle crisis detection
+ * Fast-path: Deterministic response, no LLM, <600ms target
+ * Optimized: Precompute response, batch DB operations, immediate scheduling
+ */
+async function handleCrisis(
+  ctx: any,
+  userId: any,
+  crisisResult: any
+): Promise<void> {
+  // Precompute crisis response (no DB dependency)
+  const crisisMessage = getCrisisResponse(crisisResult.isDVHint);
+
+  // Batch database operations (parallel inserts - CONVEX_01.md optimization)
+  await Promise.all([
+    // Log crisis event
+    ctx.db.insert("alerts", {
+      userId,
+      type: "crisis",
+      severity: crisisResult.severity ?? "medium",
+      context: { detection: crisisResult },
+      message: crisisMessage,
+      channel: "sms",
+      status: "pending",
+    }),
+    // Log guardrail event
+    ctx.db.insert("guardrail_events", {
+      userId,
+      type: "crisis",
+      severity: crisisResult.severity ?? "medium",
+      context: { detection: crisisResult },
+      createdAt: Date.now(),
+    }),
+  ]);
+
+  // Send crisis response immediately (0 delay scheduler = immediate)
+  // This is async but doesn't block the mutation response
+  await ctx.scheduler.runAfter(0, internal.twilio.sendCrisisResponse, {
+    userId,
+    isDVHint: crisisResult.isDVHint,
+  });
+
+  // Schedule follow-up check-in (next day)
+  await ctx.scheduler.runAfter(
+    86400000, // 24 hours
+    internal.workflows.scheduleCrisisFollowUp,
+    { userId }
+  );
+}

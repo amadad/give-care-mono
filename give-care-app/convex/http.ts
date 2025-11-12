@@ -1,95 +1,42 @@
-import { httpRouter } from 'convex/server';
-import { httpAction } from './_generated/server';
-import { twilio } from './lib/twilio';
-import { api, internal } from './_generated/api';
-import Stripe from 'stripe';
+/**
+ * HTTP Webhook Router
+ * Handles Twilio SMS webhooks and Stripe webhooks
+ */
+
+import { httpRouter } from "convex/server";
+import { httpAction } from "./_generated/server";
+import { twilio } from "./lib/twilio";
+import { internal } from "./_generated/api";
 
 const http = httpRouter();
 
-// Register Twilio webhook routes automatically
-// Registers: /twilio/incoming-message and /twilio/message-status
+// Twilio Component automatically registers routes:
+// - /twilio/incoming-message
+// - /twilio/message-status
 twilio.registerRoutes(http);
 
-// ============================================================================
-// STRIPE WEBHOOK
-// ============================================================================
-
+/**
+ * Stripe Webhook
+ * Handles subscription events
+ */
 http.route({
-  path: '/webhooks/stripe',
-  method: 'POST',
+  path: "/stripe/webhook",
+  method: "POST",
   handler: httpAction(async (ctx, request) => {
-    const stripeSecretKey = process.env.STRIPE_SECRET_KEY;
-    const webhookSecret = process.env.STRIPE_WEBHOOKS_SECRET;
+    const body = await request.text();
+    const signature = request.headers.get("stripe-signature");
 
-    if (!stripeSecretKey || !webhookSecret) {
-      console.error('Missing Stripe configuration');
-      return new Response('Server configuration error', { status: 500 });
+    if (!signature) {
+      return new Response("Missing signature", { status: 400 });
     }
 
-    try {
-      const stripe = new Stripe(stripeSecretKey, {
-        apiVersion: '2025-10-29.clover' as any,
-      });
-      const signature = request.headers.get('stripe-signature');
-      const body = await request.text();
+    // Process Stripe webhook (idempotency handled inside)
+    await ctx.runAction(internal.stripeActions.processWebhook, {
+      body,
+      signature,
+    });
 
-      if (!signature) {
-        console.error('Missing Stripe signature');
-        return new Response('Missing signature', { status: 400 });
-      }
-
-      let event: Stripe.Event;
-      try {
-        event = await stripe.webhooks.constructEventAsync(body, signature, webhookSecret);
-      } catch (err) {
-        console.error('[stripe-webhook] Signature verification failed:', err);
-        return new Response('Invalid signature', { status: 403 });
-      }
-
-      // Record event with idempotency check and schedule async processing
-      const { eventId, duplicate } = await ctx.runMutation(
-        internal.internal.recordStripeEvent,
-        {
-          stripeEventId: event.id,
-          type: event.type,
-          data: event as unknown as Record<string, unknown>,
-        }
-      );
-
-      // Schedule async processing (only if not duplicate)
-      if (!duplicate) {
-        await ctx.scheduler.runAfter(0, internal.internal.processStripeEvent, {
-          eventId,
-        });
-      }
-
-      // Return 200 immediately (Convex best practice for webhooks)
-      return new Response(JSON.stringify({ received: true }), {
-        status: 200,
-        headers: { 'Content-Type': 'application/json' },
-      });
-    } catch (error) {
-      console.error('Stripe webhook error:', error);
-      return new Response('Webhook processing failed', { status: 500 });
-    }
-  }),
-});
-
-// ============================================================================
-// HEALTH CHECK
-// ============================================================================
-
-http.route({
-  path: '/health',
-  method: 'GET',
-  handler: httpAction(async () => {
-    return new Response(
-      JSON.stringify({ status: 'ok', timestamp: Date.now() }),
-      {
-        status: 200,
-        headers: { 'Content-Type': 'application/json' },
-      }
-    );
+    return new Response("OK", { status: 200 });
   }),
 });
 
