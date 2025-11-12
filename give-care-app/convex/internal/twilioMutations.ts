@@ -1,28 +1,27 @@
 /**
- * Twilio Wrapper Mutations
- * Wrapper mutations that call Twilio actions via ctx.runAction
+ * Twilio Wrapper Actions
+ * Wrapper actions that call Twilio actions directly
  * Used to work around scheduler path resolution issue when scheduling actions from mutations
  * 
  * The path resolution bug occurs when scheduling internal.twilio.* actions directly from mutations.
- * By wrapping them in mutations that call actions via ctx.runAction, we avoid the scheduler bug.
+ * By wrapping them in actions (not mutations), mutations can schedule these wrappers successfully.
  * 
- * Note: ctx.runAction is blocking, but SMS sending is fast enough (<500ms) that this doesn't
- * significantly impact mutation latency. The mutation still completes quickly.
+ * Mutations can schedule actions, but NOT other mutations. So these must be actions.
  */
 
-import { internalMutation } from "../_generated/server";
+import { internalAction } from "../_generated/server";
 import { v } from "convex/values";
 import { internal } from "../_generated/api";
 
 /**
- * Send STOP confirmation (wrapper mutation)
+ * Send STOP confirmation (wrapper action)
  */
-export const sendStopConfirmationMutation = internalMutation({
+export const sendStopConfirmationAction = internalAction({
   args: {
     userId: v.id("users"),
   },
   handler: async (ctx, args) => {
-    // Call the action directly (mutation → action via ctx.runAction)
+    // Call the action directly (action → action via ctx.runAction)
     // This avoids the scheduler path resolution bug
     await ctx.runAction(internal.twilio.sendStopConfirmation, {
       userId: args.userId,
@@ -31,14 +30,14 @@ export const sendStopConfirmationMutation = internalMutation({
 });
 
 /**
- * Send HELP message (wrapper mutation)
+ * Send HELP message (wrapper action)
  */
-export const sendHelpMessageMutation = internalMutation({
+export const sendHelpMessageAction = internalAction({
   args: {
     userId: v.id("users"),
   },
   handler: async (ctx, args) => {
-    // Call the action directly (mutation → action via ctx.runAction)
+    // Call the action directly (action → action via ctx.runAction)
     await ctx.runAction(internal.twilio.sendHelpMessage, {
       userId: args.userId,
     });
@@ -46,15 +45,15 @@ export const sendHelpMessageMutation = internalMutation({
 });
 
 /**
- * Send crisis response (wrapper mutation)
+ * Send crisis response (wrapper action)
  */
-export const sendCrisisResponseMutation = internalMutation({
+export const sendCrisisResponseAction = internalAction({
   args: {
     userId: v.id("users"),
     isDVHint: v.boolean(),
   },
   handler: async (ctx, args) => {
-    // Call the action directly (mutation → action via ctx.runAction)
+    // Call the action directly (action → action via ctx.runAction)
     await ctx.runAction(internal.twilio.sendCrisisResponse, {
       userId: args.userId,
       isDVHint: args.isDVHint,
@@ -63,15 +62,15 @@ export const sendCrisisResponseMutation = internalMutation({
 });
 
 /**
- * Send resubscribe message (wrapper mutation)
+ * Send resubscribe message (wrapper action)
  */
-export const sendResubscribeMessageMutation = internalMutation({
+export const sendResubscribeMessageAction = internalAction({
   args: {
     userId: v.id("users"),
     gracePeriodEndsAt: v.optional(v.number()),
   },
   handler: async (ctx, args) => {
-    // Call the action directly (mutation → action via ctx.runAction)
+    // Call the action directly (action → action via ctx.runAction)
     await ctx.runAction(internal.twilio.sendResubscribeMessage, {
       userId: args.userId,
       gracePeriodEndsAt: args.gracePeriodEndsAt,
@@ -80,16 +79,16 @@ export const sendResubscribeMessageMutation = internalMutation({
 });
 
 /**
- * Send agent response (wrapper mutation)
+ * Send agent response (wrapper action)
  * Used by internal/agents.ts to avoid scheduler path resolution issues
  */
-export const sendAgentResponseMutation = internalMutation({
+export const sendAgentResponseAction = internalAction({
   args: {
     userId: v.id("users"),
     text: v.string(),
   },
   handler: async (ctx, args) => {
-    // Call the action directly (mutation → action via ctx.runAction)
+    // Call the action directly (action → action via ctx.runAction)
     await ctx.runAction(internal.twilio.sendAgentResponse, {
       userId: args.userId,
       text: args.text,

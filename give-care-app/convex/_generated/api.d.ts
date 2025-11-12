@@ -326,32 +326,32 @@ export declare const internal: {
       >;
     };
     twilioMutations: {
-      sendAgentResponseMutation: FunctionReference<
-        "mutation",
+      sendAgentResponseAction: FunctionReference<
+        "action",
         "internal",
         { text: string; userId: Id<"users"> },
         any
       >;
-      sendCrisisResponseMutation: FunctionReference<
-        "mutation",
+      sendCrisisResponseAction: FunctionReference<
+        "action",
         "internal",
         { isDVHint: boolean; userId: Id<"users"> },
         any
       >;
-      sendHelpMessageMutation: FunctionReference<
-        "mutation",
+      sendHelpMessageAction: FunctionReference<
+        "action",
         "internal",
         { userId: Id<"users"> },
         any
       >;
-      sendResubscribeMessageMutation: FunctionReference<
-        "mutation",
+      sendResubscribeMessageAction: FunctionReference<
+        "action",
         "internal",
         { gracePeriodEndsAt?: number; userId: Id<"users"> },
         any
       >;
-      sendStopConfirmationMutation: FunctionReference<
-        "mutation",
+      sendStopConfirmationAction: FunctionReference<
+        "action",
         "internal",
         { userId: Id<"users"> },
         any
