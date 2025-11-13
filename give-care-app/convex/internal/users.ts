@@ -113,8 +113,12 @@ export const getAllUsers = internalQuery({
   args: {},
   handler: async (ctx) => {
     // Get all users (limit to prevent timeout)
+    // Use _creationTime ordering for consistent results
     // TODO: Add pagination or use a more efficient approach
-    return await ctx.db.query("users").take(1000);
+    return await ctx.db
+      .query("users")
+      .order("desc")
+      .take(1000);
   },
 });
 
@@ -128,7 +132,11 @@ export const getUsersWithCheckIns = internalQuery({
   handler: async (ctx) => {
     // Get all users (limit to prevent timeout)
     // CONVEX_01.md: "Only use .collect with a small number"
-    const allUsers = await ctx.db.query("users").take(1000);
+    // Use _creationTime ordering for consistent results
+    const allUsers = await ctx.db
+      .query("users")
+      .order("desc")
+      .take(1000);
 
     const now = Date.now();
     const eligibleUsers: Array<{ _id: any }> = [];
@@ -200,7 +208,11 @@ export const getInactiveUsers = internalQuery({
   handler: async (ctx, { days = 5 }) => {
     // Get all users (limit to prevent timeout)
     // CONVEX_01.md: "Only use .collect with a small number"
-    const allUsers = await ctx.db.query("users").take(1000);
+    // Use _creationTime ordering for consistent results
+    const allUsers = await ctx.db
+      .query("users")
+      .order("desc")
+      .take(1000);
 
     const now = Date.now();
     const threshold = days * 24 * 60 * 60 * 1000; // days in milliseconds

@@ -15,7 +15,11 @@ export const migrateAgentRuns = internalMutation({
   handler: async (ctx) => {
     // Get all agent_runs and filter in code for records needing migration
     // (records with legacy fields but missing preferred fields)
-    const allRuns = await ctx.db.query("agent_runs").collect();
+    // Order by _creationTime for consistent results (Convex handles this efficiently)
+    const allRuns = await ctx.db
+      .query("agent_runs")
+      .order("desc")
+      .collect();
     const runs = allRuns.filter(
       (run) =>
         // Has legacy fields
