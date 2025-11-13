@@ -170,28 +170,28 @@ export const sendSubscriptionMessage = internalAction({
 
     switch (scenario) {
       case "new_user":
-        message = "Welcome to GiveCare! To get started, reply SIGNUP to create your subscription and begin receiving personalized caregiving support.";
+        message = "Caring for a loved one? GiveCare provides 24/7 text-based support to help with overwhelm, isolation, and finding resources. Reply SIGNUP to get started.";
         break;
 
       case "grace_period":
         if (gracePeriodEndsAt) {
           const daysRemaining = Math.ceil((gracePeriodEndsAt - Date.now()) / 86400000);
-          message = `Your subscription has ended, but you have ${daysRemaining} day(s) to resubscribe without losing your progress. Reply RESUBSCRIBE to continue.`;
+          message = `Your GiveCare support is paused. You have ${daysRemaining} day(s) to resubscribe and keep your 24/7 caregiving support active. Reply RESUBSCRIBE to continue.`;
         } else {
-          message = "Your subscription has ended. Reply RESUBSCRIBE to continue using GiveCare.";
+          message = "Your GiveCare support is paused. Reply RESUBSCRIBE to restore your 24/7 caregiving support.";
         }
         break;
 
       case "grace_expired":
-        message = "Your subscription has ended. Reply RESUBSCRIBE to create a new subscription, or reply BILLING to manage your account.";
+        message = "Your 24/7 caregiving support has ended. Reply RESUBSCRIBE to restore your personalized help with overwhelm, isolation, and finding resources.";
         break;
 
       case "past_due":
-        message = "Your payment failed. Reply UPDATEPAYMENT to fix your billing information and restore access to GiveCare.";
+        message = "Your payment failed. Reply UPDATEPAYMENT to fix your billing and keep your 24/7 caregiving support active.";
         break;
 
       case "incomplete":
-        message = "Looks like you didn't finish signing up. Reply SIGNUP to complete your subscription and get started with GiveCare.";
+        message = "You started signing up for GiveCare's 24/7 text-based caregiving support. Reply SIGNUP to complete your subscription and get personalized help.";
         break;
 
       case "active":
