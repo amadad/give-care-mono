@@ -13,17 +13,18 @@ import { v } from "convex/values";
 export const migrateAgentRuns = internalMutation({
   args: {},
   handler: async (ctx) => {
-    // Get all agent_runs with legacy fields
-    const runs = await ctx.db
-      .query("agent_runs")
-      .filter((q) =>
-        q.or(
-          q.field("agent").neq(undefined),
-          q.field("budgetResult").neq(undefined),
-          q.field("latencyMs").neq(undefined)
-        )
-      )
-      .collect();
+    // Get all agent_runs and filter in code for records needing migration
+    // (records with legacy fields but missing preferred fields)
+    const allRuns = await ctx.db.query("agent_runs").collect();
+    const runs = allRuns.filter(
+      (run) =>
+        // Has legacy fields
+        (run.agent !== undefined ||
+          run.budgetResult !== undefined ||
+          run.latencyMs !== undefined) &&
+        // Missing preferred fields
+        (!run.agentName || !run.createdAt)
+    );
 
     let migrated = 0;
     let skipped = 0;

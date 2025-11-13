@@ -4,7 +4,9 @@
 
 import { internalQuery, internalMutation } from "../_generated/server";
 import { v } from "convex/values";
+import { Id } from "../_generated/dataModel";
 import { emitEvent } from "../lib/services/eventService";
+import { getEffectiveInterventions } from "../lib/services/learningService";
 
 /**
  * Find interventions by zones
@@ -25,13 +27,13 @@ export const findByZones = internalQuery({
 
     // Also get all interventions for these zones (fallback if no learning data)
     // Parallel queries for each zone - CONVEX_01.md optimization
-    const zoneQueries = zones.map((zone) =>
-      ctx.db
+    const zoneQueries = zones.map(async (zone) => {
+      const allMatches = await ctx.db
         .query("intervention_zones")
         .withIndex("by_zone", (q) => q.eq("zone", zone))
-        .take(10)
-        .collect()
-    );
+        .collect();
+      return allMatches.slice(0, 10); // Limit to 10 per zone
+    });
 
     const zoneResults = await Promise.all(zoneQueries);
     for (const matches of zoneResults) {
@@ -42,7 +44,7 @@ export const findByZones = internalQuery({
 
     // Get intervention details (parallel queries - CONVEX_01.md optimization)
     const interventionQueries = Array.from(interventionIds).map((id) =>
-      ctx.db.get(id as any)
+      ctx.db.get(id as Id<"interventions">)
     );
     const interventionResults = await Promise.all(interventionQueries);
 
@@ -90,7 +92,7 @@ export const getByIds = internalQuery({
   handler: async (ctx, { interventionIds }) => {
     const interventions = [];
     for (const id of interventionIds) {
-      const intervention = await ctx.db.get(id as any);
+      const intervention = await ctx.db.get(id as Id<"interventions">);
       if (intervention) {
         interventions.push({
           title: intervention.title,

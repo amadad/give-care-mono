@@ -34,7 +34,7 @@ export const searchResources = internalAction({
     // Step 1: Extract location (query → user metadata → error)
     const zipFromQuery = extractZipFromQuery(query);
     const userLocation = await ctx.runQuery(
-      internal.resources.getLocationFromUserQuery,
+      internal.internal.resources.getLocationFromUserQuery,
       { userId }
     );
 
@@ -47,7 +47,7 @@ export const searchResources = internalAction({
     }
 
     // Step 2: Emit resource.search event
-    await ctx.runMutation(internal.events.emitResourceSearch, {
+    await ctx.runMutation(internal.internal.events.emitResourceSearch, {
       userId,
       query,
       category: category || inferCategory(query),
@@ -56,7 +56,7 @@ export const searchResources = internalAction({
 
     // Step 3: Check cache (query)
     const resolvedCategory = category || inferCategory(query);
-    const cache = await ctx.runQuery(internal.resources.getCachedResources, {
+    const cache = await ctx.runQuery(internal.internal.resources.getCachedResources, {
       category: resolvedCategory,
       zip,
     });
@@ -90,7 +90,7 @@ export const searchResources = internalAction({
 
       // Step 4: Save to cache (mutation - transactional)
       const ttlDays = CATEGORY_TTLS[resolvedCategory] || 14;
-      await ctx.runMutation(internal.resources.saveToCache, {
+      await ctx.runMutation(internal.internal.resources.saveToCache, {
         category: resolvedCategory,
         zip,
         placeIds: result.resources.map((r) => r.placeId),

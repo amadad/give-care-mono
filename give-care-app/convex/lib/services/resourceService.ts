@@ -18,7 +18,7 @@ export async function suggestResourcesForZone(
   zone: string
 ): Promise<void> {
   // Get user to find zip code
-  const user = await ctx.runQuery(internal.users.getUser, { userId });
+  const user = await ctx.runQuery(internal.internal.users.getUser, { userId });
   if (!user) {
     return;
   }

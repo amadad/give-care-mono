@@ -30,7 +30,7 @@ export const getWellnessStatus = query({
     // Get latest individual score for zones
     const latestScore = await ctx.db
       .query("scores")
-      .withIndex("by_user_and_type_time", (q) => q.eq("userId", userId))
+      .withIndex("by_user", (q) => q.eq("userId", userId))
       .order("desc")
       .first();
 

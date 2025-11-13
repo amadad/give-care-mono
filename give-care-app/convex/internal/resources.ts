@@ -21,7 +21,7 @@ export const getCachedResources = internalQuery({
     // Query cache by category + zip
     const cache = await ctx.db
       .query("resource_cache")
-      .withIndex("by_zip_cat_time", (q) =>
+      .withIndex("by_zip_cat", (q) =>
         q.eq("zip", zip).eq("category", category)
       )
       .order("desc")
@@ -70,7 +70,7 @@ export const saveToCache = internalMutation({
     // Check if exists (idempotent)
     const existing = await ctx.db
       .query("resource_cache")
-      .withIndex("by_zip_cat_time", (q) =>
+      .withIndex("by_zip_cat", (q) =>
         q.eq("zip", zip).eq("category", category)
       )
       .first();

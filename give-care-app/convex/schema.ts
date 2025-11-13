@@ -106,14 +106,17 @@ export default defineSchema({
     reach2Domains: v.optional(reach2DomainsValidator), // REACH II canonical domains
     confidence: v.number(), // 0-1: answered_ratio for partial assessments
     answeredRatio: v.number(), // answered / total questions
-  }).index("by_user_and_type", ["userId", "instrument"]),
+  })
+    .index("by_user_and_type", ["userId", "instrument"])
+    .index("by_user", ["userId"]),
 
   // Scores composite - Composite burnout score history (for trend charts)
   scores_composite: defineTable({
     userId: v.id("users"),
     gcBurnout: v.number(), // Composite score (0-100)
     band: v.string(), // very_low | low | moderate | high
-  }).index("by_user", ["userId"]),
+  })
+    .index("by_user", ["userId"]),
 
   // Assessment sessions - In-progress assessments
   assessment_sessions: defineTable({
@@ -216,7 +219,9 @@ export default defineSchema({
     ),
     content: v.string(),
     importance: v.number(), // 1-10
-  }).index("by_user_and_importance", ["userId", "importance"]),
+  })
+    .index("by_user_and_importance", ["userId", "importance"])
+    .index("by_user_category", ["userId", "category"]),
 
   // Resource cache - Google Maps results cache (policy-compliant: place_id only)
   resource_cache: defineTable({
@@ -289,7 +294,7 @@ export default defineSchema({
     userId: v.id("users"),
     // Preferred: Use agentName instead of agent
     agentName: v.optional(v.union(v.literal("main"), v.literal("assessment"))),
-    threadId: v.optional(v.id("threads")),
+    threadId: v.optional(v.string()), // Thread ID from Agent Component (managed separately)
     toolCalls: v.optional(v.array(v.any())),
     createdAt: v.optional(v.number()),
     // Legacy fields (deprecated - use agentName, createdAt instead)

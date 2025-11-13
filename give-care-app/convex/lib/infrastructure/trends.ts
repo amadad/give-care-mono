@@ -17,12 +17,12 @@ export async function detectScoreTrends(ctx: ActionCtx): Promise<void> {
   // For now, we'll query all users and filter in code (not ideal, but works)
   
   // TODO: Add index or query helper for users with 2+ scores
-  const users = await ctx.runQuery(internal.users.getAllUsers, {});
+  const users = await ctx.runQuery(internal.internal.users.getAllUsers, {});
 
   for (const user of users) {
     // Get composite scores for user
     const scores = await ctx.runQuery(
-      internal.wellness.getCompositeScoreHistory,
+      internal.internal.wellness.getCompositeScoreHistory,
       { userId: user._id }
     );
 
@@ -34,14 +34,16 @@ export async function detectScoreTrends(ctx: ActionCtx): Promise<void> {
     const scoreValues = scores.map((s) => s.gcBurnout);
     const trend = calculateScoreTrend(scoreValues);
 
-    // If decline ≥ 5, schedule workflow to suggest interventions
+    // If decline ≥ 5, suggest interventions via existing workflow
     if (trend.trend === "declining" && trend.change >= 5) {
+      // Use suggestResourcesWorkflow as fallback until suggestInterventionsForDecline is implemented
+      // TODO: Implement suggestInterventionsForDecline workflow
       await ctx.scheduler.runAfter(
         0,
-        internal.workflows.suggestInterventionsForDecline,
+        internal.workflows.suggestResourcesWorkflow,
         {
           userId: user._id,
-          change: trend.change,
+          zone: "emotional", // Default to emotional zone for decline
         }
       );
     }

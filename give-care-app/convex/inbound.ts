@@ -18,6 +18,7 @@ import {
 } from "./lib/utils";
 import { getCrisisResponse } from "./lib/utils";
 import { checkSubscriptionAccess } from "./lib/services/subscriptionService";
+import { FEATURES } from "./lib/infrastructure/featureFlags";
 
 /**
  * Handle incoming message from Twilio Component
@@ -114,16 +115,18 @@ export const handleIncomingMessage = internalMutation({
       receivedAt: Date.now(),
     });
 
-    // Step 7: Check subscription access (crisis bypasses this)
-    const access = await checkSubscriptionAccess(ctx, user._id);
-    if (!access.hasAccess) {
-      // No access - send appropriate message based on scenario
-      await ctx.scheduler.runAfter(0, internal.twilioMutations.sendSubscriptionMessageAction, {
-        userId: user._id,
-        scenario: access.scenario,
-        gracePeriodEndsAt: access.gracePeriodEndsAt,
-      });
-      return { status: "subscription_required", scenario: access.scenario };
+    // Step 7: Check subscription access (crisis bypasses this, feature flag controls gating)
+    if (FEATURES.SUBSCRIPTION_GATING) {
+      const access = await checkSubscriptionAccess(ctx, user._id);
+      if (!access.hasAccess) {
+        // No access - send appropriate message based on scenario
+        await ctx.scheduler.runAfter(0, internal.twilioMutations.sendSubscriptionMessageAction, {
+          userId: user._id,
+          scenario: access.scenario,
+          gracePeriodEndsAt: access.gracePeriodEndsAt,
+        });
+        return { status: "subscription_required", scenario: access.scenario };
+      }
     }
 
     // Step 8: Update last engagement date
@@ -132,7 +135,7 @@ export const handleIncomingMessage = internalMutation({
     });
 
     // Step 9: Route to agent (async)
-    await ctx.scheduler.runAfter(0, internal.agents.processMainAgentMessage, {
+    await ctx.scheduler.runAfter(0, internal.internal.agents.processMainAgentMessage, {
       userId: user._id,
       body,
     });
@@ -326,7 +329,7 @@ async function handleCrisis(
   // Schedule follow-up check-in (next day)
   await ctx.scheduler.runAfter(
     86400000, // 24 hours
-    internal.workflows.scheduleCrisisFollowUp,
+    internal.internal.workflows.scheduleCrisisFollowUp,
     { userId }
   );
 }

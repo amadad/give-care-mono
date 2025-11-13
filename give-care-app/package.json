@@ -7,6 +7,7 @@
   "type": "module",
   "scripts": {
     "dev": "convex dev",
+    "predeploy": "find convex -name '*.js' -type f ! -path 'convex/_generated/*' -delete && find convex -name '*.js.map' -type f ! -path 'convex/_generated/*' -delete || true",
     "deploy": "convex deploy",
     "codegen": "convex codegen --typecheck enable",
     "test": "vitest",

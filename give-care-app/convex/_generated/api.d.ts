@@ -210,12 +210,6 @@ export declare const internal: {
       >;
     };
     onboarding: {
-      enforce: FunctionReference<
-        "query",
-        "internal",
-        { interactionType: string; userId: Id<"users"> },
-        any
-      >;
       enforcePolicy: FunctionReference<
         "query",
         "internal",
@@ -448,6 +442,12 @@ export declare const internal: {
       >;
     };
     wellness: {
+      getCompositeScoreHistory: FunctionReference<
+        "query",
+        "internal",
+        { userId: Id<"users"> },
+        any
+      >;
       getWellnessStatus: FunctionReference<
         "query",
         "internal",
@@ -473,6 +473,11 @@ export declare const internal: {
       { category?: string; query: string; userId: Id<"users"> },
       any
     >;
+  };
+  scripts: {
+    seedInterventions: {
+      seedInterventions: FunctionReference<"mutation", "internal", {}, any>;
+    };
   };
   twilioMutations: {
     handleBillingPortalAction: FunctionReference<

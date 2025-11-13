@@ -47,7 +47,7 @@ export function missing(
 
   for (const field of requiredFields) {
     if (!profile[field]) {
-      missingFields.push(field);
+      missingFields.push(field as string);
     }
   }
 

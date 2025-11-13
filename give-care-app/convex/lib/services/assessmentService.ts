@@ -59,15 +59,18 @@ export async function enrichProfileFromSDOH(
       metadata,
     });
 
-    // Record changes in audit trail
+    // Record changes in audit trail (using events table instead of profile_changes)
     for (const change of changes) {
-      await ctx.db.insert("profile_changes", {
+      await ctx.db.insert("events", {
         userId,
-        field: change.field,
-        oldValue: change.oldValue,
-        newValue: change.newValue,
-        source: "sdoh_assessment",
-        changedAt: Date.now(),
+        type: "profile.updated",
+        payload: {
+          field: change.field,
+          oldValue: change.oldValue,
+          newValue: change.newValue,
+          source: "sdoh_assessment",
+          changedAt: Date.now(),
+        },
       });
     }
   }

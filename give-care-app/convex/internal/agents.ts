@@ -30,8 +30,8 @@ export const processMainAgentMessage = internalAction({
     );
 
     let threadId: string;
-    if (threads.results.length > 0) {
-      threadId = threads.results[0]._id;
+    if (threads.page.length > 0) {
+      threadId = threads.page[0]._id;
     } else {
       threadId = await createThread(ctx, components.agent, {
         userId,
@@ -95,8 +95,8 @@ export const processAssessmentCompletion = internalAction({
     );
 
     let threadId: string;
-    if (threads.results.length > 0) {
-      threadId = threads.results[0]._id;
+    if (threads.page.length > 0) {
+      threadId = threads.page[0]._id;
     } else {
       threadId = await createThread(ctx, components.agent, {
         userId,

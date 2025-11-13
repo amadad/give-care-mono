@@ -35,7 +35,7 @@ export type DataModel = {
       createdAt?: number;
       latencyMs?: number;
       policyBundle?: string;
-      threadId?: Id<"threads">;
+      threadId?: string;
       toolCalls?: Array<any>;
       traceId?: string;
       userId: Id<"users">;
@@ -354,6 +354,7 @@ export type DataModel = {
       by_id: ["_id"];
       by_creation_time: ["_creationTime"];
       by_user_and_importance: ["userId", "importance", "_creationTime"];
+      by_user_category: ["userId", "category", "_creationTime"];
     };
     searchIndexes: {};
     vectorIndexes: {};
@@ -442,6 +443,7 @@ export type DataModel = {
     indexes: {
       by_id: ["_id"];
       by_creation_time: ["_creationTime"];
+      by_user: ["userId", "_creationTime"];
       by_user_and_type: ["userId", "instrument", "_creationTime"];
     };
     searchIndexes: {};
@@ -568,6 +570,7 @@ export type DataModel = {
         }>;
         onboardingStage?: string;
         primaryStressor?: string;
+        snoozeUntil?: number;
         threadId?: string;
         timezone?: string;
         zipCode?: string;
@@ -614,6 +617,7 @@ export type DataModel = {
       | "metadata.onboardingMilestones"
       | "metadata.onboardingStage"
       | "metadata.primaryStressor"
+      | "metadata.snoozeUntil"
       | "metadata.threadId"
       | "metadata.timezone"
       | "metadata.zipCode"

@@ -4,7 +4,7 @@
  */
 
 // Re-export inbound processing
-export { processInboundSMS } from "./inbound";
+export * as inbound from "./inbound";
 
 // Re-export internal modules
 export * as agents from "./internal/agents";

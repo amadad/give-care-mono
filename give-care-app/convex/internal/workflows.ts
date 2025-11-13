@@ -5,11 +5,6 @@
 
 import { internalAction } from "../_generated/server";
 import { v } from "convex/values";
-import {
-  checkInWorkflow,
-  engagementMonitoringWorkflow,
-  suggestResourcesWorkflow,
-} from "../workflows";
 import { internal } from "../_generated/api";
 
 /**
@@ -26,12 +21,14 @@ export const runCheckIns = internalAction({
       return { processed: 0 };
     }
 
-    // Start workflow for each user
-    // CONVEX_02.md: Use workflow.start() pattern for durable workflows
+    // Start workflow for each user via scheduler
+    // CONVEX_02.md: Use scheduler to start workflows
     let processed = 0;
     for (const user of users) {
       try {
-        await checkInWorkflow.start(ctx, { userId: user._id });
+        await ctx.scheduler.runAfter(0, internal.workflows.checkInWorkflow, {
+          userId: user._id,
+        });
         processed++;
       } catch (error) {
         // Log error but continue to next user (don't fail entire batch)
@@ -57,12 +54,14 @@ export const runEngagementMonitoring = internalAction({
       return { processed: 0 };
     }
 
-    // Start workflow for each user
-    // CONVEX_02.md: Use workflow.start() pattern for durable workflows
+    // Start workflow for each user via scheduler
+    // CONVEX_02.md: Use scheduler to start workflows
     let processed = 0;
     for (const user of users) {
       try {
-        await engagementMonitoringWorkflow.start(ctx, { userId: user._id });
+        await ctx.scheduler.runAfter(0, internal.workflows.engagementMonitoringWorkflow, {
+          userId: user._id,
+        });
         processed++;
       } catch (error) {
         // Log error but continue to next user (don't fail entire batch)

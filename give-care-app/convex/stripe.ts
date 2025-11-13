@@ -45,26 +45,20 @@ export const createCheckoutSession = action({
     // Determine plan from price ID
     const planId = priceId === STRIPE_PRICE_IDS.monthly ? "monthly" : "annual";
 
-    // Create or update user in Convex
+    // Create or update user in Convex (upsert returns userId, confirming creation)
     const userId = await ctx.runMutation(internal.internal.users.upsertUserFromSignup, {
       phone: phoneNumber,
       email,
       name: fullName,
     });
 
-    // Get user record
-    const user = await ctx.runQuery(internal.internal.users.getUser, { userId });
-    if (!user) {
-      throw new Error("Failed to create user");
-    }
-
     // Import Stripe SDK (Node.js runtime)
     const Stripe = (await import("stripe")).default;
     const stripe = new Stripe(stripeSecretKey, {
-      apiVersion: "2024-12-18.acacia",
+      apiVersion: "2025-10-29.clover",
     });
 
-    // Find or create Stripe customer
+    // Find existing subscription to reuse Stripe customer ID
     let customerId: string;
     const existingSubscription = await ctx.runQuery(
       internal.internal.subscriptions.getByUserId,

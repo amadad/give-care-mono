@@ -4,7 +4,7 @@
 
 import { internalQuery } from "../_generated/server";
 import { v } from "convex/values";
-import { enforce, getOnboardingPrompt } from "../lib/services/onboardingService";
+import { enforce as enforceOnboarding, getOnboardingPrompt } from "../lib/services/onboardingService";
 import type { InteractionType } from "../lib/domain/onboarding";
 
 /**
@@ -16,12 +16,9 @@ export const enforcePolicy = internalQuery({
     interactionType: v.string(),
   },
   handler: async (ctx, { userId, interactionType }) => {
-    return await enforce(ctx, userId, interactionType as InteractionType);
+    return await enforceOnboarding(ctx, userId, interactionType as InteractionType);
   },
 });
-
-// Alias for consistency
-export const enforce = enforcePolicy;
 
 /**
  * Get onboarding prompt

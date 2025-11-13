@@ -7,6 +7,25 @@ import { v } from "convex/values";
 import { getCompositeScore } from "../lib/services/wellnessService";
 
 /**
+ * Get composite score history for trend analysis
+ */
+export const getCompositeScoreHistory = internalQuery({
+  args: {
+    userId: v.id("users"),
+  },
+  handler: async (ctx, { userId }) => {
+    const allScores = await ctx.db
+      .query("scores_composite")
+      .withIndex("by_user", (q) => q.eq("userId", userId))
+      .order("desc")
+      .collect();
+    // Limit to 10 most recent in code
+    const scores = allScores.slice(0, 10);
+    return scores.map((s) => ({ gcBurnout: s.gcBurnout }));
+  },
+});
+
+/**
  * Get wellness status (composite score)
  */
 export const getWellnessStatus = internalQuery({
@@ -29,7 +48,7 @@ export const getWellnessStatus = internalQuery({
     // Get latest individual score for zones
     const latestScore = await ctx.db
       .query("scores")
-      .withIndex("by_user_and_type_time", (q) => q.eq("userId", userId))
+      .withIndex("by_user", (q) => q.eq("userId", userId))
       .order("desc")
       .first();
 

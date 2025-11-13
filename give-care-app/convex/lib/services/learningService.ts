@@ -19,20 +19,24 @@ export async function getEffectiveInterventions(
   zones: string[]
 ): Promise<Array<{ interventionId: string; zone: string; successRate: number }>> {
   // Query events table for intervention.success events
-  const events = await ctx.db
+  const allEvents = await ctx.db
     .query("events")
-    .withIndex("by_type_time", (q) => q.eq("type", "intervention.success"))
-    .order("desc")
-    .take(5000) // CONVEX_01.md: "Only use .collect with a small number"
+    .withIndex("by_type", (q) => q.eq("type", "intervention.success"))
     .collect();
+  // Filter and limit in code (CONVEX_01.md: filter in code for readability)
+  const events = allEvents
+    .sort((a, b) => b._creationTime - a._creationTime)
+    .slice(0, 5000);
 
   // Also get intervention.try events to calculate success rate
-  const tryEvents = await ctx.db
+  const allTryEvents = await ctx.db
     .query("events")
-    .withIndex("by_type_time", (q) => q.eq("type", "intervention.try"))
-    .order("desc")
-    .take(5000)
+    .withIndex("by_type", (q) => q.eq("type", "intervention.try"))
     .collect();
+  // Filter and limit in code
+  const tryEvents = allTryEvents
+    .sort((a, b) => b._creationTime - a._creationTime)
+    .slice(0, 5000);
 
   // Map events to InterventionEvent format
   const interventionEvents: InterventionEvent[] = [];

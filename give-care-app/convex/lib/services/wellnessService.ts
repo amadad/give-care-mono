@@ -27,7 +27,7 @@ export async function recalculateComposite(
   const scorePromises = assessments.map((assessment) =>
     ctx.db
       .query("scores")
-      .withIndex("by_user_and_type_time", (q) =>
+      .withIndex("by_user_and_type", (q) =>
         q.eq("userId", userId).eq("instrument", assessment.definitionId)
       )
       .order("desc")
@@ -106,7 +106,7 @@ export async function getCompositeScore(
   // Fallback: calculate from scores_composite table
   const latestComposite = await ctx.db
     .query("scores_composite")
-    .withIndex("by_user_time", (q) => q.eq("userId", userId))
+    .withIndex("by_user", (q) => q.eq("userId", userId))
     .order("desc")
     .first();
 

@@ -111,17 +111,16 @@ export const createCheckoutSessionForResubscribe = internalAction({
       throw new Error("STRIPE_SECRET_KEY not configured");
     }
 
-    // Get user
-    const user = await ctx.runQuery(internal.internal.users.getUser, { userId });
+    // Get user and subscription in parallel
+    const [user, existingSubscription] = await Promise.all([
+      ctx.runQuery(internal.internal.users.getUser, { userId }),
+      ctx.runQuery(internal.internal.subscriptions.getByUserId, { userId }),
+    ]);
+
     if (!user) {
       throw new Error("User not found");
     }
 
-    // Get existing subscription to determine plan (default to "monthly" if none)
-    const existingSubscription = await ctx.runQuery(
-      internal.internal.subscriptions.getByUserId,
-      { userId }
-    );
     const planId = existingSubscription?.planId || "monthly";
 
     // Import Stripe SDK (Node.js runtime)

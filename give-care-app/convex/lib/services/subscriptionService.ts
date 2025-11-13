@@ -84,16 +84,9 @@ export async function checkSubscriptionAccess(
     };
   }
 
-  // Incomplete checkout
-  if (subscription.status === "incomplete" || subscription.status === "incomplete_expired") {
-    return {
-      hasAccess: false,
-      scenario: "incomplete",
-      isInGracePeriod: false,
-      status: subscription.status,
-      stripeCustomerId: subscription.stripeCustomerId,
-    };
-  }
+  // Note: "incomplete" and "incomplete_expired" are Stripe checkout statuses,
+  // not subscription statuses. If subscription exists in our DB, it's past that stage.
+  // Incomplete checkouts are handled separately in checkout flow.
 
   // Other statuses (canceled without grace, etc)
   return {

@@ -29,7 +29,7 @@ export const startAssessment = internalMutation({
 
     const lastAssessment = await ctx.db
       .query("assessments")
-      .withIndex("by_user_and_type_time", (q) =>
+      .withIndex("by_user_and_type", (q) =>
         q.eq("userId", userId).eq("definitionId", assessmentType)
       )
       .order("desc")

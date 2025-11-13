@@ -29,5 +29,7 @@ export const agentMetadataValidator = v.object({
   convex: v.optional(v.any()),
   enrichedContext: v.optional(v.string()),
   threadId: v.optional(v.string()),
+  // Snooze functionality
+  snoozeUntil: v.optional(v.number()),
 });
 

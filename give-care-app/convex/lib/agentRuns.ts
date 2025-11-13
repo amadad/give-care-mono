@@ -11,7 +11,7 @@ export interface AgentRun {
   userId: Id<"users">;
   // Preferred fields
   agentName?: "main" | "assessment";
-  threadId?: Id<"threads">;
+  threadId?: string; // Thread ID from Agent Component (managed separately)
   toolCalls?: Array<any>;
   createdAt?: number;
   // Legacy fields
@@ -28,7 +28,7 @@ export interface AgentRun {
  */
 export function normalizeAgentRun(run: AgentRun): {
   agentName: "main" | "assessment";
-  threadId?: Id<"threads">;
+  threadId?: string;
   toolCalls?: Array<any>;
   createdAt: number;
 } {

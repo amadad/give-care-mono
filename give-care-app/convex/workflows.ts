@@ -19,13 +19,13 @@ export const checkInWorkflow = workflow.define({
   },
   handler: async (step, { userId }) => {
     // Step 1: Load user preferences
-    const user = await step.runQuery(internal.users.getUser, { userId });
+    const user = await step.runQuery(internal.internal.users.getUser, { userId });
     
     // Step 2: Check quiet hours (8am-9pm local)
     // TODO: Implement timezone-aware quiet hours check
     
     // Step 3: Send EMA assessment prompt
-    await step.runMutation(internal.assessments.startAssessment, {
+    await step.runMutation(internal.internal.assessments.startAssessment, {
       userId,
       assessmentType: "ema",
     });
@@ -47,7 +47,7 @@ export const engagementMonitoringWorkflow = workflow.define({
   },
   handler: async (step, { userId }) => {
     // Check last engagement date
-    const user = await step.runQuery(internal.users.getUser, { userId });
+    const user = await step.runQuery(internal.internal.users.getUser, { userId });
     
     if (!user?.lastEngagementDate) {
       return;
@@ -92,7 +92,7 @@ export const suggestResourcesWorkflow = workflow.define({
   },
   handler: async (step, { userId, zone }) => {
     // Suggest resources for the zone
-    await step.runAction(internal.resources.suggestResourcesForZoneAction, {
+    await step.runAction(internal.internal.resources.suggestResourcesForZoneAction, {
       userId,
       zone,
     });

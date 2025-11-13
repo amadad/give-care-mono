@@ -8,6 +8,8 @@ import { v } from "convex/values";
 import { getAssessmentDefinition } from "./lib/assessmentCatalog";
 import { internal } from "./_generated/api";
 import { recalculateComposite } from "./lib/services/wellnessService";
+import { emitEvent } from "./lib/services/eventService";
+import { enrichProfileFromSDOH } from "./lib/services/assessmentService";
 
 /**
  * Process assessment answer
@@ -130,7 +132,7 @@ export const completeAssessment = internalMutation({
     // Create assessment record
     const assessmentId = await ctx.db.insert("assessments", {
       userId,
-      definitionId: session.definitionId,
+      definitionId: session.definitionId as "ema" | "cwbs" | "reach2" | "sdoh",
       version: "1.0",
       answers: session.answers,
       completedAt: Date.now(),
@@ -183,15 +185,14 @@ export const completeAssessment = internalMutation({
       )[0];
 
       // Trigger workflow to suggest resources for highest pressure zone
-      const workflowManager = new WorkflowManager(components.workflow);
-      await workflowManager.start(ctx, suggestResourcesWorkflow, {
+      await ctx.scheduler.runAfter(0, internal.workflows.suggestResourcesWorkflow, {
         userId,
         zone: highestZone,
       });
     }
 
     // Route to Assessment Agent for interpretation
-    await ctx.scheduler.runAfter(0, internal.agents.processAssessmentCompletion, {
+    await ctx.scheduler.runAfter(0, internal.internal.agents.processAssessmentCompletion, {
       userId,
       assessmentId,
       score: gcBurnout,
