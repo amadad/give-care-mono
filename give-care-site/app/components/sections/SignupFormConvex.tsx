@@ -30,13 +30,14 @@ export function SignupFormConvex() {
   // Get phone from URL params (for SMS flow)
   const searchParams = useSearchParams()
 
-  // Pre-fill phone from URL param
+  // Pre-fill phone from URL param (only on mount or URL change)
   useEffect(() => {
     const urlPhone = searchParams?.get('phone')
     if (urlPhone) {
       phone.setValue(urlPhone)
     }
-  }, [searchParams, phone])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams])
 
   // Convex action to create checkout session
   const createCheckoutSession = useAction(api.stripe.createCheckoutSession)
