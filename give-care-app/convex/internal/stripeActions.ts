@@ -175,6 +175,12 @@ export const createCheckoutSessionForResubscribe = internalAction({
         userId: userId,
         planId: planId,
       },
+      subscription_data: {
+        metadata: {
+          userId: userId,
+          planId: planId,
+        },
+      },
     });
 
     return { url: session.url };

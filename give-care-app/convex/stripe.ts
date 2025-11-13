@@ -110,6 +110,12 @@ export const createCheckoutSession = action({
         planId,
         phone: phoneNumber,
       },
+      subscription_data: {
+        metadata: {
+          userId,
+          planId,
+        },
+      },
     });
 
     return session.url;
