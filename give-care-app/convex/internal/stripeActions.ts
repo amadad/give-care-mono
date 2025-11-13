@@ -21,9 +21,9 @@ export const processWebhook = internalAction({
   },
   handler: async (ctx, { body, signature }) => {
     // Get Stripe webhook secret from environment
-    const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
+    const webhookSecret = process.env.STRIPE_WEBHOOKS_SECRET;
     if (!webhookSecret) {
-      throw new Error("STRIPE_WEBHOOK_SECRET not configured");
+      throw new Error("STRIPE_WEBHOOKS_SECRET not configured");
     }
 
     // Import Stripe SDK for signature verification

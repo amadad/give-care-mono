@@ -42,6 +42,40 @@ export const applyStripeEvent = internalMutation({
 
     const subscriptionState = mapStripeEventToSubscription(event);
 
+    // Handle checkout.session.completed specially for welcome SMS
+    if (eventType === "checkout.session.completed") {
+      // Extract userId from session metadata
+      const metadata = eventData.metadata || {};
+      const userId = metadata.userId;
+
+      if (userId) {
+        // Record event for idempotency
+        await ctx.db.insert("billing_events", {
+          stripeEventId,
+          userId: userId as any,
+          type: eventType,
+          data: eventData,
+        });
+
+        // Trigger welcome SMS for new signups
+        await ctx.scheduler.runAfter(
+          0,
+          internal.internal.sms.sendWelcomeSMS,
+          { userId: userId as any }
+        );
+
+        return { status: "processed", userId, isNewSubscription: true };
+      }
+
+      // No userId in metadata - record and skip
+      await ctx.db.insert("billing_events", {
+        stripeEventId,
+        type: eventType,
+        data: eventData,
+      });
+      return { status: "skipped", reason: "no_user_id_in_checkout" };
+    }
+
     if (!subscriptionState) {
       // Event not relevant for subscription updates
       // Still record it for idempotency
@@ -118,16 +152,6 @@ export const applyStripeEvent = internalMutation({
       type: eventType,
       data: eventData,
     });
-
-    // Step 6: Send welcome SMS for new subscriptions (checkout.session.completed)
-    if (isNewSubscription && eventType === "checkout.session.completed" && subscriptionState.status === "active") {
-      // Schedule welcome SMS to start onboarding
-      await ctx.scheduler.runAfter(
-        0,
-        internal.internal.sms.sendWelcomeSMS,
-        { userId: userId as any }
-      );
-    }
 
     return { status: "processed", userId, isNewSubscription };
   },
