@@ -1,5 +1,6 @@
 'use client';
 
+import { Suspense } from 'react';
 import { motion, useReducedMotion } from 'framer-motion';
 import { SignupFormConvex } from "@/app/components/sections/SignupFormConvex"
 
@@ -33,7 +34,9 @@ export default function SignupHero() {
           animate={fadeInVariants.animate}
           transition={{ duration: shouldReduceMotion ? 0 : 0.6, delay: shouldReduceMotion ? 0 : 0.2 }}
         >
-          <SignupFormConvex />
+          <Suspense fallback={<div className="text-center">Loading...</div>}>
+            <SignupFormConvex />
+          </Suspense>
         </motion.div>
       </div>
     </section>
