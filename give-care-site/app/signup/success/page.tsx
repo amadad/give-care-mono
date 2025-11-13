@@ -95,7 +95,7 @@ export default function SuccessPage() {
                       </div>
                       
                       {/* Animated Chat Messages */}
-                      <div className="absolute z-10 px-4" style={{ top: '155px', bottom: '20px', left: '0', right: '0', overflowY: 'auto', overflowX: 'hidden' }}>
+                      <div className="absolute z-10 px-4" style={{ top: '175px', bottom: '20px', left: '0', right: '0', overflowY: 'auto', overflowX: 'hidden' }}>
                         <div className="w-[95%] mx-auto">
                           <AnimatedChat messages={successChatScenario.messages} />
                         </div>

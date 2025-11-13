@@ -31,7 +31,7 @@ http.route({
     }
 
     // Process Stripe webhook (idempotency handled inside)
-    await ctx.runAction(internal.stripeActions.processWebhook, {
+    await ctx.runAction(internal.internal.stripeActions.processWebhook, {
       body,
       signature,
     });
