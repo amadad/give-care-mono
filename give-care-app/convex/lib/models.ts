@@ -1,20 +1,21 @@
 /**
  * LLM Model Configuration
  *
- * Model Selection (GPT-5 series):
- * - gpt-5-nano: High-throughput, simple instruction-following (Main Agent)
- * - gpt-5-mini: Cost-optimized reasoning, balances speed/cost/capability (Assessment)
- * - gpt-5.1: Complex reasoning, broad knowledge (future consideration)
+ * Hybrid Approach:
+ * - Gemini 2.5 Flash: Main Agent (50% cheaper, optimized for low latency)
+ * - GPT-5 mini: Assessment Agent (clinical accuracy for 5% of traffic)
+ * - OpenAI embeddings: Proven with Agent Component
  */
 
+import { google } from "@ai-sdk/google";
 import { openai } from "@ai-sdk/openai";
 
-// Main Agent: High-throughput for 95% of traffic
-// Simple instruction-following: resource search, profile updates, check-ins
-export const MAIN_MODEL = openai.chat("gpt-5-nano");
+// Main Agent: Gemini 2.5 Flash for 95% of traffic
+// 50% cost savings, faster responses, SMS-optimized
+export const MAIN_MODEL = google("gemini-2.5-flash-latest");
 
-// Assessment Agent: Reasoning-optimized for 5% of traffic
-// Clinical scoring, intervention matching requires more reasoning
+// Assessment Agent: Keep GPT-5 mini for clinical accuracy
+// Clinical scoring, intervention matching (5% of traffic)
 export const ASSESSMENT_MODEL = openai.chat("gpt-5-mini");
 
 // Embedding model for vector search (Agent Component uses this)
