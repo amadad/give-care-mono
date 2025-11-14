@@ -1,5 +1,6 @@
 import '@testing-library/jest-dom'
 import { vi } from 'vitest'
+import { createElement } from 'react'
 
 // Mock Next.js router
 vi.mock('next/navigation', () => ({
@@ -21,9 +22,12 @@ vi.mock('next/navigation', () => ({
   },
 }))
 
-// Mock Next.js Image
+// Mock Next.js Image - render as img element instead of props object
 vi.mock('next/image', () => ({
-  default: (props: Record<string, unknown>) => props,
+  default: (props: any) => {
+    const { src, alt, ...rest } = props
+    return createElement('img', { src, alt, ...rest })
+  },
 }))
 
 // Mock environment variables
