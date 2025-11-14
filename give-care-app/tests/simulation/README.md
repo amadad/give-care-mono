@@ -20,7 +20,7 @@ End-to-end tests that verify every critical path in the GiveCare platform by run
 ### ⚠️ Requires API Keys
 Tests run successfully but agent-dependent assertions fail without:
 - **OPENAI_API_KEY**: For embeddings and GPT-4 mini (assessment agent)
-- **GOOGLE_API_KEY**: For Gemini 2.5 Flash (main agent)
+- **GOOGLE_GENERATIVE_AI_API_KEY**: For Gemini 2.5 Flash (main agent)
 
 Without API keys, you'll see:
 ```
@@ -62,7 +62,7 @@ Without API keys, you'll see:
 1. Create `.env` file in `give-care-app/` directory:
 ```bash
 OPENAI_API_KEY=sk-proj-...your-key...
-GOOGLE_API_KEY=...your-key...
+GOOGLE_GENERATIVE_AI_API_KEY=...your-key...
 ```
 
 2. Run tests:
@@ -126,7 +126,7 @@ npm run test:property
 ## Next Steps
 
 ### To Enable Full E2E Testing
-1. **Add API Keys** - Set OPENAI_API_KEY and GOOGLE_API_KEY in .env
+1. **Add API Keys** - Set OPENAI_API_KEY and GOOGLE_GENERATIVE_AI_API_KEY in .env
 2. **Run with Keys** - Verify all agent-dependent tests pass
 3. **CI/CD Integration** - Add secrets to GitHub Actions for automated testing
 
@@ -150,13 +150,13 @@ npm run test:property
 - [x] Test cleanup across all tables
 
 ### LLM-Dependent (⚠️ Requires API keys)
-- [ ] Crisis agent response with 988 (needs GOOGLE_API_KEY)
-- [ ] Crisis alert creation via LLM detection (needs GOOGLE_API_KEY)
-- [ ] Main agent conversation flow (needs GOOGLE_API_KEY)
+- [ ] Crisis agent response with 988 (needs GOOGLE_GENERATIVE_AI_API_KEY)
+- [ ] Crisis alert creation via LLM detection (needs GOOGLE_GENERATIVE_AI_API_KEY)
+- [ ] Main agent conversation flow (needs GOOGLE_GENERATIVE_AI_API_KEY)
 - [ ] Assessment completion with scoring (needs OPENAI_API_KEY)
 - [ ] Wellness score calculation (needs OPENAI_API_KEY)
-- [ ] Resource search with ZIP code (needs GOOGLE_API_KEY)
-- [ ] Progressive profile completion (needs GOOGLE_API_KEY)
+- [ ] Resource search with ZIP code (needs GOOGLE_GENERATIVE_AI_API_KEY)
+- [ ] Progressive profile completion (needs GOOGLE_GENERATIVE_AI_API_KEY)
 
 ### Not Yet Implemented
 - [ ] Check-in scheduling
