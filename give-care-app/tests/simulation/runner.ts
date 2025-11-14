@@ -1,7 +1,8 @@
 /**
- * Simulation Test Runner
+ * Simulation Test Runner - E2E Version
  *
- * Executes scenarios and collects performance/behavioral data
+ * Executes scenarios against real Convex backend
+ * NO MOCKS - Uses actual mutations, queries, and actions
  */
 
 import type {
@@ -11,52 +12,84 @@ import type {
   StepResult,
 } from './types';
 import { generateUser } from './fixtures/users';
+import { initConvexTest } from '../../convex/test.setup';
+import { api, internal } from '../../convex/_generated/api';
+import type { ConvexTestingHelper } from 'convex-test';
+import type { Id } from '../../convex/_generated/dataModel';
 
 export class SimulationRunner {
   private results: SimulationResult[] = [];
+  private t: ConvexTestingHelper | null = null;
+  private timeoutMs: number;
+  
+  constructor(timeoutMs: number = 30000) {
+    // Default 30s timeout per scenario (configurable for cloud CI)
+    this.timeoutMs = parseInt(process.env.TEST_TIMEOUT_MS || String(timeoutMs), 10);
+  }
 
   /**
-   * Run a single scenario
+   * Run a single scenario with timeout protection
    */
   async runScenario(scenario: Scenario): Promise<SimulationResult> {
     const startTime = Date.now();
-    const context = await this.setupContext(scenario);
+    let context: SimulationContext | null = null;
     const stepResults: StepResult[] = [];
     const failures: string[] = [];
 
     console.log(`\n▶ Running: ${scenario.name}`);
     console.log(`  ${scenario.description}`);
 
-    for (let i = 0; i < scenario.steps.length; i++) {
-      const step = scenario.steps[i];
-      const stepStart = Date.now();
+    try {
+      // Run scenario with timeout
+      await Promise.race([
+        (async () => {
+          context = await this.setupContext(scenario);
 
-      try {
-        const result = await this.executeStep(step, context, i + 1);
-        stepResults.push(result);
+          for (let i = 0; i < scenario.steps.length; i++) {
+            const step = scenario.steps[i];
+            const stepStart = Date.now();
 
-        if (!result.success) {
-          failures.push(`Step ${i + 1}: ${result.error}`);
-          console.log(`  ✗ Step ${i + 1}: ${result.error}`);
-        } else {
-          console.log(`  ✓ Step ${i + 1}: ${result.action} (${result.duration}ms)`);
+            try {
+              const result = await this.executeStep(step, context, i + 1);
+              stepResults.push(result);
+
+              if (!result.success) {
+                failures.push(`Step ${i + 1}: ${result.error}`);
+                console.log(`  ✗ Step ${i + 1}: ${result.error}`);
+              } else {
+                console.log(`  ✓ Step ${i + 1}: ${result.action} (${result.duration}ms)`);
+              }
+            } catch (error) {
+              const errorMsg = error instanceof Error ? error.message : String(error);
+              failures.push(`Step ${i + 1}: ${errorMsg}`);
+              stepResults.push({
+                step: i + 1,
+                action: 'action' in step ? step.action : step.expect,
+                success: false,
+                duration: Date.now() - stepStart,
+                error: errorMsg,
+              });
+              console.log(`  ✗ Step ${i + 1}: ${errorMsg}`);
+            }
+          }
+        })(),
+        new Promise((_, reject) =>
+          setTimeout(() => reject(new Error(`Scenario timeout after ${this.timeoutMs}ms`)), this.timeoutMs)
+        ),
+      ]);
+    } catch (error) {
+      const errorMsg = error instanceof Error ? error.message : String(error);
+      failures.push(`Scenario timeout or error: ${errorMsg}`);
+      console.log(`  ✗ Scenario failed: ${errorMsg}`);
+    } finally {
+      // Always cleanup, even on failure
+      if (context && scenario.cleanup !== false) {
+        try {
+          await this.cleanup(context);
+        } catch (cleanupError) {
+          console.warn(`  ⚠ Cleanup failed: ${cleanupError instanceof Error ? cleanupError.message : String(cleanupError)}`);
         }
-      } catch (error) {
-        const errorMsg = error instanceof Error ? error.message : String(error);
-        failures.push(`Step ${i + 1}: ${errorMsg}`);
-        stepResults.push({
-          step: i + 1,
-          action: 'action' in step ? step.action : step.expect,
-          success: false,
-          duration: Date.now() - stepStart,
-          error: errorMsg,
-        });
-        console.log(`  ✗ Step ${i + 1}: ${errorMsg}`);
       }
-    }
-
-    if (scenario.cleanup) {
-      await this.cleanup(context);
     }
 
     const metrics = this.calculateMetrics(stepResults);
@@ -92,18 +125,38 @@ export class SimulationRunner {
   }
 
   /**
-   * Setup simulation context
+   * Setup simulation context - Creates REAL user in Convex
    */
   private async setupContext(scenario: Scenario): Promise<SimulationContext> {
-    const user = generateUser(scenario.setup?.user);
+    if (!this.t) {
+      this.t = initConvexTest();
+    }
 
-    // In a real implementation, this would:
-    // 1. Create user in test database
-    // 2. Setup subscription if specified
-    // 3. Initialize any required state
+    const userFixture = generateUser(scenario.setup?.user);
+
+    // Create REAL user in Convex database
+    const userId = await this.t.mutation(internal.internal.users.upsertUserFromSignup, {
+      phone: userFixture.phone,
+      email: `test-${Date.now()}@simulation.test`,
+      name: userFixture.metadata.profile.firstName,
+    });
+
+    // Setup subscription if specified
+    if (scenario.setup?.subscription === 'plus' || scenario.setup?.subscription === 'enterprise') {
+      // Create subscription record
+      await this.t.mutation(internal.internal.subscriptions.createTestSubscription, {
+        userId,
+        plan: scenario.setup.subscription,
+      });
+    }
+
+    // Note: User profile data is in the user fixture but not persisted to metadata
+    // since the schema defines specific metadata fields.
+    // For tests that need profile data, it should be added via the actual agent flow.
 
     return {
-      userId: user.externalId,
+      userId: userId as string,
+      convexUserId: userId,
       variables: new Map(),
       trace: {
         messages: [],
@@ -133,7 +186,7 @@ export class SimulationRunner {
   }
 
   /**
-   * Execute an action step
+   * Execute an action step - Calls REAL Convex functions
    */
   private async executeAction(
     step: any,
@@ -143,19 +196,70 @@ export class SimulationRunner {
   ): Promise<StepResult> {
     const { action } = step;
 
+    if (!this.t) {
+      throw new Error('Test context not initialized');
+    }
+
     switch (action) {
       case 'sendMessage': {
-        // In real implementation: call Convex action
-        // await ctx.runAction(api.twilio.handleInboundSms, { ... })
+        // Get user to find phone number
+        const user = await this.t.query(internal.internal.users.getUser, {
+          userId: context.convexUserId!,
+        });
+
+        if (!user) {
+          throw new Error('User not found');
+        }
+
+        // Call REAL inbound message handler (simulates Twilio webhook)
+        const now = new Date().toISOString();
+        const messageSid = `SM${Date.now()}${Math.random()}`;
+        await this.t.mutation(internal.inbound.handleIncomingMessage, {
+          message: {
+            account_sid: 'ACtest123',
+            api_version: '2010-04-01',
+            body: step.text,
+            date_created: now,
+            date_sent: now,
+            date_updated: null,
+            direction: 'inbound',
+            error_code: null,
+            error_message: null,
+            from: user.phone,
+            messaging_service_sid: null,
+            num_media: '0',
+            num_segments: '1',
+            price: null,
+            price_unit: null,
+            sid: messageSid,
+            status: 'received',
+            subresource_uris: null,
+            to: '+15551234567',
+            uri: `/2010-04-01/Accounts/ACtest123/Messages/${messageSid}.json`,
+          },
+        });
+
+        // Wait for agent to process (scheduled functions)
+        // Note: finishAllScheduledFunctions may not be available in all convex-test versions
+        // Wrap in try-catch for cloud compatibility
+        try {
+          if (typeof this.t.finishAllScheduledFunctions === 'function') {
+            await this.t.finishAllScheduledFunctions();
+          } else {
+            // Fallback: wait a short time for async operations
+            await new Promise((resolve) => setTimeout(resolve, 100));
+          }
+        } catch (error) {
+          // Scheduled functions may not be supported in test environment
+          // Continue anyway - tests will verify results via database queries
+          console.warn('finishAllScheduledFunctions not available, continuing...');
+        }
 
         context.trace.messages.push({
           role: 'user',
           content: step.text,
           timestamp: Date.now(),
         });
-
-        // Simulate response
-        await this.simulateDelay(50, 200);
 
         return {
           step: stepNumber,
@@ -167,15 +271,56 @@ export class SimulationRunner {
       }
 
       case 'completeAssessment': {
-        // Simulate assessment completion
-        await this.simulateDelay(100, 500);
+        // Find active assessment session for user
+        const session = await this.t.query(internal.internal.assessments.getActiveSession, {
+          userId: context.convexUserId!,
+        });
+
+        if (!session) {
+          throw new Error('No active assessment session found');
+        }
+
+        // Submit answers via processAssessmentAnswer mutation
+        for (let i = 0; i < step.answers.length; i++) {
+          await this.t.mutation(internal.assessments.processAssessmentAnswer, {
+            userId: context.convexUserId!,
+            sessionId: session._id,
+            answer: step.answers[i],
+          });
+          
+          // Wait for scheduled functions after each answer
+          try {
+            if (typeof this.t.finishAllScheduledFunctions === 'function') {
+              await this.t.finishAllScheduledFunctions();
+            } else {
+              await new Promise((resolve) => setTimeout(resolve, 50));
+            }
+          } catch {
+            // Ignore scheduled function errors
+          }
+        }
+
+        // Assessment is automatically finalized when last answer is submitted
+        // Wait for completion to be processed
+        try {
+          if (typeof this.t.finishAllScheduledFunctions === 'function') {
+            await this.t.finishAllScheduledFunctions();
+          } else {
+            await new Promise((resolve) => setTimeout(resolve, 200));
+          }
+        } catch {
+          // Ignore scheduled function errors
+        }
+
+        // Store session ID in context for expectations
+        context.assessmentId = session._id;
 
         return {
           step: stepNumber,
           action,
           success: true,
           duration: Date.now() - startTime,
-          metadata: { answers: step.answers },
+          metadata: { answers: step.answers, sessionId: session._id },
         };
       }
 
@@ -190,13 +335,137 @@ export class SimulationRunner {
         };
       }
 
+      case 'callMutation': {
+        // Direct mutation call with template variable replacement
+        const args = this.replaceTemplateVariables(step.args, context);
+
+        try {
+          // Parse function path (e.g., "public.recordMemory" or "internal.assessments.startAssessment")
+          const result = await this.callConvexFunction('mutation', step.function, args);
+
+          // Store result and assessment ID if applicable
+          context.lastMutationResult = result;
+          if (step.function.includes('startAssessment') && result) {
+            // startAssessment returns {success, message}, not an ID
+            // We need to query for the active session instead
+            if (result.success) {
+              const session = await this.t.query(internal.internal.assessments.getActiveSession, {
+                userId: context.convexUserId!,
+              });
+              if (session) {
+                context.assessmentId = session._id;
+              }
+            }
+          }
+
+          return {
+            step: stepNumber,
+            action,
+            success: !step.expectError,
+            duration: Date.now() - startTime,
+            metadata: { function: step.function, result },
+          };
+        } catch (error) {
+          if (step.expectError) {
+            context.lastError = error as Error;
+            return {
+              step: stepNumber,
+              action,
+              success: true,
+              duration: Date.now() - startTime,
+              metadata: { function: step.function, error: (error as Error).message },
+            };
+          }
+          throw error;
+        }
+      }
+
+      case 'callQuery': {
+        // Direct query call with template variable replacement
+        const args = this.replaceTemplateVariables(step.args, context);
+
+        const result = await this.callConvexFunction('query', step.function, args);
+        context.lastQueryResult = result;
+
+        return {
+          step: stepNumber,
+          action,
+          success: true,
+          duration: Date.now() - startTime,
+          metadata: { function: step.function, result },
+        };
+      }
+
+      case 'callMutationParallel': {
+        // Execute multiple mutations concurrently
+        const promises = step.mutations.map((mutation) => {
+          const args = this.replaceTemplateVariables(mutation.args, context);
+          return this.callConvexFunction('mutation', mutation.function, args);
+        });
+
+        const results = await Promise.all(promises);
+        context.lastMutationResult = results;
+
+        return {
+          step: stepNumber,
+          action,
+          success: true,
+          duration: Date.now() - startTime,
+          metadata: { count: results.length, results },
+        };
+      }
+
+      case 'submitAssessmentAnswers': {
+        // Helper to submit multiple assessment answers
+        // Get active session if not in context
+        let sessionId = context.assessmentId;
+        if (!sessionId) {
+          const session = await this.t.query(internal.internal.assessments.getActiveSession, {
+            userId: context.convexUserId!,
+          });
+          if (!session) {
+            throw new Error('No active assessment session found');
+          }
+          sessionId = session._id;
+          context.assessmentId = sessionId;
+        }
+
+        // Submit each answer
+        for (let i = 0; i < step.answers.length; i++) {
+          await this.t.mutation(internal.assessments.processAssessmentAnswer, {
+            userId: context.convexUserId!,
+            sessionId: sessionId,
+            answer: step.answers[i],
+          });
+          
+          // Wait for scheduled functions after each answer
+          try {
+            if (typeof this.t.finishAllScheduledFunctions === 'function') {
+              await this.t.finishAllScheduledFunctions();
+            } else {
+              await new Promise((resolve) => setTimeout(resolve, 50));
+            }
+          } catch {
+            // Ignore scheduled function errors
+          }
+        }
+
+        return {
+          step: stepNumber,
+          action,
+          success: true,
+          duration: Date.now() - startTime,
+          metadata: { answers: step.answers, sessionId },
+        };
+      }
+
       default:
         throw new Error(`Unknown action: ${action}`);
     }
   }
 
   /**
-   * Execute an expectation step
+   * Execute an expectation step - Queries REAL database
    */
   private async executeExpectation(
     step: any,
@@ -206,15 +475,22 @@ export class SimulationRunner {
   ): Promise<StepResult> {
     const { expect: expectation } = step;
 
+    if (!this.t) {
+      throw new Error('Test context not initialized');
+    }
+
     switch (expectation) {
       case 'crisisDetected': {
-        // In real implementation: check crisis flags in context
-        const lastMessage = context.trace.messages[context.trace.messages.length - 1];
-        const crisisTerms = ['end it', 'give up', 'hurt myself', 'suicide'];
-        const detected = crisisTerms.some((term) =>
-          lastMessage?.content.toLowerCase().includes(term)
-        );
+        // Check for REAL crisis alerts in database
+        const alerts = await this.t.run(async (ctx) => {
+          return await ctx.db
+            .query('alerts')
+            .withIndex('by_user', (q) => q.eq('userId', context.convexUserId!))
+            .filter((q) => q.eq(q.field('type'), 'crisis'))
+            .collect();
+        });
 
+        const detected = alerts.length > 0;
         const success = detected === step.value;
 
         return {
@@ -227,16 +503,32 @@ export class SimulationRunner {
       }
 
       case 'response': {
-        // Simulate checking response
-        const mockResponse = this.generateMockResponse(context);
+        // Get REAL outbound messages from database
+        const messages = await this.t.run(async (ctx) => {
+          // Query messages from twilio component tables
+          // Note: Actual table structure depends on twilio component implementation
+          return await ctx.db
+            .query('agent_runs')
+            .withIndex('by_user', (q) => q.eq('userId', context.convexUserId!))
+            .order('desc')
+            .take(5);
+        });
+
+        // Extract response text from latest agent run
+        let responseText = '';
+        if (messages.length > 0) {
+          const latestRun = messages[0];
+          responseText = (latestRun.output as string) || '';
+        }
+
         let success: boolean;
         let errorMsg: string | undefined;
 
         if ('contains' in step) {
-          success = mockResponse.toLowerCase().includes(step.contains.toLowerCase());
+          success = responseText.toLowerCase().includes(step.contains.toLowerCase());
           errorMsg = success ? undefined : `Response missing expected text: "${step.contains}"`;
         } else if ('notContains' in step) {
-          success = !mockResponse.toLowerCase().includes(step.notContains.toLowerCase());
+          success = !responseText.toLowerCase().includes(step.notContains.toLowerCase());
           errorMsg = success ? undefined : `Response should not contain: "${step.notContains}"`;
         } else {
           throw new Error('Response expectation must have either "contains" or "notContains"');
@@ -248,12 +540,31 @@ export class SimulationRunner {
           success,
           duration: Date.now() - startTime,
           error: errorMsg,
+          metadata: { responseText },
         };
       }
 
       case 'responseTime': {
-        const lastStep = context.trace.messages[context.trace.messages.length - 1];
-        const responseTime = Date.now() - (lastStep?.timestamp || Date.now());
+        // Check REAL agent run latency
+        const agentRuns = await this.t.run(async (ctx) => {
+          return await ctx.db
+            .query('agent_runs')
+            .withIndex('by_user', (q) => q.eq('userId', context.convexUserId!))
+            .order('desc')
+            .take(1);
+        });
+
+        if (agentRuns.length === 0) {
+          return {
+            step: stepNumber,
+            action: expectation,
+            success: false,
+            duration: Date.now() - startTime,
+            error: 'No agent runs found',
+          };
+        }
+
+        const responseTime = agentRuns[0].latencyMs || 0;
         const success = responseTime < step.lessThan;
 
         return {
@@ -269,10 +580,26 @@ export class SimulationRunner {
       }
 
       case 'agentType': {
-        // Mock agent detection
-        const lastMessage = context.trace.messages[context.trace.messages.length - 1];
-        const crisisDetected = lastMessage?.content.toLowerCase().includes('end it');
-        const agentType = crisisDetected ? 'crisis' : 'main';
+        // Check REAL agent type from agent_runs table
+        const agentRuns = await this.t.run(async (ctx) => {
+          return await ctx.db
+            .query('agent_runs')
+            .withIndex('by_user', (q) => q.eq('userId', context.convexUserId!))
+            .order('desc')
+            .take(1);
+        });
+
+        if (agentRuns.length === 0) {
+          return {
+            step: stepNumber,
+            action: expectation,
+            success: false,
+            duration: Date.now() - startTime,
+            error: 'No agent runs found',
+          };
+        }
+
+        const agentType = agentRuns[0].agentName || agentRuns[0].agent || 'unknown';
         const success = agentType === step.equals;
 
         return {
@@ -285,19 +612,16 @@ export class SimulationRunner {
       }
 
       case 'alertCreated': {
-        // Mock alert creation
-        const lastMessage = context.trace.messages[context.trace.messages.length - 1];
-        const crisisDetected = lastMessage?.content.toLowerCase().includes('end it');
+        // Check for REAL alerts in database
+        const alerts = await this.t.run(async (ctx) => {
+          return await ctx.db
+            .query('alerts')
+            .withIndex('by_user', (q) => q.eq('userId', context.convexUserId!))
+            .filter((q) => q.eq(q.field('type'), 'crisis'))
+            .collect();
+        });
 
-        if (crisisDetected) {
-          context.trace.alerts.push({
-            type: 'crisis',
-            severity: 'critical',
-            timestamp: Date.now(),
-          });
-        }
-
-        const success = context.trace.alerts.length > 0;
+        const success = alerts.length > 0;
 
         return {
           step: stepNumber,
@@ -309,7 +633,15 @@ export class SimulationRunner {
       }
 
       case 'messageCount': {
-        const count = context.trace.messages.length;
+        // Count REAL messages in database
+        const agentRuns = await this.t.run(async (ctx) => {
+          return await ctx.db
+            .query('agent_runs')
+            .withIndex('by_user', (q) => q.eq('userId', context.convexUserId!))
+            .collect();
+        });
+
+        const count = agentRuns.length;
         const success = count === step.equals;
 
         return {
@@ -321,30 +653,470 @@ export class SimulationRunner {
         };
       }
 
+      case 'profileUpdated': {
+        // Check if profile field was updated
+        const user = await this.t.query(internal.internal.users.getUser, {
+          userId: context.convexUserId!,
+        });
+
+        if (!user) {
+          return {
+            step: stepNumber,
+            action: expectation,
+            success: false,
+            duration: Date.now() - startTime,
+            error: 'User not found',
+          };
+        }
+
+        const actualValue = (user.metadata as any)?.[step.field];
+        const success = actualValue === step.value;
+
+        return {
+          step: stepNumber,
+          action: expectation,
+          success,
+          duration: Date.now() - startTime,
+          error: success ? undefined : `Expected ${step.field}=${step.value}, got ${actualValue}`,
+          metadata: { field: step.field, actualValue },
+        };
+      }
+
+      case 'memoryCreated': {
+        // Check if memory was created with category and importance
+        const memories = await this.t.run(async (ctx) => {
+          const allMemories = await ctx.db.query('memories').collect();
+          return allMemories.filter((m) => m.userId === context.convexUserId!);
+        });
+
+        const matchingMemory = memories.find(
+          (m) => m.category === step.category && m.importance === step.importance
+        );
+
+        const success = !!matchingMemory;
+
+        return {
+          step: stepNumber,
+          action: expectation,
+          success,
+          duration: Date.now() - startTime,
+          error: success
+            ? undefined
+            : `No memory found with category=${step.category}, importance=${step.importance}`,
+          metadata: { memoriesCount: memories.length },
+        };
+      }
+
+      case 'memoriesReturned': {
+        // Verify memories returned from query
+        const memories = context.lastQueryResult;
+
+        if (!Array.isArray(memories)) {
+          return {
+            step: stepNumber,
+            action: expectation,
+            success: false,
+            duration: Date.now() - startTime,
+            error: 'Last query result is not an array',
+          };
+        }
+
+        let success = memories.length === step.count;
+        let errorMsg: string | undefined;
+
+        // Check first memory if specified
+        if (success && step.firstMemory) {
+          const first = memories[0];
+          success =
+            first?.category === step.firstMemory.category &&
+            first?.content === step.firstMemory.content &&
+            first?.importance === step.firstMemory.importance;
+          if (!success) {
+            errorMsg = 'First memory does not match expected';
+          }
+        }
+
+        // Check all match category if specified
+        if (success && step.allMatchCategory) {
+          const allMatch = memories.every((m) => m.category === step.allMatchCategory);
+          if (!allMatch) {
+            errorMsg = `Not all memories match category ${step.allMatchCategory}`;
+            success = false;
+          }
+        }
+
+        return {
+          step: stepNumber,
+          action: expectation,
+          success,
+          duration: Date.now() - startTime,
+          error: success ? undefined : errorMsg || `Expected ${step.count} memories, got ${memories.length}`,
+          metadata: { count: memories.length },
+        };
+      }
+
+      case 'memoriesOrdered': {
+        // Verify memories are ordered by importance
+        const memories = context.lastQueryResult;
+
+        if (!Array.isArray(memories)) {
+          return {
+            step: stepNumber,
+            action: expectation,
+            success: false,
+            duration: Date.now() - startTime,
+            error: 'Last query result is not an array',
+          };
+        }
+
+        const actualOrder = memories.map((m) => m.importance);
+        const success = JSON.stringify(actualOrder) === JSON.stringify(step.order);
+
+        return {
+          step: stepNumber,
+          action: expectation,
+          success,
+          duration: Date.now() - startTime,
+          error: success ? undefined : `Expected order ${step.order}, got ${actualOrder}`,
+          metadata: { actualOrder },
+        };
+      }
+
+      case 'assessmentCreated': {
+        // Check if assessment session was created
+        const session = await this.t.query(internal.internal.assessments.getActiveSession, {
+          userId: context.convexUserId!,
+        });
+
+        if (!session) {
+          return {
+            step: stepNumber,
+            action: expectation,
+            success: false,
+            duration: Date.now() - startTime,
+            error: 'No active assessment session found',
+          };
+        }
+
+        // Store session ID in context for later use
+        context.assessmentId = session._id;
+
+        const success =
+          session &&
+          session.definitionId === step.definitionId &&
+          session.status === step.status;
+
+        return {
+          step: stepNumber,
+          action: expectation,
+          success,
+          duration: Date.now() - startTime,
+          error: success
+            ? undefined
+            : `Assessment session not found or wrong type/status (expected ${step.definitionId}/${step.status}, got ${session?.definitionId}/${session?.status})`,
+          metadata: { session },
+        };
+      }
+
+      case 'assessmentFinalized': {
+        // Check if assessment was finalized with scores
+        // Look for completed assessment record (not session)
+        const assessments = await this.t.run(async (ctx) => {
+          return await ctx.db
+            .query('assessments')
+            .withIndex('by_user', (q) => q.eq('userId', context.convexUserId!))
+            .order('desc')
+            .take(1);
+        });
+
+        if (assessments.length === 0) {
+          return {
+            step: stepNumber,
+            action: expectation,
+            success: false,
+            duration: Date.now() - startTime,
+            error: 'No completed assessment found',
+          };
+        }
+
+        const assessment = assessments[0];
+        
+        // Get the score record
+        const scores = await this.t.run(async (ctx) => {
+          return await ctx.db
+            .query('scores')
+            .withIndex('by_user', (q) => q.eq('userId', context.convexUserId!))
+            .order('desc')
+            .take(1);
+        });
+
+        const score = scores.length > 0 ? scores[0] : null;
+
+        let success = assessment && assessment.definitionId === step.definitionId;
+        let errorMsg: string | undefined;
+
+        // Check composite score (approximate match within 10%)
+        if (success && step.compositeScore !== undefined && score) {
+          const scoreMatch = Math.abs((score.gcBurnout || 0) - step.compositeScore) <= 10;
+          if (!scoreMatch) {
+            errorMsg = `Composite score ${score.gcBurnout} not close to expected ${step.compositeScore}`;
+            success = false;
+          }
+        }
+
+        return {
+          step: stepNumber,
+          action: expectation,
+          success,
+          duration: Date.now() - startTime,
+          error: success ? undefined : errorMsg || 'Assessment not finalized or scores not calculated',
+          metadata: { assessment, score },
+        };
+      }
+
+      case 'assessmentStatus': {
+        // Check assessment session status and question index
+        const session = await this.t.query(internal.internal.assessments.getActiveSession, {
+          userId: context.convexUserId!,
+        });
+
+        if (!session) {
+          return {
+            step: stepNumber,
+            action: expectation,
+            success: false,
+            duration: Date.now() - startTime,
+            error: 'No active assessment session found',
+          };
+        }
+
+        const success =
+          session &&
+          session.status === step.status &&
+          session.questionIndex === step.questionIndex;
+
+        return {
+          step: stepNumber,
+          action: expectation,
+          success,
+          duration: Date.now() - startTime,
+          error: success
+            ? undefined
+            : `Assessment status/index mismatch (expected ${step.status}/${step.questionIndex}, got ${session?.status}/${session?.questionIndex})`,
+          metadata: { session },
+        };
+      }
+
+      case 'assessmentScores': {
+        // Verify exact score calculations
+        const scores = await this.t.run(async (ctx) => {
+          return await ctx.db
+            .query('scores')
+            .withIndex('by_user', (q) => q.eq('userId', context.convexUserId!))
+            .order('desc')
+            .take(1);
+        });
+
+        if (scores.length === 0) {
+          return {
+            step: stepNumber,
+            action: expectation,
+            success: false,
+            duration: Date.now() - startTime,
+            error: 'No score record found',
+          };
+        }
+
+        const score = scores[0];
+        
+        // Convert zone scores to match expected format
+        // Zone scores in DB are stored as zone_emotional, zone_physical, etc.
+        // Expected format may use different keys (emotional, physical, etc.)
+        const actualZoneScores: Record<string, number> = {};
+        if (score.zones) {
+          // Map from DB format to expected format
+          actualZoneScores.emotional = score.zones.zone_emotional || 0;
+          actualZoneScores.physical = score.zones.zone_physical || 0;
+          actualZoneScores.social = score.zones.zone_social || 0;
+          actualZoneScores.time = score.zones.zone_time || 0;
+          actualZoneScores.financial = score.zones.zone_financial || 0;
+        }
+
+        // Compare scores (allow for floating point differences)
+        let success = Math.abs(score.gcBurnout - step.compositeScore) <= 1; // Allow 1 point difference
+        
+        // Compare zone scores if provided
+        if (success && Object.keys(step.zoneScores).length > 0) {
+          for (const [zone, expectedValue] of Object.entries(step.zoneScores)) {
+            const actualValue = actualZoneScores[zone] || 0;
+            if (Math.abs(actualValue - expectedValue) > 0.1) {
+              success = false;
+              break;
+            }
+          }
+        }
+
+        return {
+          step: stepNumber,
+          action: expectation,
+          success,
+          duration: Date.now() - startTime,
+          error: success
+            ? undefined
+            : `Score mismatch: expected ${step.compositeScore}/${JSON.stringify(step.zoneScores)}, got ${score.gcBurnout}/${JSON.stringify(actualZoneScores)}`,
+          metadata: { score, actualZoneScores },
+        };
+      }
+
+      case 'activeSessionExists': {
+        // Check for active assessment session
+        const session = context.lastQueryResult || await this.t.query(internal.internal.assessments.getActiveSession, {
+          userId: context.convexUserId!,
+        });
+
+        const success =
+          session &&
+          session.questionIndex === step.questionIndex &&
+          session.definitionId === step.definitionId;
+
+        return {
+          step: stepNumber,
+          action: expectation,
+          success,
+          duration: Date.now() - startTime,
+          error: success ? undefined : `No active session or session mismatch (expected ${step.definitionId}/${step.questionIndex}, got ${session?.definitionId}/${session?.questionIndex})`,
+          metadata: { session },
+        };
+      }
+
+      case 'cooldownError': {
+        // Check for cooldown error message
+        // startAssessment returns {success: false, message: ...} on cooldown
+        const result = context.lastMutationResult;
+        const success = 
+          result && 
+          result.success === false && 
+          result.message && 
+          result.message.includes(step.message);
+
+        return {
+          step: stepNumber,
+          action: expectation,
+          success,
+          duration: Date.now() - startTime,
+          error: success ? undefined : `Expected cooldown error with "${step.message}", got: ${result?.message || 'no error'}`,
+          metadata: { result },
+        };
+      }
+
+      case 'errorThrown': {
+        // Check for any error with specific message
+        const error = context.lastError;
+        const success = error && error.message.includes(step.message);
+
+        return {
+          step: stepNumber,
+          action: expectation,
+          success,
+          duration: Date.now() - startTime,
+          error: success ? undefined : `Expected error with "${step.message}", got: ${error?.message || 'no error'}`,
+          metadata: { error: error?.message },
+        };
+      }
+
       default:
         throw new Error(`Unknown expectation: ${expectation}`);
     }
   }
 
-  /**
-   * Generate mock response based on context
-   */
-  private generateMockResponse(context: SimulationContext): string {
-    const lastMessage = context.trace.messages[context.trace.messages.length - 1];
 
-    if (lastMessage?.content.toLowerCase().includes('end it')) {
-      return "I hear that you're going through a very difficult time. Please reach out: 988 (Crisis Text Line)";
+  /**
+   * Replace template variables in args ({{userId}}, {{assessmentId}}, etc.)
+   */
+  private replaceTemplateVariables(args: Record<string, any>, context: SimulationContext): Record<string, any> {
+    const replaced: Record<string, any> = {};
+
+    for (const [key, value] of Object.entries(args)) {
+      if (typeof value === 'string') {
+        // Replace {{userId}} with context.convexUserId
+        if (value === '{{userId}}') {
+          replaced[key] = context.convexUserId;
+        }
+        // Replace {{assessmentId}} with context.assessmentId
+        else if (value === '{{assessmentId}}') {
+          replaced[key] = context.assessmentId;
+        }
+        // No replacement needed
+        else {
+          replaced[key] = value;
+        }
+      } else {
+        replaced[key] = value;
+      }
     }
 
-    return 'I understand caregiving can be challenging. How can I support you today?';
+    return replaced;
   }
 
   /**
-   * Simulate network/processing delay
+   * Call Convex function by string path
    */
-  private async simulateDelay(min: number, max: number): Promise<void> {
-    const delay = Math.random() * (max - min) + min;
-    await new Promise((resolve) => setTimeout(resolve, delay));
+  private async callConvexFunction(
+    type: 'mutation' | 'query',
+    functionPath: string,
+    args: Record<string, any>
+  ): Promise<any> {
+    if (!this.t) {
+      throw new Error('Test context not initialized');
+    }
+
+    // Parse function path - either "public.functionName" or "internal.module.functionName"
+    // For now, we'll use internal functions since they're what we have access to
+    // Examples: "public.recordMemory", "internal.assessments.startAssessment"
+
+    // Get the function reference from api or internal
+    const isInternal = functionPath.startsWith('internal.');
+    const pathParts = functionPath.split('.');
+
+    if (isInternal) {
+      // internal.memories.recordMemory -> internal['memories']['recordMemory']
+      const [_, module, funcName] = pathParts;
+
+      // Debug: log available modules
+      if (!(internal as any)[module]) {
+        const availableModules = Object.keys(internal as any);
+        throw new Error(
+          `Could not find module for: "${module}". Available modules: ${availableModules.join(', ')}`
+        );
+      }
+
+      const func = (internal as any)[module]?.[funcName];
+      if (!func) {
+        const availableFuncs = Object.keys((internal as any)[module] || {});
+        throw new Error(
+          `Could not find function "${funcName}" in module "${module}". Available functions: ${availableFuncs.join(', ')}`
+        );
+      }
+
+      if (type === 'mutation') {
+        return await this.t.mutation(func, args);
+      } else {
+        return await this.t.query(func, args);
+      }
+    } else {
+      // public.recordMemory -> api['recordMemory']
+      const [_, funcName] = pathParts;
+      const func = (api as any)[funcName];
+      if (!func) {
+        throw new Error(`Function not found: ${functionPath}`);
+      }
+
+      if (type === 'mutation') {
+        return await this.t.mutation(func, args);
+      } else {
+        return await this.t.query(func, args);
+      }
+    }
   }
 
   /**
@@ -389,11 +1161,94 @@ export class SimulationRunner {
   }
 
   /**
-   * Cleanup test data
+   * Cleanup test data - Delete REAL records from database
    */
   private async cleanup(context: SimulationContext): Promise<void> {
-    // In real implementation: delete test user, messages, etc.
-    console.log(`  🧹 Cleanup: ${context.userId}`);
+    if (!this.t || !context.convexUserId) {
+      console.log(`  🧹 Cleanup: ${context.userId} (skipped - no Convex ID)`);
+      return;
+    }
+
+    // Delete all related data for test user
+    await this.t.run(async (ctx) => {
+      // Delete agent runs
+      const agentRuns = await ctx.db
+        .query('agent_runs')
+        .withIndex('by_user', (q) => q.eq('userId', context.convexUserId!))
+        .collect();
+      for (const run of agentRuns) {
+        await ctx.db.delete(run._id);
+      }
+
+      // Delete alerts
+      const alerts = await ctx.db
+        .query('alerts')
+        .withIndex('by_user', (q) => q.eq('userId', context.convexUserId!))
+        .collect();
+      for (const alert of alerts) {
+        await ctx.db.delete(alert._id);
+      }
+
+      // Delete assessment sessions
+      const assessmentSessions = await ctx.db
+        .query('assessment_sessions')
+        .withIndex('by_user_status', (q) => q.eq('userId', context.convexUserId!).eq('status', 'active'))
+        .collect();
+      for (const session of assessmentSessions) {
+        await ctx.db.delete(session._id);
+      }
+      
+      // Also delete completed assessments
+      const assessments = await ctx.db
+        .query('assessments')
+        .withIndex('by_user', (q) => q.eq('userId', context.convexUserId!))
+        .collect();
+      for (const assessment of assessments) {
+        await ctx.db.delete(assessment._id);
+      }
+      
+      // Delete scores
+      const scores = await ctx.db
+        .query('scores')
+        .withIndex('by_user', (q) => q.eq('userId', context.convexUserId!))
+        .collect();
+      for (const score of scores) {
+        await ctx.db.delete(score._id);
+      }
+
+      // Delete memories (filter in code since no by_user index)
+      const memories = await ctx.db
+        .query('memories')
+        .collect();
+      for (const memory of memories) {
+        if (memory.userId === context.convexUserId!) {
+          await ctx.db.delete(memory._id);
+        }
+      }
+
+      // Delete inbound receipts
+      const receipts = await ctx.db
+        .query('inbound_receipts')
+        .withIndex('by_user', (q) => q.eq('userId', context.convexUserId!))
+        .collect();
+      for (const receipt of receipts) {
+        await ctx.db.delete(receipt._id);
+      }
+
+      // Delete subscriptions
+      const subscriptions = await ctx.db
+        .query('subscriptions')
+        .withIndex('by_user', (q) => q.eq('userId', context.convexUserId!))
+        .collect();
+      for (const subscription of subscriptions) {
+        await ctx.db.delete(subscription._id);
+      }
+
+      // Finally, delete the user
+      await ctx.db.delete(context.convexUserId!);
+    });
+
+    console.log(`  🧹 Cleanup: ${context.userId} (deleted from database)`);
   }
 
   /**

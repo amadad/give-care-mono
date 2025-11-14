@@ -192,6 +192,20 @@ export declare const internal: {
         { limit?: number; userId: Id<"users"> },
         any
       >;
+      listMemories: FunctionReference<
+        "query",
+        "internal",
+        {
+          category?:
+            | "care_routine"
+            | "preference"
+            | "intervention_result"
+            | "crisis_trigger"
+            | "family_health";
+          userId: Id<"users">;
+        },
+        any
+      >;
       recordMemory: FunctionReference<
         "mutation",
         "internal",
@@ -351,6 +365,12 @@ export declare const internal: {
       >;
     };
     subscriptions: {
+      createTestSubscription: FunctionReference<
+        "mutation",
+        "internal",
+        { plan: "plus" | "enterprise"; userId: Id<"users"> },
+        any
+      >;
       getByUserId: FunctionReference<
         "query",
         "internal",

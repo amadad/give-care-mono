@@ -13,6 +13,8 @@
     "test": "vitest",
     "test:simulate": "vitest tests/simulation/simulation.test.ts",
     "test:simulate:watch": "vitest tests/simulation/simulation.test.ts --watch",
+    "test:e2e": "vitest tests/simulation/all-scenarios.test.ts",
+    "test:e2e:watch": "vitest tests/simulation/all-scenarios.test.ts --watch",
     "test:property": "vitest tests/simulation/property-based.test.ts",
     "test:all": "vitest tests/",
     "lint": "eslint .",
