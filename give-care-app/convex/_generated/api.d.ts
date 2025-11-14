@@ -231,6 +231,12 @@ export declare const internal: {
         { category: string; zip: string },
         any
       >;
+      getLatestUserScore: FunctionReference<
+        "query",
+        "internal",
+        { userId: Id<"users"> },
+        any
+      >;
       getLocationFromUserQuery: FunctionReference<
         "query",
         "internal",
@@ -470,7 +476,12 @@ export declare const internal: {
     searchResources: FunctionReference<
       "action",
       "internal",
-      { category?: string; query: string; userId: Id<"users"> },
+      {
+        category?: string;
+        query: string;
+        userId: Id<"users">;
+        zones?: Array<string>;
+      },
       any
     >;
   };

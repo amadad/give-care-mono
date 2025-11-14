@@ -43,7 +43,7 @@ export const searchResources = createTool({
   }> => {
     // Check onboarding policy (crisis path bypasses this)
     const check = await ctx.runQuery(internal.internal.onboarding.enforcePolicy, {
-      userId: ctx.userId! as Id<"users">,
+      userId: ctx.userId as Id<"users">,
       interactionType: "resource_search",
     });
 
@@ -57,7 +57,7 @@ export const searchResources = createTool({
     }
 
     const result = await ctx.runAction(internal.resources.searchResources, {
-      userId: ctx.userId! as Id<"users">,
+      userId: ctx.userId as Id<"users">,
       query: args.query,
       category: args.category,
     });
@@ -97,7 +97,7 @@ export const startAssessment = createTool({
   }> => {
     // Check onboarding policy (crisis path bypasses this)
     const check = await ctx.runQuery(internal.internal.onboarding.enforcePolicy, {
-      userId: ctx.userId! as Id<"users">,
+      userId: ctx.userId as Id<"users">,
       interactionType: "assessment",
     });
 
@@ -112,7 +112,7 @@ export const startAssessment = createTool({
     const result = await ctx.runMutation(
       internal.internal.assessments.startAssessment,
       {
-        userId: ctx.userId! as Id<"users">,
+        userId: ctx.userId as Id<"users">,
         assessmentType: args.assessmentType,
       }
     );
@@ -137,7 +137,7 @@ export const checkWellnessStatus = createTool({
     lastAssessment: string;
   }> => {
     const result = await ctx.runQuery(internal.internal.wellness.getWellnessStatus, {
-      userId: ctx.userId! as Id<"users">,
+      userId: ctx.userId as Id<"users">,
     });
     return result;
   },
@@ -170,7 +170,7 @@ export const findInterventions = createTool({
   }> => {
     // Check onboarding policy (crisis path bypasses this)
     const check = await ctx.runQuery(internal.internal.onboarding.enforcePolicy, {
-      userId: ctx.userId! as Id<"users">,
+      userId: ctx.userId as Id<"users">,
       interactionType: "intervention",
     });
 
@@ -214,7 +214,7 @@ export const recordMemory = createTool({
   }),
   handler: async (ctx: ToolCtx, args): Promise<{ success: boolean }> => {
     await ctx.runMutation(internal.internal.memories.recordMemory, {
-      userId: ctx.userId! as Id<"users">,
+      userId: ctx.userId as Id<"users">,
       category: args.category,
       content: args.content,
       importance: args.importance,
@@ -235,7 +235,7 @@ export const updateProfile = createTool({
   }),
   handler: async (ctx: ToolCtx, args): Promise<{ success: boolean }> => {
     await ctx.runMutation(internal.internal.users.updateProfile, {
-      userId: ctx.userId! as Id<"users">,
+      userId: ctx.userId as Id<"users">,
       field: args.field,
       value: args.value,
     });
@@ -255,7 +255,7 @@ export const trackInterventionPreference = createTool({
   }),
   handler: async (ctx: ToolCtx, args): Promise<{ success: boolean }> => {
     await ctx.runMutation(internal.internal.interventions.trackEvent, {
-      userId: ctx.userId! as Id<"users">,
+      userId: ctx.userId as Id<"users">,
       interventionId: args.interventionId,
       status: args.status,
     });

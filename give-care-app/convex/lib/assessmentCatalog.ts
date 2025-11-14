@@ -403,8 +403,11 @@ export function getAssessmentDefinition(
       return REACH2_DEFINITION;
     case "sdoh":
       return SDOH_DEFINITION;
-    default:
-      throw new Error(`Unknown assessment type: ${type}`);
+    default: {
+      // TypeScript knows all cases are handled, but we need this for runtime safety
+      const _exhaustive: never = type;
+      throw new Error(`Unknown assessment type: ${String(_exhaustive)}`);
+    }
   }
 }
 

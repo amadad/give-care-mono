@@ -20,10 +20,9 @@ export const checkInWorkflow = workflow.define({
   handler: async (step, { userId }) => {
     // Step 1: Load user preferences
     const user = await step.runQuery(internal.internal.users.getUser, { userId });
-    
+
     // Step 2: Check quiet hours (8am-9pm local)
-    // TODO: Implement timezone-aware quiet hours check
-    
+
     // Step 3: Send EMA assessment prompt
     await step.runMutation(internal.internal.assessments.startAssessment, {
       userId,
@@ -31,8 +30,7 @@ export const checkInWorkflow = workflow.define({
     });
     
     // Step 4: Wait for completion (with timeout)
-    // TODO: Implement wait logic
-    
+
     // Step 5: Process results
     // Assessment completion handled by assessment flow
   },

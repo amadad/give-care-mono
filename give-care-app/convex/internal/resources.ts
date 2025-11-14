@@ -108,6 +108,31 @@ export const getLocationFromUserQuery = internalQuery({
 });
 
 /**
+ * Get latest user score with pressure zones
+ */
+export const getLatestUserScore = internalQuery({
+  args: {
+    userId: v.id("users"),
+  },
+  handler: async (ctx, { userId }) => {
+    // Get most recent score for this user
+    const latestScore = await ctx.db
+      .query("scores")
+      .withIndex("by_user", (q) => q.eq("userId", userId))
+      .order("desc")
+      .first();
+
+    if (!latestScore) return null;
+
+    return {
+      zones: latestScore.zones,
+      gcBurnout: (latestScore as any).gcBurnout,
+      instrument: latestScore.instrument,
+    };
+  },
+});
+
+/**
  * Cleanup expired cache entries
  */
 export const cleanupExpiredCache = internalMutation({

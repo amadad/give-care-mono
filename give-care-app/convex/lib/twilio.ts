@@ -11,7 +11,7 @@ import type { ActionCtx } from "../_generated/server";
  * Twilio client instance
  */
 export const twilio = new Twilio(components.twilio, {
-  defaultFrom: process.env.TWILIO_PHONE_NUMBER!,
+  defaultFrom: process.env.TWILIO_PHONE_NUMBER,
 });
 
 // Set incoming message callback

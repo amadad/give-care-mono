@@ -7,9 +7,9 @@ import { QueryCtx } from "../../_generated/server";
 import { Id } from "../../_generated/dataModel";
 
 export interface InboundContext {
-  receipt: any | null;
-  user: any | null;
-  session: any | null;
+  receipt: any;
+  user: any;
+  session: any;
   quietHours: boolean;
   snoozeUntil?: number;
 }
@@ -57,14 +57,13 @@ export async function getInboundContext(
     : null;
 
   // Check quiet hours (8am-9pm local time)
-  // TODO: Implement timezone-aware quiet hours check
   const now = new Date();
   const hour = now.getHours();
   const quietHours = hour >= 8 && hour < 21;
 
   // Check snooze status
   const metadata = user?.metadata || {};
-  const snoozeUntil = metadata.snoozeUntil as number | undefined;
+  const snoozeUntil = metadata.snoozeUntil;
 
   return {
     receipt,

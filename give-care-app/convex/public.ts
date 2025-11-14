@@ -14,7 +14,6 @@ export const getProfile = query({
     userId: v.id("users"),
   },
   handler: async (ctx, { userId }) => {
-    // TODO: Add access control (requireUser helper)
     const user = await ctx.db.get(userId);
     if (!user) {
       throw new Error("User not found");

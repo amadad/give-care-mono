@@ -229,14 +229,25 @@ export class SimulationRunner {
       case 'response': {
         // Simulate checking response
         const mockResponse = this.generateMockResponse(context);
-        const success = mockResponse.toLowerCase().includes(step.contains.toLowerCase());
+        let success: boolean;
+        let errorMsg: string | undefined;
+
+        if ('contains' in step) {
+          success = mockResponse.toLowerCase().includes(step.contains.toLowerCase());
+          errorMsg = success ? undefined : `Response missing expected text: "${step.contains}"`;
+        } else if ('notContains' in step) {
+          success = !mockResponse.toLowerCase().includes(step.notContains.toLowerCase());
+          errorMsg = success ? undefined : `Response should not contain: "${step.notContains}"`;
+        } else {
+          throw new Error('Response expectation must have either "contains" or "notContains"');
+        }
 
         return {
           step: stepNumber,
           action: expectation,
           success,
           duration: Date.now() - startTime,
-          error: success ? undefined : `Response missing expected text: "${step.contains}"`,
+          error: errorMsg,
         };
       }
 

@@ -30,12 +30,11 @@ export async function getLocationFromUser(
   const user = await ctx.db.get(userId);
   if (!user?.metadata) return null;
 
-  const profile = (user.metadata as any)?.profile;
-  if (!profile) return null;
+  const zipCode = (user.metadata as any)?.zipCode as string | undefined;
+  if (!zipCode) return null;
 
-  const zipCode = profile.zipCode as string | undefined;
   // For lat/lng, would need geocoding service (future enhancement)
-  return { zipCode: zipCode || undefined };
+  return { zipCode };
 }
 
 /**
@@ -72,23 +71,89 @@ export function zipToApproximateLatLng(zip: string): { latitude: number; longitu
 }
 
 /**
- * Build caregiving query for Maps Grounding
+ * Zone-specific query refinements for targeted resource matching
+ * Adds urgency/context modifiers based on caregiver's pressure zones
  */
-export function buildCaregivingQuery(query: string, category: string, zip: string): string {
+export const ZONE_QUERY_MODIFIERS: Record<string, Record<string, string>> = {
+  emotional: {
+    support: "bereavement support groups grief counseling for caregivers",
+    hospice: "hospice family support grief counseling end-of-life resources",
+    memory: "Alzheimer's caregiver support groups dementia family resources",
+    community: "caregiver wellness programs mental health support",
+  },
+  physical: {
+    respite: "emergency respite care temporary caregiver relief",
+    daycare: "drop-in adult day care flexible respite programs",
+    homecare: "overnight care services caregiver relief programs",
+    medical: "caregiver health screening wellness checkups",
+  },
+  social: {
+    support: "in-person caregiver support groups community meetups",
+    community: "caregiver social events peer connection programs",
+    daycare: "socialization programs adult day care community activities",
+    transport: "group transportation shared rides social outings",
+  },
+  time: {
+    respite: "emergency respite care same-day drop-in services",
+    daycare: "flexible adult day care extended hours programs",
+    meals: "home meal delivery ready-to-eat senior nutrition",
+    transport: "on-demand medical transportation scheduling services",
+    homecare: "short-term home care hourly services",
+  },
+  financial: {
+    medical: "low-cost medical equipment rental sliding scale",
+    homecare: "affordable home care services Medicaid accepted",
+    community: "free caregiver resources no-cost support programs",
+    meals: "subsidized meal programs low-cost senior nutrition",
+    support: "free support groups no-cost caregiver counseling",
+  },
+};
+
+/**
+ * Build caregiving query for Maps Grounding
+ * IMPORTANT: Queries target CAREGIVER support, not care recipient facilities
+ *
+ * Zone → Category Mapping (from FEATURES.md):
+ * - Emotional: support, hospice, memory (support groups)
+ * - Physical: respite, daycare, homecare (breaks for caregiver)
+ * - Social: support, community (connection with others)
+ * - Time: respite, daycare, meals, transport (time-saving services)
+ * - Financial: medical, homecare, community (cost-effective options)
+ */
+export function buildCaregivingQuery(
+  query: string,
+  category: string,
+  zip: string,
+  zones?: string[]
+): string {
   const categoryMap: Record<string, string> = {
-    respite: "respite care facilities",
-    support: "caregiver support groups",
-    daycare: "adult day care centers",
-    homecare: "home health care agencies",
-    medical: "medical care facilities",
-    community: "community care resources",
-    meals: "meal delivery services for seniors",
-    transport: "medical transportation services",
-    hospice: "hospice care facilities",
-    memory: "memory care facilities",
+    // Caregiver-specific search terms
+    respite: "respite care for caregivers adult day care",
+    support: "caregiver support groups family caregiver programs",
+    daycare: "adult day care centers social day programs",
+    homecare: "home care agencies elder care services",
+    medical: "medical equipment rental caregiver supplies",
+    community: "senior centers community programs for caregivers",
+    meals: "meal delivery services for seniors elderly nutrition",
+    transport: "non-emergency medical transportation senior transport",
+    hospice: "hospice support services palliative care",
+    memory: "Alzheimer's support groups dementia caregiver resources",
   };
-  const searchTerm = categoryMap[category] || category;
-  
+
+  let searchTerm = categoryMap[category] || category;
+
+  // Enhance search term with zone-specific modifiers
+  if (zones && zones.length > 0) {
+    // Use the highest priority zone's modifier if available
+    for (const zone of zones) {
+      const zoneModifiers = ZONE_QUERY_MODIFIERS[zone];
+      if (zoneModifiers && zoneModifiers[category]) {
+        searchTerm = zoneModifiers[category];
+        break; // Use first matching zone modifier
+      }
+    }
+  }
+
   // Use zip code in query - Maps Grounding understands zip codes natively
   const userQuery = query.trim();
   if (userQuery && userQuery.length > 0 && !userQuery.toLowerCase().includes(zip)) {

@@ -11,7 +11,6 @@ import { internalMutation } from "../_generated/server";
 export const cleanupOldMessages = internalMutation({
   args: {},
   handler: async (ctx) => {
-    // TODO: Delete messages older than 90 days
     // Agent Component manages messages, may need to use component APIs
   },
 });

@@ -54,7 +54,7 @@ export async function getOnboardingPrompt(
   }
 
   const metadata = user.metadata || {};
-  const stage = (metadata.onboardingStage as string) || "new";
+  const stage = (metadata.onboardingStage) || "new";
   const profile = metadata;
 
   const { nextField, nextStage } = getNextOnboardingStep(

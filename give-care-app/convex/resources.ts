@@ -29,14 +29,19 @@ export const searchResources = internalAction({
     userId: v.id("users"),
     query: v.string(),
     category: v.optional(v.string()),
+    zones: v.optional(v.array(v.string())), // Optional: pass explicit zones
   },
-  handler: async (ctx, { userId, query, category }) => {
+  handler: async (ctx, { userId, query, category, zones: explicitZones }) => {
     // Step 1: Extract location (query → user metadata → error)
     const zipFromQuery = extractZipFromQuery(query);
-    const userLocation = await ctx.runQuery(
-      internal.internal.resources.getLocationFromUserQuery,
-      { userId }
-    );
+    
+    // Batch queries for better performance (CONVEX_01.md best practice)
+    const [userLocation, latestScore] = await Promise.all([
+      ctx.runQuery(internal.internal.resources.getLocationFromUserQuery, { userId }),
+      !explicitZones || explicitZones.length === 0
+        ? ctx.runQuery(internal.internal.resources.getLatestUserScore, { userId })
+        : Promise.resolve(null),
+    ]);
 
     const zip = zipFromQuery || userLocation?.zipCode;
     if (!zip) {
@@ -44,6 +49,26 @@ export const searchResources = internalAction({
         error: "missing_zip",
         suggestion: "What's your 5-digit zip code so I can find nearby support?",
       };
+    }
+
+    // Step 1.5: Get user's pressure zones (if not explicitly provided)
+    let pressureZones: string[] = explicitZones || [];
+    if (!explicitZones || explicitZones.length === 0) {
+      if (latestScore?.zones) {
+        // Extract top 2-3 pressure zones (zones >= 3.5 on 1-5 scale)
+        const zoneEntries = Object.entries(latestScore.zones)
+          .filter(([_, score]) => {
+            return typeof score === 'number' && score >= 3.5;
+          })
+          .sort(([_, a], [__, b]) => {
+            const numA = typeof a === 'number' ? a : 0;
+            const numB = typeof b === 'number' ? b : 0;
+            return numB - numA;
+          })
+          .slice(0, 3)
+          .map(([zoneName, _]) => zoneName.replace('zone_', '')); // Remove 'zone_' prefix
+        pressureZones = zoneEntries;
+      }
     }
 
     // Step 2: Emit resource.search event
@@ -85,7 +110,8 @@ export const searchResources = internalAction({
         query,
         resolvedCategory,
         location,
-        3000 // 3s timeout
+        3000, // 3s timeout
+        pressureZones // Pass pressure zones for zone-specific refinements
       );
 
       // Step 4: Save to cache (mutation - transactional)

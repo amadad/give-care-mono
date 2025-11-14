@@ -34,7 +34,8 @@ export async function searchWithMapsGrounding(
   query: string,
   category: string,
   location: LocationData,
-  timeoutMs: number = MAPS_FETCH_TIMEOUT_MS
+  timeoutMs: number = MAPS_FETCH_TIMEOUT_MS,
+  zones?: string[]
 ): Promise<MapsGroundingResult> {
   const apiKey = process.env.GOOGLE_GENERATIVE_AI_API_KEY || process.env.GEMINI_API_KEY;
   if (!apiKey) {
@@ -43,11 +44,11 @@ export async function searchWithMapsGrounding(
 
   const ai = new GoogleGenAI({ apiKey });
 
-  // Build caregiving-specific query
+  // Build caregiving-specific query with zone refinements
   if (!location.zipCode) {
     throw new Error("Zip code is required for Maps Grounding");
   }
-  const mapsQuery = buildCaregivingQuery(query, category, location.zipCode);
+  const mapsQuery = buildCaregivingQuery(query, category, location.zipCode, zones);
 
   // Config per official docs
   const config: any = {

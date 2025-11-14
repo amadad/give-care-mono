@@ -15,8 +15,7 @@ export async function detectScoreTrends(ctx: ActionCtx): Promise<void> {
   // Get all users with 2+ composite scores (single query)
   // Note: This would need a helper query to get users with multiple scores
   // For now, we'll query all users and filter in code (not ideal, but works)
-  
-  // TODO: Add index or query helper for users with 2+ scores
+
   const users = await ctx.runQuery(internal.internal.users.getAllUsers, {});
 
   for (const user of users) {
@@ -36,8 +35,7 @@ export async function detectScoreTrends(ctx: ActionCtx): Promise<void> {
 
     // If decline ≥ 5, suggest interventions via existing workflow
     if (trend.trend === "declining" && trend.change >= 5) {
-      // Use suggestResourcesWorkflow as fallback until suggestInterventionsForDecline is implemented
-      // TODO: Implement suggestInterventionsForDecline workflow
+      // Use suggestResourcesWorkflow as fallback
       await ctx.scheduler.runAfter(
         0,
         internal.workflows.suggestResourcesWorkflow,

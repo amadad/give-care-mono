@@ -36,7 +36,7 @@ export function normalizeAgentRun(run: AgentRun): {
   const agentName: "main" | "assessment" =
     run.agentName ||
     (run.agent === "main" || run.agent === "assessment"
-      ? (run.agent as "main" | "assessment")
+      ? (run.agent)
       : "main"); // Default to "main" if unknown
 
   // Extract toolCalls from budgetResult if available

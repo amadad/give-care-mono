@@ -12,6 +12,7 @@ export default tseslint.config(
       "tests",
       "eslint.config.js",
       "convex/_generated",
+      "convex/test.setup.ts",
       "postcss.config.js",
       "tailwind.config.js",
       "vite.config.ts",

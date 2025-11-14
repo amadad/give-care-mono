@@ -52,7 +52,7 @@ export const applyStripeEvent = internalMutation({
         // Record event for idempotency
         await ctx.db.insert("billing_events", {
           stripeEventId,
-          userId: userId as any,
+          userId: userId,
           type: eventType,
           data: eventData,
         });
@@ -61,7 +61,7 @@ export const applyStripeEvent = internalMutation({
         await ctx.scheduler.runAfter(
           0,
           internal.internal.sms.sendWelcomeSMS,
-          { userId: userId as any }
+          { userId: userId }
         );
 
         return { status: "processed", userId, isNewSubscription: true };

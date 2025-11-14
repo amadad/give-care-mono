@@ -114,7 +114,6 @@ export const getAllUsers = internalQuery({
   handler: async (ctx) => {
     // Get all users (limit to prevent timeout)
     // Use _creationTime ordering for consistent results
-    // TODO: Add pagination or use a more efficient approach
     return await ctx.db
       .query("users")
       .order("desc")
@@ -143,10 +142,7 @@ export const getUsersWithCheckIns = internalQuery({
 
     for (const user of allUsers) {
       const metadata = user.metadata || {};
-      const checkInFrequency = metadata.checkInFrequency as
-        | "daily"
-        | "weekly"
-        | undefined;
+      const checkInFrequency = metadata.checkInFrequency;
 
       if (!checkInFrequency) {
         continue; // No check-in frequency set

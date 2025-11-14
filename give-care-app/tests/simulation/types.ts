@@ -9,6 +9,7 @@ export type SimulationStep =
   | { action: 'triggerScheduled'; triggerId: string }
   | { expect: 'crisisDetected'; value: boolean }
   | { expect: 'response'; contains: string }
+  | { expect: 'response'; notContains: string }
   | { expect: 'responseTime'; lessThan: number }
   | { expect: 'agentType'; equals: 'main' | 'crisis' | 'assessment' }
   | { expect: 'alertCreated'; severity: string }

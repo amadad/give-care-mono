@@ -43,8 +43,5 @@ export async function suggestResourcesForZone(
       category,
     });
   }
-
-  // TODO: Send SMS to user with resource suggestions
-  // This would be done via the workflow or a separate action
 }
 

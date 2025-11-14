@@ -46,7 +46,7 @@ export const migrateAgentRuns = internalMutation({
       // Convert agent to agentName
       if (!run.agentName && run.agent) {
         if (run.agent === "main" || run.agent === "assessment") {
-          updates.agentName = run.agent as "main" | "assessment";
+          updates.agentName = run.agent;
         } else {
           // Default to "main" if unknown
           updates.agentName = "main";

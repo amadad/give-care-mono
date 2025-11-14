@@ -245,6 +245,48 @@ export const progressiveOnboardingPartialCompletion: Scenario = {
   cleanup: true,
 };
 
+export const zipCodePersistence: Scenario = {
+  name: 'ZIP Code Persistence',
+  description: 'ZIP code is saved and not asked again on subsequent resource searches',
+  tags: ['onboarding', 'progressive', 'zipCode', 'persistence'],
+  setup: {
+    subscription: 'plus',
+  },
+  steps: [
+    {
+      action: 'sendMessage',
+      text: 'I need respite care',
+      channel: 'sms',
+    },
+    {
+      expect: 'response',
+      contains: 'ZIP code',
+    },
+    {
+      action: 'sendMessage',
+      text: '11576',
+    },
+    {
+      expect: 'response',
+      contains: 'resource',
+    },
+    // Request resources again - should NOT ask for ZIP code
+    {
+      action: 'sendMessage',
+      text: 'Find support groups',
+    },
+    {
+      expect: 'response',
+      notContains: 'ZIP code',
+    },
+    {
+      expect: 'response',
+      contains: 'resource',
+    },
+  ],
+  cleanup: true,
+};
+
 export const onboardingScenarios = [
   onboardingHappyPath,
   onboardingWithoutSubscription,
@@ -253,4 +295,5 @@ export const onboardingScenarios = [
   progressiveOnboardingContextualZipCode,
   progressiveOnboardingP2Compliance,
   progressiveOnboardingPartialCompletion,
+  zipCodePersistence,
 ];

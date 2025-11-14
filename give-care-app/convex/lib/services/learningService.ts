@@ -43,7 +43,7 @@ export async function getEffectiveInterventions(
   
   // Process success events
   for (const event of events) {
-    const payload = event.payload as any;
+    const payload = event.payload;
     if (payload?.interventionId && payload?.zone) {
       interventionEvents.push({
         interventionId: payload.interventionId,
@@ -57,13 +57,13 @@ export async function getEffectiveInterventions(
   // Process try events (mark as not successful if no corresponding success)
   const successMap = new Set(
     events.map((e) => {
-      const p = e.payload as any;
+      const p = e.payload;
       return `${p?.interventionId}:${p?.zone}:${e.userId}`;
     })
   );
 
   for (const event of tryEvents) {
-    const payload = event.payload as any;
+    const payload = event.payload;
     if (payload?.interventionId && payload?.zone) {
       const key = `${payload.interventionId}:${payload.zone}:${event.userId}`;
       if (!successMap.has(key)) {
