@@ -2,7 +2,7 @@
  * LLM Model Configuration
  *
  * Hybrid Approach:
- * - Gemini 2.5 Flash: Main Agent (50% cheaper, optimized for low latency)
+ * - Gemini 2.0 Flash: Main Agent (50% cheaper, optimized for low latency)
  * - GPT-5 mini: Assessment Agent (clinical accuracy for 5% of traffic)
  * - OpenAI embeddings: Proven with Agent Component
  */
@@ -10,9 +10,9 @@
 import { google } from "@ai-sdk/google";
 import { openai } from "@ai-sdk/openai";
 
-// Main Agent: Gemini 2.5 Flash for 95% of traffic
+// Main Agent: Gemini 2.0 Flash for 95% of traffic
 // 50% cost savings, faster responses, SMS-optimized
-export const MAIN_MODEL = google("gemini-2.5-flash-latest");
+export const MAIN_MODEL = google("gemini-2.0-flash");
 
 // Assessment Agent: Keep GPT-5 mini for clinical accuracy
 // Clinical scoring, intervention matching (5% of traffic)
