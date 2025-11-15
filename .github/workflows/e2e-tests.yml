@@ -18,6 +18,9 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 20
 
+    # Pipeline: Deploy to test env → Run E2E tests → Deploy to prod (main only)
+    # Note: Tests run AFTER deployment because they require convex/_generated/ types
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -36,26 +39,9 @@ jobs:
         run: pnpm install --frozen-lockfile
 
       # ============================================================
-      # STAGE 1: Fast in-memory unit tests (30-60 seconds)
+      # STAGE 1: Deploy to test environment
       # ============================================================
-      - name: Stage 1 - Unit Tests (In-Memory)
-        env:
-          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-          GOOGLE_GENERATIVE_AI_API_KEY: ${{ secrets.GOOGLE_GENERATIVE_AI_API_KEY }}
-          TWILIO_ACCOUNT_SID: ${{ secrets.TWILIO_ACCOUNT_SID }}
-          TWILIO_AUTH_TOKEN: ${{ secrets.TWILIO_AUTH_TOKEN }}
-          TWILIO_PHONE_NUMBER: ${{ secrets.TWILIO_PHONE_NUMBER }}
-          NODE_ENV: test
-          VITEST: true
-        run: |
-          echo "Running fast in-memory tests..."
-          pnpm --filter give-care-app test:e2e
-          echo "Unit tests passed"
-
-      # ============================================================
-      # STAGE 2: Deploy to test environment
-      # ============================================================
-      - name: Stage 2 - Deploy to Test Environment
+      - name: Stage 1 - Deploy to Test Environment
         working-directory: give-care-app
         env:
           CONVEX_DEPLOY_KEY: ${{ secrets.CONVEX_DEPLOY_KEY }}
@@ -71,9 +57,9 @@ jobs:
           echo "Deployed to test environment: $PREVIEW_NAME"
 
       # ============================================================
-      # STAGE 3: Run tests against deployed backend
+      # STAGE 2: Run E2E tests against deployed backend
       # ============================================================
-      - name: Stage 3 - Integration Tests (Real Deployment)
+      - name: Stage 2 - E2E Tests (Real Deployment)
         env:
           CONVEX_URL: ${{ env.CONVEX_TEST_URL }}
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
@@ -82,15 +68,15 @@ jobs:
           TWILIO_AUTH_TOKEN: ${{ secrets.TWILIO_AUTH_TOKEN }}
           TWILIO_PHONE_NUMBER: ${{ secrets.TWILIO_PHONE_NUMBER }}
         run: |
-          echo "Running integration tests against deployed backend..."
+          echo "Running E2E tests against deployed backend..."
           echo "Testing: $CONVEX_URL"
           pnpm --filter give-care-app test:e2e
-          echo "Integration tests passed"
+          echo "E2E tests passed"
 
       # ============================================================
-      # STAGE 4: Deploy to production (only on main branch)
+      # STAGE 3: Deploy to production (only on main branch)
       # ============================================================
-      - name: Stage 4 - Deploy to Production
+      - name: Stage 3 - Deploy to Production
         if: github.ref == 'refs/heads/main' && github.event_name == 'push'
         working-directory: give-care-app
         env:
