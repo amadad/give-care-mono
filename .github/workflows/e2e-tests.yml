@@ -63,9 +63,26 @@ jobs:
           echo "Deployment URL: $DEPLOYMENT_URL"
 
       # ============================================================
-      # STAGE 2: Run E2E tests against deployed backend
+      # STAGE 2: Generate types and run E2E tests
       # ============================================================
+      - name: Stage 2 - Generate Convex Types
+        working-directory: give-care-app
+        env:
+          CONVEX_DEPLOY_KEY: ${{ secrets.CONVEX_DEPLOY_KEY }}
+        run: |
+          echo "Generating Convex types..."
+          # Generate types from schema (codegen generates types from TypeScript code, not deployment)
+          # This creates the convex/_generated/ directory required by tests
+          pnpm codegen
+          # Verify _generated directory exists
+          if [ ! -d "convex/_generated" ]; then
+            echo "Error: _generated directory not found after codegen"
+            exit 1
+          fi
+          echo "Types generated successfully"
+
       - name: Stage 2 - E2E Tests (Real Deployment)
+        working-directory: give-care-app
         env:
           CONVEX_URL: ${{ env.CONVEX_TEST_URL }}
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
@@ -76,7 +93,7 @@ jobs:
         run: |
           echo "Running E2E tests against deployed backend..."
           echo "Testing: $CONVEX_URL"
-          pnpm --filter give-care-app test:e2e
+          pnpm test:e2e
           echo "E2E tests passed"
 
       # ============================================================
