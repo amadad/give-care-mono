@@ -50,11 +50,17 @@ jobs:
 
           # Create preview deployment with unique name
           PREVIEW_NAME="ci-test-${{ github.run_id }}"
-          npx convex deploy --preview-create $PREVIEW_NAME
+
+          # Capture deployment output and extract URL
+          npx convex deploy --preview-create $PREVIEW_NAME 2>&1 | tee deploy.log
+
+          # Extract URL from deploy output (format: "Deployed to https://xxx.convex.cloud")
+          DEPLOYMENT_URL=$(grep -oP 'https://[a-z0-9-]+\.convex\.cloud' deploy.log | head -1)
 
           # Save deployment URL for next step
-          echo "CONVEX_TEST_URL=$(npx convex env get CONVEX_URL)" >> $GITHUB_ENV
+          echo "CONVEX_TEST_URL=$DEPLOYMENT_URL" >> $GITHUB_ENV
           echo "Deployed to test environment: $PREVIEW_NAME"
+          echo "Deployment URL: $DEPLOYMENT_URL"
 
       # ============================================================
       # STAGE 2: Run E2E tests against deployed backend
