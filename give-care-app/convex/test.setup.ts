@@ -15,9 +15,10 @@ import rateLimiterTest from '@convex-dev/rate-limiter/test';
 /**
  * Glob pattern for all Convex function files
  * Required by convex-test to find and load functions
+ * Includes _generated directory for component types
  */
 /// <reference types="vite/client" />
-export const modules = import.meta.glob('./**/!(*.*.*)*.*s');
+export const modules = import.meta.glob('./**/*.{js,ts}');
 
 /**
  * Initialize Convex test environment with REAL components
@@ -50,8 +51,10 @@ export function initConvexTest() {
   t.registerComponent('workflow', workflowTest.schema, workflowTest.modules);
   rateLimiterTest.register(t, 'rateLimiter');
 
-  // Note: Twilio component doesn't have a test utility yet
-  // The runner handles Twilio query failures gracefully with a try/catch fallback
+  // Register Twilio component (test mode - no real SMS sent)
+  // Twilio doesn't export a test helper, so we need to manually define an empty schema
+  // This allows component.twilio.* queries to work in tests without sending real SMS
+  t.registerComponent('twilio', { tables: {} }, {});
 
   return t;
 }

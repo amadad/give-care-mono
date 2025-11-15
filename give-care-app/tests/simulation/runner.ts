@@ -308,8 +308,8 @@ export class SimulationRunner {
           
           // Wait for scheduled functions after each answer
           try {
-            if (typeof this.t.finishAllScheduledFunctions === 'function') {
-              await this.t.finishAllScheduledFunctions();
+            if (typeof this.t.finishInProgressScheduledFunctions === 'function') {
+              await this.t.finishInProgressScheduledFunctions();
             } else {
               await new Promise((resolve) => setTimeout(resolve, 50));
             }
@@ -321,8 +321,8 @@ export class SimulationRunner {
         // Assessment is automatically finalized when last answer is submitted
         // Wait for completion to be processed
         try {
-          if (typeof this.t.finishAllScheduledFunctions === 'function') {
-            await this.t.finishAllScheduledFunctions();
+          if (typeof this.t.finishInProgressScheduledFunctions === 'function') {
+            await this.t.finishInProgressScheduledFunctions();
           } else {
             await new Promise((resolve) => setTimeout(resolve, 200));
           }
@@ -455,11 +455,11 @@ export class SimulationRunner {
             sessionId: sessionId,
             answer: step.answers[i],
           });
-          
+
           // Wait for scheduled functions after each answer
           try {
-            if (typeof this.t.finishAllScheduledFunctions === 'function') {
-              await this.t.finishAllScheduledFunctions();
+            if (typeof this.t.finishInProgressScheduledFunctions === 'function') {
+              await this.t.finishInProgressScheduledFunctions();
             } else {
               await new Promise((resolve) => setTimeout(resolve, 50));
             }
@@ -1381,8 +1381,8 @@ export class SimulationRunner {
       return;
     }
 
-    if (typeof this.t.finishAllScheduledFunctions === 'function') {
-      await this.t.finishAllScheduledFunctions();
+    if (typeof this.t.finishInProgressScheduledFunctions === 'function') {
+      await this.t.finishInProgressScheduledFunctions();
     } else {
       await new Promise((resolve) => setTimeout(resolve, 50));
     }
