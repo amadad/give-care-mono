@@ -6,6 +6,7 @@
 import { WorkflowManager } from "@convex-dev/workflow";
 import { components, internal } from "./_generated/api";
 import { v } from "convex/values";
+import { internalAction } from "./_generated/server";
 
 const workflow = new WorkflowManager(components.workflow);
 
@@ -91,6 +92,23 @@ export const suggestResourcesWorkflow = workflow.define({
   handler: async (step, { userId, zone }) => {
     // Suggest resources for the zone
     await step.runAction(internal.internal.resources.suggestResourcesForZoneAction, {
+      userId,
+      zone,
+    });
+  },
+});
+
+/**
+ * Action to start suggestResourcesWorkflow
+ * Workflows must be started from actions using workflow.start()
+ */
+export const startSuggestResourcesWorkflow = internalAction({
+  args: {
+    userId: v.id("users"),
+    zone: v.string(),
+  },
+  handler: async (ctx, { userId, zone }) => {
+    await workflow.start(ctx, suggestResourcesWorkflow, {
       userId,
       zone,
     });

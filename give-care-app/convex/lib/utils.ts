@@ -11,12 +11,18 @@ const CRISIS_PATTERNS = {
     /\bend\s+my\s+life\b/i,
     /\bcan't\s+go\s+on\b/i,
     /\boverdose\b/i,
+    /\bend\s+it\s+all\b/i, // "I want to end it all"
+    /\bcan't\s+take\s+it\s+anymore\b/i, // "I can't take it anymore"
+    /\bhurting\s+myself\b/i, // "I'm thinking of hurting myself"
   ],
   medium: [
     /\bhurt\s+myself\b/i,
     /\bself[- ]?harm\b/i,
     /\bhopeless\b/i,
     /\bdone\s+with\s+life\b/i,
+    /\bno\s+point\s+in\s+continuing\b/i, // "There is no point in continuing"
+    /\bgive\s+up\b/i, // "I want to give up"
+    /\bcan't\s+do\s+this\s+anymore\b/i, // "I can't do this anymore"
   ],
   low: [/\bpanic\s+attack\b/i],
 };
@@ -220,7 +226,7 @@ export function extractCareRecipient(
  */
 export function getCrisisResponse(isDVHint: boolean): string {
   const baseResponse =
-    "I'm hearing intense distress. You're not alone. Call or text 988 (24/7) or chat at 988lifeline.org. Text HOME to 741741. If in immediate danger, call 911. Want me to connect you now?";
+    "I'm hearing intense distress. You're not alone. Call or text 988 (24/7) or chat at 988lifeline.org. Text HOME to 741741 (Crisis Text Line). If in immediate danger, call 911. Want me to connect you now?";
 
   if (isDVHint) {
     return `${baseResponse} If you can't safely reply, call 911.`;

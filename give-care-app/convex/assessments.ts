@@ -185,7 +185,8 @@ export const completeAssessment = internalMutation({
       )[0];
 
       // Trigger workflow to suggest resources for highest pressure zone
-      await ctx.scheduler.runAfter(0, internal.workflows.suggestResourcesWorkflow, {
+      // Workflows must be started via action, not scheduled directly
+      await ctx.scheduler.runAfter(0, internal.workflows.startSuggestResourcesWorkflow, {
         userId,
         zone: highestZone,
       });

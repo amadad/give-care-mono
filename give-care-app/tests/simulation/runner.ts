@@ -13,7 +13,7 @@ import type {
 } from './types';
 import { generateUser } from './fixtures/users';
 import { initConvexTest } from '../../convex/test.setup';
-import { api, internal } from '../../convex/_generated/api';
+import { api, internal, components } from '../../convex/_generated/api';
 import type { ConvexTestingHelper } from 'convex-test';
 import type { Id } from '../../convex/_generated/dataModel';
 
@@ -503,22 +503,61 @@ export class SimulationRunner {
       }
 
       case 'response': {
-        // Get REAL outbound messages from database
-        const messages = await this.t.run(async (ctx) => {
-          // Query messages from twilio component tables
-          // Note: Actual table structure depends on twilio component implementation
-          return await ctx.db
-            .query('agent_runs')
-            .withIndex('by_user', (q) => q.eq('userId', context.convexUserId!))
-            .order('desc')
-            .take(5);
-        });
-
-        // Extract response text from latest agent run
+        // Get REAL outbound messages from Twilio component
+        // First try Twilio component (for crisis responses and direct SMS)
+        // Then fall back to agent_runs (for agent-generated responses)
         let responseText = '';
-        if (messages.length > 0) {
-          const latestRun = messages[0];
-          responseText = (latestRun.output as string) || '';
+        
+        try {
+          // Get user phone number
+          const user = await this.t.query(internal.internal.users.getUser, {
+            userId: context.convexUserId!,
+          });
+          
+          if (user?.phone) {
+            // Query Twilio component for outbound messages to this user
+            const twilioMessages = await this.t.run(async (ctx) => {
+              return await ctx.runQuery(components.twilio.messages.getByCounterparty, {
+                account_sid: process.env.TWILIO_ACCOUNT_SID || '',
+                counterparty: user.phone,
+                limit: 10,
+              });
+            });
+            
+            // Filter for outgoing messages (direction === 'outbound-api' or 'outbound-reply')
+            const outboundMessages = twilioMessages.filter(
+              (msg: any) => msg.direction === 'outbound-api' || msg.direction === 'outbound-reply'
+            );
+            
+            if (outboundMessages.length > 0) {
+              // Get the most recent outbound message
+              const latest = outboundMessages.sort(
+                (a: any, b: any) => 
+                  new Date(b.date_created).getTime() - new Date(a.date_created).getTime()
+              )[0];
+              responseText = latest.body || '';
+            }
+          }
+        } catch (error) {
+          // If Twilio query fails (e.g., missing credentials), fall back to agent_runs
+          console.warn('Failed to query Twilio messages, falling back to agent_runs:', error);
+        }
+        
+        // Fallback: Check agent_runs for agent-generated responses
+        if (!responseText) {
+          const agentRuns = await this.t.run(async (ctx) => {
+            return await ctx.db
+              .query('agent_runs')
+              .withIndex('by_user', (q) => q.eq('userId', context.convexUserId!))
+              .order('desc')
+              .take(5);
+          });
+          
+          if (agentRuns.length > 0) {
+            const latestRun = agentRuns[0];
+            // Agent runs don't store output directly, but we can check if there's any stored response
+            responseText = (latestRun as any).output as string || '';
+          }
         }
 
         let success: boolean;
