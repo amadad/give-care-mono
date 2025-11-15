@@ -48,8 +48,8 @@ export function initConvexTest() {
   t.registerComponent('workflow', workflowTest.schema, workflowTest.modules);
   rateLimiterTest.register(t, 'rateLimiter');
 
-  // Note: twilio component doesn't have a test utility yet
-  // Tests that require Twilio should mock SMS sending/receiving
+  // Note: Twilio component doesn't have a test utility yet
+  // The runner handles Twilio query failures gracefully with a try/catch fallback
 
   return t;
 }
