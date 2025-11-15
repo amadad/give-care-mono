@@ -20,9 +20,12 @@ export const Route = createFileRoute('/crisis')({
 })
 
 function CrisisPage() {
-  const alerts = useQuery(api["functions/admin"].getCrisisAlerts)
+  // Query raw tables
+  const users = useQuery(api.wellness.listUsers)
+  const scores = useQuery(api.wellness.listScores)
+  const rawAlerts = useQuery(api.wellness.listAlerts)
 
-  if (!alerts) {
+  if (!users || !scores) {
     return (
       <div className="space-y-6">
         <h1 className="text-3xl font-bold">Crisis Management</h1>
@@ -34,7 +37,55 @@ function CrisisPage() {
     )
   }
 
-  const { crisisUsers, pendingFollowups } = alerts
+  // Compute crisis users (burnout >= 80)
+  const userScoreMap = new Map<string, number>()
+  for (const score of scores) {
+    const existing = userScoreMap.get(score.userId)
+    if (!existing || score.gcBurnout > existing) {
+      userScoreMap.set(score.userId, score.gcBurnout)
+    }
+  }
+
+  const crisisUsers = users
+    .filter(u => {
+      const burnoutScore = userScoreMap.get(u._id)
+      return burnoutScore !== undefined && burnoutScore >= 80
+    })
+    .map(u => {
+      const latestScore = scores
+        .filter(s => s.userId === u._id)
+        .sort((a, b) => b._creationTime - a._creationTime)[0]
+
+      const pressureZones: string[] = []
+      if (latestScore?.zones) {
+        Object.entries(latestScore.zones).forEach(([zone, value]) => {
+          if (typeof value === 'number' && value > 3.5) {
+            pressureZones.push(zone.replace('zone_', ''))
+          }
+        })
+      }
+
+      return {
+        _id: u._id,
+        firstName: u.name || "Unknown",
+        phoneNumber: u.phone || u.externalId,
+        burnoutScore: Math.round(userScoreMap.get(u._id)!),
+        pressureZones,
+      }
+    })
+
+  const pendingFollowups = (rawAlerts || [])
+    .filter(a => a.type === "crisis" && a.status === "pending")
+    .map(a => {
+      const user = users.find(u => u._id === a.userId)
+      return {
+        _id: user?._id || a.userId,
+        firstName: user?.name || "Unknown",
+        phoneNumber: user?.phone || user?.externalId || "Unknown",
+        crisisFollowupCount: 1,
+        hoursUntilNextFollowup: 4,
+      }
+    })
 
   return (
     <div className="space-y-6">

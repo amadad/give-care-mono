@@ -1,6 +1,6 @@
 # GiveCare Admin Dashboard
 
-**Status**: Frontend code generated ✅ | Setup commands needed 🚧
+**Status**: Synced with backend ✅ | Running on localhost:5173 ✅ | User list page pending 🚧
 
 Real-time admin dashboard for GiveCare built with:
 - **Vite** + **React 19** + **TypeScript**
@@ -150,46 +150,64 @@ admin/
    - Sidebar - Navigation menu with icons
    - Header - Search bar + profile dropdown
    - MetricCard - KPI cards for metrics
+   - BurnoutChart - Recharts histogram for burnout distribution
+   - QualityMetrics - Evaluation metric cards
+   - AgentPerformance - Agent latency charts
+   - SummaryPerformance - Summary quality metrics
 5. **Dashboard Home** (index.tsx) - 5 metric cards + subscription breakdown
-6. **Utilities** (lib/utils.ts) - Helper functions for formatting
+6. **User Detail** (`src/routes/users/$userId.tsx`) - Wellness chart, conversation history, assessment history
+7. **Crisis Management** (`src/routes/crisis.tsx`) - Crisis alerts (burnout ≥80), pending follow-ups with timers
+8. **Analytics** (`src/routes/analytics.tsx`) - 3 tabs: Usage (burnout histogram, user funnel, SMS trends), Quality (eval scores), Performance (agent latency)
+9. **System Health** (`src/routes/system.tsx`) - Rate limiter status, API usage, database performance
+10. **Backend Integration** - Queries raw Convex tables (users, scores, assessments, alerts, events, subscriptions)
+11. **Utilities** (lib/utils.ts) - Helper functions for formatting
 
 ---
 
 ## What's TODO 🚧
 
-### Pages to Build:
+### High Priority (Week 1)
 
 1. **User List** (`src/routes/users/index.tsx`)
    - TanStack Table with filters
    - Search by name/phone
    - Pagination
+   - Link to user detail pages
 
-2. **User Detail** (`src/routes/users/$userId.tsx`) ✅ Complete
-   - Wellness chart (Recharts)
-   - Conversation history
-   - Assessment history
+### Medium Priority (Week 2-3)
 
-3. **Crisis Management** (`src/routes/crisis.tsx`) ✅ Complete
-   - Crisis alerts (burnout ≥80)
-   - Pending follow-ups with timers
+1. **Backend Metrics Queries** - Replace mock data in system.tsx with real metrics:
+   - Token usage tracking (requires `llm_usage` table)
+   - Rate limit tracking
+   - Agent run latency aggregation
+   - Error log aggregation
 
-4. **Analytics** (`src/routes/analytics.tsx`) ✅ Complete
-   - Tab 1: Usage (burnout histogram, user funnel, SMS trends)
-   - Tab 2: Quality (eval scores, feedback table)
-   - Tab 3: Performance (agent latency)
+2. **Alert Management UI** - When crisis escalation is implemented:
+   - Alert detail view
+   - Mark as processed
+   - Alert history
 
-5. **System Health** (`src/routes/system.tsx`) ✅ Complete
-   - Rate limiter status
-   - API usage
-   - Database performance
+3. **Evaluation Dashboard** - When LLM-as-judge is implemented:
+   - P1-P6 compliance scores
+   - Evaluation history
+   - Failed evaluations detail view
 
-### Components to Build:
+### Low Priority (Week 4+)
 
-- `UserTable.tsx` - Table with filters/search/pagination
-- `BurnoutChart.tsx` - Recharts histogram
-- `QualityMetrics.tsx` - Eval metric cards
-- `RecentFeedback.tsx` - Feedback table
-- `CrisisAlert.tsx` - Crisis user cards
+1. **Advanced Filters** - Add filtering to all list views:
+   - Date range pickers
+   - Multi-select filters
+   - Search across multiple fields
+
+2. **Export Functionality** - Export data to CSV/Excel:
+   - User lists
+   - Analytics data
+   - Audit logs
+
+3. **Real-time Updates** - Add WebSocket subscriptions for:
+   - Crisis alerts
+   - New user registrations
+   - Agent run completion
 
 ---
 

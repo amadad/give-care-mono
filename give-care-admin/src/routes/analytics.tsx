@@ -21,9 +21,57 @@ export const Route = createFileRoute('/analytics')({
 })
 
 function AnalyticsPage() {
-  const burnoutDist = useQuery(api["functions/analytics"].getBurnoutDistribution)
-  const journeyFunnel = useQuery(api["functions/analytics"].getUserJourneyFunnel)
-  const dailyMetrics = useQuery(api["functions/analytics"].getDailyMetrics, { days: 30 })
+  // Query raw tables
+  const users = useQuery(api.wellness.listUsers)
+  const scores = useQuery(api.wellness.listScores)
+  const assessments = useQuery(api.assessments.listAssessments)
+  const events = useQuery(api.wellness.listEvents)
+
+  // Compute burnout distribution
+  const burnoutDist = useMemo(() => {
+    if (!scores) return null
+    const distribution = { very_low: 0, low: 0, moderate: 0, high: 0 }
+    scores.forEach(score => {
+      if (score.band in distribution) {
+        distribution[score.band as keyof typeof distribution]++
+      }
+    })
+    return [
+      { range: "Very Low", count: distribution.very_low },
+      { range: "Low", count: distribution.low },
+      { range: "Moderate", count: distribution.moderate },
+      { range: "High", count: distribution.high },
+    ]
+  }, [scores])
+
+  // Compute user journey funnel
+  const journeyFunnel = useMemo(() => {
+    if (!users || !assessments || !events) return null
+    const now = Date.now()
+    const sevenDaysAgo = now - 7 * 24 * 60 * 60 * 1000
+    return [
+      { phase: "registered", count: users.length },
+      { phase: "completed assessment", count: new Set(assessments.map(a => a.userId)).size },
+      { phase: "tried intervention", count: new Set(events.filter(e => e.type === "intervention.try").map(e => e.userId)).size },
+      { phase: "successful intervention", count: new Set(events.filter(e => e.type === "intervention.success").map(e => e.userId)).size },
+      { phase: "active (7d)", count: users.filter(u => u.lastEngagementDate && u.lastEngagementDate > sevenDaysAgo).length },
+    ]
+  }, [users, assessments, events])
+
+  // Compute daily metrics (mock for now)
+  const dailyMetrics = useMemo(() => {
+    const days = 30
+    const data: Array<{ date: string; sent: number; received: number }> = []
+    for (let i = 0; i < days; i++) {
+      const date = new Date(Date.now() - (i * 24 * 60 * 60 * 1000))
+      data.push({
+        date: date.toISOString().split('T')[0],
+        sent: 0,
+        received: 0,
+      })
+    }
+    return data.reverse()
+  }, [])
 
   const maxDailyMessages = useMemo(() => {
     if (!dailyMetrics) return 0

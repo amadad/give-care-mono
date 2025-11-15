@@ -1,6 +1,6 @@
 # GiveCare Monorepo - Task Overview
 
-**Last Updated**: 2025-11-11  
+**Last Updated**: 2025-11-15
 **Status**: Archived - See project-specific task files
 
 ---
@@ -9,7 +9,8 @@
 
 This master task file is **outdated** and has been archived. For current task tracking, see:
 
-- **give-care-app**: See `give-care-app/docs/ARCHITECTURE.md` "Known Issues" section
+- **give-care-app**: See `give-care-app/docs/ARCHITECTURE.md` "Known Issues & Roadmap" section
+- **give-care-admin**: See `give-care-admin/README.md` "What's TODO" section
 - **give-care-site**: See `give-care-site/docs/WEBSITE_TASKS.md`
 - **give-care-story**: Stable - no active tasks
 - **give-care-etl**: See `give-care-etl/docs/ARCHITECTURE.md`
@@ -20,8 +21,8 @@ This master task file is **outdated** and has been archived. For current task tr
 
 | Project | Version | Status | Source of Truth |
 |---------|---------|--------|-----------------|
-| **give-care-app** | 1.7.0 | ✅ Production | `give-care-app/docs/ARCHITECTURE.md` |
-| **give-care-admin** | 0.1.0 | ✅ Stable | `give-care-admin/README.md` |
+| **give-care-app** | 1.7.0 | 🚧 Remediation | `give-care-app/docs/ARCHITECTURE.md` (Known Issues & Roadmap) |
+| **give-care-admin** | 0.1.0 | ✅ Synced | `give-care-admin/README.md` (What's TODO) |
 | **give-care-site** | 0.1.0 | 🚧 Development | `give-care-site/docs/WEBSITE_TASKS.md` |
 | **give-care-story** | 1.0.0 | ✅ Stable | No active tasks |
 | **give-care-etl** | 0.1.0 | 🚧 Development | `give-care-etl/docs/ARCHITECTURE.md` |
@@ -38,3 +39,7 @@ This master task file is **outdated** and has been archived. For current task tr
 ---
 
 **Note**: This file was archived on 2025-11-11. All task tracking has moved to project-specific documentation files listed above.
+
+**Recent Updates (2025-11-15)**:
+- ✅ Admin dashboard synced with backend (queries raw Convex tables)
+- 🔴 Next priority: Human Crisis Escalation (email alerts) - see `give-care-app/docs/remediation-plan.md`

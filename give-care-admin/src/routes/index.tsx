@@ -5,6 +5,7 @@ import { MetricCard } from '@/components/dashboard/MetricCard'
 import { Users, Activity, AlertTriangle, TrendingUp, Clock, CreditCard } from 'lucide-react'
 import { Skeleton } from '@/components/ui/skeleton'
 import { ErrorBoundary } from '@/components/ErrorBoundary'
+import { useMemo } from 'react'
 
 export const Route = createFileRoute('/')({
   component: () => (
@@ -15,7 +16,45 @@ export const Route = createFileRoute('/')({
 })
 
 function DashboardHome() {
-  const metrics = useQuery(api["functions/admin"].getMetrics)
+  // Query raw tables directly
+  const users = useQuery(api.wellness.listUsers)
+  const scores = useQuery(api.wellness.listScores)
+  const subscriptions = useQuery(api.public.listSubscriptions)
+
+  // Compute metrics client-side
+  const metrics = useMemo(() => {
+    if (!users || !scores) return null
+
+    const now = Date.now()
+    const sevenDaysAgo = now - 7 * 24 * 60 * 60 * 1000
+
+    const activeUsers = users.filter(u =>
+      u.lastEngagementDate && u.lastEngagementDate > sevenDaysAgo
+    )
+
+    const crisisScores = scores.filter(s => s.gcBurnout >= 80)
+
+    const avgBurnoutScore = scores.length > 0
+      ? scores.reduce((sum, s) => sum + s.gcBurnout, 0) / scores.length
+      : 0
+
+    const subscriptionBreakdown = {
+      active: subscriptions?.filter(s => s.status === "active").length || 0,
+      incomplete: 0,
+      pastDue: subscriptions?.filter(s => s.status === "past_due").length || 0,
+      canceled: subscriptions?.filter(s => s.status === "canceled").length || 0,
+      none: users.length - (subscriptions?.length || 0),
+    }
+
+    return {
+      totalUsers: users.length,
+      activeUsers: activeUsers.length,
+      crisisAlerts: crisisScores.length,
+      avgBurnoutScore,
+      p95ResponseTime: 1200, // Mock - requires agent_runs analysis
+      subscriptionBreakdown,
+    }
+  }, [users, scores, subscriptions])
 
   if (!metrics) {
     return (

@@ -19,7 +19,28 @@ export const Route = createFileRoute('/system')({
 })
 
 function SystemHealthPage() {
-  const systemHealth = useQuery(api["functions/admin"].getSystemHealth)
+  // Mock data - backend queries not implemented yet
+  const systemHealth = {
+    rateLimits: {
+      perUser: { used: 0, limit: 50, status: "ok" as const },
+      global: { used: 0, limit: 1000, status: "ok" as const },
+      priorityUsers: 0,
+    },
+    openai: {
+      tokensToday: 0,
+      tokensLimit: 1000000,
+      costToday: 0,
+      budget: 50.0,
+    },
+    database: {
+      queryLatency: 45,
+      connectionPoolActive: 3,
+      connectionPoolMax: 10,
+      storageUsed: 0.1,
+      storageLimit: 10,
+    },
+    errors: [] as Array<{ type: string; count: number; severity: string }>,
+  }
 
   if (!systemHealth) {
     return (

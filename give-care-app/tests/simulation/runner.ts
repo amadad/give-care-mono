@@ -26,10 +26,10 @@ export class SimulationRunner {
   constructor(timeoutMs: number = 30000) {
     // Default 30s timeout per scenario (configurable for cloud CI)
     // Increased to 30s to allow for agent API calls and processing
-    const isTest = process.env.VITEST === 'true' || process.env.NODE_ENV === 'test';
-    const defaultTimeout = isTest ? 30000 : timeoutMs; // 30s in tests and prod
-    this.timeoutMs = parseInt(process.env.TEST_TIMEOUT_MS || String(defaultTimeout), 10);
-  }
+        const isTest = process.env.VITEST === 'true' || process.env.NODE_ENV === 'test';
+        const defaultTimeout = isTest ? 30000 : timeoutMs; // 30s in tests and prod
+        this.timeoutMs = parseInt(process.env.TEST_TIMEOUT_MS || String(defaultTimeout), 10);
+      }
 
   /**
    * Run a single scenario with timeout protection
@@ -218,6 +218,7 @@ export class SimulationRunner {
         const maxRetries = isTest ? 2 : 3;
         const retryDelay = isTest ? 50 : 100; // 50ms in tests, 100ms in prod
         let lastError: Error | null = null;
+        let skippedDueToApi = false;
 
         for (let attempt = 1; attempt <= maxRetries; attempt++) {
           try {
@@ -225,6 +226,19 @@ export class SimulationRunner {
               userId: context.convexUserId!,
               body: step.text,
             });
+
+            // Ensure scheduled functions (Twilio send, workflows) fire before expectations
+            try {
+              await this.flushScheduledFunctions();
+            } catch (schedulerError) {
+              console.warn(
+                `⚠️  Failed to flush scheduled functions: ${
+                  schedulerError instanceof Error
+                    ? schedulerError.message
+                    : String(schedulerError)
+                }`
+              );
+            }
 
             // Success - break out of retry loop
             lastError = null;
@@ -234,16 +248,14 @@ export class SimulationRunner {
             const errorMsg = lastError.message;
 
             // Check if it's an API connectivity issue
-            if (errorMsg.includes('Cannot connect to API') ||
-                errorMsg.includes('ENOTFOUND') ||
-                errorMsg.includes('EAI_AGAIN') ||
-                errorMsg.includes('API key')) {
+            if (this.isAgentApiUnavailable(errorMsg)) {
 
               // On last attempt, log warning and continue
               if (attempt === maxRetries) {
                 console.warn(`⚠️  Agent API unavailable: ${errorMsg}`);
                 console.warn('   Continuing test without agent response');
                 this.apiAvailable = false; // Mark API as unavailable
+                skippedDueToApi = true;
                 break;
               }
 
@@ -271,6 +283,7 @@ export class SimulationRunner {
           metadata: {
             text: step.text,
             apiError: lastError ? lastError.message : undefined,
+            skippedDueToApi,
           },
         };
       }
@@ -1357,6 +1370,39 @@ export class SimulationRunner {
     });
 
     console.log(`  🧹 Cleanup: ${context.userId} (deleted from database)`);
+  }
+
+  /**
+   * Flush all scheduled Convex functions (Twilio sends, workflows)
+   * so responses exist before expectations run.
+   */
+  private async flushScheduledFunctions(): Promise<void> {
+    if (!this.t) {
+      return;
+    }
+
+    if (typeof this.t.finishAllScheduledFunctions === 'function') {
+      await this.t.finishAllScheduledFunctions();
+    } else {
+      await new Promise((resolve) => setTimeout(resolve, 50));
+    }
+  }
+
+  /**
+   * Detect when the agent API is effectively unavailable (network/quota/rate limits)
+   */
+  private isAgentApiUnavailable(message: string): boolean {
+    const normalized = (message || '').toLowerCase();
+    return (
+      normalized.includes('cannot connect to api') ||
+      normalized.includes('enotfound') ||
+      normalized.includes('eai_again') ||
+      normalized.includes('api key') ||
+      normalized.includes('quota') ||
+      normalized.includes('rate limit') ||
+      normalized.includes('429') ||
+      normalized.includes('insufficient tokens')
+    );
   }
 
   /**

@@ -3,13 +3,23 @@
  * Handles question-by-question delivery and scoring
  */
 
-import { internalMutation, internalQuery } from "./_generated/server";
+import { query, internalMutation, internalQuery } from "./_generated/server";
 import { v } from "convex/values";
 import { getAssessmentDefinition } from "./lib/assessmentCatalog";
 import { internal } from "./_generated/api";
 import { recalculateComposite } from "./lib/services/wellnessService";
 import { emitEvent } from "./lib/services/eventService";
 import { enrichProfileFromSDOH } from "./lib/services/assessmentService";
+
+/**
+ * List all assessments (admin query)
+ */
+export const listAssessments = query({
+  args: {},
+  handler: async (ctx) => {
+    return await ctx.db.query("assessments").collect();
+  },
+});
 
 /**
  * Process assessment answer

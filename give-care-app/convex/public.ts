@@ -25,3 +25,13 @@ export const getProfile = query({
     };
   },
 });
+
+/**
+ * List all subscriptions (admin query)
+ */
+export const listSubscriptions = query({
+  args: {},
+  handler: async (ctx) => {
+    return await ctx.db.query("subscriptions").collect();
+  },
+});

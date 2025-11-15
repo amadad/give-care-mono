@@ -2,7 +2,7 @@
 # give-care-app/convex
 
 **Purpose:** Concise technical map for AI agents and developers
-**Last Updated:** 2025-11-11 (v1.7.0 - Post-consolidation)
+**Last Updated:** 2025-11-15 (v1.7.0 - Added remediation roadmap)
 
 ---
 
@@ -391,20 +391,64 @@ workflow.define({
 
 ---
 
-## Known Issues (v1.5.0)
+## Known Issues & Roadmap (v1.7.0)
 
-### Critical
-1. **Convex Typecheck Disabled** - `convex/tsconfig.json` was removed; `npx convex codegen --typecheck enable` currently fails. Reintroduce a tsconfig to re-enable type safety.
+### Critical (Week 1-2 - Production Blockers)
 
-### High Priority
-(None - all GA blockers resolved)
+1. **Human Crisis Escalation** - Email alerts to crisis response team when burnout ≥80 or crisis keywords detected (legal/ethical safety requirement)
+   - Files: `convex/actions/alerts.ts`, `convex/internal/alerts.ts`
+   - Dependencies: Resend API key
+   - Estimated: 2-3 hours
+   - See: `docs/remediation-plan.md` section 3
 
-### Medium Priority
-1. **Assessment Responses** - `recordAssessmentResponse` mutation still missing. Add it when wiring EMA/BSFC answer ingestion back to public API.
+2. **LLM Guardrails Middleware** - AI SDK middleware for PII redaction and crisis content filtering
+   - Files: `convex/lib/middleware/guardrails.ts`, update `convex/lib/models.ts`
+   - Features: Crisis keyword detection, PII redaction (SSN/phone/email), usage tracking
+   - Estimated: 3-4 hours
+   - See: `docs/remediation-plan.md` section 4
 
-### Low Priority
-1. **Twilio SDK Callback** - `twilioClient.ts` incoming callback remains TODO (HTTP webhook handles ingress for now).
-2. **Missing Types** - Some helper types still live only in `lib/types.ts`; re-export as needed.
+3. **Convex Typecheck Disabled** - `convex/tsconfig.json` was removed; `npx convex codegen --typecheck enable` currently fails. Reintroduce a tsconfig to re-enable type safety.
+
+### High Priority (Week 2-3)
+
+1. **Evaluation Benchmarks (LLM-as-Judge)** - Automated quality monitoring for P1-P6 compliance
+   - Schema: Add `evaluations`, `evaluation_configs` tables
+   - Files: `convex/internal/evaluations.ts`, `convex/crons.ts`
+   - Features: GPT-4 as judge for principle compliance, scheduled evaluation runs
+   - Estimated: 4-6 hours
+   - See: `docs/remediation-plan.md` section 2
+
+2. **Few-Shot Examples** - Add example conversations to agent system prompts for better response quality
+   - Files: `convex/lib/prompts.ts`
+   - See: `docs/remediation-plan.md` section 4
+
+3. **Prompt Versioning System** - Version control for system prompts with A/B testing support
+   - Schema: Add `prompt_versions` table
+   - Files: `convex/internal/prompts.ts`
+   - See: `docs/remediation-plan.md` section 5
+
+### Medium Priority (Week 3-4)
+
+1. **Cost Tracking** - Track LLM token usage per user/conversation
+   - Schema: Add `llm_usage` table
+   - Files: Add usage tracking to `convex/lib/models.ts`
+
+2. **Response Caching** - Cache similar queries to reduce LLM costs
+   - Schema: Add `agent_response_cache` table
+   - Files: `convex/internal/cache.ts`
+
+3. **Assessment Responses** - `recordAssessmentResponse` mutation still missing. Add it when wiring EMA/BSFC answer ingestion back to public API.
+
+### Low Priority (Week 5+)
+
+1. **Intervention RAG System** - Gemini grounding for evidence-based interventions
+   - See: `docs/remediation-plan.md` section 8
+
+2. **Twilio SDK Callback** - `twilioClient.ts` incoming callback remains TODO (HTTP webhook handles ingress for now).
+
+3. **Missing Types** - Some helper types still live only in `lib/types.ts`; re-export as needed.
+
+**Status Reference**: See `docs/remediation-plan.md` for detailed implementation specs
 
 ---
 

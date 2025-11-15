@@ -45,3 +45,43 @@ export const getWellnessStatus = query({
   },
 });
 
+/**
+ * List all users (admin query)
+ */
+export const listUsers = query({
+  args: {},
+  handler: async (ctx) => {
+    return await ctx.db.query("users").collect();
+  },
+});
+
+/**
+ * List all scores (admin query)
+ */
+export const listScores = query({
+  args: {},
+  handler: async (ctx) => {
+    return await ctx.db.query("scores").collect();
+  },
+});
+
+/**
+ * List all alerts (admin query)
+ */
+export const listAlerts = query({
+  args: {},
+  handler: async (ctx) => {
+    return await ctx.db.query("alerts").collect();
+  },
+});
+
+/**
+ * List all events (admin query)
+ */
+export const listEvents = query({
+  args: {},
+  handler: async (ctx) => {
+    return await ctx.db.query("events").collect();
+  },
+});
+

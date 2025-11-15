@@ -20,6 +20,9 @@ import type { GenericId as Id } from "convex/values";
  * ```
  */
 export declare const api: {
+  assessments: {
+    listAssessments: FunctionReference<"query", "public", {}, any>;
+  };
   interventions: {
     getInterventionsByZones: FunctionReference<
       "query",
@@ -35,6 +38,7 @@ export declare const api: {
       { userId: Id<"users"> },
       any
     >;
+    listSubscriptions: FunctionReference<"query", "public", {}, any>;
   };
   stripe: {
     createCheckoutSession: FunctionReference<
@@ -51,6 +55,10 @@ export declare const api: {
       { userId: Id<"users"> },
       any
     >;
+    listAlerts: FunctionReference<"query", "public", {}, any>;
+    listEvents: FunctionReference<"query", "public", {}, any>;
+    listScores: FunctionReference<"query", "public", {}, any>;
+    listUsers: FunctionReference<"query", "public", {}, any>;
   };
 };
 
