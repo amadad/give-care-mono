@@ -1,0 +1,141 @@
+name: E2E Tests
+
+on:
+  push:
+    branches: [main, dev]
+    paths:
+      - 'give-care-app/**'
+      - '.github/workflows/e2e-tests.yml'
+  pull_request:
+    branches: [main, dev]
+    paths:
+      - 'give-care-app/**'
+  workflow_dispatch: # Allow manual trigger
+
+jobs:
+  test-and-deploy:
+    name: Test & Deploy Pipeline
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    defaults:
+      run:
+        working-directory: give-care-app
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: give-care-app/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      # ============================================================
+      # STAGE 1: Fast in-memory unit tests (30-60 seconds)
+      # ============================================================
+      - name: Stage 1 - Unit Tests (In-Memory)
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          GOOGLE_GENERATIVE_AI_API_KEY: ${{ secrets.GOOGLE_GENERATIVE_AI_API_KEY }}
+          TWILIO_ACCOUNT_SID: ${{ secrets.TWILIO_ACCOUNT_SID }}
+          TWILIO_AUTH_TOKEN: ${{ secrets.TWILIO_AUTH_TOKEN }}
+          TWILIO_PHONE_NUMBER: ${{ secrets.TWILIO_PHONE_NUMBER }}
+          NODE_ENV: test
+          VITEST: true
+        run: |
+          echo "🧪 Running fast in-memory tests..."
+          npm run test:e2e
+          echo "✅ Unit tests passed!"
+
+      # ============================================================
+      # STAGE 2: Deploy to test environment
+      # ============================================================
+      - name: Stage 2 - Deploy to Test Environment
+        env:
+          CONVEX_DEPLOY_KEY: ${{ secrets.CONVEX_DEPLOY_KEY }}
+        run: |
+          echo "🚀 Deploying to test environment..."
+
+          # Create preview deployment with unique name
+          PREVIEW_NAME="ci-test-${{ github.run_id }}"
+          npx convex deploy --preview $PREVIEW_NAME --yes
+
+          # Save deployment URL for next step
+          echo "CONVEX_TEST_URL=$(npx convex env get CONVEX_URL)" >> $GITHUB_ENV
+          echo "✅ Deployed to test environment: $PREVIEW_NAME"
+
+      # ============================================================
+      # STAGE 3: Run tests against deployed backend
+      # ============================================================
+      - name: Stage 3 - Integration Tests (Real Deployment)
+        env:
+          CONVEX_URL: ${{ env.CONVEX_TEST_URL }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          GOOGLE_GENERATIVE_AI_API_KEY: ${{ secrets.GOOGLE_GENERATIVE_AI_API_KEY }}
+          TWILIO_ACCOUNT_SID: ${{ secrets.TWILIO_ACCOUNT_SID }}
+          TWILIO_AUTH_TOKEN: ${{ secrets.TWILIO_AUTH_TOKEN }}
+          TWILIO_PHONE_NUMBER: ${{ secrets.TWILIO_PHONE_NUMBER }}
+        run: |
+          echo "🧪 Running integration tests against deployed backend..."
+          echo "Testing: $CONVEX_URL"
+          npm run test:e2e
+          echo "✅ Integration tests passed!"
+
+      # ============================================================
+      # STAGE 4: Deploy to production (only on main branch)
+      # ============================================================
+      - name: Stage 4 - Deploy to Production
+        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+        env:
+          CONVEX_DEPLOY_KEY: ${{ secrets.CONVEX_DEPLOY_KEY }}
+        run: |
+          echo "🚀 Deploying to production..."
+          npx convex deploy --prod --yes
+          echo "✅ Deployed to production!"
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-test-results
+          path: give-care-app/test-results/
+          retention-days: 30
+
+      - name: Comment PR with test results
+        if: github.event_name == 'pull_request' && always()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const resultsPath = 'give-care-app/test-results/summary.json';
+
+            if (!fs.existsSync(resultsPath)) {
+              console.log('No test results found');
+              return;
+            }
+
+            const results = JSON.parse(fs.readFileSync(resultsPath, 'utf8'));
+            const { total, passed, failed } = results;
+            const passRate = ((passed / total) * 100).toFixed(1);
+
+            const comment = `## E2E Test Results
+
+            - **Total**: ${total} scenarios
+            - **Passed**: ✅ ${passed}
+            - **Failed**: ❌ ${failed}
+            - **Pass Rate**: ${passRate}%
+
+            ${failed > 0 ? '⚠️ Some tests failed. Review the artifacts for details.' : '✨ All tests passed!'}`;
+
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: comment
+            });

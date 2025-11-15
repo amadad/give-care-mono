@@ -24,7 +24,10 @@ export class SimulationRunner {
   
   constructor(timeoutMs: number = 30000) {
     // Default 30s timeout per scenario (configurable for cloud CI)
-    this.timeoutMs = parseInt(process.env.TEST_TIMEOUT_MS || String(timeoutMs), 10);
+    // Use shorter timeout in test environment to fail fast
+    const isTest = process.env.VITEST === 'true' || process.env.NODE_ENV === 'test';
+    const defaultTimeout = isTest ? 15000 : timeoutMs; // 15s in tests, 30s in prod
+    this.timeoutMs = parseInt(process.env.TEST_TIMEOUT_MS || String(defaultTimeout), 10);
   }
 
   /**
@@ -206,7 +209,10 @@ export class SimulationRunner {
         // This avoids scheduled function issues in test environment
 
         // Retry logic for API calls (network issues, rate limits)
-        const maxRetries = 3;
+        // Reduce retries and timeout in test environment
+        const isTest = process.env.VITEST === 'true' || process.env.NODE_ENV === 'test';
+        const maxRetries = isTest ? 2 : 3;
+        const retryDelay = isTest ? 50 : 100; // 50ms in tests, 100ms in prod
         let lastError: Error | null = null;
 
         for (let attempt = 1; attempt <= maxRetries; attempt++) {
@@ -237,7 +243,7 @@ export class SimulationRunner {
               }
 
               // Wait before retry (exponential backoff)
-              await new Promise(resolve => setTimeout(resolve, 100 * attempt));
+              await new Promise(resolve => setTimeout(resolve, retryDelay * attempt));
               continue;
             }
 
