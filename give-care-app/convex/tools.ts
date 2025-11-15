@@ -16,7 +16,7 @@ import { Id } from "./_generated/dataModel";
  */
 export const searchResources = createTool({
   description:
-    "Search for local caregiving resources using Google Maps. Returns nearby services like respite care, support groups, adult day care, home health agencies, and community resources.",
+    "Search for local caregiving resources using Google Maps. Returns nearby services like respite care, support groups, adult day care, home health agencies, and community resources. IMPORTANT: Requires user's ZIP code. If user mentions a ZIP code in their message (e.g., 'I need help in 90210'), extract it and call updateProfile(field: 'zipCode', value: '90210') BEFORE calling this tool.",
   args: z.object({
     query: z
       .string()
@@ -228,10 +228,10 @@ export const recordMemory = createTool({
  */
 export const updateProfile = createTool({
   description:
-    "Update user profile metadata (care recipient, zip code, timezone, check-in time, onboarding stage, etc.).",
+    "Update user profile metadata. CRITICAL: Extract and save data automatically from user messages. Examples: If user says 'I live in 90210' → call updateProfile(field: 'zipCode', value: '90210'). If user says 'I'm caring for mom' → call updateProfile(field: 'careRecipientName', value: 'mom'). If user says 'Call me Sarah' → call updateProfile(field: 'firstName', value: 'Sarah'). Common fields: careRecipientName, firstName, relationship, zipCode, timezone, checkInTime, onboardingStage.",
   args: z.object({
-    field: z.string().describe("Field name to update"),
-    value: z.any().describe("Value to set"),
+    field: z.string().describe("Field name to update (e.g., zipCode, firstName, careRecipientName, relationship)"),
+    value: z.any().describe("Value to set (extracted from user message)"),
   }),
   handler: async (ctx: ToolCtx, args): Promise<{ success: boolean }> => {
     await ctx.runMutation(internal.internal.users.updateProfile, {

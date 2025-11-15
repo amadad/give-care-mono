@@ -119,6 +119,20 @@ export declare const internal: {
       migrateAgentRuns: FunctionReference<"mutation", "internal", {}, any>;
     };
     agents: {
+      handleCrisisDetection: FunctionReference<
+        "mutation",
+        "internal",
+        {
+          crisisResult: {
+            isCrisis: boolean;
+            isDVHint: boolean;
+            isFalsePositive: boolean;
+            severity?: "high" | "medium" | "low";
+          };
+          userId: Id<"users">;
+        },
+        any
+      >;
       processAssessmentCompletion: FunctionReference<
         "action",
         "internal",
@@ -577,6 +591,12 @@ export declare const internal: {
       "mutation",
       "internal",
       any,
+      any
+    >;
+    startSuggestResourcesWorkflow: FunctionReference<
+      "action",
+      "internal",
+      { userId: Id<"users">; zone: string },
       any
     >;
     suggestResourcesWorkflow: FunctionReference<

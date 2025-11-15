@@ -293,7 +293,7 @@ export default defineSchema({
   agent_runs: defineTable({
     userId: v.id("users"),
     // Preferred: Use agentName instead of agent
-    agentName: v.optional(v.union(v.literal("main"), v.literal("assessment"))),
+    agentName: v.optional(v.union(v.literal("main"), v.literal("assessment"), v.literal("crisis"))),
     threadId: v.optional(v.string()), // Thread ID from Agent Component (managed separately)
     toolCalls: v.optional(v.array(v.any())),
     createdAt: v.optional(v.number()),

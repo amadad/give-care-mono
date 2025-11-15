@@ -3,6 +3,8 @@ import { v } from "convex/values";
 // User metadata validator (for onboarding, preferences, etc.)
 export const agentMetadataValidator = v.object({
   careRecipient: v.optional(v.string()),
+  careRecipientName: v.optional(v.string()), // Name/relationship of care recipient (mom, dad, etc.)
+  firstName: v.optional(v.string()), // User's first name
   zipCode: v.optional(v.string()),
   timezone: v.optional(v.string()),
   checkInTime: v.optional(v.string()), // e.g., "19:00" for 7pm

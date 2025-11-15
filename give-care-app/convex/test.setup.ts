@@ -40,6 +40,8 @@ export const modules = import.meta.glob('./**/!(*.*.*)*.*s');
  */
 export function initConvexTest() {
   // Initialize test with schema and modules
+  // Environment variables are loaded via vitest.config.ts (dotenv + test.env)
+  // and are available through process.env in the test environment
   const t = convexTest(schema, modules);
 
   // Register components used by the app

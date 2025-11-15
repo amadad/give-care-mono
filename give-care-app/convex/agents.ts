@@ -24,6 +24,7 @@ import {
 /**
  * Main Agent (95% of traffic)
  * General support, resource discovery, daily check-ins, memory building
+ * Note: Temperature configuration handled by model defaults
  */
 export const mainAgent = new Agent(components.agent, {
   name: "Main Agent",
@@ -45,6 +46,7 @@ export const mainAgent = new Agent(components.agent, {
 /**
  * Assessment Agent (5% of traffic)
  * Clinical scoring and intervention matching
+ * Note: Temperature configuration handled by model defaults
  */
 export const assessmentAgent = new Agent(components.agent, {
   name: "Assessment Agent",

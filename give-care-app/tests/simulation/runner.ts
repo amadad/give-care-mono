@@ -25,9 +25,9 @@ export class SimulationRunner {
 
   constructor(timeoutMs: number = 30000) {
     // Default 30s timeout per scenario (configurable for cloud CI)
-    // Use shorter timeout in test environment to fail fast
+    // Increased to 30s to allow for agent API calls and processing
     const isTest = process.env.VITEST === 'true' || process.env.NODE_ENV === 'test';
-    const defaultTimeout = isTest ? 15000 : timeoutMs; // 15s in tests, 30s in prod
+    const defaultTimeout = isTest ? 30000 : timeoutMs; // 30s in tests and prod
     this.timeoutMs = parseInt(process.env.TEST_TIMEOUT_MS || String(defaultTimeout), 10);
   }
 
@@ -572,7 +572,26 @@ export class SimulationRunner {
           console.warn('Failed to query Twilio messages, falling back to agent_runs:', error);
         }
 
-        // Fallback: Check agent_runs for agent-generated responses
+        // Fallback 1: Check alerts for crisis responses
+        if (!responseText) {
+          const alerts = await this.t.run(async (ctx) => {
+            return await ctx.db
+              .query('alerts')
+              .filter((q) => q.eq(q.field('userId'), context.convexUserId!))
+              .order('desc')
+              .take(5);
+          });
+
+          if (alerts.length > 0) {
+            const latestAlert = alerts[0];
+            // Crisis messages are stored in the message field
+            responseText = latestAlert.message || '';
+          }
+        }
+
+        // Fallback 2: Check agent_runs (for non-crisis agent responses)
+        // Note: agent_runs doesn't store response text, this is just for tracking
+        // Actual responses come from Twilio or alerts table
         if (!responseText) {
           const agentRuns = await this.t.run(async (ctx) => {
             return await ctx.db
@@ -582,10 +601,11 @@ export class SimulationRunner {
               .take(5);
           });
 
+          // If we have an agent run but no response text, the response may still be pending
+          // or stored elsewhere (e.g., in Agent Component's messages)
           if (agentRuns.length > 0) {
-            const latestRun = agentRuns[0];
-            // Agent runs don't store output directly, but we can check if there's any stored response
-            responseText = (latestRun as any).output as string || '';
+            // For now, just note that we found agent activity but no response text
+            // The test should wait or check other sources
           }
         }
 

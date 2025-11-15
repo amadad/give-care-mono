@@ -1,5 +1,9 @@
 import { defineConfig } from 'vitest/config';
 import path from 'path';
+import dotenv from 'dotenv';
+
+// Load environment variables from .env.local
+dotenv.config({ path: '.env.local' });
 
 export default defineConfig({
   test: {
@@ -7,6 +11,12 @@ export default defineConfig({
     environment: 'edge-runtime',
     include: ['tests/**/*.test.ts'],
     exclude: ['node_modules', 'convex/_generated', 'tests/**/*.eval.ts'],
+    env: {
+      // Pass environment variables to test environment
+      GOOGLE_GENERATIVE_AI_API_KEY: process.env.GOOGLE_GENERATIVE_AI_API_KEY || '',
+      OPENAI_API_KEY: process.env.OPENAI_API_KEY || '',
+      GEMINI_API_KEY: process.env.GEMINI_API_KEY || process.env.GOOGLE_GENERATIVE_AI_API_KEY || '',
+    },
     server: {
       deps: { inline: ['convex-test'] },
     },

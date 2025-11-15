@@ -234,3 +234,67 @@ export function getCrisisResponse(isDVHint: boolean): string {
 
   return baseResponse;
 }
+
+/**
+ * Extract profile data from message text (deterministic preprocessing)
+ * Returns field-value pairs to auto-save before agent processing
+ * This ensures data is captured even if agent doesn't use tools
+ */
+export function extractProfileData(message: string): Record<string, string> {
+  const extracted: Record<string, string> = {};
+
+  // Extract ZIP code (5 digits, optionally with context words)
+  const zipPatterns = [
+    /\b(\d{5})(?:-\d{4})?\b/,  // Standalone 5-digit ZIP
+    /(?:zip|ZIP|zip code|zipcode|in)\s*[:\s]*(\d{5})/i,  // "in 90210", "ZIP: 90210"
+    /I(?:'m| am) in (\d{5})/i,  // "I'm in 90210"
+    /help in (\d{5})/i,  // "help in 90210"
+  ];
+
+  for (const pattern of zipPatterns) {
+    const match = message.match(pattern);
+    if (match && match[1]) {
+      extracted.zipCode = match[1];
+      break; // Use first match
+    }
+  }
+
+  // Extract first name (common self-introduction patterns)
+  const firstNamePatterns = [
+    /(?:I'm|I am|my name is|call me|this is)\s+([A-Z][a-z]+)/i,
+    /^([A-Z][a-z]+)\s+here/i,  // "Sarah here"
+  ];
+
+  for (const pattern of firstNamePatterns) {
+    const match = message.match(pattern);
+    if (match && match[1]) {
+      // Filter out common false positives
+      const name = match[1].toLowerCase();
+      if (!['help', 'caring', 'looking', 'need', 'want', 'trying'].includes(name)) {
+        extracted.firstName = match[1];
+        break;
+      }
+    }
+  }
+
+  // Extract care recipient name (common family role patterns)
+  const careRecipientPatterns = [
+    /caring for (?:my\s+)?([a-z]+)/i,  // "caring for mom", "caring for my dad"
+    /taking care of (?:my\s+)?([a-z]+)/i,
+    /(?:help|looking after|watching)\s+(?:my\s+)?([a-z]+)/i,
+  ];
+
+  for (const pattern of careRecipientPatterns) {
+    const match = message.match(pattern);
+    if (match && match[1]) {
+      const recipient = match[1].toLowerCase();
+      // Only save if it's a common family role
+      if (['mom', 'dad', 'mother', 'father', 'husband', 'wife', 'partner', 'sister', 'brother', 'grandmother', 'grandfather', 'grandma', 'grandpa'].includes(recipient)) {
+        extracted.careRecipientName = recipient;
+        break;
+      }
+    }
+  }
+
+  return extracted;
+}

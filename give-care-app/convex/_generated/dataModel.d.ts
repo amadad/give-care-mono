@@ -30,7 +30,7 @@ export type DataModel = {
   agent_runs: {
     document: {
       agent?: string;
-      agentName?: "main" | "assessment";
+      agentName?: "main" | "assessment" | "crisis";
       budgetResult?: any;
       createdAt?: number;
       latencyMs?: number;
@@ -553,6 +553,7 @@ export type DataModel = {
       locale: string;
       metadata?: {
         careRecipient?: string;
+        careRecipientName?: string;
         checkInFrequency?: "daily" | "weekly";
         checkInTime?: string;
         contextUpdatedAt?: number;
@@ -560,6 +561,7 @@ export type DataModel = {
         enrichedContext?: string;
         firstAssessmentCompletedAt?: number;
         firstBand?: string;
+        firstName?: string;
         firstResourceSearchedAt?: number;
         firstScore?: number;
         gcBurnout?: number;
@@ -603,6 +605,7 @@ export type DataModel = {
       | "locale"
       | "metadata"
       | "metadata.careRecipient"
+      | "metadata.careRecipientName"
       | "metadata.checkInFrequency"
       | "metadata.checkInTime"
       | "metadata.contextUpdatedAt"
@@ -610,6 +613,7 @@ export type DataModel = {
       | "metadata.enrichedContext"
       | "metadata.firstAssessmentCompletedAt"
       | "metadata.firstBand"
+      | "metadata.firstName"
       | "metadata.firstResourceSearchedAt"
       | "metadata.firstScore"
       | "metadata.gcBurnout"

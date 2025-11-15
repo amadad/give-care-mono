@@ -108,6 +108,7 @@ export const startSuggestResourcesWorkflow = internalAction({
     zone: v.string(),
   },
   handler: async (ctx, { userId, zone }) => {
+    // @ts-expect-error - workflow.start type inference issue with v0.2.7
     await workflow.start(ctx, suggestResourcesWorkflow, {
       userId,
       zone,
