@@ -18,10 +18,6 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 20
 
-    defaults:
-      run:
-        working-directory: give-care-app
-
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -34,7 +30,7 @@ jobs:
         with:
           node-version: '20'
           cache: 'pnpm'
-          cache-dependency-path: give-care-app/pnpm-lock.yaml
+          cache-dependency-path: pnpm-lock.yaml
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
@@ -52,26 +48,27 @@ jobs:
           NODE_ENV: test
           VITEST: true
         run: |
-          echo "🧪 Running fast in-memory tests..."
-          pnpm run test:e2e
-          echo "✅ Unit tests passed!"
+          echo "Running fast in-memory tests..."
+          pnpm --filter give-care-app test:e2e
+          echo "Unit tests passed"
 
       # ============================================================
       # STAGE 2: Deploy to test environment
       # ============================================================
       - name: Stage 2 - Deploy to Test Environment
+        working-directory: give-care-app
         env:
           CONVEX_DEPLOY_KEY: ${{ secrets.CONVEX_DEPLOY_KEY }}
         run: |
-          echo "🚀 Deploying to test environment..."
+          echo "Deploying to test environment..."
 
           # Create preview deployment with unique name
           PREVIEW_NAME="ci-test-${{ github.run_id }}"
-          npx convex deploy --preview $PREVIEW_NAME --yes
+          npx convex deploy --preview-create $PREVIEW_NAME
 
           # Save deployment URL for next step
           echo "CONVEX_TEST_URL=$(npx convex env get CONVEX_URL)" >> $GITHUB_ENV
-          echo "✅ Deployed to test environment: $PREVIEW_NAME"
+          echo "Deployed to test environment: $PREVIEW_NAME"
 
       # ============================================================
       # STAGE 3: Run tests against deployed backend
@@ -85,22 +82,23 @@ jobs:
           TWILIO_AUTH_TOKEN: ${{ secrets.TWILIO_AUTH_TOKEN }}
           TWILIO_PHONE_NUMBER: ${{ secrets.TWILIO_PHONE_NUMBER }}
         run: |
-          echo "🧪 Running integration tests against deployed backend..."
+          echo "Running integration tests against deployed backend..."
           echo "Testing: $CONVEX_URL"
-          pnpm run test:e2e
-          echo "✅ Integration tests passed!"
+          pnpm --filter give-care-app test:e2e
+          echo "Integration tests passed"
 
       # ============================================================
       # STAGE 4: Deploy to production (only on main branch)
       # ============================================================
       - name: Stage 4 - Deploy to Production
         if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+        working-directory: give-care-app
         env:
           CONVEX_DEPLOY_KEY: ${{ secrets.CONVEX_DEPLOY_KEY }}
         run: |
-          echo "🚀 Deploying to production..."
-          npx convex deploy --prod --yes
-          echo "✅ Deployed to production!"
+          echo "Deploying to production..."
+          npx convex deploy --yes
+          echo "Deployed to production"
 
       - name: Upload test results
         if: always()
@@ -130,11 +128,11 @@ jobs:
             const comment = `## E2E Test Results
 
             - **Total**: ${total} scenarios
-            - **Passed**: ✅ ${passed}
-            - **Failed**: ❌ ${failed}
+            - **Passed**: ${passed}
+            - **Failed**: ${failed}
             - **Pass Rate**: ${passRate}%
 
-            ${failed > 0 ? '⚠️ Some tests failed. Review the artifacts for details.' : '✨ All tests passed!'}`;
+            ${failed > 0 ? 'Some tests failed. Review the artifacts for details.' : 'All tests passed.'}`;
 
             github.rest.issues.createComment({
               issue_number: context.issue.number,
