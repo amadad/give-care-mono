@@ -28,10 +28,8 @@ import rateLimiterTest from '@convex-dev/rate-limiter/test';
 // 
 // IMPORTANT: This glob MUST include _generated directory files
 // The pattern './**/*.{js,ts}' will match files in _generated like api.js, server.js
-export const modules = import.meta.glob('./**/*.{js,ts}', {
-  // Don't exclude _generated - we need it!
-  ignore: ['**/node_modules/**'],
-});
+// Note: Vite automatically excludes node_modules, so we don't need to specify it
+export const modules = import.meta.glob('./**/*.{js,ts}');
 
 /**
  * Initialize Convex test environment with REAL components
