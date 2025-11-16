@@ -108,8 +108,7 @@ export const startSuggestResourcesWorkflow = internalAction({
     zone: v.string(),
   },
   handler: async (ctx, { userId, zone }) => {
-    // @ts-expect-error - workflow type expects different signature but works correctly
-    await workflow.start(ctx, suggestResourcesWorkflow, {
+    await workflow.start(ctx, internal.workflows.suggestResourcesWorkflow, {
       userId,
       zone,
     });

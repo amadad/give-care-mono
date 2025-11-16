@@ -11,8 +11,8 @@ const HAS_TWILIO_CREDS =
   Boolean(process.env.TWILIO_ACCOUNT_SID) &&
   Boolean(process.env.TWILIO_AUTH_TOKEN);
 
-const FALLBACK_ACCOUNT_SID = process.env.TWILIO_ACCOUNT_SID ?? "test-account";
-const FALLBACK_FROM = process.env.TWILIO_PHONE_NUMBER ?? "+15555550100";
+const FALLBACK_ACCOUNT_SID = process.env.TWILIO_ACCOUNT_SID || "test-account";
+const FALLBACK_FROM = process.env.TWILIO_PHONE_NUMBER || "+15555550100";
 
 class TwilioStub {
   public incomingMessageCallback = internal.inbound.handleIncomingMessage;
@@ -27,7 +27,7 @@ class TwilioStub {
     ctx: ActionCtx,
     args: { to: string; body: string; from?: string }
   ) {
-    const from = args.from ?? this.defaultFrom;
+    const from = args.from || this.defaultFrom;
     if (!from) {
       throw new Error(
         "Missing Twilio phone number. Set TWILIO_PHONE_NUMBER or provide a from number."
