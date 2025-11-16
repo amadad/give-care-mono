@@ -115,18 +115,13 @@ jobs:
           echo "Running E2E tests against deployed backend..."
           echo "Testing: $CONVEX_URL"
           # CRITICAL: Verify _generated exists BEFORE running tests
-          # The pretest:e2e hook will run codegen, but we also verify here as a safety check
+          # We already ran codegen in the previous step, so pretest hook should skip
           if [ ! -d "convex/_generated" ] || [ ! -f "convex/_generated/api.d.ts" ]; then
-            echo "Warning: _generated directory missing or incomplete. Running codegen..."
-            pnpm codegen
-          fi
-          # Double-check after pretest hook
-          if [ ! -d "convex/_generated" ]; then
-            echo "Error: _generated directory still missing after codegen"
+            echo "Error: _generated directory missing or incomplete. Codegen should have run in previous step."
             exit 1
           fi
           echo "Verified _generated directory exists before running tests"
-          # Run tests (pretest:e2e hook will also run codegen automatically)
+          # Run tests (pretest:e2e hook will skip since _generated exists)
           pnpm test:e2e
           echo "E2E tests passed"
 
