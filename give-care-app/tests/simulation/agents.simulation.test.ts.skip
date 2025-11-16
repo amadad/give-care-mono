@@ -12,12 +12,11 @@ import { describe, it, expect } from 'vitest';
 import { convexTest } from 'convex-test';
 import { api, internal } from '../../convex/_generated/api';
 import schema from '../../convex/schema';
-import { modules } from '../../convex/test.setup';
 
 describe('Agent Simulation Tests', () => {
   it.skip('should handle main agent greeting with profile', async () => {
     // ARCHITECTURE.md: "Main Agent - Onboarding flow Turn 1"
-    const t = convexTest(schema, modules);
+    const t = convexTest(schema);
 
     // Setup user with profile
     const hydrated = await t.mutation(api.functions.context.hydrate, {

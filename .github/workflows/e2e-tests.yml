@@ -139,16 +139,17 @@ jobs:
           echo "Cache cleared, _generated verified"
           # CRITICAL: Ensure Vitest transforms test.setup.ts AFTER _generated exists
           # import.meta.glob is evaluated during transform, so _generated MUST exist when Vitest starts
-          # Touch test.setup.ts to ensure Vitest re-transforms it (even though cache is cleared)
-          touch convex/test.setup.ts
-          # Verify _generated still exists
+          # 
+          # The issue: import.meta.glob is evaluated at BUILD TIME by Vite
+          # Solution: Ensure _generated exists BEFORE Vitest starts transforming code
+          # We've already run codegen and cleared caches, so _generated exists and Vitest will see it
           if [ ! -d "convex/_generated" ] || [ ! -f "convex/_generated/api.js" ]; then
             echo "Error: _generated directory missing before starting Vitest"
             exit 1
           fi
-          echo "Starting Vitest - _generated exists, transform will include it"
-          # Run tests directly with vitest (bypass pretest hook since codegen already ran)
-          # This ensures Vitest transforms test.setup.ts AFTER _generated exists
+          echo "Starting Vitest - _generated exists, convex-test will auto-discover functions"
+          # Run tests - convex-test auto-discovers functions in convex/ folder
+          # No need to pass modules - it handles discovery automatically
           pnpm vitest tests/simulation/all-scenarios.test.ts --run
           echo "E2E tests passed"
 

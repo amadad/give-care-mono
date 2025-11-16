@@ -13,26 +13,14 @@ import workflowTest from '@convex-dev/workflow/test';
 import rateLimiterTest from '@convex-dev/rate-limiter/test';
 
 /**
- * Glob pattern for all Convex function files
- * Required by convex-test to find and load functions
- * Includes _generated directory for component types
+ * Test setup for convex-test
  * 
- * Note: The _generated directory must exist before this module is imported.
- * In CI, run `convex codegen` before running tests.
+ * According to Convex docs: If your convex/ folder is in the standard location,
+ * you don't need to pass modules to convexTest - it will auto-discover all functions.
+ * 
+ * Only use import.meta.glob if you have a custom folder name/location in convex.json.
+ * Since we use the standard "convex/" folder, we don't need to pass modules.
  */
-/// <reference types="vite/client" />
-// CRITICAL: import.meta.glob is evaluated at BUILD TIME by Vite
-// The glob pattern MUST match _generated files, and _generated MUST exist
-// when Vitest collects files (during "collect" phase before tests run).
-//
-// IMPORTANT: This glob MUST include _generated directory files
-// The pattern './**/*.{js,ts}' matches files relative to this file's directory (convex/)
-// So it will match './_generated/api.js', './_generated/server.js', etc.
-// Note: Vite automatically excludes node_modules, so we don't need to specify it
-//
-// ROOT CAUSE FIX: Ensure codegen runs BEFORE Vitest starts (via pretest hooks or CI step)
-// The directory must exist when Vitest scans files, not just when tests run
-export const modules = import.meta.glob('./**/*.{js,ts}');
 
 /**
  * Initialize Convex test environment with REAL components
@@ -54,14 +42,14 @@ export const modules = import.meta.glob('./**/*.{js,ts}');
  * All component functions (e.g., components.agent.threads.*) work in tests.
  */
 export function initConvexTest() {
-  // Initialize test with schema and modules
+  // Initialize test with schema only
+  // convex-test will auto-discover all functions in the convex/ folder
   // Environment variables are loaded via vitest.config.ts (dotenv + test.env)
   // and are available through process.env in the test environment
   // 
-  // CRITICAL: import.meta.glob is evaluated at BUILD TIME by Vite during transform phase
-  // The _generated directory MUST exist when Vitest transforms this file
-  // This is ensured by running 'convex codegen' BEFORE Vitest starts (via pretest hooks or CI step)
-  const t = convexTest(schema, modules);
+  // Note: _generated directory must exist (created by 'convex codegen')
+  // but we don't need to pass modules - convex-test handles discovery automatically
+  const t = convexTest(schema);
 
   // Register components used by the app
   // Some components provide register function, others need manual registration
