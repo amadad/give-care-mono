@@ -19,6 +19,10 @@ class TwilioStub {
 
   constructor(private defaultFrom: string, private accountSid: string) {}
 
+  registerRoutes(_: unknown) {
+    // No-op in tests – real Twilio client registers HTTP routes
+  }
+
   async sendMessage(
     ctx: ActionCtx,
     args: { to: string; body: string; from?: string }
@@ -56,7 +60,7 @@ class TwilioStub {
       rest: { simulated: true },
     };
 
-    await ctx.runMutation(internal.twilio.messages.insert, { message });
+    await ctx.runMutation(components.twilio.messages.insert, { message });
     return message;
   }
 }
