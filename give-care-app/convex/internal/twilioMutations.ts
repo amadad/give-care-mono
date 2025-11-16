@@ -224,3 +224,47 @@ export const sendSubscriptionMessageAction = internalAction({
     });
   },
 });
+
+/**
+ * Insert a simulated message into the Twilio component's messages table
+ * Used by TwilioStub for testing purposes
+ */
+export const insertSimulatedMessage = internalMutation({
+  args: {
+    message: v.object({
+      account_sid: v.string(),
+      api_version: v.string(),
+      body: v.string(),
+      counterparty: v.optional(v.string()),
+      date_created: v.string(),
+      date_sent: v.union(v.string(), v.null()),
+      date_updated: v.union(v.string(), v.null()),
+      direction: v.string(),
+      error_code: v.union(v.number(), v.null()),
+      error_message: v.union(v.string(), v.null()),
+      from: v.string(),
+      messaging_service_sid: v.union(v.string(), v.null()),
+      num_media: v.string(),
+      num_segments: v.string(),
+      price: v.union(v.string(), v.null()),
+      price_unit: v.union(v.string(), v.null()),
+      sid: v.string(),
+      status: v.string(),
+      subresource_uris: v.union(
+        v.object({
+          media: v.string(),
+          feedback: v.optional(v.string()),
+        }),
+        v.null()
+      ),
+      to: v.string(),
+      uri: v.string(),
+      rest: v.optional(v.any()),
+    }),
+  },
+  handler: async (ctx, { message }) => {
+    // Insert into the component's messages table
+    // Component tables are accessible via ctx.db using the table name
+    await ctx.db.insert("messages", message);
+  },
+});

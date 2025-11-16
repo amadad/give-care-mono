@@ -60,7 +60,10 @@ class TwilioStub {
       rest: { simulated: true },
     };
 
-    await ctx.runMutation(components.twilio.messages.insert, { message });
+    // Note: Component tables are sandboxed and not directly accessible via ctx.db
+    // The real Twilio component handles message insertion automatically
+    // For the stub, we just return the simulated message without inserting it
+    // Tests that query messages should use the real Twilio component or mock appropriately
     return message;
   }
 }
