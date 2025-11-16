@@ -16,13 +16,14 @@ const addressValidator = v.object({
   country: v.optional(v.string()),
 });
 
-const reach2DomainsValidator = v.object({
-  depression: v.optional(v.number()),
-  burden: v.optional(v.number()),
-  selfCare: v.optional(v.number()),
-  socialSupport: v.optional(v.number()),
-  safety: v.optional(v.number()),
-  problemBehaviors: v.optional(v.number()),
+// Zone scores validator (P1-P6)
+const zonesValidator = v.object({
+  P1: v.optional(v.number()),
+  P2: v.optional(v.number()),
+  P3: v.optional(v.number()),
+  P4: v.optional(v.number()),
+  P5: v.optional(v.number()),
+  P6: v.optional(v.number()),
 });
 
 export default defineSchema({
@@ -38,31 +39,23 @@ export default defineSchema({
     address: v.optional(addressValidator),
     metadata: v.optional(agentMetadataValidator),
     lastEngagementDate: v.optional(v.number()),
-    engagementFlags: v.optional(
-      v.object({
-        lastNudgeDate: v.optional(v.number()),
-        nudgeCount: v.optional(v.number()),
-        escalationLevel: v.optional(
-          v.union(
-            v.literal("none"),
-            v.literal("day5"),
-            v.literal("day7"),
-            v.literal("day14")
-          )
-        ),
-      })
-    ),
+    // Score-centric fields (also stored in metadata for backward compatibility)
+    gcSdohScore: v.optional(v.number()), // GC-SDOH Score (0-100)
+    zones: v.optional(zonesValidator), // P1-P6 zone scores
+    riskLevel: v.optional(v.union(v.literal("low"), v.literal("moderate"), v.literal("high"), v.literal("crisis"))),
+    lastEMA: v.optional(v.number()),
+    lastSDOH: v.optional(v.number()),
+    emaEnabled: v.optional(v.boolean()),
+    zipCode: v.optional(v.string()),
   })
     .index("by_externalId", ["externalId"])
     .index("by_phone", ["phone"]),
 
-  // Assessments - Completed assessments
+  // Assessments - Completed assessments (EMA + SDOH only)
   assessments: defineTable({
     userId: v.id("users"),
     definitionId: v.union(
       v.literal("ema"),
-      v.literal("cwbs"),
-      v.literal("reach2"),
       v.literal("sdoh")
     ),
     version: v.string(),
@@ -78,14 +71,12 @@ export default defineSchema({
     .index("by_user", ["userId"])
     .index("by_user_and_type", ["userId", "definitionId"]),
 
-  // Scores - Burnout scores (raw + normalized)
+  // Scores - Burnout scores (raw + normalized) - EMA + SDOH only
   scores: defineTable({
     userId: v.id("users"),
     assessmentId: v.id("assessments"),
     instrument: v.union(
       v.literal("ema"),
-      v.literal("cwbs"),
-      v.literal("reach2"),
       v.literal("sdoh")
     ),
     rawComposite: v.number(), // Instrument-native score
@@ -96,19 +87,24 @@ export default defineSchema({
       v.literal("moderate"),
       v.literal("high")
     ),
-    zones: v.object({
-      zone_emotional: v.optional(v.number()),
-      zone_physical: v.optional(v.number()),
-      zone_social: v.optional(v.number()),
-      zone_time: v.optional(v.number()),
-      zone_financial: v.optional(v.number()),
-    }),
-    reach2Domains: v.optional(reach2DomainsValidator), // REACH II canonical domains
+    zones: zonesValidator, // P1-P6 zone scores
     confidence: v.number(), // 0-1: answered_ratio for partial assessments
     answeredRatio: v.number(), // answered / total questions
   })
     .index("by_user_and_type", ["userId", "instrument"])
     .index("by_user", ["userId"]),
+
+  // Score history - Track score changes over time
+  score_history: defineTable({
+    userId: v.id("users"),
+    oldScore: v.number(), // Previous score
+    newScore: v.number(), // New score
+    zones: zonesValidator, // Zone snapshot at time of change
+    trigger: v.union(v.literal("ema"), v.literal("sdoh"), v.literal("observation")),
+    timestamp: v.number(),
+  })
+    .index("by_user", ["userId"])
+    .index("by_timestamp", ["timestamp"]),
 
   // Scores composite - Composite burnout score history (for trend charts)
   scores_composite: defineTable({

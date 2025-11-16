@@ -5,11 +5,80 @@
 
 import { internalMutation } from "../_generated/server";
 import { v } from "convex/values";
-import {
-  mapStripeEventToSubscription,
-  type SubscriptionState,
-} from "../lib/domain/stripeMapping";
 import { internal } from "../_generated/api";
+
+// Inlined from lib/domain/stripeMapping.ts
+type StripeSubscriptionStatus = "active" | "canceled" | "past_due";
+type SubscriptionPlan = "monthly" | "annual";
+
+interface SubscriptionState {
+  userId?: string;
+  stripeCustomerId: string;
+  planId: SubscriptionPlan;
+  status: StripeSubscriptionStatus;
+  currentPeriodEnd: number;
+  canceledAt?: number;
+  gracePeriodEndsAt?: number;
+}
+
+function mapStripeEventToSubscription(event: { id: string; type: string; data: { object: any } }): SubscriptionState | null {
+  const { type, data } = event;
+  const obj = data.object;
+
+  switch (type) {
+    case "checkout.session.completed":
+      return null;
+
+    case "customer.subscription.created":
+    case "customer.subscription.updated": {
+      const customerId = obj.customer as string;
+      const status = obj.status as string;
+      const currentPeriodEnd = (obj.current_period_end as number) * 1000;
+      const canceledAt = obj.canceled_at ? (obj.canceled_at as number) * 1000 : undefined;
+
+      let subscriptionStatus: StripeSubscriptionStatus = "active";
+      if (status === "canceled" || status === "unpaid") {
+        subscriptionStatus = "canceled";
+      } else if (status === "past_due") {
+        subscriptionStatus = "past_due";
+      }
+
+      const gracePeriodEndsAt = canceledAt && subscriptionStatus === "canceled"
+        ? canceledAt + 30 * 24 * 60 * 60 * 1000
+        : undefined;
+
+      const planId = obj.metadata?.planId || obj.metadata?.plan_id || "monthly";
+
+      return {
+        stripeCustomerId: customerId,
+        planId: (planId === "monthly" || planId === "annual") ? planId : "monthly",
+        status: subscriptionStatus,
+        currentPeriodEnd,
+        canceledAt,
+        gracePeriodEndsAt,
+      };
+    }
+
+    case "customer.subscription.deleted": {
+      const customerId = obj.customer as string;
+      const canceledAt = Date.now();
+      const gracePeriodEndsAt = canceledAt + 30 * 24 * 60 * 60 * 1000;
+      const planId = obj.metadata?.planId || obj.metadata?.plan_id || "monthly";
+
+      return {
+        stripeCustomerId: customerId,
+        planId: (planId === "monthly" || planId === "annual") ? planId : "monthly",
+        status: "canceled",
+        currentPeriodEnd: (obj.current_period_end as number) * 1000,
+        canceledAt,
+        gracePeriodEndsAt,
+      };
+    }
+
+    default:
+      return null;
+  }
+}
 
 /**
  * Apply Stripe webhook event (idempotent)

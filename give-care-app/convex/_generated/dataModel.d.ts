@@ -128,7 +128,7 @@ export type DataModel = {
     document: {
       answers: Array<{ questionId: string; value: number }>;
       completedAt: number;
-      definitionId: "ema" | "cwbs" | "reach2" | "sdoh";
+      definitionId: "ema" | "sdoh";
       rawScores?: any;
       userId: Id<"users">;
       version: string;
@@ -388,6 +388,48 @@ export type DataModel = {
     searchIndexes: {};
     vectorIndexes: {};
   };
+  score_history: {
+    document: {
+      newScore: number;
+      oldScore: number;
+      timestamp: number;
+      trigger: "ema" | "sdoh" | "observation";
+      userId: Id<"users">;
+      zones: {
+        P1?: number;
+        P2?: number;
+        P3?: number;
+        P4?: number;
+        P5?: number;
+        P6?: number;
+      };
+      _id: Id<"score_history">;
+      _creationTime: number;
+    };
+    fieldPaths:
+      | "_creationTime"
+      | "_id"
+      | "newScore"
+      | "oldScore"
+      | "timestamp"
+      | "trigger"
+      | "userId"
+      | "zones"
+      | "zones.P1"
+      | "zones.P2"
+      | "zones.P3"
+      | "zones.P4"
+      | "zones.P5"
+      | "zones.P6";
+    indexes: {
+      by_id: ["_id"];
+      by_creation_time: ["_creationTime"];
+      by_timestamp: ["timestamp", "_creationTime"];
+      by_user: ["userId", "_creationTime"];
+    };
+    searchIndexes: {};
+    vectorIndexes: {};
+  };
   scores: {
     document: {
       answeredRatio: number;
@@ -395,23 +437,16 @@ export type DataModel = {
       band: "very_low" | "low" | "moderate" | "high";
       confidence: number;
       gcBurnout: number;
-      instrument: "ema" | "cwbs" | "reach2" | "sdoh";
+      instrument: "ema" | "sdoh";
       rawComposite: number;
-      reach2Domains?: {
-        burden?: number;
-        depression?: number;
-        problemBehaviors?: number;
-        safety?: number;
-        selfCare?: number;
-        socialSupport?: number;
-      };
       userId: Id<"users">;
       zones: {
-        zone_emotional?: number;
-        zone_financial?: number;
-        zone_physical?: number;
-        zone_social?: number;
-        zone_time?: number;
+        P1?: number;
+        P2?: number;
+        P3?: number;
+        P4?: number;
+        P5?: number;
+        P6?: number;
       };
       _id: Id<"scores">;
       _creationTime: number;
@@ -426,20 +461,14 @@ export type DataModel = {
       | "gcBurnout"
       | "instrument"
       | "rawComposite"
-      | "reach2Domains"
-      | "reach2Domains.burden"
-      | "reach2Domains.depression"
-      | "reach2Domains.problemBehaviors"
-      | "reach2Domains.safety"
-      | "reach2Domains.selfCare"
-      | "reach2Domains.socialSupport"
       | "userId"
       | "zones"
-      | "zones.zone_emotional"
-      | "zones.zone_financial"
-      | "zones.zone_physical"
-      | "zones.zone_social"
-      | "zones.zone_time";
+      | "zones.P1"
+      | "zones.P2"
+      | "zones.P3"
+      | "zones.P4"
+      | "zones.P5"
+      | "zones.P6";
     indexes: {
       by_id: ["_id"];
       by_creation_time: ["_creationTime"];
@@ -542,14 +571,13 @@ export type DataModel = {
       };
       channel: "sms" | "email" | "web";
       consent?: { emergency: boolean; marketing: boolean };
+      emaEnabled?: boolean;
       email?: string;
-      engagementFlags?: {
-        escalationLevel?: "none" | "day5" | "day7" | "day14";
-        lastNudgeDate?: number;
-        nudgeCount?: number;
-      };
       externalId: string;
+      gcSdohScore?: number;
+      lastEMA?: number;
       lastEngagementDate?: number;
+      lastSDOH?: number;
       locale: string;
       metadata?: {
         careRecipient?: string;
@@ -587,6 +615,16 @@ export type DataModel = {
       };
       name?: string;
       phone?: string;
+      riskLevel?: "low" | "moderate" | "high" | "crisis";
+      zipCode?: string;
+      zones?: {
+        P1?: number;
+        P2?: number;
+        P3?: number;
+        P4?: number;
+        P5?: number;
+        P6?: number;
+      };
       _id: Id<"users">;
       _creationTime: number;
     };
@@ -603,13 +641,13 @@ export type DataModel = {
       | "consent"
       | "consent.emergency"
       | "consent.marketing"
+      | "emaEnabled"
       | "email"
-      | "engagementFlags"
-      | "engagementFlags.escalationLevel"
-      | "engagementFlags.lastNudgeDate"
-      | "engagementFlags.nudgeCount"
       | "externalId"
+      | "gcSdohScore"
+      | "lastEMA"
       | "lastEngagementDate"
+      | "lastSDOH"
       | "locale"
       | "metadata"
       | "metadata.careRecipient"
@@ -641,7 +679,16 @@ export type DataModel = {
       | "metadata.totalInteractionCount"
       | "metadata.zipCode"
       | "name"
-      | "phone";
+      | "phone"
+      | "riskLevel"
+      | "zipCode"
+      | "zones"
+      | "zones.P1"
+      | "zones.P2"
+      | "zones.P3"
+      | "zones.P4"
+      | "zones.P5"
+      | "zones.P6";
     indexes: {
       by_id: ["_id"];
       by_creation_time: ["_creationTime"];

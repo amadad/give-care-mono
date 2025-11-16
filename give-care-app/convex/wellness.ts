@@ -4,7 +4,7 @@
 
 import { query } from "./_generated/server";
 import { v } from "convex/values";
-import { getCompositeScore } from "./lib/services/wellnessService";
+import { getRiskLevel } from "./lib/sdoh";
 
 /**
  * Get wellness status (public query)
@@ -15,10 +15,9 @@ export const getWellnessStatus = query({
     userId: v.id("users"),
   },
   handler: async (ctx, { userId }) => {
-    // Get composite score (uses denormalized value from metadata)
-    const composite = await getCompositeScore(ctx, userId);
-
-    if (!composite) {
+    // Get score from user (new score-first system)
+    const user = await ctx.db.get(userId);
+    if (!user) {
       return {
         score: 0,
         band: "unknown",
@@ -27,19 +26,34 @@ export const getWellnessStatus = query({
       };
     }
 
-    // Get latest individual score for zones
-    const latestScore = await ctx.db
-      .query("scores")
+    const gcSdohScore = user.gcSdohScore || (user.metadata as any)?.gcSdohScore;
+    const zones = user.zones || (user.metadata as any)?.zones || {};
+
+    if (gcSdohScore === undefined || gcSdohScore === null) {
+      return {
+        score: 0,
+        band: "unknown",
+        zones: {},
+        lastAssessment: "never",
+      };
+    }
+
+    // Get latest assessment for lastAssessment timestamp
+    const latestAssessment = await ctx.db
+      .query("assessments")
       .withIndex("by_user", (q) => q.eq("userId", userId))
       .order("desc")
       .first();
 
+    const riskLevel = user.riskLevel || getRiskLevel(gcSdohScore);
+    const band = riskLevel === "crisis" ? "high" : riskLevel === "high" ? "high" : riskLevel === "moderate" ? "moderate" : "low";
+
     return {
-      score: composite.gcBurnout,
-      band: composite.band,
-      zones: latestScore?.zones || {},
-      lastAssessment: latestScore
-        ? new Date(latestScore._creationTime).toISOString()
+      score: gcSdohScore,
+      band,
+      zones: zones || {},
+      lastAssessment: latestAssessment
+        ? new Date(latestAssessment.completedAt).toISOString()
         : "never",
     };
   },

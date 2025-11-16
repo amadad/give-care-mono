@@ -3,11 +3,9 @@
  * Cache operations following Convex best practices
  */
 
-import { internalQuery, internalMutation, internalAction } from "../_generated/server";
+import { internalQuery, internalMutation } from "../_generated/server";
 import { v } from "convex/values";
 import type { Id } from "../_generated/dataModel";
-import { getLocationFromUser } from "../lib/mapsUtils";
-import { suggestResourcesForZone } from "../lib/services/resourceService";
 
 /**
  * Get cached resources (query - pure, reactive)
@@ -36,20 +34,6 @@ export const getCachedResources = internalQuery({
     }
 
     return cache;
-  },
-});
-
-/**
- * Suggest resources for a zone (action)
- * Called by workflow
- */
-export const suggestResourcesForZoneAction = internalAction({
-  args: {
-    userId: v.id("users"),
-    zone: v.string(),
-  },
-  handler: async (ctx, { userId, zone }) => {
-    await suggestResourcesForZone(ctx, userId, zone);
   },
 });
 
@@ -97,13 +81,20 @@ export const saveToCache = internalMutation({
 
 /**
  * Get location from user (query helper)
+ * Simplified: just returns ZIP code from user metadata
  */
 export const getLocationFromUserQuery = internalQuery({
   args: {
     userId: v.id("users"),
   },
   handler: async (ctx, { userId }) => {
-    return await getLocationFromUser(ctx, userId);
+    const user = await ctx.db.get(userId);
+    if (!user) return null;
+    
+    const zipCode = user.zipCode || (user.metadata as any)?.zipCode;
+    if (!zipCode) return null;
+    
+    return { zipCode };
   },
 });
 

@@ -7,9 +7,7 @@ import { query, internalMutation, internalQuery } from "./_generated/server";
 import { v } from "convex/values";
 import { getAssessmentDefinition } from "./lib/assessmentCatalog";
 import { internal } from "./_generated/api";
-import { recalculateComposite } from "./lib/services/wellnessService";
-import { emitEvent } from "./lib/services/eventService";
-import { enrichProfileFromSDOH } from "./lib/services/assessmentService";
+import { calculateZoneAverage } from "./lib/scoreCalculator";
 
 /**
  * List all assessments (admin query)
@@ -99,66 +97,58 @@ export const processAssessmentAnswer = internalMutation({
         band = "high";
       }
 
-      // Create assessment record
+      // Create assessment record (only EMA or SDOH)
+      if (session.definitionId !== "ema" && session.definitionId !== "sdoh") {
+        return { error: "Invalid assessment type" };
+      }
+
       const assessmentId = await ctx.db.insert("assessments", {
         userId,
-        definitionId: session.definitionId as "ema" | "cwbs" | "reach2" | "sdoh",
+        definitionId: session.definitionId as "ema" | "sdoh",
         version: "1.0",
         answers,
         completedAt: Date.now(),
       });
 
-      // Create score record
+      // Update scores using new score system (via action)
+      if (session.definitionId === "ema") {
+        await ctx.scheduler.runAfter(0, internal.internal.score.updateFromEMA, {
+          userId,
+          answers,
+        });
+      } else if (session.definitionId === "sdoh") {
+        await ctx.scheduler.runAfter(0, internal.internal.score.updateFromSDOH, {
+          userId,
+          answers,
+        });
+      }
+
+      // Create score record for backward compatibility
+      const p1Scores = zoneScores["P1"] || [];
+      const p2Scores = zoneScores["P2"] || [];
+      const p3Scores = zoneScores["P3"] || [];
+      const p4Scores = zoneScores["P4"] || [];
+      const p5Scores = zoneScores["P5"] || [];
+      const p6Scores = zoneScores["P6"] || [];
+
       await ctx.db.insert("scores", {
         userId,
         assessmentId,
-        instrument: session.definitionId as any,
+        instrument: session.definitionId as "ema" | "sdoh",
         rawComposite: avgScore,
         gcBurnout,
         band,
         zones: {
-          zone_emotional: zoneAverages["zone_emotional"] ?? 0,
-          zone_physical: zoneAverages["zone_physical"] ?? 0,
-          zone_social: zoneAverages["zone_social"] ?? 0,
-          zone_time: zoneAverages["zone_time"] ?? 0,
-          zone_financial: zoneAverages["zone_financial"] ?? 0,
+          P1: p1Scores.length > 0 ? calculateZoneAverage(p1Scores) : undefined,
+          P2: p2Scores.length > 0 ? calculateZoneAverage(p2Scores) : undefined,
+          P3: p3Scores.length > 0 ? calculateZoneAverage(p3Scores) : undefined,
+          P4: p4Scores.length > 0 ? calculateZoneAverage(p4Scores) : undefined,
+          P5: p5Scores.length > 0 ? calculateZoneAverage(p5Scores) : undefined,
+          P6: p6Scores.length > 0 ? calculateZoneAverage(p6Scores) : undefined,
         },
         confidence: answers.length / definition.questions.length,
         answeredRatio: answers.length / definition.questions.length,
       });
-
-      // Recalculate composite burnout score (write-through)
-      await recalculateComposite(ctx, userId);
-
-      // Emit assessment.completed event
-      await emitEvent(ctx, userId, "assessment.completed", {
-        assessmentId,
-        instrument: session.definitionId,
-        gcBurnout,
-        band,
-        zones: zoneAverages,
-      });
-
-      // Enrich profile from SDOH assessment (if applicable)
-      if (session.definitionId === "sdoh") {
-        await enrichProfileFromSDOH(ctx, userId, answers, zoneAverages);
-      }
-
-      // Find highest pressure zone for proactive resource suggestions
-      const zoneEntries = Object.entries(zoneAverages).filter(
-        ([_, value]) => value > 0
-      );
-      if (zoneEntries.length > 0) {
-        const highestZone = zoneEntries.reduce((max, [zone, value]) =>
-          value > max[1] ? [zone, value] : max
-        )[0];
-
-        // Trigger workflow to suggest resources for highest pressure zone
-        await ctx.scheduler.runAfter(0, internal.workflows.startSuggestResourcesWorkflow, {
-          userId,
-          zone: highestZone,
-        });
-      }
 
       // Route to Assessment Agent for interpretation
       await ctx.scheduler.runAfter(0, internal.internal.agents.processAssessmentCompletion, {
@@ -240,68 +230,58 @@ export const completeAssessment = internalMutation({
       band = "high";
     }
 
-    // Create assessment record
+    // Create assessment record (only EMA or SDOH)
+    if (session.definitionId !== "ema" && session.definitionId !== "sdoh") {
+      return;
+    }
+
     const assessmentId = await ctx.db.insert("assessments", {
       userId,
-      definitionId: session.definitionId as "ema" | "cwbs" | "reach2" | "sdoh",
+      definitionId: session.definitionId as "ema" | "sdoh",
       version: "1.0",
       answers: session.answers,
       completedAt: Date.now(),
     });
 
-    // Create score record
+    // Update scores using new score system (via action)
+    if (session.definitionId === "ema") {
+      await ctx.scheduler.runAfter(0, internal.internal.score.updateFromEMA, {
+        userId,
+        answers: session.answers,
+      });
+    } else if (session.definitionId === "sdoh") {
+      await ctx.scheduler.runAfter(0, internal.internal.score.updateFromSDOH, {
+        userId,
+        answers: session.answers,
+      });
+    }
+
+    // Create score record for backward compatibility
+    const p1Scores = zoneScores["P1"] || [];
+    const p2Scores = zoneScores["P2"] || [];
+    const p3Scores = zoneScores["P3"] || [];
+    const p4Scores = zoneScores["P4"] || [];
+    const p5Scores = zoneScores["P5"] || [];
+    const p6Scores = zoneScores["P6"] || [];
+
     await ctx.db.insert("scores", {
       userId,
       assessmentId,
-      instrument: session.definitionId as any,
+      instrument: session.definitionId as "ema" | "sdoh",
       rawComposite: avgScore,
       gcBurnout,
       band,
       zones: {
-        zone_emotional: zoneAverages["zone_emotional"] ?? 0,
-        zone_physical: zoneAverages["zone_physical"] ?? 0,
-        zone_social: zoneAverages["zone_social"] ?? 0,
-        zone_time: zoneAverages["zone_time"] ?? 0,
-        zone_financial: zoneAverages["zone_financial"] ?? 0,
+        P1: p1Scores.length > 0 ? calculateZoneAverage(p1Scores) : undefined,
+        P2: p2Scores.length > 0 ? calculateZoneAverage(p2Scores) : undefined,
+        P3: p3Scores.length > 0 ? calculateZoneAverage(p3Scores) : undefined,
+        P4: p4Scores.length > 0 ? calculateZoneAverage(p4Scores) : undefined,
+        P5: p5Scores.length > 0 ? calculateZoneAverage(p5Scores) : undefined,
+        P6: p6Scores.length > 0 ? calculateZoneAverage(p6Scores) : undefined,
       },
       confidence: session.answers.length / definition.questions.length,
       answeredRatio: session.answers.length / definition.questions.length,
     });
-
-    // Recalculate composite burnout score (write-through)
-    // Single mutation - CONVEX_01.md best practice
-    await recalculateComposite(ctx, userId);
-
-    // Emit assessment.completed event
-    await emitEvent(ctx, userId, "assessment.completed", {
-      assessmentId,
-      instrument: session.definitionId,
-      gcBurnout,
-      band,
-      zones: zoneAverages,
-    });
-
-    // Enrich profile from SDOH assessment (if applicable)
-    if (session.definitionId === "sdoh") {
-      await enrichProfileFromSDOH(ctx, userId, session.answers, zoneAverages);
-    }
-
-    // Find highest pressure zone for proactive resource suggestions
-    const zoneEntries = Object.entries(zoneAverages).filter(
-      ([_, value]) => value > 0
-    );
-    if (zoneEntries.length > 0) {
-      const highestZone = zoneEntries.reduce((max, [zone, value]) =>
-        value > max[1] ? [zone, value] : max
-      )[0];
-
-      // Trigger workflow to suggest resources for highest pressure zone
-      // Workflows must be started via action, not scheduled directly
-      await ctx.scheduler.runAfter(0, internal.workflows.startSuggestResourcesWorkflow, {
-        userId,
-        zone: highestZone,
-      });
-    }
 
     // Route to Assessment Agent for interpretation
     await ctx.scheduler.runAfter(0, internal.internal.agents.processAssessmentCompletion, {

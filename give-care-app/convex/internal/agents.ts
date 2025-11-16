@@ -9,7 +9,6 @@ import { mainAgent, assessmentAgent } from "../agents";
 import { components } from "../_generated/api";
 import { createThread, saveMessage } from "@convex-dev/agent";
 import { internal } from "../_generated/api";
-import { getRelevantMemories } from "../lib/services/memoryService";
 import { detectCrisis, getCrisisResponse, extractProfileData } from "../lib/utils";
 
 /**
@@ -201,11 +200,7 @@ export const handleCrisisDetection = internalMutation({
       isDVHint: crisisResult.isDVHint,
     });
 
-    // Schedule follow-up check-in (next day)
-    await ctx.scheduler.runAfter(
-      86400000, // 24 hours
-      internal.internal.workflows.scheduleCrisisFollowUp,
-      { userId }
-    );
+    // Note: Crisis follow-up removed as part of simplification
+    // Future: Can add back if needed via check-in workflow
   },
 });

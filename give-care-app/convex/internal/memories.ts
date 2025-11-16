@@ -4,7 +4,29 @@
 
 import { internalMutation, internalQuery } from "../_generated/server";
 import { v } from "convex/values";
-import { getRelevantMemories } from "../lib/services/memoryService";
+import type { QueryCtx } from "../_generated/server";
+import type { Id } from "../_generated/dataModel";
+
+/**
+ * Get relevant memories (inline - was in memoryService)
+ * Agent Component handles semantic search, this just filters by importance
+ */
+async function getRelevantMemories(
+  ctx: QueryCtx,
+  userId: Id<"users">,
+  limit: number = 5
+) {
+  const memories = await ctx.db
+    .query("memories")
+    .withIndex("by_user_and_importance", (q) => q.eq("userId", userId))
+    .collect();
+
+  // Filter by importance >= 7, sort by importance desc, limit
+  return memories
+    .filter((m) => m.importance >= 7)
+    .sort((a, b) => b.importance - a.importance)
+    .slice(0, limit);
+}
 
 /**
  * Record memory

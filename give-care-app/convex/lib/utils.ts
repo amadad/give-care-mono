@@ -226,7 +226,7 @@ export function extractCareRecipient(
  */
 export function getCrisisResponse(isDVHint: boolean): string {
   const baseResponse =
-    "I'm hearing intense distress. You're not alone. Call or text 988 (24/7) or chat at 988lifeline.org. Text HOME to 741741 (Crisis Text Line). If in immediate danger, call 911. Want me to connect you now?";
+    "I'm hearing intense distress. You're not alone - support is available 24/7. Call or text 988 or chat at 988lifeline.org. Text HOME to 741741 (Crisis Text Line). If in immediate danger, call 911.";
 
   if (isDVHint) {
     return `${baseResponse} If you can't safely reply, call 911.`;

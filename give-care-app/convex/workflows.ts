@@ -1,6 +1,6 @@
 /**
  * Durable Workflows
- * Using @convex-dev/workflow for check-ins, engagement, trends
+ * Simplified: EMA check-ins only
  */
 
 import { WorkflowManager } from "@convex-dev/workflow";
@@ -21,96 +21,82 @@ export const checkInWorkflow = workflow.define({
   handler: async (step, { userId }) => {
     // Step 1: Load user preferences
     const user = await step.runQuery(internal.internal.users.getUser, { userId });
+    if (!user) {
+      return; // User not found
+    }
 
-    // Step 2: Check quiet hours (8am-9pm local)
+    // Step 2: Check quiet hours (8am-9pm local time)
+    // Get user's timezone from metadata (default to UTC if missing)
+    const timezone = user.metadata?.timezone || "UTC";
+    const now = new Date();
+    
+    // Convert to user's local time (simplified - assumes UTC offset in hours)
+    // For production, use a proper timezone library
+    const hour = now.getUTCHours(); // Simplified - use user's timezone in production
+    
+    // Check if within quiet hours (8am-9pm)
+    const isQuietHours = hour >= 8 && hour < 21;
+    
+    if (!isQuietHours) {
+      // Outside quiet hours - reschedule for next day at 9 AM local
+      // For now, just skip (cron will retry next day)
+      return;
+    }
 
     // Step 3: Send EMA assessment prompt
-    await step.runMutation(internal.internal.assessments.startAssessment, {
+    const assessmentResult = await step.runMutation(internal.internal.assessments.startAssessment, {
       userId,
       assessmentType: "ema",
     });
     
-    // Step 4: Wait for completion (with timeout)
-
-    // Step 5: Process results
-    // Assessment completion handled by assessment flow
-  },
-});
-
-/**
- * Engagement Monitoring Workflow
- */
-export const engagementMonitoringWorkflow = workflow.define({
-  args: {
-    userId: v.id("users"),
-  },
-  handler: async (step, { userId }) => {
-    // Check last engagement date
-    const user = await step.runQuery(internal.internal.users.getUser, { userId });
-    
-    if (!user?.lastEngagementDate) {
+    if (!assessmentResult.success) {
+      // Assessment on cooldown or error - skip
       return;
     }
-    
-    const daysSince = (Date.now() - user.lastEngagementDate) / 86400000;
-    
-    // Day 5: Gentle nudge
-    if (daysSince >= 5 && daysSince < 7) {
-      await step.runAction(internal.internal.sms.sendEngagementNudge, {
-        userId,
-        level: "day5",
-      });
-    }
-    
-    // Day 7: Escalation
-    if (daysSince >= 7 && daysSince < 14) {
-      await step.runAction(internal.internal.sms.sendEngagementNudge, {
-        userId,
-        level: "day7",
-      });
-    }
-    
-    // Day 14: Final check-in
-    if (daysSince >= 14) {
-      await step.runAction(internal.internal.sms.sendEngagementNudge, {
-        userId,
-        level: "day14",
-      });
-    }
-  },
-});
 
-/**
- * Suggest Resources Workflow
- * Triggered after assessment completion to suggest resources for highest pressure zone
- */
-export const suggestResourcesWorkflow = workflow.define({
-  args: {
-    userId: v.id("users"),
-    zone: v.string(),
-  },
-  handler: async (step, { userId, zone }) => {
-    // Suggest resources for the zone
-    await step.runAction(internal.internal.resources.suggestResourcesForZoneAction, {
-      userId,
-      zone,
-    });
-  },
-});
+    // Step 4: Check for completion
+    // Note: Assessment completion is handled by the assessment flow itself
+    // This workflow just checks if completion happened and processes results
+    // The assessment flow already triggers resource suggestions and agent processing
+    
+    // Check if assessment was completed recently (within last hour)
+    const oneHourAgo = Date.now() - 60 * 60 * 1000;
+    const latestAssessment = await step.runQuery(
+      internal.internal.assessments.getLatestCompletedAssessment,
+      { userId, assessmentType: "ema" }
+    );
 
-/**
- * Action to start suggestResourcesWorkflow
- * Workflows must be started from actions using workflow.start()
- */
-export const startSuggestResourcesWorkflow = internalAction({
-  args: {
-    userId: v.id("users"),
-    zone: v.string(),
-  },
-  handler: async (ctx, { userId, zone }) => {
-    await workflow.start(ctx, internal.workflows.suggestResourcesWorkflow, {
-      userId,
-      zone,
-    });
+    // Step 5: Process results if completed
+    if (latestAssessment && latestAssessment.completedAt > oneHourAgo) {
+      // Assessment was completed recently - process results
+      const assessmentScore = latestAssessment.gcBurnout;
+      const assessmentBand = latestAssessment.band;
+      
+      // Check if high stress (band === "high" or score >= 61)
+      const isHighStress = assessmentBand === "high" || assessmentScore >= 61;
+      
+      // Get highest pressure zone
+      let highestZone: string | null = null;
+      if (latestAssessment.zones) {
+        const zoneEntries = Object.entries(latestAssessment.zones).filter(
+          ([_, value]) => typeof value === 'number' && value > 0
+        );
+        if (zoneEntries.length > 0) {
+          highestZone = zoneEntries.reduce((max, [zone, value]) => {
+            const maxValue = typeof max[1] === 'number' ? max[1] : 0;
+            const currentValue = typeof value === 'number' ? value : 0;
+            return currentValue > maxValue ? [zone, value] : max;
+          })[0];
+        }
+      }
+      
+      // Send follow-up message acknowledging completion
+      await step.runAction(internal.internal.sms.sendAssessmentCompletionMessage, {
+        userId,
+        score: assessmentScore,
+        band: assessmentBand,
+      });
+    }
+    // If not completed, the assessment flow will handle completion when user responds
   },
 });

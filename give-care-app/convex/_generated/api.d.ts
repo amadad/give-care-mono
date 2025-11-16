@@ -32,6 +32,12 @@ export declare const api: {
     >;
   };
   public: {
+    getByExternalIdQuery: FunctionReference<
+      "query",
+      "public",
+      { externalId: string },
+      any
+    >;
     getProfile: FunctionReference<
       "query",
       "public",
@@ -39,6 +45,20 @@ export declare const api: {
       any
     >;
     listSubscriptions: FunctionReference<"query", "public", {}, any>;
+  };
+  score: {
+    getScore: FunctionReference<
+      "query",
+      "public",
+      { userId: Id<"users"> },
+      any
+    >;
+    getScoreHistory: FunctionReference<
+      "query",
+      "public",
+      { limit?: number; userId: Id<"users"> },
+      any
+    >;
   };
   stripe: {
     createCheckoutSession: FunctionReference<
@@ -166,18 +186,59 @@ export declare const internal: {
         { userId: Id<"users"> },
         any
       >;
+      getLatestCompletedAssessment: FunctionReference<
+        "query",
+        "internal",
+        { assessmentType: "ema" | "sdoh"; userId: Id<"users"> },
+        any
+      >;
       startAssessment: FunctionReference<
         "mutation",
         "internal",
-        {
-          assessmentType: "ema" | "cwbs" | "reach2" | "sdoh";
-          userId: Id<"users">;
-        },
+        { assessmentType: "ema" | "sdoh"; userId: Id<"users"> },
         any
       >;
     };
     cleanup: {
-      cleanupOldMessages: FunctionReference<"mutation", "internal", {}, any>;
+      cleanupOldMessages: FunctionReference<"action", "internal", {}, any>;
+      deleteReceipt: FunctionReference<
+        "mutation",
+        "internal",
+        { receiptId: Id<"inbound_receipts"> },
+        any
+      >;
+      getOldReceipts: FunctionReference<
+        "query",
+        "internal",
+        { cutoffTime: number; userId: Id<"users"> },
+        any
+      >;
+    };
+    core: {
+      ensureUserMutation: FunctionReference<
+        "mutation",
+        "internal",
+        {
+          channel: "sms" | "email" | "web";
+          email?: string;
+          externalId: string;
+          name?: string;
+          phone?: string;
+        },
+        any
+      >;
+      getUserById: FunctionReference<
+        "query",
+        "internal",
+        { userId: Id<"users"> },
+        any
+      >;
+      updateUserMetadata: FunctionReference<
+        "mutation",
+        "internal",
+        { metadata: any; userId: Id<"users"> },
+        any
+      >;
     };
     events: {
       emitResourceSearch: FunctionReference<
@@ -204,6 +265,14 @@ export declare const internal: {
         "mutation",
         "internal",
         { interventionId: string; status: string; userId: Id<"users"> },
+        any
+      >;
+    };
+    learning: {
+      trackHelpfulnessMutation: FunctionReference<
+        "mutation",
+        "internal",
+        { helpful: boolean; resourceId: string; userId: Id<"users"> },
         any
       >;
     };
@@ -290,10 +359,55 @@ export declare const internal: {
         },
         any
       >;
-      suggestResourcesForZoneAction: FunctionReference<
+    };
+    score: {
+      insertScoreHistory: FunctionReference<
+        "mutation",
+        "internal",
+        {
+          newScore: number;
+          oldScore: number;
+          trigger: "ema" | "sdoh" | "observation";
+          userId: Id<"users">;
+          zones: any;
+        },
+        any
+      >;
+      updateFromEMA: FunctionReference<
         "action",
         "internal",
-        { userId: Id<"users">; zone: string },
+        {
+          answers: Array<{ questionId: string; value: number }>;
+          userId: Id<"users">;
+        },
+        any
+      >;
+      updateFromSDOH: FunctionReference<
+        "action",
+        "internal",
+        {
+          answers: Array<{ questionId: string; value: number }>;
+          userId: Id<"users">;
+        },
+        any
+      >;
+      updateUserScore: FunctionReference<
+        "mutation",
+        "internal",
+        {
+          gcSdohScore: number;
+          lastEMA?: number;
+          lastSDOH?: number;
+          riskLevel: string;
+          userId: Id<"users">;
+          zones: any;
+        },
+        any
+      >;
+      updateZone: FunctionReference<
+        "mutation",
+        "internal",
+        { userId: Id<"users">; value: number; zone: string },
         any
       >;
     };
@@ -302,6 +416,24 @@ export declare const internal: {
         "action",
         "internal",
         { text: string; userId: Id<"users"> },
+        any
+      >;
+      sendAssessmentCompletionMessage: FunctionReference<
+        "action",
+        "internal",
+        { band: string; score: number; userId: Id<"users"> },
+        any
+      >;
+      sendAssessmentReminder: FunctionReference<
+        "action",
+        "internal",
+        { userId: Id<"users"> },
+        any
+      >;
+      sendCrisisFollowUpMessage: FunctionReference<
+        "action",
+        "internal",
+        { hasResponded: boolean; userId: Id<"users"> },
         any
       >;
       sendCrisisResponse: FunctionReference<
@@ -317,6 +449,12 @@ export declare const internal: {
         any
       >;
       sendHelpMessage: FunctionReference<
+        "action",
+        "internal",
+        { userId: Id<"users"> },
+        any
+      >;
+      sendRateLimitMessage: FunctionReference<
         "action",
         "internal",
         { userId: Id<"users"> },
@@ -536,13 +674,6 @@ export declare const internal: {
     };
     workflows: {
       runCheckIns: FunctionReference<"action", "internal", {}, any>;
-      runEngagementMonitoring: FunctionReference<"action", "internal", {}, any>;
-      scheduleCrisisFollowUp: FunctionReference<
-        "action",
-        "internal",
-        { userId: Id<"users"> },
-        any
-      >;
     };
   };
   resources: {
@@ -551,9 +682,11 @@ export declare const internal: {
       "internal",
       {
         category?: string;
+        hasScore?: boolean;
         query: string;
         userId: Id<"users">;
-        zones?: Array<string>;
+        zipCode?: string;
+        zone?: string;
       },
       any
     >;
@@ -657,24 +790,6 @@ export declare const internal: {
   };
   workflows: {
     checkInWorkflow: FunctionReference<"mutation", "internal", any, any>;
-    engagementMonitoringWorkflow: FunctionReference<
-      "mutation",
-      "internal",
-      any,
-      any
-    >;
-    startSuggestResourcesWorkflow: FunctionReference<
-      "action",
-      "internal",
-      { userId: Id<"users">; zone: string },
-      any
-    >;
-    suggestResourcesWorkflow: FunctionReference<
-      "mutation",
-      "internal",
-      any,
-      any
-    >;
   };
 };
 

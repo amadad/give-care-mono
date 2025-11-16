@@ -27,6 +27,21 @@ export const getProfile = query({
 });
 
 /**
+ * Get user by external ID (phone or email)
+ */
+export const getByExternalIdQuery = query({
+  args: {
+    externalId: v.string(),
+  },
+  handler: async (ctx, { externalId }) => {
+    return await ctx.db
+      .query("users")
+      .withIndex("by_externalId", (q) => q.eq("externalId", externalId))
+      .first();
+  },
+});
+
+/**
  * List all subscriptions (admin query)
  */
 export const listSubscriptions = query({

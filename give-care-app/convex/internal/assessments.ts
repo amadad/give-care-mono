@@ -13,17 +13,13 @@ export const startAssessment = internalMutation({
     userId: v.id("users"),
     assessmentType: v.union(
       v.literal("ema"),
-      v.literal("cwbs"),
-      v.literal("reach2"),
       v.literal("sdoh")
     ),
   },
   handler: async (ctx, { userId, assessmentType }) => {
-    // Check cooldown periods
+    // Check cooldown periods (EMA + SDOH only)
     const cooldowns: Record<string, number> = {
       ema: 86400000, // 1 day
-      cwbs: 604800000, // 7 days
-      reach2: 1814400000, // 21 days
       sdoh: 2592000000, // 30 days
     };
 
@@ -80,6 +76,54 @@ export const getActiveSession = internalQuery({
         q.eq("userId", userId).eq("status", "active")
       )
       .first();
+  },
+});
+
+/**
+ * Get latest completed assessment for a user
+ * Used by workflows to check completion status
+ */
+export const getLatestCompletedAssessment = internalQuery({
+  args: {
+    userId: v.id("users"),
+    assessmentType: v.union(
+      v.literal("ema"),
+      v.literal("sdoh")
+    ),
+  },
+  handler: async (ctx, { userId, assessmentType }) => {
+    // Get latest assessment
+    const assessment = await ctx.db
+      .query("assessments")
+      .withIndex("by_user_and_type", (q) =>
+        q.eq("userId", userId).eq("definitionId", assessmentType)
+      )
+      .order("desc")
+      .first();
+
+    if (!assessment) {
+      return null;
+    }
+
+    // Get corresponding score
+    const score = await ctx.db
+      .query("scores")
+      .withIndex("by_user", (q) => q.eq("userId", userId))
+      .filter((q) => q.eq(q.field("assessmentId"), assessment._id))
+      .order("desc")
+      .first();
+
+    if (!score) {
+      return null;
+    }
+
+    return {
+      assessmentId: assessment._id,
+      completedAt: assessment.completedAt,
+      gcBurnout: score.gcBurnout,
+      band: score.band,
+      zones: score.zones,
+    };
   },
 });
 

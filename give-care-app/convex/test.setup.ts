@@ -16,10 +16,10 @@ import twilioSchema from './lib/twilioComponentSchema';
 /**
  * Glob pattern for all Convex function files
  * Required by convex-test to find and load functions
- * 
+ *
  * In a monorepo, convex-test may not find convex/ relative to node_modules,
  * so we explicitly pass modules using import.meta.glob
- * 
+ *
  * CRITICAL: import.meta.glob is evaluated at BUILD TIME by Vite
  * The _generated directory MUST exist when Vitest transforms this file
  * This is ensured by running 'convex codegen' BEFORE Vitest starts (via pretest hooks or CI step)

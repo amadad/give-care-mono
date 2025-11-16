@@ -10,8 +10,36 @@
  */
 
 import { GoogleGenAI } from '@google/genai';
-import type { LocationData } from './mapsUtils';
-import { buildCaregivingQuery, formatResourcesForSMS } from './mapsUtils';
+
+export interface LocationData {
+  zipCode?: string;
+  latitude?: number;
+  longitude?: number;
+}
+
+/**
+ * Build caregiving-specific query (inline helper)
+ */
+function buildCaregivingQuery(query: string, category: string, zipCode: string, zones?: string[]): string {
+  let enhancedQuery = `Find ${category || 'caregiving'} resources`;
+  if (zones && zones.length > 0) {
+    enhancedQuery += ` for ${zones.join(', ')} support`;
+  }
+  enhancedQuery += ` near ${zipCode}`;
+  return enhancedQuery;
+}
+
+/**
+ * Format resources for SMS (inline helper)
+ */
+function formatResourcesForSMS(resources: Array<{ name: string; address?: string }>, category: string): string {
+  const lines = resources.slice(0, 3).map((r, i) => {
+    const num = i + 1;
+    const addr = r.address ? ` - ${r.address}` : '';
+    return `${num}. ${r.name}${addr}`;
+  });
+  return `Found ${resources.length} ${category} resources:\n${lines.join('\n')}`;
+}
 
 export interface MapsGroundingResult {
   resources: Array<{

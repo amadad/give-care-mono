@@ -146,6 +146,87 @@ export const sendEngagementNudge = internalAction({
 });
 
 /**
+ * Send rate limit message
+ */
+export const sendRateLimitMessage = internalAction({
+  args: {
+    userId: v.id("users"),
+  },
+  handler: async (ctx, { userId }) => {
+    const user = await ctx.runQuery(internal.internal.users.getUser, { userId });
+    if (!user?.phone) return;
+
+    const message = "You've reached your daily message limit. I'll be back tomorrow to continue supporting you.";
+    await sendSMS(ctx, user.phone, message);
+  },
+});
+
+/**
+ * Send assessment completion message
+ */
+export const sendAssessmentCompletionMessage = internalAction({
+  args: {
+    userId: v.id("users"),
+    score: v.number(),
+    band: v.string(),
+  },
+  handler: async (ctx, { userId, score, band }) => {
+    const user = await ctx.runQuery(internal.internal.users.getUser, { userId });
+    if (!user?.phone) return;
+
+    // Map band to user-friendly text
+    const bandText: Record<string, string> = {
+      very_low: "very low stress",
+      low: "low stress",
+      moderate: "moderate stress",
+      high: "high stress",
+    };
+
+    const message = `Thanks for completing your check-in! Your score is ${score} - that shows ${bandText[band] || band}. How are you feeling today?`;
+    await sendSMS(ctx, user.phone, message);
+  },
+});
+
+/**
+ * Send assessment reminder message
+ */
+export const sendAssessmentReminder = internalAction({
+  args: {
+    userId: v.id("users"),
+  },
+  handler: async (ctx, { userId }) => {
+    const user = await ctx.runQuery(internal.internal.users.getUser, { userId });
+    if (!user?.phone) return;
+
+    const message = "You started a check-in earlier. Want to finish it? Just reply with your answers.";
+    await sendSMS(ctx, user.phone, message);
+  },
+});
+
+/**
+ * Send crisis follow-up message
+ */
+export const sendCrisisFollowUpMessage = internalAction({
+  args: {
+    userId: v.id("users"),
+    hasResponded: v.boolean(),
+  },
+  handler: async (ctx, { userId, hasResponded }) => {
+    const user = await ctx.runQuery(internal.internal.users.getUser, { userId });
+    if (!user?.phone) return;
+
+    let message: string;
+    if (hasResponded) {
+      message = "I'm here to support you. What kind of support would help right now?";
+    } else {
+      message = "How are you doing today? I wanted to check in after our conversation yesterday.";
+    }
+
+    await sendSMS(ctx, user.phone, message);
+  },
+});
+
+/**
  * Send subscription message based on scenario
  */
 export const sendSubscriptionMessage = internalAction({

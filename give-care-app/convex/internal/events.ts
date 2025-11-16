@@ -4,7 +4,24 @@
 
 import { internalMutation } from "../_generated/server";
 import { v } from "convex/values";
-import { emitEvent } from "../lib/services/eventService";
+import type { MutationCtx } from "../_generated/server";
+import type { Id } from "../_generated/dataModel";
+
+/**
+ * Emit event (inline - was in eventService)
+ */
+async function emitEvent(
+  ctx: MutationCtx,
+  userId: Id<"users">,
+  type: string,
+  payload: any
+) {
+  await ctx.db.insert("events", {
+    userId,
+    type: type as any,
+    payload,
+  });
+}
 
 /**
  * Emit resource search event

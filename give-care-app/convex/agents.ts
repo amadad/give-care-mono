@@ -11,14 +11,10 @@ import { components } from "./_generated/api";
 import { MAIN_MODEL, ASSESSMENT_MODEL, EMBEDDING_MODEL } from "./lib/models";
 import { MAIN_PROMPT, ASSESSMENT_PROMPT } from "./lib/prompts";
 import {
-  searchResources,
+  getResources,
   startAssessment,
-  checkWellnessStatus,
-  findInterventions,
-  recordMemory,
-  updateProfile,
-  trackInterventionPreference,
-  getInterventions,
+  recordObservation,
+  trackInterventionHelpfulness,
 } from "./tools";
 
 /**
@@ -32,13 +28,10 @@ export const mainAgent = new Agent(components.agent, {
   textEmbeddingModel: EMBEDDING_MODEL,
   instructions: MAIN_PROMPT,
   tools: {
-    searchResources,
+    getResources,
     startAssessment,
-    checkWellnessStatus,
-    findInterventions,
-    recordMemory,
-    updateProfile,
-    trackInterventionPreference,
+    recordObservation,
+    trackInterventionHelpfulness,
   },
   maxSteps: 5, // Allows tool chaining
 });
@@ -54,7 +47,7 @@ export const assessmentAgent = new Agent(components.agent, {
   textEmbeddingModel: EMBEDDING_MODEL,
   instructions: ASSESSMENT_PROMPT,
   tools: {
-    getInterventions,
+    getResources, // Assessment agent can suggest resources after scoring
   },
   maxSteps: 2, // Scoring + interpretation
 });

@@ -11,117 +11,99 @@ import { internalAction } from "./_generated/server";
 import { v } from "convex/values";
 import { internal } from "./_generated/api";
 import { searchWithMapsGrounding } from "./lib/maps";
-import {
-  extractZipFromQuery,
-  inferCategory,
-  CATEGORY_TTLS,
-  formatCachedResultsForSMS,
-  zipToApproximateLatLng,
-} from "./lib/mapsUtils";
-import type { LocationData } from "./lib/mapsUtils";
+import { findWorstZone } from "./lib/scoreCalculator";
+import { getZoneDisplayName } from "./lib/sdoh";
 
 /**
- * Search resources using Google Maps Grounding
- * Called from searchResources tool
+ * Extract ZIP code from query string (inline helper)
+ */
+function extractZipFromQuery(query: string): string | null {
+  const zipMatch = query.match(/\b\d{5}\b/);
+  return zipMatch ? zipMatch[0] : null;
+}
+
+/**
+ * National resources (hardcoded list for graceful degradation)
+ */
+const NATIONAL_RESOURCES: Record<string, string[]> = {
+  respite: [
+    "Family Caregiver Alliance: caregiver.org",
+    "ARCH National Respite: archrespite.org",
+    "National Respite Locator: archrespite.org/respitelocator",
+  ],
+  support: [
+    "Family Caregiver Alliance: caregiver.org",
+    "AARP Caregiving: aarp.org/caregiving",
+    "Caregiver Action Network: caregiveraction.org",
+  ],
+  default: [
+    "Family Caregiver Alliance: caregiver.org",
+    "AARP Caregiving: aarp.org/caregiving",
+    "National Alliance for Caregiving: caregiving.org",
+  ],
+};
+
+function getNationalResources(category?: string): string[] {
+  return NATIONAL_RESOURCES[category || "default"] || NATIONAL_RESOURCES.default;
+}
+
+/**
+ * Search resources with graceful degradation
+ * No ZIP → national resources, Has ZIP → local, Has score → targeted by worst zone
  */
 export const searchResources = internalAction({
   args: {
     userId: v.id("users"),
     query: v.string(),
     category: v.optional(v.string()),
-    zones: v.optional(v.array(v.string())), // Optional: pass explicit zones
+    zipCode: v.optional(v.string()),
+    zone: v.optional(v.string()), // P1-P6 zone for targeted resources
+    hasScore: v.optional(v.boolean()), // Whether user has a score
   },
-  handler: async (ctx, { userId, query, category, zones: explicitZones }) => {
-    // Step 1: Extract location (query → user metadata → error)
+  handler: async (ctx, { userId, query, category, zipCode, zone, hasScore }) => {
+    // Extract ZIP from query if present
     const zipFromQuery = extractZipFromQuery(query);
+    const zip = zipCode || zipFromQuery;
     
-    // Batch queries for better performance (CONVEX_01.md best practice)
-    const [userLocation, latestScore] = await Promise.all([
-      ctx.runQuery(internal.internal.resources.getLocationFromUserQuery, { userId }),
-      !explicitZones || explicitZones.length === 0
-        ? ctx.runQuery(internal.internal.resources.getLatestUserScore, { userId })
-        : Promise.resolve(null),
-    ]);
-
-    const zip = zipFromQuery || userLocation?.zipCode;
-    if (!zip) {
+    // Get user to check for ZIP and score
+    const user = await ctx.runQuery(internal.internal.users.getUser, { userId });
+    const userZip = zip || user?.zipCode || (user?.metadata as any)?.zipCode;
+    const userHasScore = hasScore !== undefined ? hasScore : (user?.gcSdohScore !== undefined && user.gcSdohScore !== null);
+    const userZones = user?.zones || (user?.metadata as any)?.zones;
+    
+    // Graceful degradation: No ZIP → return national resources
+    if (!userZip) {
+      const nationalResources = getNationalResources(category);
       return {
-        error: "missing_zip",
-        suggestion: "What's your 5-digit zip code so I can find nearby support?",
+        resources: `National resources:\n${nationalResources.map(r => `• ${r}`).join('\n')}\n\nShare your ZIP for local options?`,
+        message: "I found some national resources. Share your ZIP code for local options near you.",
       };
     }
 
-    // Step 1.5: Get user's pressure zones (if not explicitly provided)
-    let pressureZones: string[] = explicitZones || [];
-    if (!explicitZones || explicitZones.length === 0) {
-      if (latestScore?.zones) {
-        // Extract top 2-3 pressure zones (zones >= 3.5 on 1-5 scale)
-        const zoneEntries = Object.entries(latestScore.zones)
-          .filter(([_, score]) => {
-            return typeof score === 'number' && score >= 3.5;
-          })
-          .sort(([_, a], [__, b]) => {
-            const numA = typeof a === 'number' ? a : 0;
-            const numB = typeof b === 'number' ? b : 0;
-            return numB - numA;
-          })
-          .slice(0, 3)
-          .map(([zoneName, _]) => zoneName.replace('zone_', '')); // Remove 'zone_' prefix
-        pressureZones = zoneEntries;
+    // Has ZIP → Google Maps search for local resources
+    // If has score + worst zone → add zone context to query
+    let searchQuery = query;
+    let targetZone: string | undefined = zone;
+    
+    if (userHasScore && userZones && !targetZone) {
+      // Find worst zone for targeted resources
+      const worstZone = findWorstZone(userZones as any);
+      if (worstZone) {
+        targetZone = worstZone;
+        const zoneName = getZoneDisplayName(worstZone);
+        // Enhance query with zone context
+        searchQuery = `${query} for ${zoneName.toLowerCase()} support`;
       }
     }
 
-    // Step 2: Emit resource.search event
-    await ctx.runMutation(internal.internal.events.emitResourceSearch, {
-      userId,
-      query,
-      category: category || inferCategory(query),
-      zip,
-    });
-
-    // Step 3: Check cache (query)
-    const resolvedCategory = category || inferCategory(query);
-    const cache = await ctx.runQuery(internal.internal.resources.getCachedResources, {
-      category: resolvedCategory,
-      zip,
-    });
-
-    if (cache && cache.placeIds.length > 0) {
-      // Cache hit - format from placeIds
-      // Note: For SMS, we format placeIds directly (no Places Details API call needed)
-      const text = formatCachedResultsForSMS(cache.placeIds, resolvedCategory);
-      return {
-        resources: text,
-        sources: cache.placeIds.map((id) => ({ placeId: id })),
-      };
-    }
-
-    // Step 3: Call Maps Grounding API (action - network call)
+    // Call Maps Grounding API for local search
     try {
-      // Get approximate lat/lng from zip for better location context
-      const approximateLocation = zipToApproximateLatLng(zip);
-      const location: LocationData = {
-        zipCode: zip,
-        latitude: approximateLocation?.latitude,
-        longitude: approximateLocation?.longitude,
-      };
-
       const result = await searchWithMapsGrounding(
-        query,
-        resolvedCategory,
-        location,
-        3000, // 3s timeout
-        pressureZones // Pass pressure zones for zone-specific refinements
+        searchQuery,
+        category || "caregiving",
+        { zipCode: userZip },
+        3000 // 3s timeout
       );
-
-      // Step 4: Save to cache (mutation - transactional)
-      const ttlDays = CATEGORY_TTLS[resolvedCategory] || 14;
-      await ctx.runMutation(internal.internal.resources.saveToCache, {
-        category: resolvedCategory,
-        zip,
-        placeIds: result.resources.map((r) => r.placeId),
-        ttlDays,
-      });
 
       return {
         resources: result.text,
@@ -133,21 +115,12 @@ export const searchResources = internalAction({
         widgetToken: result.widgetToken,
       };
     } catch (error) {
-      // Error handling
-      if (error instanceof Error && error.message.includes("timeout")) {
-        return {
-          error: "timeout",
-          message: "Search is taking longer than expected. Please try again.",
-        };
-      }
-      if (error instanceof Error && error.message.includes("No Maps Grounding results")) {
-        return {
-          error: "no_results",
-          message: `I couldn't find ${resolvedCategory} resources near ${zip}. Try a more specific query.`,
-        };
-      }
-      // Re-throw unexpected errors
-      throw error;
+      // Fallback to national resources on error
+      const nationalResources = getNationalResources(category);
+      return {
+        resources: `I couldn't find local results. Here are national resources:\n${nationalResources.map(r => `• ${r}`).join('\n')}`,
+        message: "Local search unavailable. Here are national resources.",
+      };
     }
   },
 });

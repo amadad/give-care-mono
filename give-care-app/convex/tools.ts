@@ -1,6 +1,6 @@
 /**
  * Agent Tools
- * All 8 tools for Main Agent and Assessment Agent
+ * Simplified to 4 core tools: getResources, startAssessment, recordObservation, trackInterventionHelpfulness
  */
 
 "use node";
@@ -12,22 +12,31 @@ import type { ToolCtx } from "@convex-dev/agent";
 import { Id } from "./_generated/dataModel";
 
 /**
- * 1. searchResources - Google Maps Grounding API search
+ * Extract ZIP code from query string (inline helper)
  */
-export const searchResources = createTool({
+function extractZipFromQuery(query: string): string | null {
+  const zipMatch = query.match(/\b\d{5}\b/);
+  return zipMatch ? zipMatch[0] : null;
+}
+
+/**
+ * 1. getResources - Resource search with graceful degradation
+ * No ZIP → national resources, Has ZIP → local, Has score → targeted by worst zone
+ */
+export const getResources = createTool({
   description:
-    "Search for local caregiving resources using Google Maps. Returns nearby services like respite care, support groups, adult day care, home health agencies, and community resources. IMPORTANT: Requires user's ZIP code. If user mentions a ZIP code in their message (e.g., 'I need help in 90210'), extract it and call updateProfile(field: 'zipCode', value: '90210') BEFORE calling this tool.",
+    "Search for caregiving resources. Works progressively: returns national resources if no ZIP code, local resources if ZIP provided, and targeted resources if user has a score and worst zone identified. If user mentions a ZIP code in their message, extract it and use it in the query.",
   args: z.object({
     query: z
       .string()
       .describe(
-        "Natural language query for resources. Can include zip code (e.g., 'respite care near me in 11576')."
+        "Natural language query for resources (e.g., 'respite care', 'support groups'). Can include zip code (e.g., 'respite care near me in 11576')."
       ),
-    category: z
+    zone: z
       .string()
       .optional()
       .describe(
-        "Optional category: respite, support, daycare, homecare, medical, community, meals, transport, hospice, memory"
+        "Optional pressure zone (P1-P6) to target resources. Use when user has a score and worst zone is known."
       ),
   }),
   handler: async (
@@ -41,25 +50,24 @@ export const searchResources = createTool({
     suggestion?: string;
     message?: string;
   }> => {
-    // Check onboarding policy (crisis path bypasses this)
-    const check = await ctx.runQuery(internal.internal.onboarding.enforcePolicy, {
+    // Extract ZIP from query if present
+    const zipFromQuery = extractZipFromQuery(args.query);
+    
+    // Get user to check for ZIP and score
+    const user = await ctx.runQuery(internal.internal.users.getUser, {
       userId: ctx.userId as Id<"users">,
-      interactionType: "resource_search",
     });
 
-    if (!check.allowed) {
-      return {
-        error: "missing_field",
-        suggestion: check.question,
-        message: check.question,
-        resources: check.question || "Please provide your zip code to search for resources.",
-      };
-    }
+    const userZip = user?.zipCode || (user?.metadata as any)?.zipCode || zipFromQuery;
+    const hasScore = user?.gcSdohScore !== undefined && user.gcSdohScore !== null;
 
+    // Call resource search with graceful degradation
     const result = await ctx.runAction(internal.resources.searchResources, {
       userId: ctx.userId as Id<"users">,
       query: args.query,
-      category: args.category,
+      zipCode: userZip || undefined,
+      zone: args.zone || undefined,
+      hasScore,
     });
     
     // Handle error responses
@@ -77,15 +85,15 @@ export const searchResources = createTool({
 });
 
 /**
- * 2. startAssessment - Begin assessment session
+ * 2. startAssessment - Begin assessment session (EMA or SDOH only)
  */
 export const startAssessment = createTool({
   description:
-    "Begin a wellness assessment (EMA, CWBS, REACH-II, or SDOH). Checks cooldown periods and creates assessment session.",
+    "Begin a wellness assessment (EMA or SDOH-28). EMA is a quick 3-question daily check-in. SDOH-28 is a comprehensive 28-question assessment that should only be suggested if user has never taken it or it's been 30+ days since last completion.",
   args: z.object({
     assessmentType: z
-      .enum(["ema", "cwbs", "reach2", "sdoh"])
-      .describe("Type of assessment to start"),
+      .enum(["ema", "sdoh"])
+      .describe("Type of assessment to start: 'ema' for daily check-in, 'sdoh' for comprehensive assessment"),
   }),
   handler: async (
     ctx: ToolCtx,
@@ -95,20 +103,6 @@ export const startAssessment = createTool({
     message: string;
     nextStep: string;
   }> => {
-    // Check onboarding policy (crisis path bypasses this)
-    const check = await ctx.runQuery(internal.internal.onboarding.enforcePolicy, {
-      userId: ctx.userId as Id<"users">,
-      interactionType: "assessment",
-    });
-
-    if (!check.allowed) {
-      return {
-        success: false,
-        message: check.question || "Please provide information about who you're caring for.",
-        nextStep: "",
-      };
-    }
-
     const result = await ctx.runMutation(
       internal.internal.assessments.startAssessment,
       {
@@ -121,174 +115,71 @@ export const startAssessment = createTool({
 });
 
 /**
- * 3. checkWellnessStatus - Get current burnout score
+ * 3. recordObservation - Infer P2 (Physical Health) from conversation
  */
-export const checkWellnessStatus = createTool({
+export const recordObservation = createTool({
   description:
-    "Get the user's current burnout score, band, and pressure zones from their latest assessment.",
-  args: z.object({}),
-  handler: async (
-    ctx: ToolCtx,
-    args
-  ): Promise<{
-    score: number;
-    band: string;
-    zones: Record<string, number>;
-    lastAssessment: string;
-  }> => {
-    const result = await ctx.runQuery(internal.internal.wellness.getWellnessStatus, {
-      userId: ctx.userId as Id<"users">,
-    });
-    return result;
-  },
-});
-
-/**
- * 4. findInterventions - Match interventions to zones
- */
-export const findInterventions = createTool({
-  description:
-    "Find evidence-based interventions matched to specific pressure zones (emotional, physical, social, time, financial).",
+    "Record observations about the user's physical health from conversation. Use when user mentions physical symptoms like exhaustion, pain, sleep issues, or health concerns. This updates the P2 (Physical Health) zone score.",
   args: z.object({
-    zones: z
-      .array(z.string())
-      .describe("Array of zone names to match interventions for"),
-  }),
-  handler: async (
-    ctx: ToolCtx,
-    args
-  ): Promise<{
-    interventions: Array<{
-      title: string;
-      description: string;
-      category: string;
-      evidenceLevel: string;
-      duration: string;
-    }>;
-    error?: string;
-    message?: string;
-  }> => {
-    // Check onboarding policy (crisis path bypasses this)
-    const check = await ctx.runQuery(internal.internal.onboarding.enforcePolicy, {
-      userId: ctx.userId as Id<"users">,
-      interactionType: "intervention",
-    });
-
-    if (!check.allowed) {
-      return {
-        interventions: [],
-        error: "missing_field",
-        message: check.question || "Please provide information about who you're caring for.",
-      };
-    }
-
-    const result = await ctx.runQuery(internal.internal.interventions.findByZones, {
-      zones: args.zones,
-    });
-    return result;
-  },
-});
-
-/**
- * 5. recordMemory - Save user context
- */
-export const recordMemory = createTool({
-  description:
-    "Save important user context (care routines, preferences, triggers, family health info) for future reference. Agent Component handles semantic search automatically.",
-  args: z.object({
-    category: z
-      .enum([
-        "care_routine",
-        "preference",
-        "intervention_result",
-        "crisis_trigger",
-        "family_health",
-      ])
-      .describe("Category of memory"),
-    content: z.string().describe("Content to remember"),
-    importance: z
+    observation: z
+      .string()
+      .describe("What the user said about their physical health (e.g., 'I'm exhausted', 'I have back pain', 'I can't sleep')"),
+    zone: z
+      .string()
+      .optional()
+      .describe("Pressure zone (defaults to P2 for physical health, but can specify other zones if relevant)"),
+    severity: z
       .number()
       .min(1)
-      .max(10)
-      .describe("Importance score (1-10, 7+ for embedding)"),
-  }),
-  handler: async (ctx: ToolCtx, args): Promise<{ success: boolean }> => {
-    await ctx.runMutation(internal.internal.memories.recordMemory, {
-      userId: ctx.userId as Id<"users">,
-      category: args.category,
-      content: args.content,
-      importance: args.importance,
-    });
-    return { success: true };
-  },
-});
-
-/**
- * 6. updateProfile - Update user metadata
- */
-export const updateProfile = createTool({
-  description:
-    "Update user profile metadata. CRITICAL: Extract and save data automatically from user messages. Examples: If user says 'I live in 90210' → call updateProfile(field: 'zipCode', value: '90210'). If user says 'I'm caring for mom' → call updateProfile(field: 'careRecipientName', value: 'mom'). If user says 'Call me Sarah' → call updateProfile(field: 'firstName', value: 'Sarah'). Common fields: careRecipientName, firstName, relationship, zipCode, timezone, checkInTime, onboardingStage.",
-  args: z.object({
-    field: z.string().describe("Field name to update (e.g., zipCode, firstName, careRecipientName, relationship)"),
-    value: z.any().describe("Value to set (extracted from user message)"),
-  }),
-  handler: async (ctx: ToolCtx, args): Promise<{ success: boolean }> => {
-    await ctx.runMutation(internal.internal.users.updateProfile, {
-      userId: ctx.userId as Id<"users">,
-      field: args.field,
-      value: args.value,
-    });
-    return { success: true };
-  },
-});
-
-/**
- * 7. trackInterventionPreference - Log intervention interaction
- */
-export const trackInterventionPreference = createTool({
-  description:
-    "Track user interaction with an intervention (viewed, tried, helpful, not helpful, etc.).",
-  args: z.object({
-    interventionId: z.string().describe("Intervention ID"),
-    status: z.string().describe("Interaction status (viewed, tried, helpful, etc.)"),
-  }),
-  handler: async (ctx: ToolCtx, args): Promise<{ success: boolean }> => {
-    await ctx.runMutation(internal.internal.interventions.trackEvent, {
-      userId: ctx.userId as Id<"users">,
-      interventionId: args.interventionId,
-      status: args.status,
-    });
-    return { success: true };
-  },
-});
-
-/**
- * 8. getInterventions - Retrieve intervention details (Assessment Agent only)
- */
-export const getInterventions = createTool({
-  description:
-    "Retrieve detailed information about specific interventions by their IDs. Used by Assessment Agent after scoring.",
-  args: z.object({
-    interventionIds: z.array(z.string()).describe("Array of intervention IDs"),
+      .max(5)
+      .describe("Severity level (1=mild, 5=severe) based on language intensity"),
   }),
   handler: async (
     ctx: ToolCtx,
     args
   ): Promise<{
-    interventions: Array<{
-      title: string;
-      description: string;
-      category: string;
-      evidenceLevel: string;
-      duration: string;
-      content: string;
-    }>;
+    success: boolean;
+    message: string;
   }> => {
-    const result = await ctx.runQuery(internal.internal.interventions.getByIds, {
-      interventionIds: args.interventionIds,
+    const zone = args.zone || "P2"; // Default to P2 (Physical Health)
+    
+    // Convert severity (1-5) to zone score (0-100)
+    // Higher severity = higher score (more stress)
+    const zoneScore = ((args.severity - 1) / 4) * 100;
+
+    await ctx.runMutation(internal.internal.score.updateZone, {
+      userId: ctx.userId as Id<"users">,
+      zone,
+      value: zoneScore,
     });
-    return result;
+
+    return {
+      success: true,
+      message: `Recorded observation about ${zone === "P2" ? "physical health" : zone}`,
+    };
   },
 });
 
+/**
+ * 4. trackInterventionHelpfulness - Simple "Did this help?" tracking
+ */
+export const trackInterventionHelpfulness = createTool({
+  description:
+    "Track whether a resource or intervention was helpful to the user. Simple yes/no feedback for closed-loop learning.",
+  args: z.object({
+    resourceId: z
+      .string()
+      .describe("ID of the resource or intervention the user interacted with"),
+    helpful: z
+      .boolean()
+      .describe("Whether the resource was helpful (true) or not helpful (false)"),
+  }),
+  handler: async (ctx: ToolCtx, args): Promise<{ success: boolean }> => {
+    await ctx.runMutation(internal.internal.learning.trackHelpfulnessMutation, {
+      userId: ctx.userId as Id<"users">,
+      resourceId: args.resourceId,
+      helpful: args.helpful,
+    });
+    return { success: true };
+  },
+});

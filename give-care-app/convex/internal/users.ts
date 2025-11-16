@@ -245,13 +245,8 @@ export const getInactiveUsers = internalQuery({
         continue;
       }
 
-      // Exclude already escalated users
-      // escalationLevel can be: "none" | "day5" | "day7" | "day14" | undefined
-      // Only exclude if explicitly set to a non-"none" value
-      const escalationLevel = user.engagementFlags?.escalationLevel;
-      if (escalationLevel && escalationLevel !== "none") {
-        continue; // Already escalated (day5, day7, or day14)
-      }
+      // Note: engagementFlags removed as part of simplification
+      // All users are eligible for check-ins if they meet other criteria
 
       // Check subscription access (only active users)
       const subscription = await ctx.db

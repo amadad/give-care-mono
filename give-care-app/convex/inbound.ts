@@ -6,7 +6,7 @@
 
 import { internalMutation } from "./_generated/server";
 import { messageValidator } from "@convex-dev/twilio";
-import { internal } from "./_generated/api";
+import { components, internal } from "./_generated/api";
 import {
   detectCrisis,
   isStopRequest,
@@ -17,8 +17,63 @@ import {
   isUpdatePaymentRequest
 } from "./lib/utils";
 import { getCrisisResponse } from "./lib/utils";
-import { checkSubscriptionAccess } from "./lib/services/subscriptionService";
-import { FEATURES } from "./lib/infrastructure/featureFlags";
+import type { Id } from "./_generated/dataModel";
+
+// Inlined feature flags
+const FEATURES = {
+  SUBSCRIPTION_GATING: process.env.SUBSCRIPTIONS_ENABLED === "true",
+} as const;
+import type { MutationCtx } from "./_generated/server";
+
+/**
+ * Check subscription access (inline - was in subscriptionService)
+ * Returns access status and scenario for messaging
+ */
+async function checkSubscriptionAccess(
+  ctx: MutationCtx,
+  userId: Id<"users">
+): Promise<{
+  hasAccess: boolean;
+  scenario: "new_user" | "active" | "grace_period" | "grace_expired" | "past_due" | "incomplete" | "unknown";
+  gracePeriodEndsAt?: number;
+}> {
+  const subscription = await ctx.db
+    .query("subscriptions")
+    .withIndex("by_user", (q) => q.eq("userId", userId))
+    .first();
+
+  if (!subscription) {
+    return { hasAccess: false, scenario: "new_user" };
+  }
+
+  const now = Date.now();
+
+  // Active subscription
+  if (subscription.status === "active") {
+    return { hasAccess: true, scenario: "active" };
+  }
+
+  // Canceled but in grace period
+  if (subscription.status === "canceled" && subscription.gracePeriodEndsAt) {
+    if (now < subscription.gracePeriodEndsAt) {
+      return {
+        hasAccess: true,
+        scenario: "grace_period",
+        gracePeriodEndsAt: subscription.gracePeriodEndsAt,
+      };
+    } else {
+      return { hasAccess: false, scenario: "grace_expired" };
+    }
+  }
+
+  // Past due
+  if (subscription.status === "past_due") {
+    return { hasAccess: false, scenario: "past_due" };
+  }
+
+  // Unknown/other status
+  return { hasAccess: false, scenario: "unknown" };
+}
 
 /**
  * Handle incoming message from Twilio Component
@@ -54,11 +109,7 @@ export const handleIncomingMessage = internalMutation({
     // For crisis path, we'll create receipt after crisis handling to minimize latency
     // For non-crisis path, create receipt before processing
 
-    // Step 4: Rate limiting (10 SMS/day)
-    // Note: Rate limiter component check would go here
-    // For now, allowing all messages (can be enhanced later)
-
-    // Step 5: Handle special keywords (before crisis detection)
+    // Step 4: Handle special keywords (before crisis detection)
     // Note: Keywords are checked in priority order
     if (isStopRequest(body)) {
       await handleStop(ctx, user._id);
@@ -115,7 +166,47 @@ export const handleIncomingMessage = internalMutation({
       receivedAt: Date.now(),
     });
 
-    // Step 7: Check subscription access (crisis bypasses this, feature flag controls gating)
+    // Step 7: Rate limiting (10 SMS/day) - only for non-crisis messages
+    // Crisis messages bypass rate limiting (already handled above)
+    const rateLimitKey = user._id; // User ID as string key
+    const rateLimitCheck = await ctx.runQuery(components.rateLimiter.lib.checkRateLimit, {
+      name: "sms_daily",
+      key: rateLimitKey,
+      config: {
+        kind: "fixed window",
+        period: 86400000, // 24 hours in milliseconds
+        rate: 10, // 10 messages per day
+        capacity: 10,
+      },
+      count: 1,
+    });
+
+    if (!rateLimitCheck.ok) {
+      // Rate limit exceeded - send message and return early
+      await ctx.scheduler.runAfter(0, internal.internal.sms.sendRateLimitMessage, {
+        userId: user._id,
+      });
+      // Still update last engagement date to track engagement
+      await ctx.db.patch(user._id, {
+        lastEngagementDate: Date.now(),
+      });
+      return { status: "rate_limited", retryAfter: rateLimitCheck.retryAfter };
+    }
+
+    // Consume rate limit token (user is within limit)
+    await ctx.runMutation(components.rateLimiter.lib.rateLimit, {
+      name: "sms_daily",
+      key: rateLimitKey,
+      config: {
+        kind: "fixed window",
+        period: 86400000,
+        rate: 10,
+        capacity: 10,
+      },
+      count: 1,
+    });
+
+    // Step 8: Check subscription access (crisis bypasses this, feature flag controls gating)
     if (FEATURES.SUBSCRIPTION_GATING) {
       const access = await checkSubscriptionAccess(ctx, user._id);
       if (!access.hasAccess) {
@@ -129,12 +220,12 @@ export const handleIncomingMessage = internalMutation({
       }
     }
 
-    // Step 8: Update last engagement date
+    // Step 9: Update last engagement date
     await ctx.db.patch(user._id, {
       lastEngagementDate: Date.now(),
     });
 
-    // Step 9: Route to agent (async)
+    // Step 10: Route to agent (async)
     await ctx.scheduler.runAfter(0, internal.internal.agents.processMainAgentMessage, {
       userId: user._id,
       body,
@@ -326,10 +417,6 @@ async function handleCrisis(
     isDVHint: crisisResult.isDVHint,
   });
 
-  // Schedule follow-up check-in (next day)
-  await ctx.scheduler.runAfter(
-    86400000, // 24 hours
-    internal.internal.workflows.scheduleCrisisFollowUp,
-    { userId }
-  );
+  // Note: Crisis follow-up removed as part of simplification
+  // Future: Can add back if needed via check-in workflow
 }

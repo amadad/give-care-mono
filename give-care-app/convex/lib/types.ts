@@ -4,7 +4,7 @@
 
 import type { Id } from "../_generated/dataModel";
 
-export type AssessmentType = "ema" | "cwbs" | "reach2" | "sdoh";
+export type AssessmentType = "ema" | "sdoh";
 
 export type BurnoutBand = "very_low" | "low" | "moderate" | "high";
 
