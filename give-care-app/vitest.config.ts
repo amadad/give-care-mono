@@ -20,6 +20,10 @@ export default defineConfig({
     },
     server: {
       deps: { inline: ['convex-test'] },
+      fs: {
+        // Explicitly allow Vite to access _generated during import.meta.glob evaluation
+        allow: ['.', '../node_modules', './convex/_generated']
+      }
     },
     // Coverage configuration
     coverage: {
