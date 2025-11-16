@@ -73,9 +73,13 @@ jobs:
         run: |
           echo "Generating Convex types..."
           echo "Using deployment: $CONVEX_URL"
+          # CRITICAL: Clear ALL caches before codegen to ensure fresh state
+          # This prevents any cached transforms from interfering
+          rm -rf node_modules/.vite node_modules/.vitest .vitest 2>/dev/null || true
+          find . -type d -name ".vite" -exec rm -rf {} + 2>/dev/null || true
           # Generate types from schema (codegen generates types from TypeScript code, not deployment)
           # This creates the convex/_generated/ directory required by tests
-          # CRITICAL: This must run BEFORE Vitest starts, as import.meta.glob is evaluated at import time
+          # CRITICAL: This must run BEFORE Vitest starts, as import.meta.glob is evaluated at BUILD TIME
           # Set CONVEX_URL so codegen knows which deployment to use
           pnpm codegen
           # Verify _generated directory exists and has files
@@ -121,12 +125,31 @@ jobs:
             exit 1
           fi
           echo "Verified _generated directory exists before running tests"
-          # CRITICAL: Clear Vitest cache to force re-scan of filesystem
-          # This ensures import.meta.glob sees _generated files even if Vitest cached module graph
-          rm -rf node_modules/.vite node_modules/.vitest 2>/dev/null || true
-          # Run tests (pretest:e2e hook will skip since _generated exists)
-          # Use --no-cache to ensure Vitest doesn't use cached module graph
-          pnpm test:e2e --no-cache
+          # CRITICAL: Clear ALL Vitest/Vite caches to force fresh transform
+          # import.meta.glob is evaluated at BUILD TIME during transform phase
+          # We must ensure cache is cleared so glob is re-evaluated with _generated present
+          rm -rf node_modules/.vite node_modules/.vitest .vitest 2>/dev/null || true
+          # Also clear any Vite cache directories
+          find . -type d -name ".vite" -exec rm -rf {} + 2>/dev/null || true
+          # Verify _generated still exists after cache clearing
+          if [ ! -d "convex/_generated" ] || [ ! -f "convex/_generated/api.js" ]; then
+            echo "Error: _generated directory missing after cache clear"
+            exit 1
+          fi
+          echo "Cache cleared, _generated verified"
+          # CRITICAL: Ensure Vitest transforms test.setup.ts AFTER _generated exists
+          # import.meta.glob is evaluated during transform, so _generated MUST exist when Vitest starts
+          # Touch test.setup.ts to ensure Vitest re-transforms it (even though cache is cleared)
+          touch convex/test.setup.ts
+          # Verify _generated still exists
+          if [ ! -d "convex/_generated" ] || [ ! -f "convex/_generated/api.js" ]; then
+            echo "Error: _generated directory missing before starting Vitest"
+            exit 1
+          fi
+          echo "Starting Vitest - _generated exists, transform will include it"
+          # Run tests directly with vitest (bypass pretest hook since codegen already ran)
+          # This ensures Vitest transforms test.setup.ts AFTER _generated exists
+          pnpm vitest tests/simulation/all-scenarios.test.ts --run
           echo "E2E tests passed"
 
       # ============================================================

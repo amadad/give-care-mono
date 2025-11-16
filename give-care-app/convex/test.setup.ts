@@ -54,15 +54,13 @@ export const modules = import.meta.glob('./**/*.{js,ts}');
  * All component functions (e.g., components.agent.threads.*) work in tests.
  */
 export function initConvexTest() {
-  // CRITICAL: Verify _generated exists before initializing convex-test
-  // This provides a clear error if codegen hasn't run
-  // Note: This check happens at RUNTIME, but import.meta.glob was evaluated at BUILD TIME
-  // So if _generated didn't exist when Vitest started, the glob won't include those files
-  // That's why we MUST run codegen BEFORE Vitest starts (via pretest hooks or CI step)
-  
   // Initialize test with schema and modules
   // Environment variables are loaded via vitest.config.ts (dotenv + test.env)
   // and are available through process.env in the test environment
+  // 
+  // CRITICAL: import.meta.glob is evaluated at BUILD TIME by Vite during transform phase
+  // The _generated directory MUST exist when Vitest transforms this file
+  // This is ensured by running 'convex codegen' BEFORE Vitest starts (via pretest hooks or CI step)
   const t = convexTest(schema, modules);
 
   // Register components used by the app
