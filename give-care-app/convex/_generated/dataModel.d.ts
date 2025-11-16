@@ -565,6 +565,8 @@ export type DataModel = {
         firstResourceSearchedAt?: number;
         firstScore?: number;
         gcBurnout?: number;
+        journeyPhase?: string;
+        lastAssessmentScore?: number;
         onboardingCompletedAt?: number;
         onboardingMilestones?: Array<{
           completedAt: number;
@@ -572,9 +574,15 @@ export type DataModel = {
         }>;
         onboardingStage?: string;
         primaryStressor?: string;
+        profile?: {
+          careRecipientName?: string;
+          firstName?: string;
+          relationship?: string;
+        };
         snoozeUntil?: number;
         threadId?: string;
         timezone?: string;
+        totalInteractionCount?: number;
         zipCode?: string;
       };
       name?: string;
@@ -617,13 +625,20 @@ export type DataModel = {
       | "metadata.firstResourceSearchedAt"
       | "metadata.firstScore"
       | "metadata.gcBurnout"
+      | "metadata.journeyPhase"
+      | "metadata.lastAssessmentScore"
       | "metadata.onboardingCompletedAt"
       | "metadata.onboardingMilestones"
       | "metadata.onboardingStage"
       | "metadata.primaryStressor"
+      | "metadata.profile"
+      | "metadata.profile.careRecipientName"
+      | "metadata.profile.firstName"
+      | "metadata.profile.relationship"
       | "metadata.snoozeUntil"
       | "metadata.threadId"
       | "metadata.timezone"
+      | "metadata.totalInteractionCount"
       | "metadata.zipCode"
       | "name"
       | "phone";

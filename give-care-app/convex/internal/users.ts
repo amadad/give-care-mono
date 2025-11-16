@@ -70,6 +70,8 @@ export const upsertUserFromSignup = internalMutation({
 
 /**
  * Update user profile metadata
+ * Profile fields (firstName, careRecipientName, relationship, etc.) are nested in metadata.profile
+ * Other fields (zipCode, timezone, onboardingStage, etc.) go directly in metadata
  */
 export const updateProfile = internalMutation({
   args: {
@@ -84,12 +86,29 @@ export const updateProfile = internalMutation({
     }
 
     const metadata = user.metadata || {};
-    await ctx.db.patch(userId, {
-      metadata: {
-        ...metadata,
-        [field]: value,
-      },
-    });
+
+    // Profile fields go in metadata.profile, everything else at metadata level
+    const profileFields = ['firstName', 'careRecipientName', 'relationship'];
+
+    if (profileFields.includes(field)) {
+      const profile = metadata.profile || {};
+      await ctx.db.patch(userId, {
+        metadata: {
+          ...metadata,
+          profile: {
+            ...profile,
+            [field]: value,
+          },
+        },
+      });
+    } else {
+      await ctx.db.patch(userId, {
+        metadata: {
+          ...metadata,
+          [field]: value,
+        },
+      });
+    }
   },
 });
 

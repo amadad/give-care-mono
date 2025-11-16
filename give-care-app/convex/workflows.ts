@@ -108,7 +108,7 @@ export const startSuggestResourcesWorkflow = internalAction({
     zone: v.string(),
   },
   handler: async (ctx, { userId, zone }) => {
-    // @ts-expect-error - workflow.start type inference issue with v0.2.7
+    // @ts-expect-error - workflow type expects different signature but works correctly
     await workflow.start(ctx, suggestResourcesWorkflow, {
       userId,
       zone,
