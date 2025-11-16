@@ -11,6 +11,7 @@ import schema from './schema';
 import agentTest from '@convex-dev/agent/test';
 import workflowTest from '@convex-dev/workflow/test';
 import rateLimiterTest from '@convex-dev/rate-limiter/test';
+import twilioSchema from './lib/twilioComponentSchema';
 
 /**
  * Glob pattern for all Convex function files
@@ -25,6 +26,22 @@ import rateLimiterTest from '@convex-dev/rate-limiter/test';
  */
 /// <reference types="vite/client" />
 export const modules = import.meta.glob('./**/*.{js,ts}');
+
+const agentComponentModules = import.meta.glob(
+  '../node_modules/@convex-dev/agent/dist/component/**/*.js'
+);
+
+const workflowComponentModules = import.meta.glob(
+  '../node_modules/@convex-dev/workflow/dist/component/**/*.js'
+);
+
+const rateLimiterComponentModules = import.meta.glob(
+  '../node_modules/@convex-dev/rate-limiter/dist/component/**/*.js'
+);
+
+const twilioComponentModules = import.meta.glob(
+  '../node_modules/@convex-dev/twilio/dist/esm/component/**/*.js'
+);
 
 /**
  * Initialize Convex test environment with REAL components
@@ -57,15 +74,13 @@ export function initConvexTest() {
   const t = convexTest(schema, modules);
 
   // Register components used by the app
-  // Some components provide register function, others need manual registration
-  agentTest.register(t, 'agent');
-  t.registerComponent('workflow', workflowTest.schema, workflowTest.modules);
-  rateLimiterTest.register(t, 'rateLimiter');
+  // Use custom globs that include *_generated/*.js artifacts required by convex-test
+  t.registerComponent('agent', agentTest.schema, agentComponentModules);
+  t.registerComponent('workflow', workflowTest.schema, workflowComponentModules);
+  t.registerComponent('rateLimiter', rateLimiterTest.schema, rateLimiterComponentModules);
 
-  // Register Twilio component (test mode - no real SMS sent)
-  // Twilio doesn't export a test helper, so we need to manually define an empty schema
-  // This allows component.twilio.* queries to work in tests without sending real SMS
-  t.registerComponent('twilio', { tables: {} }, {});
+  // Register Twilio component (no-op schema but required tables for stub SMS)
+  t.registerComponent('twilio', twilioSchema, twilioComponentModules);
 
   return t;
 }

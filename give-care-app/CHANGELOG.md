@@ -1,5 +1,13 @@
 # Changelog - GiveCare App
 
+## [Unreleased]
+
+### ✅ Testing & Infrastructure
+
+- Added a Twilio test stub so SMS sends succeed in CI without real credentials. When `TWILIO_ACCOUNT_SID/AUTH_TOKEN` are absent, outbound messages are recorded directly in the Twilio component tables, keeping simulation tests deterministic.
+- Registered the external Convex components (Agent, Workflow, Rate Limiter, Twilio) with glob patterns that include their `_generated` artifacts, unblocking `convex-test` from loading their functions inside Vitest.
+- Documented the Twilio component schema locally so tests no longer rely on deep imports from `@convex-dev/twilio`.
+
 ## [2.0.0] - 2025-11-12
 
 ### 🏗️ Major Architecture Refactoring

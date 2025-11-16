@@ -9,6 +9,10 @@ export default defineConfig({
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./ui"),
+      "@twilio-component": path.resolve(
+        __dirname,
+        "./node_modules/@convex-dev/twilio/dist/component"
+      ),
     },
   },
 });
