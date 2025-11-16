@@ -108,9 +108,9 @@ export const getLatestCompletedAssessment = internalQuery({
     // Get corresponding score
     const score = await ctx.db
       .query("scores")
-      .withIndex("by_user", (q) => q.eq("userId", userId))
-      .filter((q) => q.eq(q.field("assessmentId"), assessment._id))
-      .order("desc")
+      .withIndex("by_user_and_assessment", (q) =>
+        q.eq("userId", userId).eq("assessmentId", assessment._id)
+      )
       .first();
 
     if (!score) {

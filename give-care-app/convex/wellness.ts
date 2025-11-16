@@ -61,41 +61,53 @@ export const getWellnessStatus = query({
 
 /**
  * List all users (admin query)
+ * Limited to 100 results - use pagination for more
  */
 export const listUsers = query({
-  args: {},
-  handler: async (ctx) => {
-    return await ctx.db.query("users").collect();
+  args: {
+    limit: v.optional(v.number()),
+  },
+  handler: async (ctx, { limit = 100 }) => {
+    return await ctx.db.query("users").take(Math.min(limit, 100));
   },
 });
 
 /**
  * List all scores (admin query)
+ * Limited to 100 results - use pagination for more
  */
 export const listScores = query({
-  args: {},
-  handler: async (ctx) => {
-    return await ctx.db.query("scores").collect();
+  args: {
+    limit: v.optional(v.number()),
+  },
+  handler: async (ctx, { limit = 100 }) => {
+    return await ctx.db.query("scores").take(Math.min(limit, 100));
   },
 });
 
 /**
  * List all alerts (admin query)
+ * Limited to 100 results - use pagination for more
  */
 export const listAlerts = query({
-  args: {},
-  handler: async (ctx) => {
-    return await ctx.db.query("alerts").collect();
+  args: {
+    limit: v.optional(v.number()),
+  },
+  handler: async (ctx, { limit = 100 }) => {
+    return await ctx.db.query("alerts").take(Math.min(limit, 100));
   },
 });
 
 /**
  * List all events (admin query)
+ * Limited to 100 results - use pagination for more
  */
 export const listEvents = query({
-  args: {},
-  handler: async (ctx) => {
-    return await ctx.db.query("events").collect();
+  args: {
+    limit: v.optional(v.number()),
+  },
+  handler: async (ctx, { limit = 100 }) => {
+    return await ctx.db.query("events").take(Math.min(limit, 100));
   },
 });
 

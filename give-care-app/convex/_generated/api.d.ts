@@ -75,10 +75,10 @@ export declare const api: {
       { userId: Id<"users"> },
       any
     >;
-    listAlerts: FunctionReference<"query", "public", {}, any>;
-    listEvents: FunctionReference<"query", "public", {}, any>;
-    listScores: FunctionReference<"query", "public", {}, any>;
-    listUsers: FunctionReference<"query", "public", {}, any>;
+    listAlerts: FunctionReference<"query", "public", { limit?: number }, any>;
+    listEvents: FunctionReference<"query", "public", { limit?: number }, any>;
+    listScores: FunctionReference<"query", "public", { limit?: number }, any>;
+    listUsers: FunctionReference<"query", "public", { limit?: number }, any>;
   };
 };
 
@@ -248,26 +248,6 @@ export declare const internal: {
         any
       >;
     };
-    interventions: {
-      findByZones: FunctionReference<
-        "query",
-        "internal",
-        { zones: Array<string> },
-        any
-      >;
-      getByIds: FunctionReference<
-        "query",
-        "internal",
-        { interventionIds: Array<string> },
-        any
-      >;
-      trackEvent: FunctionReference<
-        "mutation",
-        "internal",
-        { interventionId: string; status: string; userId: Id<"users"> },
-        any
-      >;
-    };
     learning: {
       trackHelpfulnessMutation: FunctionReference<
         "mutation",
@@ -311,20 +291,6 @@ export declare const internal: {
           importance: number;
           userId: Id<"users">;
         },
-        any
-      >;
-    };
-    onboarding: {
-      enforcePolicy: FunctionReference<
-        "query",
-        "internal",
-        { interactionType: string; userId: Id<"users"> },
-        any
-      >;
-      getPrompt: FunctionReference<
-        "query",
-        "internal",
-        { userId: Id<"users"> },
         any
       >;
     };
@@ -658,23 +624,6 @@ export declare const internal: {
         any
       >;
     };
-    wellness: {
-      getCompositeScoreHistory: FunctionReference<
-        "query",
-        "internal",
-        { userId: Id<"users"> },
-        any
-      >;
-      getWellnessStatus: FunctionReference<
-        "query",
-        "internal",
-        { userId: Id<"users"> },
-        any
-      >;
-    };
-    workflows: {
-      runCheckIns: FunctionReference<"action", "internal", {}, any>;
-    };
   };
   resources: {
     searchResources: FunctionReference<
@@ -690,11 +639,6 @@ export declare const internal: {
       },
       any
     >;
-  };
-  scripts: {
-    seedInterventions: {
-      seedInterventions: FunctionReference<"mutation", "internal", {}, any>;
-    };
   };
   twilioMutations: {
     handleBillingPortalAction: FunctionReference<

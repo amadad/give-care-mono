@@ -8,12 +8,8 @@ import { internal } from "./_generated/api";
 
 const crons = cronJobs();
 
-// Daily EMA check-ins for eligible users
-crons.daily(
-  "checkIns",
-  { hourUTC: 9, minuteUTC: 0 },
-  internal.internal.workflows.runCheckIns
-);
+// Note: Daily EMA check-ins disabled (workflows.ts removed in simplification)
+// Re-enable when needed by creating internal/workflows.ts with runCheckIns
 
 // Daily message cleanup (90-day retention)
 crons.daily(

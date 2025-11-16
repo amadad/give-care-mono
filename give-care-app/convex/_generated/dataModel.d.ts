@@ -473,6 +473,7 @@ export type DataModel = {
       by_id: ["_id"];
       by_creation_time: ["_creationTime"];
       by_user: ["userId", "_creationTime"];
+      by_user_and_assessment: ["userId", "assessmentId", "_creationTime"];
       by_user_and_type: ["userId", "instrument", "_creationTime"];
     };
     searchIndexes: {};

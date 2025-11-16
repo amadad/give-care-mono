@@ -92,7 +92,8 @@ export default defineSchema({
     answeredRatio: v.number(), // answered / total questions
   })
     .index("by_user_and_type", ["userId", "instrument"])
-    .index("by_user", ["userId"]),
+    .index("by_user", ["userId"])
+    .index("by_user_and_assessment", ["userId", "assessmentId"]),
 
   // Score history - Track score changes over time
   score_history: defineTable({
