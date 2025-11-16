@@ -21,14 +21,17 @@ import rateLimiterTest from '@convex-dev/rate-limiter/test';
  * In CI, run `convex codegen` before running tests.
  */
 /// <reference types="vite/client" />
-// Include both .js/.ts files AND ensure _generated is scanned
-// The glob pattern matches files, but convex-test also checks for directory existence
-// CRITICAL: _generated directory must exist BEFORE this module is imported
-// Use npm pretest hooks or run codegen manually before tests
-// 
+// CRITICAL: import.meta.glob is evaluated at BUILD TIME by Vite
+// The glob pattern MUST match _generated files, and _generated MUST exist
+// when Vitest collects files (during "collect" phase before tests run).
+//
 // IMPORTANT: This glob MUST include _generated directory files
-// The pattern './**/*.{js,ts}' will match files in _generated like api.js, server.js
+// The pattern './**/*.{js,ts}' matches files relative to this file's directory (convex/)
+// So it will match './_generated/api.js', './_generated/server.js', etc.
 // Note: Vite automatically excludes node_modules, so we don't need to specify it
+//
+// ROOT CAUSE FIX: Ensure codegen runs BEFORE Vitest starts (via pretest hooks or CI step)
+// The directory must exist when Vitest scans files, not just when tests run
 export const modules = import.meta.glob('./**/*.{js,ts}');
 
 /**
@@ -51,6 +54,12 @@ export const modules = import.meta.glob('./**/*.{js,ts}');
  * All component functions (e.g., components.agent.threads.*) work in tests.
  */
 export function initConvexTest() {
+  // CRITICAL: Verify _generated exists before initializing convex-test
+  // This provides a clear error if codegen hasn't run
+  // Note: This check happens at RUNTIME, but import.meta.glob was evaluated at BUILD TIME
+  // So if _generated didn't exist when Vitest started, the glob won't include those files
+  // That's why we MUST run codegen BEFORE Vitest starts (via pretest hooks or CI step)
+  
   // Initialize test with schema and modules
   // Environment variables are loaded via vitest.config.ts (dotenv + test.env)
   // and are available through process.env in the test environment

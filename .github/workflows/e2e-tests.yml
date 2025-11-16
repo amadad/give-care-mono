@@ -121,8 +121,12 @@ jobs:
             exit 1
           fi
           echo "Verified _generated directory exists before running tests"
+          # CRITICAL: Clear Vitest cache to force re-scan of filesystem
+          # This ensures import.meta.glob sees _generated files even if Vitest cached module graph
+          rm -rf node_modules/.vite node_modules/.vitest 2>/dev/null || true
           # Run tests (pretest:e2e hook will skip since _generated exists)
-          pnpm test:e2e
+          # Use --no-cache to ensure Vitest doesn't use cached module graph
+          pnpm test:e2e --no-cache
           echo "E2E tests passed"
 
       # ============================================================
