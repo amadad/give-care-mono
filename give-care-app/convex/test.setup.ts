@@ -16,9 +16,22 @@ import rateLimiterTest from '@convex-dev/rate-limiter/test';
  * Glob pattern for all Convex function files
  * Required by convex-test to find and load functions
  * Includes _generated directory for component types
+ * 
+ * Note: The _generated directory must exist before this module is imported.
+ * In CI, run `convex codegen` before running tests.
  */
 /// <reference types="vite/client" />
-export const modules = import.meta.glob('./**/*.{js,ts}');
+// Include both .js/.ts files AND ensure _generated is scanned
+// The glob pattern matches files, but convex-test also checks for directory existence
+// CRITICAL: _generated directory must exist BEFORE this module is imported
+// Use npm pretest hooks or run codegen manually before tests
+// 
+// IMPORTANT: This glob MUST include _generated directory files
+// The pattern './**/*.{js,ts}' will match files in _generated like api.js, server.js
+export const modules = import.meta.glob('./**/*.{js,ts}', {
+  // Don't exclude _generated - we need it!
+  ignore: ['**/node_modules/**'],
+});
 
 /**
  * Initialize Convex test environment with REAL components

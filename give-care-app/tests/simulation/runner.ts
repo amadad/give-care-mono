@@ -13,8 +13,11 @@ import type {
 } from './types';
 import { generateUser } from './fixtures/users';
 import { initConvexTest } from '../../convex/test.setup';
-import { api, internal, components } from '../../convex/_generated/api';
+// Dynamic import of generated types to avoid errors if _generated doesn't exist yet
+// These will be imported after codegen runs (via pretest hooks)
 import type { ConvexTestingHelper } from 'convex-test';
+// Import generated types - these must exist (codegen runs via pretest hooks)
+import { api, internal, components } from '../../convex/_generated/api';
 import type { Id } from '../../convex/_generated/dataModel';
 
 export class SimulationRunner {

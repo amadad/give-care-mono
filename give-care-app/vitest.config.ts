@@ -10,7 +10,8 @@ export default defineConfig({
     globals: true,
     environment: 'edge-runtime',
     include: ['tests/**/*.test.ts'],
-    exclude: ['node_modules', 'convex/_generated', 'tests/**/*.eval.ts'],
+    // Don't exclude _generated - we need it for imports
+    exclude: ['node_modules', 'tests/**/*.eval.ts'],
     env: {
       // Pass environment variables to test environment
       GOOGLE_GENERATIVE_AI_API_KEY: process.env.GOOGLE_GENERATIVE_AI_API_KEY || '',

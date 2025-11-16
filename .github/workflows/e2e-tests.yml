@@ -69,17 +69,38 @@ jobs:
         working-directory: give-care-app
         env:
           CONVEX_DEPLOY_KEY: ${{ secrets.CONVEX_DEPLOY_KEY }}
+          CONVEX_URL: ${{ env.CONVEX_TEST_URL }}
         run: |
           echo "Generating Convex types..."
+          echo "Using deployment: $CONVEX_URL"
           # Generate types from schema (codegen generates types from TypeScript code, not deployment)
           # This creates the convex/_generated/ directory required by tests
+          # CRITICAL: This must run BEFORE Vitest starts, as import.meta.glob is evaluated at import time
+          # Set CONVEX_URL so codegen knows which deployment to use
           pnpm codegen
-          # Verify _generated directory exists
+          # Verify _generated directory exists and has files
           if [ ! -d "convex/_generated" ]; then
             echo "Error: _generated directory not found after codegen"
             exit 1
           fi
-          echo "Types generated successfully"
+          echo "Verifying _generated directory contents..."
+          ls -la convex/_generated/ || echo "Warning: Could not list _generated contents"
+          # Ensure at least api.d.ts exists (required by imports in test files)
+          if [ ! -f "convex/_generated/api.d.ts" ]; then
+            echo "Error: api.d.ts not found in _generated directory"
+            exit 1
+          fi
+          # Verify dataModel.d.ts exists (also imported by tests)
+          if [ ! -f "convex/_generated/dataModel.d.ts" ]; then
+            echo "Error: dataModel.d.ts not found in _generated directory"
+            exit 1
+          fi
+          # Verify api.js exists (required by convex-test)
+          if [ ! -f "convex/_generated/api.js" ]; then
+            echo "Error: api.js not found in _generated directory"
+            exit 1
+          fi
+          echo "Types generated successfully - _generated directory verified"
 
       - name: Stage 2 - E2E Tests (Real Deployment)
         working-directory: give-care-app
@@ -93,6 +114,19 @@ jobs:
         run: |
           echo "Running E2E tests against deployed backend..."
           echo "Testing: $CONVEX_URL"
+          # CRITICAL: Verify _generated exists BEFORE running tests
+          # The pretest:e2e hook will run codegen, but we also verify here as a safety check
+          if [ ! -d "convex/_generated" ] || [ ! -f "convex/_generated/api.d.ts" ]; then
+            echo "Warning: _generated directory missing or incomplete. Running codegen..."
+            pnpm codegen
+          fi
+          # Double-check after pretest hook
+          if [ ! -d "convex/_generated" ]; then
+            echo "Error: _generated directory still missing after codegen"
+            exit 1
+          fi
+          echo "Verified _generated directory exists before running tests"
+          # Run tests (pretest:e2e hook will also run codegen automatically)
           pnpm test:e2e
           echo "E2E tests passed"
 
