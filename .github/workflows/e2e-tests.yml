@@ -138,18 +138,20 @@ jobs:
           fi
           echo "Cache cleared, _generated verified"
           # CRITICAL: Ensure Vitest transforms test.setup.ts AFTER _generated exists
-          # import.meta.glob is evaluated during transform, so _generated MUST exist when Vitest starts
+          # import.meta.glob is evaluated at BUILD TIME by Vite during transform phase
+          # We must ensure _generated exists when Vitest transforms convex/test.setup.ts
           # 
-          # The issue: import.meta.glob is evaluated at BUILD TIME by Vite
-          # Solution: Ensure _generated exists BEFORE Vitest starts transforming code
-          # We've already run codegen and cleared caches, so _generated exists and Vitest will see it
+          # In monorepo, we pass modules explicitly because convex-test may not find
+          # convex/ relative to hoisted node_modules at root level
           if [ ! -d "convex/_generated" ] || [ ! -f "convex/_generated/api.js" ]; then
             echo "Error: _generated directory missing before starting Vitest"
             exit 1
           fi
-          echo "Starting Vitest - _generated exists, convex-test will auto-discover functions"
-          # Run tests - convex-test auto-discovers functions in convex/ folder
-          # No need to pass modules - it handles discovery automatically
+          # Force Vitest to re-transform test.setup.ts by touching it
+          # This ensures import.meta.glob is re-evaluated with _generated present
+          touch convex/test.setup.ts
+          echo "Starting Vitest - _generated exists, modules will include it"
+          # Run tests - modules are passed explicitly for monorepo compatibility
           pnpm vitest tests/simulation/all-scenarios.test.ts --run
           echo "E2E tests passed"
 
