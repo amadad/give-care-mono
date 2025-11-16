@@ -9,7 +9,7 @@
  * Mutations can schedule actions, but NOT other mutations. So these must be actions.
  */
 
-import { internalAction } from "../_generated/server";
+import { internalAction, internalMutation } from "../_generated/server";
 import { v } from "convex/values";
 import { internal } from "../_generated/api";
 
@@ -263,8 +263,12 @@ export const insertSimulatedMessage = internalMutation({
     }),
   },
   handler: async (ctx, { message }) => {
-    // Insert into the component's messages table
-    // Component tables are accessible via ctx.db using the table name
-    await ctx.db.insert("messages", message);
+    // NOTE: Component tables are sandboxed and cannot be accessed via ctx.db.insert
+    // The Twilio component manages its own messages table internally
+    // This mutation exists for API compatibility but does not actually insert
+    // The real Twilio component handles message storage automatically
+    // For testing, messages should be queried via components.twilio.messages.* queries
+    // which work with the real component's stored messages
+    return { inserted: false, reason: "Component tables are sandboxed" };
   },
 });
