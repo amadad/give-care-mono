@@ -16,6 +16,7 @@ import {
   recordObservation,
   trackInterventionHelpfulness,
   findInterventions,
+  checkAssessmentStatus,
 } from "./tools";
 
 /**
@@ -34,6 +35,7 @@ export const mainAgent = new Agent(components.agent, {
     recordObservation,
     trackInterventionHelpfulness,
     findInterventions,
+    checkAssessmentStatus,
   },
   maxSteps: 5, // Allows tool chaining
 });

@@ -229,3 +229,72 @@ export const findInterventions = createTool({
     };
   },
 });
+
+/**
+ * 6. checkAssessmentStatus - Check user's assessment history and burnout score
+ */
+export const checkAssessmentStatus = createTool({
+  description:
+    "Check if user has completed assessments and what their current burnout score is. Use when user asks about burnout tracking or 'how are you tracking me'. Returns assessment history and current score if available.",
+  args: z.object({}),
+  handler: async (
+    ctx: ToolCtx,
+    args
+  ): Promise<{
+    hasSDOH: boolean;
+    hasEMA: boolean;
+    currentScore: number | null;
+    lastSDOHDate: number | null;
+    lastEMADate: number | null;
+    lastSDOHScore: number | null;
+    lastEMAScore: number | null;
+    message: string;
+  }> => {
+    const userId = ctx.userId as Id<"users">;
+    
+    // Get user to check current score
+    const user = await ctx.runQuery(internal.internal.users.getUser, { userId });
+    const currentScore = user?.gcSdohScore || null;
+    
+    // Check for latest SDOH assessment
+    const lastSDOH = await ctx.runQuery(
+      internal.internal.assessments.getLatestCompletedAssessment,
+      { userId, assessmentType: "sdoh" }
+    );
+    
+    // Check for latest EMA assessment
+    const lastEMA = await ctx.runQuery(
+      internal.internal.assessments.getLatestCompletedAssessment,
+      { userId, assessmentType: "ema" }
+    );
+    
+    const hasSDOH = lastSDOH !== null;
+    const hasEMA = lastEMA !== null;
+    const lastSDOHDate = lastSDOH?.completedAt || null;
+    const lastEMADate = lastEMA?.completedAt || null;
+    const lastSDOHScore = lastSDOH?.gcBurnout || null;
+    const lastEMAScore = lastEMA?.gcBurnout || null;
+    
+    // Build helpful message for agent
+    let message = "";
+    if (hasSDOH && currentScore !== null) {
+      const dateStr = new Date(lastSDOHDate!).toLocaleDateString();
+      message = `User has SDOH assessment. Last score: ${currentScore} (completed ${dateStr}).`;
+    } else if (hasEMA && !hasSDOH) {
+      message = "User has EMA check-ins but no full SDOH assessment yet.";
+    } else {
+      message = "User has not completed any assessments yet.";
+    }
+    
+    return {
+      hasSDOH,
+      hasEMA,
+      currentScore,
+      lastSDOHDate,
+      lastEMADate,
+      lastSDOHScore,
+      lastEMAScore,
+      message,
+    };
+  },
+});
