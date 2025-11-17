@@ -153,6 +153,149 @@ export type DataModel = {
     searchIndexes: {};
     vectorIndexes: {};
   };
+  authAccounts: {
+    document: {
+      emailVerified?: string;
+      phoneVerified?: string;
+      provider: string;
+      providerAccountId: string;
+      secret?: string;
+      userId: Id<"users">;
+      _id: Id<"authAccounts">;
+      _creationTime: number;
+    };
+    fieldPaths:
+      | "_creationTime"
+      | "_id"
+      | "emailVerified"
+      | "phoneVerified"
+      | "provider"
+      | "providerAccountId"
+      | "secret"
+      | "userId";
+    indexes: {
+      by_id: ["_id"];
+      by_creation_time: ["_creationTime"];
+      providerAndAccountId: ["provider", "providerAccountId", "_creationTime"];
+      userIdAndProvider: ["userId", "provider", "_creationTime"];
+    };
+    searchIndexes: {};
+    vectorIndexes: {};
+  };
+  authRateLimits: {
+    document: {
+      attemptsLeft: number;
+      identifier: string;
+      lastAttemptTime: number;
+      _id: Id<"authRateLimits">;
+      _creationTime: number;
+    };
+    fieldPaths:
+      | "_creationTime"
+      | "_id"
+      | "attemptsLeft"
+      | "identifier"
+      | "lastAttemptTime";
+    indexes: {
+      by_id: ["_id"];
+      by_creation_time: ["_creationTime"];
+      identifier: ["identifier", "_creationTime"];
+    };
+    searchIndexes: {};
+    vectorIndexes: {};
+  };
+  authRefreshTokens: {
+    document: {
+      expirationTime: number;
+      firstUsedTime?: number;
+      parentRefreshTokenId?: Id<"authRefreshTokens">;
+      sessionId: Id<"authSessions">;
+      _id: Id<"authRefreshTokens">;
+      _creationTime: number;
+    };
+    fieldPaths:
+      | "_creationTime"
+      | "_id"
+      | "expirationTime"
+      | "firstUsedTime"
+      | "parentRefreshTokenId"
+      | "sessionId";
+    indexes: {
+      by_id: ["_id"];
+      by_creation_time: ["_creationTime"];
+      sessionId: ["sessionId", "_creationTime"];
+      sessionIdAndParentRefreshTokenId: [
+        "sessionId",
+        "parentRefreshTokenId",
+        "_creationTime",
+      ];
+    };
+    searchIndexes: {};
+    vectorIndexes: {};
+  };
+  authSessions: {
+    document: {
+      expirationTime: number;
+      userId: Id<"users">;
+      _id: Id<"authSessions">;
+      _creationTime: number;
+    };
+    fieldPaths: "_creationTime" | "_id" | "expirationTime" | "userId";
+    indexes: {
+      by_id: ["_id"];
+      by_creation_time: ["_creationTime"];
+      userId: ["userId", "_creationTime"];
+    };
+    searchIndexes: {};
+    vectorIndexes: {};
+  };
+  authVerificationCodes: {
+    document: {
+      accountId: Id<"authAccounts">;
+      code: string;
+      emailVerified?: string;
+      expirationTime: number;
+      phoneVerified?: string;
+      provider: string;
+      verifier?: string;
+      _id: Id<"authVerificationCodes">;
+      _creationTime: number;
+    };
+    fieldPaths:
+      | "_creationTime"
+      | "_id"
+      | "accountId"
+      | "code"
+      | "emailVerified"
+      | "expirationTime"
+      | "phoneVerified"
+      | "provider"
+      | "verifier";
+    indexes: {
+      by_id: ["_id"];
+      by_creation_time: ["_creationTime"];
+      accountId: ["accountId", "_creationTime"];
+      code: ["code", "_creationTime"];
+    };
+    searchIndexes: {};
+    vectorIndexes: {};
+  };
+  authVerifiers: {
+    document: {
+      sessionId?: Id<"authSessions">;
+      signature?: string;
+      _id: Id<"authVerifiers">;
+      _creationTime: number;
+    };
+    fieldPaths: "_creationTime" | "_id" | "sessionId" | "signature";
+    indexes: {
+      by_id: ["_id"];
+      by_creation_time: ["_creationTime"];
+      signature: ["signature", "_creationTime"];
+    };
+    searchIndexes: {};
+    vectorIndexes: {};
+  };
   billing_events: {
     document: {
       data: any;

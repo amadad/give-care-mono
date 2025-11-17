@@ -22,10 +22,10 @@ export const Route = createFileRoute('/analytics')({
 
 function AnalyticsPage() {
   // Query raw tables
-  const users = useQuery(api.wellness.listUsers, {})
-  const scores = useQuery(api.wellness.listScores, {})
+  const users = useQuery(api.public.listUsers, {})
+  const scores = useQuery(api.public.listScores, {})
   const assessments = useQuery(api.assessments.listAssessments, {})
-  const events = useQuery(api.wellness.listEvents, {})
+  const events = useQuery(api.public.listEvents, {})
 
   // Compute burnout distribution
   const burnoutDist = useMemo(() => {

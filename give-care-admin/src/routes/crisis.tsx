@@ -21,9 +21,9 @@ export const Route = createFileRoute('/crisis')({
 
 function CrisisPage() {
   // Query raw tables
-  const users = useQuery(api.wellness.listUsers, {})
-  const scores = useQuery(api.wellness.listScores, {})
-  const rawAlerts = useQuery(api.wellness.listAlerts, {})
+  const users = useQuery(api.public.listUsers, {})
+  const scores = useQuery(api.public.listScores, {})
+  const rawAlerts = useQuery(api.public.listAlerts, {})
 
   if (!users || !scores) {
     return (

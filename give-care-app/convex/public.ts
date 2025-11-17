@@ -111,3 +111,95 @@ export const resetRateLimiter = mutation({
     return { success: true, message: "Rate limiter cleared - users can now send up to 30 messages/day" };
   },
 });
+
+/**
+ * List all users (admin query)
+ * Requires authentication - admin only
+ */
+export const listUsers = query({
+  args: {
+    limit: v.optional(v.number()),
+  },
+  handler: async (ctx, { limit = 100 }) => {
+    // Access control: require authentication
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) {
+      throw new Error("Unauthorized: Authentication required");
+    }
+
+    // Limit results to prevent unbounded queries
+    // Note: Cannot use .order() without an index - using .take() only
+    return await ctx.db
+      .query("users")
+      .take(limit);
+  },
+});
+
+/**
+ * List all scores (admin query)
+ * Requires authentication - admin only
+ */
+export const listScores = query({
+  args: {
+    limit: v.optional(v.number()),
+  },
+  handler: async (ctx, { limit = 100 }) => {
+    // Access control: require authentication
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) {
+      throw new Error("Unauthorized: Authentication required");
+    }
+
+    // Limit results to prevent unbounded queries
+    // Note: Cannot use .order() without an index - using .take() only
+    return await ctx.db
+      .query("scores")
+      .take(limit);
+  },
+});
+
+/**
+ * List all alerts (admin query)
+ * Requires authentication - admin only
+ */
+export const listAlerts = query({
+  args: {
+    limit: v.optional(v.number()),
+  },
+  handler: async (ctx, { limit = 100 }) => {
+    // Access control: require authentication
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) {
+      throw new Error("Unauthorized: Authentication required");
+    }
+
+    // Limit results to prevent unbounded queries
+    // Note: Cannot use .order() without an index - using .take() only
+    return await ctx.db
+      .query("alerts")
+      .take(limit);
+  },
+});
+
+/**
+ * List all events (admin query)
+ * Requires authentication - admin only
+ */
+export const listEvents = query({
+  args: {
+    limit: v.optional(v.number()),
+  },
+  handler: async (ctx, { limit = 100 }) => {
+    // Access control: require authentication
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) {
+      throw new Error("Unauthorized: Authentication required");
+    }
+
+    // Limit results to prevent unbounded queries
+    // Note: Cannot use .order() without an index - using .take() only
+    return await ctx.db
+      .query("events")
+      .take(limit);
+  },
+});

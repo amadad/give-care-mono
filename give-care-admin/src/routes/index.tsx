@@ -17,8 +17,8 @@ export const Route = createFileRoute('/')({
 
 function DashboardHome() {
   // Query raw tables directly
-  const users = useQuery(api.wellness.listUsers, {})
-  const scores = useQuery(api.wellness.listScores, {})
+  const users = useQuery(api.public.listUsers, {})
+  const scores = useQuery(api.public.listScores, {})
   const subscriptions = useQuery(api.public.listSubscriptions, {})
 
   // Compute metrics client-side
