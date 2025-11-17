@@ -5,6 +5,7 @@
 
 import { query, mutation } from "./_generated/server";
 import { v } from "convex/values";
+import { components } from "./_generated/api";
 
 /**
  * Get user profile (with access control)
@@ -64,5 +65,20 @@ export const listSubscriptions = query({
     return await ctx.db
       .query("subscriptions")
       .take(limit);
+  },
+});
+
+/**
+ * Reset rate limiter (admin mutation)
+ * Clears all rate limit buckets to allow fresh starts
+ * USE WITH CAUTION - only for testing/debugging
+ */
+export const resetRateLimiter = mutation({
+  args: {},
+  handler: async (ctx) => {
+    // Clear all rate limit buckets
+    await ctx.runMutation(components.rateLimiter.lib.clearAll, {});
+
+    return { success: true, message: "Rate limiter cleared - users can now send up to 30 messages/day" };
   },
 });
