@@ -1,6 +1,6 @@
-import { motion } from 'framer-motion';
+import { motion, type Variants } from 'framer-motion';
 
-const textVariants = {
+const textVariants: Variants = {
   hidden: { opacity: 0, y: 20 },
   visible: (i: number) => ({
     opacity: 1,
@@ -8,7 +8,7 @@ const textVariants = {
     transition: {
       delay: i * 0.2,
       duration: 0.8,
-      ease: "easeOut"
+      ease: [0.4, 0, 0.2, 1] as any
     }
   })
 };
