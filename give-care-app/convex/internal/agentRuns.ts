@@ -1,11 +1,59 @@
 /**
  * Internal Agent Runs Functions
- * Migration and normalization utilities
+ * Usage tracking and migration utilities
  */
 
 import { internalMutation } from "../_generated/server";
 import { v } from "convex/values";
 import { Id } from "../_generated/dataModel";
+
+/**
+ * Track agent execution
+ * Called by usageHandler in agents.ts
+ */
+export const track = internalMutation({
+  args: {
+    userId: v.optional(v.string()),
+    threadId: v.optional(v.string()),
+    agentName: v.optional(v.string()),
+    model: v.string(),
+    provider: v.string(),
+    promptTokens: v.number(),
+    completionTokens: v.number(),
+    totalTokens: v.number(),
+    providerMetadata: v.optional(v.any()),
+  },
+  handler: async (ctx, args) => {
+    // Only track if we have a userId
+    if (!args.userId) {
+      return;
+    }
+
+    // Map agent name to schema enum
+    const agentName =
+      args.agentName === "Main Agent" ? "main" :
+      args.agentName === "Assessment Agent" ? "assessment" :
+      undefined;
+
+    await ctx.db.insert("agent_runs", {
+      userId: args.userId as Id<"users">,
+      agentName,
+      threadId: args.threadId,
+      createdAt: Date.now(),
+      // Store token usage in budgetResult for backward compatibility
+      budgetResult: {
+        model: args.model,
+        provider: args.provider,
+        usage: {
+          promptTokens: args.promptTokens,
+          completionTokens: args.completionTokens,
+          totalTokens: args.totalTokens,
+        },
+        providerMetadata: args.providerMetadata,
+      },
+    });
+  },
+});
 
 /**
  * Agent Run type (for normalization)

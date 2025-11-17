@@ -6,8 +6,8 @@
 
 "use node";
 
-import { Agent } from "@convex-dev/agent";
-import { components } from "./_generated/api";
+import { Agent, type UsageHandler } from "@convex-dev/agent";
+import { components, internal } from "./_generated/api";
 import { MAIN_MODEL, ASSESSMENT_MODEL, EMBEDDING_MODEL } from "./lib/models";
 import { MAIN_PROMPT, ASSESSMENT_PROMPT } from "./lib/prompts";
 import {
@@ -18,6 +18,25 @@ import {
   findInterventions,
   checkAssessmentStatus,
 } from "./tools";
+
+/**
+ * Usage tracking handler for both agents
+ * Tracks token usage, costs, and execution metadata
+ */
+const trackUsage: UsageHandler = async (ctx, usage) => {
+  await ctx.runMutation(internal.internal.agentRuns.track, {
+    userId: usage.userId,
+    threadId: usage.threadId,
+    agentName: usage.agentName,
+    model: usage.model,
+    provider: usage.provider,
+    // AI SDK 5.0: inputTokens/outputTokens instead of promptTokens/completionTokens
+    promptTokens: usage.usage.inputTokens ?? 0,
+    completionTokens: usage.usage.outputTokens ?? 0,
+    totalTokens: usage.usage.totalTokens ?? 0,
+    providerMetadata: usage.providerMetadata,
+  });
+};
 
 /**
  * Main Agent (95% of traffic)
@@ -38,6 +57,7 @@ export const mainAgent = new Agent(components.agent, {
     checkAssessmentStatus,
   },
   maxSteps: 5, // Allows tool chaining
+  usageHandler: trackUsage,
 });
 
 /**
@@ -55,4 +75,5 @@ export const assessmentAgent = new Agent(components.agent, {
     findInterventions, // Assessment agent can suggest interventions after scoring
   },
   maxSteps: 2, // Scoring + interpretation
+  usageHandler: trackUsage,
 });

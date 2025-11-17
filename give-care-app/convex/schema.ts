@@ -289,7 +289,7 @@ export default defineSchema({
   // Agent runs - Agent execution tracking
   // Preferred fields: agentName, threadId, toolCalls, createdAt
   // Legacy fields (deprecated): agent, budgetResult, latencyMs, policyBundle, traceId
-  // Note: Records are created automatically by Convex Agent Component
+  // Note: Records are created via usageHandler in agents.ts (see internal/agentRuns.ts)
   agent_runs: defineTable({
     userId: v.id("users"),
     // Preferred: Use agentName instead of agent

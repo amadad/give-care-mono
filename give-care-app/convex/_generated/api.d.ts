@@ -287,6 +287,22 @@ export declare const internal: {
   internal: {
     agentRuns: {
       migrateAgentRuns: FunctionReference<"mutation", "internal", {}, any>;
+      track: FunctionReference<
+        "mutation",
+        "internal",
+        {
+          agentName?: string;
+          completionTokens: number;
+          model: string;
+          promptTokens: number;
+          provider: string;
+          providerMetadata?: any;
+          threadId?: string;
+          totalTokens: number;
+          userId?: string;
+        },
+        any
+      >;
     };
     agents: {
       handleCrisisDetection: FunctionReference<
