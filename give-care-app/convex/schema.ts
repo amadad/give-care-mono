@@ -1,6 +1,7 @@
 import { defineSchema, defineTable } from "convex/server";
 import { v } from "convex/values";
 import { agentMetadataValidator } from "./lib/validators";
+import { authTables } from "@convex-dev/auth/server";
 
 // Validators
 const consentValidator = v.object({
@@ -27,6 +28,8 @@ const zonesValidator = v.object({
 });
 
 export default defineSchema({
+  ...authTables,
+
   // Users - User profiles
   users: defineTable({
     externalId: v.string(), // Phone number or email
