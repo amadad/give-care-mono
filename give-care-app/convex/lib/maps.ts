@@ -18,13 +18,31 @@ export interface LocationData {
 }
 
 /**
+ * Map pressure zones to human-readable service categories
+ */
+const ZONE_TO_SERVICE_MAP: Record<string, string> = {
+  P1: 'social support and caregiver peer groups',
+  P2: 'respite care and in-home healthcare',
+  P3: 'housing assistance and home modification',
+  P4: 'financial aid and benefits counseling',
+  P5: 'legal aid and care navigation',
+  P6: 'mental health and counseling',
+};
+
+/**
  * Build caregiving-specific query (inline helper)
  */
 function buildCaregivingQuery(query: string, category: string, zipCode: string, zones?: string[]): string {
   let enhancedQuery = `Find ${category || 'caregiving'} resources`;
+
+  // Map zone codes (P1, P2, etc.) to human-readable service names
   if (zones && zones.length > 0) {
-    enhancedQuery += ` for ${zones.join(', ')} support`;
+    const serviceTypes = zones
+      .map(zone => ZONE_TO_SERVICE_MAP[zone] || zone)
+      .join(', ');
+    enhancedQuery += ` for ${serviceTypes}`;
   }
+
   enhancedQuery += ` near ${zipCode}`;
   return enhancedQuery;
 }
