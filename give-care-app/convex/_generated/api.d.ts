@@ -55,6 +55,7 @@ export declare const api: {
       { limit?: number },
       any
     >;
+    resetRateLimiter: FunctionReference<"mutation", "public", {}, any>;
   };
   score: {
     getScore: FunctionReference<
