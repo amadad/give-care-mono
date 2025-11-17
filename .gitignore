@@ -74,3 +74,4 @@ _drafts/
 
 # Design iterations
 .superdesign/
+*.bak
