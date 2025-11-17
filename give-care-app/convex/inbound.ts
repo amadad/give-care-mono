@@ -150,6 +150,18 @@ export const handleIncomingMessage = internalMutation({
       return { status: "ema_checkin_updated" };
     }
 
+    // Check if user is awaiting crisis follow-up response
+    const metadata = user.metadata as any;
+    if (metadata?.awaitingCrisisFollowUp) {
+      const { alertId, timestamp } = metadata.awaitingCrisisFollowUp;
+
+      // Only handle if within 48 hours (to avoid stale state)
+      if (Date.now() - timestamp < 48 * 60 * 60 * 1000) {
+        await handleCrisisFollowUpResponseInline(ctx, user._id, alertId, body);
+        return { status: "crisis_followup_response" };
+      }
+    }
+
     // Step 6: Crisis detection (deterministic, no LLM)
     // Fast-path: Check crisis BEFORE creating receipt to minimize latency
     const crisisResult = detectCrisis(body);
@@ -463,6 +475,34 @@ async function handleEMACheckInKeyword(
 }
 
 /**
+ * Handle crisis follow-up response inline (in mutation context)
+ * Routes to action for SMS sending
+ */
+async function handleCrisisFollowUpResponseInline(
+  ctx: any,
+  userId: any,
+  alertId: any,
+  body: string
+): Promise<void> {
+  // Clear awaiting state
+  const user = await ctx.db.get(userId);
+  const metadata = user?.metadata as any;
+  await ctx.db.patch(userId, {
+    metadata: {
+      ...metadata,
+      awaitingCrisisFollowUp: undefined,
+    } as any,
+  });
+
+  // Schedule the response handler (action) to send SMS and record feedback
+  await ctx.scheduler.runAfter(0, internal.internal.sms.handleCrisisFollowUpResponse, {
+    userId,
+    response: body,
+    alertId, // Pass the alertId so we don't have to query for it
+  });
+}
+
+/**
  * Handle crisis detection
  * Fast-path: Deterministic response, no LLM, <600ms target
  * Optimized: Precompute response, batch DB operations, immediate scheduling
@@ -475,27 +515,25 @@ async function handleCrisis(
   // Precompute crisis response (no DB dependency)
   const crisisMessage = getCrisisResponse(crisisResult.isDVHint);
 
-  // Batch database operations (parallel inserts - CONVEX_01.md optimization)
-  await Promise.all([
-    // Log crisis event
-    ctx.db.insert("alerts", {
-      userId,
-      type: "crisis",
-      severity: crisisResult.severity ?? "medium",
-      context: { detection: crisisResult },
-      message: crisisMessage,
-      channel: "sms",
-      status: "pending",
-    }),
-    // Log guardrail event
-    ctx.db.insert("guardrail_events", {
-      userId,
-      type: "crisis",
-      severity: crisisResult.severity ?? "medium",
-      context: { detection: crisisResult },
-      createdAt: Date.now(),
-    }),
-  ]);
+  // Insert alert first to get alertId for follow-up tracking
+  const alertId = await ctx.db.insert("alerts", {
+    userId,
+    type: "crisis",
+    severity: crisisResult.severity ?? "medium",
+    context: { detection: crisisResult },
+    message: crisisMessage,
+    channel: "sms",
+    status: "pending",
+  });
+
+  // Log guardrail event (parallel with alert)
+  await ctx.db.insert("guardrail_events", {
+    userId,
+    type: "crisis",
+    severity: crisisResult.severity ?? "medium",
+    context: { detection: crisisResult, alertId },
+    createdAt: Date.now(),
+  });
 
   // Send crisis response immediately (0 delay scheduler = immediate)
   // This is async but doesn't block the mutation response
@@ -504,10 +542,10 @@ async function handleCrisis(
     isDVHint: crisisResult.isDVHint,
   });
 
-  // Schedule crisis follow-up at T+24 hours
+  // Schedule crisis follow-up at T+24 hours with alertId for feedback tracking
   await ctx.scheduler.runAfter(
     24 * 60 * 60 * 1000, // 24 hours in milliseconds
     internal.internal.sms.sendCrisisFollowUpMessage,
-    { userId }
+    { userId, alertId }
   );
 }

@@ -327,4 +327,46 @@ export default defineSchema({
   })
     .index("by_user", ["userId"])
     .index("by_severity", ["severity"]),
+
+  // Conversation feedback - User feedback on AI responses
+  conversation_feedback: defineTable({
+    userId: v.id("users"),
+    agentRunId: v.optional(v.id("agent_runs")),
+    alertId: v.optional(v.id("alerts")), // Link to crisis alert if applicable
+    helpful: v.boolean(),
+    reason: v.optional(v.string()), // "too_generic", "didnt_understand", "perfect", "other"
+    createdAt: v.number(),
+  })
+    .index("by_user", ["userId"])
+    .index("by_alert", ["alertId"])
+    .index("by_helpful", ["helpful"]),
+
+  // Crisis feedback - Specific feedback for crisis interventions
+  crisis_feedback: defineTable({
+    userId: v.id("users"),
+    alertId: v.id("alerts"), // Link to original crisis alert
+    connectedWith988: v.optional(v.boolean()), // Did they connect with crisis hotline?
+    wasHelpful: v.optional(v.boolean()), // Was the response helpful?
+    followUpResponse: v.optional(v.string()), // Their verbatim response
+    createdAt: v.number(),
+  })
+    .index("by_user", ["userId"])
+    .index("by_alert", ["alertId"])
+    .index("by_connected", ["connectedWith988"]),
+
+  // Session metrics - Aggregate metrics per conversation session
+  session_metrics: defineTable({
+    userId: v.id("users"),
+    threadId: v.optional(v.string()), // Agent thread ID if applicable
+    startedAt: v.number(),
+    endedAt: v.optional(v.number()),
+    messageCount: v.number(),
+    assessmentCompleted: v.optional(v.boolean()),
+    crisisDetected: v.optional(v.boolean()),
+    userReturnedNext24h: v.optional(v.boolean()), // Calculated retroactively
+    avgResponseTimeMs: v.optional(v.number()),
+  })
+    .index("by_user", ["userId"])
+    .index("by_thread", ["threadId"])
+    .index("by_started", ["startedAt"]),
 });

@@ -177,7 +177,10 @@ export const seedInterventions = internalMutation({
   args: {},
   handler: async (ctx) => {
     // Check if interventions already exist
-    const existing = await ctx.db.query("interventions").first();
+    const existing = await ctx.db
+      .query("interventions")
+      .order("desc")
+      .first();
     if (existing) {
       return { message: "Interventions already seeded", count: 0 };
     }

@@ -44,6 +44,49 @@ export declare const api: {
     >;
     signOut: FunctionReference<"action", "public", {}, any>;
   };
+  feedback: {
+    getConversationQualityMetrics: FunctionReference<
+      "query",
+      "public",
+      { limit?: number; userId?: Id<"users"> },
+      any
+    >;
+    getCrisisAlertsWithFeedback: FunctionReference<
+      "query",
+      "public",
+      { limit?: number },
+      any
+    >;
+    getCrisisFeedbackSummary: FunctionReference<
+      "query",
+      "public",
+      { limit?: number },
+      any
+    >;
+    getGuardrailEventsForReview: FunctionReference<
+      "query",
+      "public",
+      {
+        limit?: number;
+        severity?: "low" | "medium" | "high";
+        type?:
+          | "crisis"
+          | "false_positive"
+          | "dv_hint"
+          | "crisis_followup_sent"
+          | "stress_spike_followup_sent"
+          | "reassurance_loop"
+          | "self_sacrifice";
+      },
+      any
+    >;
+    getSessionOutcomeMetrics: FunctionReference<
+      "query",
+      "public",
+      { limit?: number; userId?: Id<"users"> },
+      any
+    >;
+  };
   interventions: {
     getInterventionsByZones: FunctionReference<
       "query",
@@ -71,7 +114,6 @@ export declare const api: {
       { userId: Id<"users"> },
       any
     >;
-    listAccounts: FunctionReference<"query", "public", { limit?: number }, any>;
     listAlerts: FunctionReference<"query", "public", { limit?: number }, any>;
     listEvents: FunctionReference<"query", "public", { limit?: number }, any>;
     listScores: FunctionReference<"query", "public", { limit?: number }, any>;
@@ -327,10 +369,50 @@ export declare const internal: {
         },
         any
       >;
+      recordConversationFeedback: FunctionReference<
+        "mutation",
+        "internal",
+        {
+          agentRunId?: Id<"agent_runs">;
+          alertId?: Id<"alerts">;
+          helpful: boolean;
+          reason?: string;
+          userId: Id<"users">;
+        },
+        any
+      >;
+      recordCrisisFeedback: FunctionReference<
+        "mutation",
+        "internal",
+        {
+          alertId: Id<"alerts">;
+          connectedWith988?: boolean;
+          followUpResponse?: string;
+          userId: Id<"users">;
+          wasHelpful?: boolean;
+        },
+        any
+      >;
       trackHelpfulnessMutation: FunctionReference<
         "mutation",
         "internal",
         { helpful: boolean; resourceId: string; userId: Id<"users"> },
+        any
+      >;
+      upsertSessionMetrics: FunctionReference<
+        "mutation",
+        "internal",
+        {
+          assessmentCompleted?: boolean;
+          avgResponseTimeMs?: number;
+          crisisDetected?: boolean;
+          endedAt?: number;
+          messageCount: number;
+          startedAt: number;
+          threadId?: string;
+          userId: Id<"users">;
+          userReturnedNext24h?: boolean;
+        },
         any
       >;
     };
@@ -460,7 +542,7 @@ export declare const internal: {
       handleCrisisFollowUpResponse: FunctionReference<
         "action",
         "internal",
-        { response: string; userId: Id<"users"> },
+        { alertId?: Id<"alerts">; response: string; userId: Id<"users"> },
         any
       >;
       handleSpikeFollowUpResponse: FunctionReference<
@@ -490,7 +572,7 @@ export declare const internal: {
       sendCrisisFollowUpMessage: FunctionReference<
         "action",
         "internal",
-        { userId: Id<"users"> },
+        { alertId: Id<"alerts">; userId: Id<"users"> },
         any
       >;
       sendCrisisFollowUpNudge: FunctionReference<
@@ -700,11 +782,23 @@ export declare const internal: {
       >;
     };
     users: {
+      getAlert: FunctionReference<
+        "query",
+        "internal",
+        { alertId: Id<"alerts"> },
+        any
+      >;
       getAllUsers: FunctionReference<"query", "internal", {}, any>;
       getInactiveUsers: FunctionReference<
         "query",
         "internal",
         { days?: number },
+        any
+      >;
+      getRecentCrisisAlert: FunctionReference<
+        "query",
+        "internal",
+        { userId: Id<"users"> },
         any
       >;
       getRecentGuardrailEvents: FunctionReference<

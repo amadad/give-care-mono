@@ -225,24 +225,24 @@ export const handleCrisisDetection = internalMutation({
     // Precompute crisis response
     const crisisMessage = getCrisisResponse(crisisResult.isDVHint);
 
-    // Batch database operations (parallel inserts)
+    // Insert alert first to get alertId for follow-up tracking
+    const alertId = await ctx.db.insert("alerts", {
+      userId,
+      type: "crisis",
+      severity: crisisResult.severity ?? "medium",
+      context: { detection: crisisResult },
+      message: crisisMessage,
+      channel: "sms",
+      status: "pending",
+    });
+
+    // Log guardrail event and agent run (can be parallel)
     await Promise.all([
-      // Log crisis event
-      ctx.db.insert("alerts", {
-        userId,
-        type: "crisis",
-        severity: crisisResult.severity ?? "medium",
-        context: { detection: crisisResult },
-        message: crisisMessage,
-        channel: "sms",
-        status: "pending",
-      }),
-      // Log guardrail event
       ctx.db.insert("guardrail_events", {
         userId,
         type: "crisis",
         severity: crisisResult.severity ?? "medium",
-        context: { detection: crisisResult },
+        context: { detection: crisisResult, alertId },
         createdAt: Date.now(),
       }),
       // Log agent run for tracking (even though no agent was used)
@@ -261,11 +261,11 @@ export const handleCrisisDetection = internalMutation({
       isDVHint: crisisResult.isDVHint,
     });
 
-    // Schedule crisis follow-up at T+24 hours
+    // Schedule crisis follow-up at T+24 hours with alertId for feedback tracking
     await ctx.scheduler.runAfter(
       24 * 60 * 60 * 1000, // 24 hours in milliseconds
       internal.internal.sms.sendCrisisFollowUpMessage,
-      { userId }
+      { userId, alertId }
     );
   },
 });

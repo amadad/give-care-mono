@@ -320,6 +320,66 @@ export type DataModel = {
     searchIndexes: {};
     vectorIndexes: {};
   };
+  conversation_feedback: {
+    document: {
+      agentRunId?: Id<"agent_runs">;
+      alertId?: Id<"alerts">;
+      createdAt: number;
+      helpful: boolean;
+      reason?: string;
+      userId: Id<"users">;
+      _id: Id<"conversation_feedback">;
+      _creationTime: number;
+    };
+    fieldPaths:
+      | "_creationTime"
+      | "_id"
+      | "agentRunId"
+      | "alertId"
+      | "createdAt"
+      | "helpful"
+      | "reason"
+      | "userId";
+    indexes: {
+      by_id: ["_id"];
+      by_creation_time: ["_creationTime"];
+      by_alert: ["alertId", "_creationTime"];
+      by_helpful: ["helpful", "_creationTime"];
+      by_user: ["userId", "_creationTime"];
+    };
+    searchIndexes: {};
+    vectorIndexes: {};
+  };
+  crisis_feedback: {
+    document: {
+      alertId: Id<"alerts">;
+      connectedWith988?: boolean;
+      createdAt: number;
+      followUpResponse?: string;
+      userId: Id<"users">;
+      wasHelpful?: boolean;
+      _id: Id<"crisis_feedback">;
+      _creationTime: number;
+    };
+    fieldPaths:
+      | "_creationTime"
+      | "_id"
+      | "alertId"
+      | "connectedWith988"
+      | "createdAt"
+      | "followUpResponse"
+      | "userId"
+      | "wasHelpful";
+    indexes: {
+      by_id: ["_id"];
+      by_creation_time: ["_creationTime"];
+      by_alert: ["alertId", "_creationTime"];
+      by_connected: ["connectedWith988", "_creationTime"];
+      by_user: ["userId", "_creationTime"];
+    };
+    searchIndexes: {};
+    vectorIndexes: {};
+  };
   events: {
     document: {
       payload: any;
@@ -641,6 +701,42 @@ export type DataModel = {
     indexes: {
       by_id: ["_id"];
       by_creation_time: ["_creationTime"];
+      by_user: ["userId", "_creationTime"];
+    };
+    searchIndexes: {};
+    vectorIndexes: {};
+  };
+  session_metrics: {
+    document: {
+      assessmentCompleted?: boolean;
+      avgResponseTimeMs?: number;
+      crisisDetected?: boolean;
+      endedAt?: number;
+      messageCount: number;
+      startedAt: number;
+      threadId?: string;
+      userId: Id<"users">;
+      userReturnedNext24h?: boolean;
+      _id: Id<"session_metrics">;
+      _creationTime: number;
+    };
+    fieldPaths:
+      | "_creationTime"
+      | "_id"
+      | "assessmentCompleted"
+      | "avgResponseTimeMs"
+      | "crisisDetected"
+      | "endedAt"
+      | "messageCount"
+      | "startedAt"
+      | "threadId"
+      | "userId"
+      | "userReturnedNext24h";
+    indexes: {
+      by_id: ["_id"];
+      by_creation_time: ["_creationTime"];
+      by_started: ["startedAt", "_creationTime"];
+      by_thread: ["threadId", "_creationTime"];
       by_user: ["userId", "_creationTime"];
     };
     searchIndexes: {};

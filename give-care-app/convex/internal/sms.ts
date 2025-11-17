@@ -244,8 +244,9 @@ function isQuietHours(userTimezone?: string): boolean {
 export const sendCrisisFollowUpMessage = internalAction({
   args: {
     userId: v.id("users"),
+    alertId: v.id("alerts"),
   },
-  handler: async (ctx, { userId }) => {
+  handler: async (ctx, { userId, alertId }) => {
     const user = await ctx.runQuery(internal.internal.users.getUser, { userId });
     if (!user?.phone) return;
 
@@ -269,12 +270,19 @@ export const sendCrisisFollowUpMessage = internalAction({
 
     await sendSMS(ctx, user.phone, message);
 
-    // Log guardrail event
+    // Set conversation state to expect crisis follow-up response
+    await ctx.runMutation(internal.internal.users.updateProfile, {
+      userId,
+      field: "awaitingCrisisFollowUp",
+      value: { alertId, timestamp: Date.now() },
+    });
+
+    // Log guardrail event with alertId for feedback tracking
     await ctx.runMutation(internal.internal.learning.logGuardrailEvent, {
       userId,
       type: "crisis_followup_sent",
       severity: "medium",
-      context: { timestamp: Date.now() },
+      context: { timestamp: Date.now(), alertId },
     });
   },
 });
@@ -287,12 +295,23 @@ export const handleCrisisFollowUpResponse = internalAction({
   args: {
     userId: v.id("users"),
     response: v.string(), // "YES" or "NO" or "UNSURE"
+    alertId: v.optional(v.id("alerts")), // Optional alertId from context
   },
-  handler: async (ctx, { userId, response }) => {
+  handler: async (ctx, { userId, response, alertId }) => {
     const user = await ctx.runQuery(internal.internal.users.getUser, { userId });
     if (!user?.phone) return;
 
     const upperResponse = response.toUpperCase().trim();
+
+    // Get the crisis alert (use provided alertId or query for recent one)
+    let recentAlert;
+    if (alertId) {
+      recentAlert = await ctx.runQuery(internal.internal.users.getAlert, { alertId });
+    } else {
+      recentAlert = await ctx.runQuery(internal.internal.users.getRecentCrisisAlert, {
+        userId,
+      });
+    }
 
     if (upperResponse === "YES") {
       // User connected - acknowledge
@@ -301,6 +320,17 @@ export const handleCrisisFollowUpResponse = internalAction({
         user.phone,
         "Glad you were able to connect. I'm here if you need support."
       );
+
+      // Record feedback: connected with 988
+      if (recentAlert) {
+        await ctx.runMutation(internal.internal.learning.recordCrisisFeedback, {
+          userId,
+          alertId: recentAlert._id,
+          connectedWith988: true,
+          wasHelpful: true,
+          followUpResponse: response,
+        });
+      }
     } else if (upperResponse === "NO" || upperResponse === "UNSURE") {
       // User didn't connect - offer help and schedule T+72h nudge
       await sendSMS(
@@ -308,6 +338,17 @@ export const handleCrisisFollowUpResponse = internalAction({
         user.phone,
         "Thanks for telling me. Would a counselor right now help? If so, call 988 or text 741741. I can also share local options."
       );
+
+      // Record feedback: did not connect
+      if (recentAlert) {
+        await ctx.runMutation(internal.internal.learning.recordCrisisFeedback, {
+          userId,
+          alertId: recentAlert._id,
+          connectedWith988: false,
+          wasHelpful: false,
+          followUpResponse: response,
+        });
+      }
 
       // Schedule T+72h nudge (from now, so 48h from original T+24h)
       await ctx.scheduler.runAfter(

@@ -320,3 +320,35 @@ export const getInactiveUsers = internalQuery({
     return eligibleUsers.slice(0, 100);
   },
 });
+
+/**
+ * Get most recent crisis alert for user
+ * Used to link feedback to the correct crisis event
+ */
+export const getRecentCrisisAlert = internalQuery({
+  args: {
+    userId: v.id("users"),
+  },
+  handler: async (ctx, { userId }) => {
+    const alert = await ctx.db
+      .query("alerts")
+      .withIndex("by_user", (q) => q.eq("userId", userId))
+      .filter((q) => q.eq(q.field("type"), "crisis"))
+      .order("desc")
+      .first();
+
+    return alert;
+  },
+});
+
+/**
+ * Get alert by ID
+ */
+export const getAlert = internalQuery({
+  args: {
+    alertId: v.id("alerts"),
+  },
+  handler: async (ctx, { alertId }) => {
+    return await ctx.db.get(alertId);
+  },
+});
