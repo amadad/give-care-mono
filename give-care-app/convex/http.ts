@@ -7,8 +7,12 @@ import { httpRouter } from "convex/server";
 import { httpAction } from "./_generated/server";
 import { twilio } from "./lib/twilio";
 import { internal } from "./_generated/api";
+import { auth } from "./auth";
 
 const http = httpRouter();
+
+// Auth routes for admin dashboard authentication
+auth.addHttpRoutes(http);
 
 // Twilio Component automatically registers routes:
 // - /twilio/incoming-message

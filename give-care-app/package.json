@@ -33,6 +33,7 @@
     "@ai-sdk/google": "^2.0.30",
     "@ai-sdk/openai": "^2.0.0",
     "@convex-dev/agent": "^0.2.12",
+    "@convex-dev/auth": "^0.0.90",
     "@convex-dev/rag": "^0.5.4",
     "@convex-dev/rate-limiter": "^0.2.14",
     "@convex-dev/twilio": "^0.1.7",
