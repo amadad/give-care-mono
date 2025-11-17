@@ -174,7 +174,7 @@ export const handleIncomingMessage = internalMutation({
       receivedAt: Date.now(),
     });
 
-    // Step 7: Rate limiting (10 SMS/day) - only for non-crisis messages
+    // Step 7: Rate limiting (30 SMS/day) - only for non-crisis messages
     // Crisis messages bypass rate limiting (already handled above)
     const rateLimitKey = user._id; // User ID as string key
     const rateLimitCheck = await ctx.runQuery(components.rateLimiter.lib.checkRateLimit, {
@@ -183,8 +183,8 @@ export const handleIncomingMessage = internalMutation({
       config: {
         kind: "fixed window",
         period: 86400000, // 24 hours in milliseconds
-        rate: 10, // 10 messages per day
-        capacity: 10,
+        rate: 30, // 30 messages per day
+        capacity: 30,
       },
       count: 1,
     });
@@ -208,8 +208,8 @@ export const handleIncomingMessage = internalMutation({
       config: {
         kind: "fixed window",
         period: 86400000,
-        rate: 10,
-        capacity: 10,
+        rate: 30,
+        capacity: 30,
       },
       count: 1,
     });
