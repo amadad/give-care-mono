@@ -62,27 +62,33 @@ VITE_CONVEX_URL=${convexUrl}
   console.log('✅ Created give-care-app .env.local for codegen');
   console.log('');
 
-  // Check if Convex types exist, run codegen only if needed/possible
+  // Always attempt to regenerate Convex types to ensure they're up-to-date
+  // This is important because new functions may have been added to the deployment
   const { existsSync } = await import('fs');
   const { execSync } = await import('child_process');
   const adminDir = join(__dirname, '..'); // give-care-admin
   const appDir = join(__dirname, '..', '..', 'give-care-app'); // give-care-app (sibling)
   const typesPath = join(appDir, 'convex', '_generated', 'api.d.ts');
 
-  if (existsSync(typesPath)) {
-    console.log('✅ Convex types already exist, skipping codegen');
-  } else {
-    console.log('📦 Running convex codegen...');
-    try {
-      execSync('npx convex codegen --typecheck disable', {
-        cwd: appDir,
-        stdio: 'inherit',
-        env: { ...process.env, CONVEX_DEPLOYMENT: convexDeployment }
-      });
-      console.log('✅ Convex types generated successfully');
-    } catch (codegenError) {
-      console.warn('⚠️  Convex codegen failed, but continuing build...');
-      console.warn('   Using committed types from repository');
+  console.log('📦 Running convex codegen to ensure types are up-to-date...');
+  try {
+    execSync('npx convex codegen --typecheck disable', {
+      cwd: appDir,
+      stdio: 'inherit',
+      env: { ...process.env, CONVEX_DEPLOYMENT: convexDeployment }
+    });
+    console.log('✅ Convex types generated successfully');
+  } catch (codegenError) {
+    if (existsSync(typesPath)) {
+      console.warn('⚠️  Convex codegen failed, but types exist - using committed types');
+      console.warn('   Note: Types may be stale. Ensure Convex deployment is up-to-date.');
+    } else {
+      console.error('❌ Convex codegen failed and no types found!');
+      console.error('   Build will likely fail. Please ensure:');
+      console.error('   1. Convex deployment is up-to-date');
+      console.error('   2. CONVEX_DEPLOYMENT is correctly configured');
+      console.error('   3. Network access to Convex is available');
+      throw codegenError;
     }
   }
 

@@ -71,12 +71,16 @@ export declare const api: {
       { userId: Id<"users"> },
       any
     >;
+    listAlerts: FunctionReference<"query", "public", { limit?: number }, any>;
+    listEvents: FunctionReference<"query", "public", { limit?: number }, any>;
+    listScores: FunctionReference<"query", "public", { limit?: number }, any>;
     listSubscriptions: FunctionReference<
       "query",
       "public",
       { limit?: number },
       any
     >;
+    listUsers: FunctionReference<"query", "public", { limit?: number }, any>;
     resetRateLimiter: FunctionReference<"mutation", "public", {}, any>;
   };
   score: {
