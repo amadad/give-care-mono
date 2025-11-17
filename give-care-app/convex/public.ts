@@ -69,6 +69,35 @@ export const listSubscriptions = query({
 });
 
 /**
+ * Check rate limiter status for a user (admin query)
+ * Returns the current rate limit state without consuming a token
+ */
+export const checkRateLimitStatus = query({
+  args: {
+    userId: v.id("users"),
+  },
+  handler: async (ctx, { userId }) => {
+    const result = await ctx.runQuery(components.rateLimiter.lib.checkRateLimit, {
+      name: "sms_daily",
+      key: userId,
+      config: {
+        kind: "fixed window",
+        period: 86400000,
+        rate: 30,
+        capacity: 30,
+      },
+      count: 1,
+    });
+
+    return {
+      ok: result.ok,
+      retryAfter: result.retryAfter,
+      currentConfig: { rate: 30, capacity: 30, period: 86400000 },
+    };
+  },
+});
+
+/**
  * Reset rate limiter (admin mutation)
  * Clears all rate limit buckets to allow fresh starts
  * USE WITH CAUTION - only for testing/debugging
