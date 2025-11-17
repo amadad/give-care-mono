@@ -308,7 +308,11 @@ export default defineSchema({
     type: v.union(
       v.literal("crisis"),
       v.literal("false_positive"),
-      v.literal("dv_hint")
+      v.literal("dv_hint"),
+      v.literal("crisis_followup_sent"),
+      v.literal("stress_spike_followup_sent"),
+      v.literal("reassurance_loop"),
+      v.literal("self_sacrifice")
     ),
     severity: v.union(
       v.literal("low"),

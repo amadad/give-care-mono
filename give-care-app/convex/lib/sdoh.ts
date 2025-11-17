@@ -103,3 +103,18 @@ export function getRiskLevelDisplay(riskLevel: RiskLevel): string {
   return display[riskLevel];
 }
 
+/**
+ * Map risk level to band (for assessments table compatibility)
+ * Risk levels: low, moderate, high, crisis
+ * Bands: very_low, low, moderate, high
+ */
+export function getBandFromRiskLevel(riskLevel: RiskLevel): "very_low" | "low" | "moderate" | "high" {
+  const mapping: Record<RiskLevel, "very_low" | "low" | "moderate" | "high"> = {
+    low: "very_low", // score 0-25
+    moderate: "low", // score 26-50
+    high: "moderate", // score 51-75
+    crisis: "high", // score 76-100
+  };
+  return mapping[riskLevel];
+}
+

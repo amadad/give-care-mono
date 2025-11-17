@@ -31,12 +31,20 @@ function buildCaregivingQuery(query: string, category: string, zipCode: string, 
 
 /**
  * Format resources for SMS (inline helper)
+ * Includes Google Maps Place ID links when available
  */
-function formatResourcesForSMS(resources: Array<{ name: string; address?: string }>, category: string): string {
+function formatResourcesForSMS(
+  resources: Array<{ placeId?: string; name: string; address?: string }>,
+  category: string
+): string {
   const lines = resources.slice(0, 3).map((r, i) => {
     const num = i + 1;
     const addr = r.address ? ` - ${r.address}` : '';
-    return `${num}. ${r.name}${addr}`;
+    // Add Google Maps link if placeId available
+    const mapsLink = r.placeId
+      ? `\n   https://www.google.com/maps/search/?api=1&query_place_id=${r.placeId}`
+      : '';
+    return `${num}. ${r.name}${addr}${mapsLink}`;
   });
   return `Found ${resources.length} ${category} resources:\n${lines.join('\n')}`;
 }

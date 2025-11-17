@@ -8,25 +8,43 @@ import { v } from "convex/values";
 import { getAssessmentDefinition } from "./lib/assessmentCatalog";
 import { internal } from "./_generated/api";
 import { calculateZoneAverage } from "./lib/scoreCalculator";
+import { getRiskLevel, getBandFromRiskLevel } from "./lib/sdoh";
 
 /**
  * List all assessments (admin query)
+ * Requires authentication - admin only
  */
 export const listAssessments = query({
-  args: {},
-  handler: async (ctx) => {
-    return await ctx.db.query("assessments").collect();
+  args: {
+    limit: v.optional(v.number()),
+  },
+  handler: async (ctx, { limit = 100 }) => {
+    // Access control: require authentication
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) {
+      throw new Error("Unauthorized: Authentication required");
+    }
+
+    // TODO: Add admin check if you have admin role system
+    // For now, any authenticated user can access (restrict further if needed)
+
+    // Limit results to prevent unbounded queries
+    // Note: Cannot use .order() without an index - using .take() only
+    return await ctx.db
+      .query("assessments")
+      .take(limit);
   },
 });
 
 /**
  * Process assessment answer
+ * Accepts number or "skip" - skipped questions are not included in score calculation
  */
 export const processAssessmentAnswer = internalMutation({
   args: {
     userId: v.id("users"),
     sessionId: v.id("assessment_sessions"),
-    answer: v.number(),
+    answer: v.union(v.number(), v.literal("skip")),
   },
   handler: async (ctx, { userId, sessionId, answer }) => {
     const session = await ctx.db.get(sessionId);
@@ -39,14 +57,14 @@ export const processAssessmentAnswer = internalMutation({
     );
     const currentQuestion = definition.questions[session.questionIndex];
 
-    // Save answer
-    const answers = [
-      ...session.answers,
-      {
+    // Save answer (only if not skipped)
+    const answers = [...session.answers];
+    if (answer !== "skip") {
+      answers.push({
         questionId: currentQuestion.id,
-        value: answer,
-      },
-    ];
+        value: answer as number,
+      });
+    }
 
     const nextIndex = session.questionIndex + 1;
 
@@ -59,10 +77,19 @@ export const processAssessmentAnswer = internalMutation({
         questionIndex: nextIndex,
       });
 
+      // Filter out skipped answers (only use numeric values for scoring)
+      const answeredValues = answers.filter((a) => typeof a.value === "number");
+      const answeredRatio = answeredValues.length / definition.questions.length;
+
+      // Guard: Don't calculate score if no answers
+      if (answeredValues.length === 0) {
+        return { error: "No answers provided" };
+      }
+
       // Calculate scores and create records inline (synchronous for tests)
-      // Calculate raw scores
+      // Calculate raw scores (only from answered questions)
       const zoneScores: Record<string, number[]> = {};
-      for (const answer of answers) {
+      for (const answer of answeredValues) {
         const question = definition.questions.find((q) => q.id === answer.questionId);
         if (question?.zone) {
           if (!zoneScores[question.zone]) {
@@ -72,30 +99,24 @@ export const processAssessmentAnswer = internalMutation({
         }
       }
 
-      // Calculate zone averages
+      // Calculate zone averages (only for zones with answers)
       const zoneAverages: Record<string, number> = {};
       for (const [zone, values] of Object.entries(zoneScores)) {
-        zoneAverages[zone] =
-          values.reduce((sum, v) => sum + v, 0) / values.length;
+        if (values.length > 0) {
+          zoneAverages[zone] =
+            values.reduce((sum, v) => sum + v, 0) / values.length;
+        }
       }
 
-      // Calculate composite score (average of all answers, normalized to 0-100)
-      const allValues = answers.map((a) => a.value);
-      const composite = (allValues.reduce((sum, v) => sum + v, 0) / allValues.length) * 20;
+      // Calculate composite score (average of answered questions, normalized to 0-100)
+      const allValues = answeredValues.map((a) => a.value);
+      const avgScore = allValues.reduce((sum, v) => sum + v, 0) / allValues.length; // Raw average (1-5 scale)
+      const composite = avgScore * 20; // Normalize to 0-100
       const gcBurnout = Math.round(composite);
 
-      // Determine band
-      const avgScore = allValues.reduce((sum, v) => sum + v, 0) / allValues.length;
-      let band: "very_low" | "low" | "moderate" | "high";
-      if (avgScore < 2) {
-        band = "very_low";
-      } else if (avgScore < 3) {
-        band = "low";
-      } else if (avgScore < 4) {
-        band = "moderate";
-      } else {
-        band = "high";
-      }
+      // Determine band using getRiskLevel (single source of truth)
+      const riskLevel = getRiskLevel(gcBurnout);
+      const band = getBandFromRiskLevel(riskLevel);
 
       // Create assessment record (only EMA or SDOH)
       if (session.definitionId !== "ema" && session.definitionId !== "sdoh") {
@@ -146,8 +167,8 @@ export const processAssessmentAnswer = internalMutation({
           P5: p5Scores.length > 0 ? calculateZoneAverage(p5Scores) : undefined,
           P6: p6Scores.length > 0 ? calculateZoneAverage(p6Scores) : undefined,
         },
-        confidence: answers.length / definition.questions.length,
-        answeredRatio: answers.length / definition.questions.length,
+        confidence: answeredRatio, // Use answeredRatio for confidence
+        answeredRatio: answeredRatio,
       });
 
       // Route to Assessment Agent for interpretation
@@ -193,9 +214,18 @@ export const completeAssessment = internalMutation({
       session.definitionId as any
     );
 
-    // Calculate raw scores
+    // Filter out skipped answers (only use numeric values for scoring)
+    const answeredValues = session.answers.filter((a) => typeof a.value === "number");
+    const answeredRatio = answeredValues.length / definition.questions.length;
+
+    // Guard: Don't calculate score if no answers
+    if (answeredValues.length === 0) {
+      return; // Cannot complete assessment with no answers
+    }
+
+    // Calculate raw scores (only from answered questions)
     const zoneScores: Record<string, number[]> = {};
-    for (const answer of session.answers) {
+    for (const answer of answeredValues) {
       const question = definition.questions.find((q) => q.id === answer.questionId);
       if (question?.zone) {
         if (!zoneScores[question.zone]) {
@@ -205,30 +235,24 @@ export const completeAssessment = internalMutation({
       }
     }
 
-    // Calculate zone averages
+    // Calculate zone averages (only for zones with answers)
     const zoneAverages: Record<string, number> = {};
     for (const [zone, values] of Object.entries(zoneScores)) {
-      zoneAverages[zone] =
-        values.reduce((sum, v) => sum + v, 0) / values.length;
+      if (values.length > 0) {
+        zoneAverages[zone] =
+          values.reduce((sum, v) => sum + v, 0) / values.length;
+      }
     }
 
-    // Calculate composite score (average of all answers, normalized to 0-100)
-    const allValues = session.answers.map((a) => a.value);
-    const composite = (allValues.reduce((sum, v) => sum + v, 0) / allValues.length) * 20;
+    // Calculate composite score (average of answered questions, normalized to 0-100)
+    const allValues = answeredValues.map((a) => a.value);
+    const avgScore = allValues.reduce((sum, v) => sum + v, 0) / allValues.length; // Raw average (1-5 scale)
+    const composite = avgScore * 20; // Normalize to 0-100
     const gcBurnout = Math.round(composite);
 
-    // Determine band
-    const avgScore = allValues.reduce((sum, v) => sum + v, 0) / allValues.length;
-    let band: "very_low" | "low" | "moderate" | "high";
-    if (avgScore < 2) {
-      band = "very_low";
-    } else if (avgScore < 3) {
-      band = "low";
-    } else if (avgScore < 4) {
-      band = "moderate";
-    } else {
-      band = "high";
-    }
+    // Determine band using getRiskLevel (single source of truth)
+    const riskLevel = getRiskLevel(gcBurnout);
+    const band = getBandFromRiskLevel(riskLevel);
 
     // Create assessment record (only EMA or SDOH)
     if (session.definitionId !== "ema" && session.definitionId !== "sdoh") {
@@ -271,16 +295,16 @@ export const completeAssessment = internalMutation({
       rawComposite: avgScore,
       gcBurnout,
       band,
-      zones: {
-        P1: p1Scores.length > 0 ? calculateZoneAverage(p1Scores) : undefined,
-        P2: p2Scores.length > 0 ? calculateZoneAverage(p2Scores) : undefined,
-        P3: p3Scores.length > 0 ? calculateZoneAverage(p3Scores) : undefined,
-        P4: p4Scores.length > 0 ? calculateZoneAverage(p4Scores) : undefined,
-        P5: p5Scores.length > 0 ? calculateZoneAverage(p5Scores) : undefined,
-        P6: p6Scores.length > 0 ? calculateZoneAverage(p6Scores) : undefined,
-      },
-      confidence: session.answers.length / definition.questions.length,
-      answeredRatio: session.answers.length / definition.questions.length,
+        zones: {
+          P1: p1Scores.length > 0 ? calculateZoneAverage(p1Scores) : undefined,
+          P2: p2Scores.length > 0 ? calculateZoneAverage(p2Scores) : undefined,
+          P3: p3Scores.length > 0 ? calculateZoneAverage(p3Scores) : undefined,
+          P4: p4Scores.length > 0 ? calculateZoneAverage(p4Scores) : undefined,
+          P5: p5Scores.length > 0 ? calculateZoneAverage(p5Scores) : undefined,
+          P6: p6Scores.length > 0 ? calculateZoneAverage(p6Scores) : undefined,
+        },
+        confidence: answeredRatio, // Use answeredRatio for confidence
+        answeredRatio: answeredRatio,
     });
 
     // Route to Assessment Agent for interpretation

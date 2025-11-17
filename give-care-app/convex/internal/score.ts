@@ -120,22 +120,14 @@ export const updateFromSDOH = internalAction({
     const newScore = calculateCompositeScore(updatedZones);
     const riskLevel = getRiskLevel(newScore);
 
-    // Record score history
-    await ctx.runMutation(internal.internal.score.insertScoreHistory, {
-      userId,
-      oldScore: currentScore,
-      newScore,
-      zones: updatedZones,
-      trigger: "sdoh",
-    });
-
-    // Update user
+    // Update user and record score history in single transaction
     await ctx.runMutation(internal.internal.score.updateUserScore, {
       userId,
       zones: updatedZones,
       gcSdohScore: newScore,
       riskLevel,
       lastSDOH: Date.now(),
+      trigger: "sdoh",
     });
 
     return { score: newScore, riskLevel, zones: updatedZones };
@@ -201,22 +193,14 @@ export const updateFromEMA = internalAction({
     const newScore = calculateCompositeScore(updatedZones);
     const riskLevel = getRiskLevel(newScore);
 
-    // Record score history
-    await ctx.runMutation(internal.internal.score.insertScoreHistory, {
-      userId,
-      oldScore: currentScore,
-      newScore,
-      zones: updatedZones,
-      trigger: "ema",
-    });
-
-    // Update user
+    // Update user and record score history in single transaction
     await ctx.runMutation(internal.internal.score.updateUserScore, {
       userId,
       zones: updatedZones,
       gcSdohScore: newScore,
       riskLevel,
       lastEMA: Date.now(),
+      trigger: "ema",
     });
 
     return { score: newScore, riskLevel, zones: updatedZones };
@@ -247,7 +231,27 @@ export const insertScoreHistory = internalMutation({
 });
 
 /**
+ * Check if user has crisis in last N days
+ */
+async function hasRecentCrisis(ctx: any, userId: any, days: number): Promise<boolean> {
+  const threshold = Date.now() - days * 24 * 60 * 60 * 1000;
+  // Limit to recent 100 events to prevent unbounded collection
+  // Filter in code since we need to check createdAt >= threshold
+  const recentCrisis = await ctx.db
+    .query("guardrail_events")
+    .withIndex("by_user", (q) => q.eq("userId", userId))
+    .order("desc")
+    .take(100); // Safety limit
+
+  return recentCrisis.some(
+    (event) => event.type === "crisis" && event.createdAt >= threshold
+  );
+}
+
+/**
  * Helper mutation: Update user score fields
+ * Detects stress spikes and schedules follow-ups if conditions met
+ * Also records score history in the same transaction for atomicity
  */
 export const updateUserScore = internalMutation({
   args: {
@@ -257,12 +261,30 @@ export const updateUserScore = internalMutation({
     riskLevel: v.string(),
     lastEMA: v.optional(v.number()),
     lastSDOH: v.optional(v.number()),
+    trigger: v.optional(v.union(v.literal("ema"), v.literal("sdoh"), v.literal("observation"))),
   },
   handler: async (ctx, args) => {
     const user = await ctx.db.get(args.userId);
     if (!user) return;
-    
+
+    const oldScore = user.gcSdohScore || 0;
+    const newScore = args.gcSdohScore;
+    const delta = newScore - oldScore;
+
     const metadata = user.metadata || {};
+    
+    // Record score history in the same transaction (if trigger provided)
+    if (args.trigger) {
+      await ctx.db.insert("score_history", {
+        userId: args.userId,
+        oldScore,
+        newScore,
+        zones: args.zones,
+        trigger: args.trigger,
+        timestamp: Date.now(),
+      });
+    }
+    
     await ctx.db.patch(args.userId, {
       // Top-level fields
       gcSdohScore: args.gcSdohScore,
@@ -280,6 +302,37 @@ export const updateUserScore = internalMutation({
         lastSDOH: args.lastSDOH,
       } as any,
     });
+
+    // Check for stress spike (delta >= 20) and schedule follow-up if conditions met
+    // Feature flag: FF_SPIKE_FOLLOWUPS (check env var)
+    const spikeFollowupsEnabled = process.env.FF_SPIKE_FOLLOWUPS === "true";
+    
+    if (
+      spikeFollowupsEnabled &&
+      delta >= 20 &&
+      newScore > oldScore // Only if score increased
+    ) {
+      // Check conditions: no crisis in 7d, proactiveOk = true, cooldown >= 7d
+      const hasCrisis = await hasRecentCrisis(ctx, args.userId, 7);
+      const proactiveOk = (metadata as any)?.proactiveOk === true;
+      const lastSpikeFollowUpAt = (metadata as any)?.lastSpikeFollowUpAt || 0;
+      const cooldownMs = 7 * 24 * 60 * 60 * 1000; // 7 days
+      const cooldownMet = Date.now() - lastSpikeFollowUpAt >= cooldownMs;
+
+      if (!hasCrisis && proactiveOk && cooldownMet) {
+        // Schedule spike follow-up (ask-first pattern)
+        await ctx.scheduler.runAfter(
+          0, // Immediate
+          internal.internal.sms.sendScoreSpikeFollowUp,
+          {
+            userId: args.userId,
+            oldScore,
+            newScore,
+            zones: args.zones,
+          }
+        );
+      }
+    }
   },
 });
 

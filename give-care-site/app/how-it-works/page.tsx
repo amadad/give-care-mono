@@ -28,9 +28,11 @@ const scenarios = {
     { "id": 5, "text": "How stressed do you feel right now?", "isUser": false },
     { "id": 6, "text": "Very stressed", "isUser": true },
     { "id": 7, "text": "Your wellness score today: 45/100 (Managing, but challenging)", "isUser": false },
-    { "id": 8, "text": "Top pressure: Emotional strain. Let me find support for you", "isUser": false },
-    { "id": 9, "text": "Found a caregiver support group meeting tonight at 7pm. Interested?", "isUser": false },
-    { "id": 10, "text": "maybe, send me the details", "isUser": true },
+    { "id": 8, "text": "Top pressure: Emotional strain. Quick strategy: 2-min breathing exercise can help. Want it? Reply YES.", "isUser": false },
+    { "id": 9, "text": "yes", "isUser": true },
+    { "id": 10, "text": "Box breathing: Inhale 4 counts, hold 4, exhale 4, hold 4. Repeat 3x. Helps reset your nervous system.", "isUser": false },
+    { "id": 11, "text": "Found a caregiver support group meeting tonight at 7pm. Interested?", "isUser": false },
+    { "id": 12, "text": "maybe, send me the details", "isUser": true },
   ],
   respite: [
     { "id": 1, "text": "I haven't left the house in 3 weeks", "isUser": true },
@@ -78,15 +80,19 @@ const whatYouGet = [
   },
   {
     title: "Resources matched to your exact situation",
-    description: "Respite care near you. Financial assistance you qualify for. Support groups that fit your schedule."
+    description: "Respite care, meals, transport, home care, day programs, hospice, memory care, legal help, financial aid, and support groups—all matched to your needs and location."
+  },
+  {
+    title: "Evidence-based micro-interventions",
+    description: "Quick strategies (2-10 min) matched to your pressure zones. Breathing exercises for emotional strain, respite planning for physical exhaustion, boundary scripts for self-care neglect."
   },
   {
     title: "Your burnout score tracked over time",
-    description: "See proof you're improving. Know when you need more help before you break."
+    description: "See your progress over time. Notice patterns that help you recognize when additional support might be useful."
   },
   {
-    title: "Crisis safety built in",
-    description: "When crisis language is detected, we provide immediate access to 988 Suicide & Crisis Lifeline and other crisis resources."
+    title: "Safety support when you need it",
+    description: "If you're in crisis, we connect you immediately with 988 Suicide & Crisis Lifeline and other support resources. We follow up the next day to see how you're doing."
   }
 ];
 
@@ -207,19 +213,19 @@ export default function HowItWorksPage() {
                 </h2>
                 <div className="space-y-6 text-amber-100">
                   <p className="text-xl text-center font-light">
-                    Caregiver burnout can creep up gradually. Early support helps prevent crisis points.
+                    Caregiver stress can build gradually. Early support helps you notice patterns and find resources when you need them.
                   </p>
                   <p className="text-lg font-light">
-                    GC-SDOH-28 measures the invisible—financial strain, isolation, access to care, housing quality, community support. The real-world factors dragging you down.
+                    GC-SDOH-28 measures the invisible—financial strain, isolation, access to care, housing quality, community support. The real-world factors that affect your wellbeing.
                   </p>
                   <div className="card-editorial-dark border-l-4 border-amber-100">
                     <p className="font-semibold text-amber-50 mb-2">Your score is your starting line.</p>
                     <p className="text-amber-100">
-                      Week by week, we track changes. When the number drops, you have proof: things are getting better. When it climbs, we find more support before you break.
+                      Week by week, we track changes. When the number drops, you can see: things are getting better. When it climbs, we find more support before things feel overwhelming.
                     </p>
                   </div>
                   <p className="text-center text-amber-100 italic">
-                    28 questions. 2 minutes. A number that finally makes your burden visible.
+                    28 questions. 2 minutes. A way to see and track what you're experiencing.
                   </p>
                 </div>
               </div>
@@ -351,7 +357,7 @@ export default function HowItWorksPage() {
           <div className="container-editorial">
             <ScrollAnimationWrapper variant="fadeInUp">
               <div className="max-w-4xl mx-auto text-center section-standard">
-                <h2 className="heading-section-dark mb-4">Ready to measure your burnout?</h2>
+                <h2 className="heading-section-dark mb-4">Ready to see where you're at?</h2>
                 <p className="text-lg text-amber-100 mb-8 max-w-2xl mx-auto font-light">
                   Take the free assessment. Get your score. See what support looks like.
                 </p>

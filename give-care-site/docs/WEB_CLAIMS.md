@@ -2,7 +2,7 @@
 
 **Document Type**: Public-Facing Feature Claims
 **Source**: https://www.givecareapp.com (Next.js site)
-**Last Updated**: 2025-11-09
+**Last Updated**: 2025-01-11
 **Purpose**: Catalog all product promises, claims, and commitments made to users on the public website
 
 ---
@@ -28,12 +28,12 @@
 ## Core Feature Claims (Bento Grid)
 
 ### Feature 1: Understand Your Capacity
-**Claim**: "4 validated assessments show a number (0-100). Finally, proof when others don't see the weight."
+**Claim**: "Validated assessments show a number (0-100) that reflects what you're carrying. A way to see and track what you're experiencing."
 
 **Implied Promise**:
 - Quantified burnout measurement (numerical score)
 - Validation by external authorities (clinical backing)
-- Social proof mechanism ("proof when others don't see")
+- Visibility and tracking (a way to see and track what you're experiencing)
 
 ---
 
@@ -48,18 +48,22 @@
 ---
 
 ### Feature 3: Find Help That Fits Your Life
-**Claim**: "Resources matched to your specific needs—respite funding, local support groups, practical strategies. Not generic lists you have to filter yourself."
+**Claim**: "Resources matched to your specific needs—respite funding, local support groups, practical strategies. Plus evidence-based micro-interventions (2-10 min) matched to your pressure zones. Not generic lists you have to filter yourself."
 
 **Implied Promise**:
 - Personalized resource matching
 - Geographic specificity (local)
 - Pre-filtered results (no manual sorting)
 - Multiple resource types (funding, groups, strategies)
+- Evidence-based micro-interventions (2-10 min duration)
+- Interventions matched to pressure zones (P1-P6)
 
 **Specific Examples Given**:
 - Respite funding
 - Local support groups
 - Practical strategies
+- Micro-interventions (2-10 min)
+- Pressure zone matching
 
 ---
 
@@ -79,34 +83,48 @@
 ---
 
 ### Feature 5: Proactive Check-Ins Based on Patterns
-**Claim**: "Sudden silence? Score changes? Shifting routines? We check in when you need it—before things escalate. You're not alone in watching for warning signs."
+**Claim**: "Haven't heard from you? Score changed? We check in when patterns shift—offering support before things feel overwhelming. Stress-spike follow-ups share quick strategies. Next-day check-ins after difficult moments ensure you're connected. You're not alone."
 
 **Implied Promise**:
-- Pattern detection (silence, score changes, routine shifts)
+- Pattern detection (silence, score spikes ≥20 points, crisis events)
 - Proactive outreach (system initiates)
 - Early intervention (before escalation)
+- Stress-spike follow-ups with intervention offers
+- Crisis next-day check-ins (T+24h) with T+72h nudges
 
 **Warning Signs Detected**:
-- Sudden silence
-- Score changes
+- Sudden silence (5/7/14 day engagement watcher)
+- Score spikes (20+ point increase)
+- Crisis events (next-day follow-up)
 - Shifting routines
+
+**Follow-Up Types**:
+- Stress-spike follow-ups: "ask-first" pattern, offers interventions if YES
+- Crisis next-day check-ins: T+24h follow-up asking if user connected to 988/741741
+- Engagement nudges: 5/7/14 day inactivity triggers with suppression logic
 
 ---
 
 ### Feature 6: Reminders When YOU Want Them
-**Claim**: "Not everyone wants 9am check-ins. Set your schedule—daily, weekly, Tue/Thu at 7pm ET. Your timezone, your pace."
+**Claim**: "Not everyone wants 9am check-ins. Text DAILY or WEEKLY to set your schedule. Text PAUSE CHECKINS to take a break, RESUME when ready. Your timezone, your pace. We can adjust frequency if weekly feels better for you."
 
 **Implied Promise**:
-- User-controlled scheduling
+- User-controlled scheduling via SMS keywords
 - Timezone awareness
-- Flexible frequency options (daily, weekly, custom days/times)
+- Flexible frequency options (daily, weekly)
+- Pause/resume functionality
+- Safety protections (high-risk users auto-downgraded)
 
-**Scheduling Examples**:
-- Daily
-- Weekly
-- Specific days (Tue/Thu)
-- Specific times (7pm ET)
-- User's timezone
+**Scheduling Keywords**:
+- DAILY: Set daily check-ins
+- WEEKLY: Set weekly check-ins
+- PAUSE CHECKINS: Pause for 7 days
+- RESUME: Resume check-ins
+
+**Safety Features**:
+- Frequency can be adjusted if weekly feels better (respects user agency)
+- Quiet hours respected (9 AM - 7:59 PM local time)
+- Snooze functionality (7-day pause)
 
 ---
 
@@ -383,26 +401,49 @@
 - Respite care
 - Financial assistance
 - Support groups
+- Meals, transport, home care, day programs, hospice, memory care, legal help, financial aid
 
 ---
 
-### 3. Your Burnout Score Tracked Over Time
-**Claim**: "See proof you're improving. Know when you need more help before you break."
+### 3. Evidence-Based Micro-Interventions
+**Claim**: "Quick strategies (2-10 min) matched to your pressure zones. Breathing exercises for emotional strain, respite planning for physical exhaustion, boundary scripts for self-care neglect."
+
+**Key Points**:
+- 16 evidence-based interventions
+- Duration: 2-10 minutes
+- Matched to pressure zones (P1-P6)
+- Examples: breathing exercises, respite planning, boundary scripts
+- Delivered via SMS after assessments or when zones referenced
+
+**Intervention Categories**:
+- Emotional strain → Breathing exercises, grief resources
+- Physical exhaustion → Sleep hygiene, micro-breaks, respite scheduling
+- Self-care neglect → 5-minute routines, boundary scripts
+- Financial strain → Respite funding guides, benefits checklists
+- Social isolation → Support group connections
+- Caregiving tasks → Medication trackers, appointment checklists
+
+---
+
+### 4. Your Burnout Score Tracked Over Time
+**Claim**: "See your progress over time. Notice patterns that help you recognize when additional support might be useful."
 
 **Key Points**:
 - Longitudinal data (over time)
-- Improvement validation (proof)
-- Early warning system (before you break)
+- Progress visibility (see your journey)
+- Pattern recognition (helps you notice when additional support might be useful)
 
 ---
 
-### 4. Crisis Safety Built In
-**Claim**: "When crisis language is detected, we provide immediate access to 988 Suicide & Crisis Lifeline and other crisis resources."
+### 5. Safety Support When You Need It
+**Claim**: "If you're in crisis, we connect you immediately with 988 Suicide & Crisis Lifeline and other support resources. We follow up the next day to see how you're doing."
 
 **Key Points**:
 - Automatic detection (no manual flagging)
 - Immediate access (no delay)
 - Multiple resources (988 + others)
+- Next-day follow-up (T+24h) to check how you're doing
+- T+72h nudge if no response to follow-up
 
 ---
 
@@ -617,16 +658,20 @@
 
 | Website Claim | Backend Implementation File | Notes |
 |---------------|----------------------------|-------|
-| 4 validated assessments | `convex/domains/assessments.ts` | EMA, BSFC, REACH-II, SDOH |
-| 0-100 burnout score | `convex/domains/wellness.ts` | Scoring logic |
-| Resources matched to needs | `convex/resources.ts` | Google Maps grounding |
+| 4 validated assessments | `convex/assessments.ts` | EMA, SDOH-28 (BSFC & REACH-II removed) |
+| 0-100 burnout score | `convex/internal/score.ts` | Scoring logic with zones |
+| Resources matched to needs | `convex/resources.ts` | Google Maps grounding, 8+ categories |
+| Micro-interventions (2-10 min) | `convex/interventions.ts` + `convex/tools.ts` | 16 interventions, matched to zones |
 | 50% fewer repeated questions | `convex/agents.ts` (memory tools) | Memory system via `recordMemory` |
-| User-controlled scheduling | `convex/domains/scheduler.ts` | RRULE-based triggers |
-| Crisis detection | `convex/lib/constants.ts` (CRISIS_TERMS) | 15+ crisis keywords |
+| User-controlled scheduling (DAILY/WEEKLY) | `convex/inbound.ts` | Keyword detection (DAILY, WEEKLY, PAUSE CHECKINS, RESUME) |
+| Stress-spike follow-ups | `convex/internal/sms.ts` | 20+ point increase triggers ask-first message |
+| Crisis next-day check-in | `convex/internal/sms.ts` | T+24h follow-up, T+72h nudge |
+| Engagement watcher (5/7/14 day) | `convex/internal/workflows.ts` | Inactivity detection with suppression |
+| Crisis detection | `convex/lib/utils.ts` | Crisis keyword detection |
 | 988/741741/911 resources | `convex/lib/prompts.ts` (CRISIS_PROMPT) | Hard-coded in crisis agent |
 | SMS-first | `convex/http.ts` + `convex/inbound.ts` | Twilio webhooks |
 | Same-day respite booking | `convex/resources.ts` | Google Maps search |
-| Financial assistance programs | *Not implemented in backend* | Demo only on website |
+| Financial assistance programs | `convex/resources.ts` | Expanded resource categories |
 | Open source GitHub | https://github.com/orgs/givecareapp | Public repos |
 
 ---

@@ -25,21 +25,34 @@ export const checkInWorkflow = workflow.define({
       return; // User not found
     }
 
-    // Step 2: Check quiet hours (8am-9pm local time)
+    const metadata = user.metadata || {};
+    const checkInFrequency = (metadata as any)?.checkInFrequency;
+    const snoozeUntil = (metadata as any)?.snoozeUntil;
+
+    // Check if check-ins are enabled
+    if (!checkInFrequency) {
+      return; // No check-in frequency set
+    }
+
+    // Check if snoozed
+    if (snoozeUntil && Date.now() < snoozeUntil) {
+      return; // Still snoozed
+    }
+
+    // Step 2: Check quiet hours (9am-7pm local time, never after 8pm)
     // Get user's timezone from metadata (default to UTC if missing)
-    const timezone = user.metadata?.timezone || "UTC";
+    const timezone = (metadata as any)?.timezone || "UTC";
     const now = new Date();
     
     // Convert to user's local time (simplified - assumes UTC offset in hours)
     // For production, use a proper timezone library
     const hour = now.getUTCHours(); // Simplified - use user's timezone in production
     
-    // Check if within quiet hours (8am-9pm)
-    const isQuietHours = hour >= 8 && hour < 21;
+    // Check if within quiet hours (9am-7pm, never after 8pm)
+    const isQuietHours = hour >= 9 && hour < 20;
     
     if (!isQuietHours) {
-      // Outside quiet hours - reschedule for next day at 9 AM local
-      // For now, just skip (cron will retry next day)
+      // Outside quiet hours - skip (cron will retry next day)
       return;
     }
 
@@ -98,5 +111,18 @@ export const checkInWorkflow = workflow.define({
       });
     }
     // If not completed, the assessment flow will handle completion when user responds
+  },
+});
+
+/**
+ * Start check-in workflow for a user
+ * Helper action to start workflows from other actions
+ */
+export const startCheckInWorkflow = internalAction({
+  args: {
+    userId: v.id("users"),
+  },
+  handler: async (ctx, { userId }) => {
+    await workflow.start(ctx, internal.workflows.checkInWorkflow, { userId });
   },
 });

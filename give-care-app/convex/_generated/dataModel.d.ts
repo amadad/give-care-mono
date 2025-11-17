@@ -210,7 +210,14 @@ export type DataModel = {
       context: any;
       createdAt: number;
       severity: "low" | "medium" | "high";
-      type: "crisis" | "false_positive" | "dv_hint";
+      type:
+        | "crisis"
+        | "false_positive"
+        | "dv_hint"
+        | "crisis_followup_sent"
+        | "stress_spike_followup_sent"
+        | "reassurance_loop"
+        | "self_sacrifice";
       userId?: Id<"users">;
       _id: Id<"guardrail_events">;
       _creationTime: number;

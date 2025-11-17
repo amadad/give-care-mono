@@ -14,7 +14,8 @@ import {
   isResubscribeRequest,
   isSignupRequest,
   isBillingRequest,
-  isUpdatePaymentRequest
+  isUpdatePaymentRequest,
+  isEMACheckInKeyword,
 } from "./lib/utils";
 import { getCrisisResponse } from "./lib/utils";
 import type { Id } from "./_generated/dataModel";
@@ -140,6 +141,13 @@ export const handleIncomingMessage = internalMutation({
     if (isUpdatePaymentRequest(body)) {
       await handleUpdatePayment(ctx, user._id);
       return { status: "update_payment_initiated" };
+    }
+
+    // Handle EMA check-in keywords
+    const emaKeyword = isEMACheckInKeyword(body);
+    if (emaKeyword) {
+      await handleEMACheckInKeyword(ctx, user._id, emaKeyword);
+      return { status: "ema_checkin_updated" };
     }
 
     // Step 6: Crisis detection (deterministic, no LLM)
@@ -376,6 +384,85 @@ async function handleUpdatePayment(ctx: any, userId: any): Promise<void> {
 }
 
 /**
+ * Handle EMA check-in keywords (DAILY, WEEKLY, PAUSE CHECKINS, RESUME)
+ */
+async function handleEMACheckInKeyword(
+  ctx: any,
+  userId: any,
+  keyword: "daily" | "weekly" | "pause" | "resume"
+): Promise<void> {
+  const user = await ctx.db.get(userId);
+  if (!user) return;
+
+  const metadata = user.metadata || {};
+  let checkInFrequency: "daily" | "weekly" | null = null;
+  let snoozeUntil: number | undefined = undefined;
+  let message = "";
+
+  // Check for high-risk users (2+ crises in 30 days)
+  const thirtyDaysAgo = Date.now() - 30 * 24 * 60 * 60 * 1000;
+  
+  // Query with time-based filtering to avoid collecting all events
+  // Note: Since we need to filter by createdAt, we collect but limit to recent events
+  // In production, consider adding a compound index (userId, createdAt) for better performance
+  const recentCrises = await ctx.db
+    .query("guardrail_events")
+    .withIndex("by_user", (q) => q.eq("userId", userId))
+    .collect();
+
+  // Filter in code (acceptable for small result sets per user)
+  // Limit to last 100 events per user to prevent unbounded collection
+  const filteredCrises = recentCrises
+    .filter((e) => e.type === "crisis" && e.createdAt >= thirtyDaysAgo)
+    .slice(0, 100); // Safety limit
+
+  const crisisCount = filteredCrises.length;
+
+  if (keyword === "daily") {
+    // Auto-downgrade to WEEKLY if high-risk
+    if (crisisCount >= 2) {
+      checkInFrequency = "weekly";
+      message =
+        "I'll check in WEEKLY (not daily) to keep things balanced. You can text DAILY, WEEKLY, PAUSE CHECKINS, or RESUME anytime.";
+    } else {
+      checkInFrequency = "daily";
+      message =
+        "Okay—I'll check in DAILY. You can text DAILY, WEEKLY, PAUSE CHECKINS, or RESUME anytime.";
+    }
+  } else if (keyword === "weekly") {
+    checkInFrequency = "weekly";
+    message =
+      "Okay—I'll check in WEEKLY. You can text DAILY, WEEKLY, PAUSE CHECKINS, or RESUME anytime.";
+  } else if (keyword === "pause") {
+    checkInFrequency = null;
+    snoozeUntil = Date.now() + 7 * 24 * 60 * 60 * 1000; // 7 days
+    message = "Check-ins paused for 7 days. Text RESUME to restart.";
+  } else if (keyword === "resume") {
+    // Resume with previous frequency or default to WEEKLY
+    checkInFrequency = (metadata as any)?.checkInFrequency || "weekly";
+    snoozeUntil = undefined;
+    message = `Check-ins resumed (${checkInFrequency.toUpperCase()}). You can text DAILY, WEEKLY, PAUSE CHECKINS, or RESUME anytime.`;
+  }
+
+  // Update user metadata
+  await ctx.db.patch(userId, {
+    metadata: {
+      ...metadata,
+      checkInFrequency,
+      snoozeUntil,
+    } as any,
+  });
+
+  // Send confirmation message
+  if (message) {
+    await ctx.scheduler.runAfter(0, internal.internal.sms.sendAgentResponse, {
+      userId,
+      text: message,
+    });
+  }
+}
+
+/**
  * Handle crisis detection
  * Fast-path: Deterministic response, no LLM, <600ms target
  * Optimized: Precompute response, batch DB operations, immediate scheduling
@@ -417,6 +504,10 @@ async function handleCrisis(
     isDVHint: crisisResult.isDVHint,
   });
 
-  // Note: Crisis follow-up removed as part of simplification
-  // Future: Can add back if needed via check-in workflow
+  // Schedule crisis follow-up at T+24 hours
+  await ctx.scheduler.runAfter(
+    24 * 60 * 60 * 1000, // 24 hours in milliseconds
+    internal.internal.sms.sendCrisisFollowUpMessage,
+    { userId }
+  );
 }

@@ -24,6 +24,7 @@ function extractZipFromQuery(query: string): string | null {
 
 /**
  * National resources (hardcoded list for graceful degradation)
+ * Expanded categories for common caregiving needs
  */
 const NATIONAL_RESOURCES: Record<string, string[]> = {
   respite: [
@@ -35,6 +36,46 @@ const NATIONAL_RESOURCES: Record<string, string[]> = {
     "Family Caregiver Alliance: caregiver.org",
     "AARP Caregiving: aarp.org/caregiving",
     "Caregiver Action Network: caregiveraction.org",
+  ],
+  meals: [
+    "Meals on Wheels: mealsonwheelsamerica.org",
+    "Elderly Nutrition Program: acl.gov/programs/health-wellness/nutrition-services",
+    "211 Food Assistance: 211.org",
+  ],
+  transport: [
+    "Eldercare Locator: eldercare.acl.gov",
+    "National Aging and Disability Transportation Center: nadtc.org",
+    "211 Transportation: 211.org",
+  ],
+  home_care: [
+    "Eldercare Locator: eldercare.acl.gov",
+    "Aging and Disability Resource Centers: adrc-tae.org",
+    "211 Home Care: 211.org",
+  ],
+  day_programs: [
+    "Eldercare Locator: eldercare.acl.gov",
+    "Adult Day Services Association: nadsa.org",
+    "211 Adult Day Care: 211.org",
+  ],
+  hospice: [
+    "National Hospice and Palliative Care Organization: nhpco.org",
+    "Hospice Foundation of America: hospicefoundation.org",
+    "211 Hospice: 211.org",
+  ],
+  memory_care: [
+    "Alzheimer's Association: alz.org",
+    "Alzheimer's Foundation of America: alzfdn.org",
+    "211 Memory Care: 211.org",
+  ],
+  legal_help: [
+    "Elder Law Answers: elderlawanswers.com",
+    "National Academy of Elder Law Attorneys: naela.org",
+    "211 Legal Assistance: 211.org",
+  ],
+  financial_aid: [
+    "Benefits.gov: benefits.gov",
+    "Eldercare Locator: eldercare.acl.gov",
+    "211 Financial Assistance: 211.org",
   ],
   default: [
     "Family Caregiver Alliance: caregiver.org",

@@ -21,7 +21,12 @@ import type { GenericId as Id } from "convex/values";
  */
 export declare const api: {
   assessments: {
-    listAssessments: FunctionReference<"query", "public", {}, any>;
+    listAssessments: FunctionReference<
+      "query",
+      "public",
+      { limit?: number },
+      any
+    >;
   };
   interventions: {
     getInterventionsByZones: FunctionReference<
@@ -44,7 +49,12 @@ export declare const api: {
       { userId: Id<"users"> },
       any
     >;
-    listSubscriptions: FunctionReference<"query", "public", {}, any>;
+    listSubscriptions: FunctionReference<
+      "query",
+      "public",
+      { limit?: number },
+      any
+    >;
   };
   score: {
     getScore: FunctionReference<
@@ -102,7 +112,7 @@ export declare const internal: {
       "mutation",
       "internal",
       {
-        answer: number;
+        answer: number | "skip";
         sessionId: Id<"assessment_sessions">;
         userId: Id<"users">;
       },
@@ -249,6 +259,24 @@ export declare const internal: {
       >;
     };
     learning: {
+      logGuardrailEvent: FunctionReference<
+        "mutation",
+        "internal",
+        {
+          context: any;
+          severity: "low" | "medium" | "high";
+          type:
+            | "crisis"
+            | "false_positive"
+            | "dv_hint"
+            | "crisis_followup_sent"
+            | "stress_spike_followup_sent"
+            | "reassurance_loop"
+            | "self_sacrifice";
+          userId?: Id<"users">;
+        },
+        any
+      >;
       trackHelpfulnessMutation: FunctionReference<
         "mutation",
         "internal",
@@ -365,6 +393,7 @@ export declare const internal: {
           lastEMA?: number;
           lastSDOH?: number;
           riskLevel: string;
+          trigger?: "ema" | "sdoh" | "observation";
           userId: Id<"users">;
           zones: any;
         },
@@ -378,6 +407,18 @@ export declare const internal: {
       >;
     };
     sms: {
+      handleCrisisFollowUpResponse: FunctionReference<
+        "action",
+        "internal",
+        { response: string; userId: Id<"users"> },
+        any
+      >;
+      handleSpikeFollowUpResponse: FunctionReference<
+        "action",
+        "internal",
+        { response: string; userId: Id<"users">; zones: any },
+        any
+      >;
       sendAgentResponse: FunctionReference<
         "action",
         "internal",
@@ -399,7 +440,13 @@ export declare const internal: {
       sendCrisisFollowUpMessage: FunctionReference<
         "action",
         "internal",
-        { hasResponded: boolean; userId: Id<"users"> },
+        { userId: Id<"users"> },
+        any
+      >;
+      sendCrisisFollowUpNudge: FunctionReference<
+        "action",
+        "internal",
+        { userId: Id<"users"> },
         any
       >;
       sendCrisisResponse: FunctionReference<
@@ -430,6 +477,12 @@ export declare const internal: {
         "action",
         "internal",
         { gracePeriodEndsAt?: number; userId: Id<"users"> },
+        any
+      >;
+      sendScoreSpikeFollowUp: FunctionReference<
+        "action",
+        "internal",
+        { newScore: number; oldScore: number; userId: Id<"users">; zones: any },
         any
       >;
       sendStopConfirmation: FunctionReference<
@@ -604,6 +657,18 @@ export declare const internal: {
         { days?: number },
         any
       >;
+      getRecentGuardrailEvents: FunctionReference<
+        "query",
+        "internal",
+        { since: number; type?: string; userId: Id<"users"> },
+        any
+      >;
+      getRecentInboundReceipt: FunctionReference<
+        "query",
+        "internal",
+        { since: number; userId: Id<"users"> },
+        any
+      >;
       getUser: FunctionReference<
         "query",
         "internal",
@@ -624,6 +689,18 @@ export declare const internal: {
         any
       >;
     };
+    workflows: {
+      checkEngagement: FunctionReference<"action", "internal", {}, any>;
+      runCheckIns: FunctionReference<"action", "internal", {}, any>;
+    };
+  };
+  interventions: {
+    findInterventions: FunctionReference<
+      "query",
+      "internal",
+      { limit?: number; zones: Array<string> },
+      any
+    >;
   };
   resources: {
     searchResources: FunctionReference<
@@ -639,6 +716,11 @@ export declare const internal: {
       },
       any
     >;
+  };
+  scripts: {
+    seedInterventions: {
+      seedInterventions: FunctionReference<"mutation", "internal", {}, any>;
+    };
   };
   twilioMutations: {
     handleBillingPortalAction: FunctionReference<
@@ -734,6 +816,12 @@ export declare const internal: {
   };
   workflows: {
     checkInWorkflow: FunctionReference<"mutation", "internal", any, any>;
+    startCheckInWorkflow: FunctionReference<
+      "action",
+      "internal",
+      { userId: Id<"users"> },
+      any
+    >;
   };
 };
 

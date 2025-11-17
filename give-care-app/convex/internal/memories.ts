@@ -87,17 +87,18 @@ export const listMemories = internalQuery({
   },
   handler: async (ctx, { userId, category }) => {
     // Query memories by user (and category if provided)
+    // Limit to prevent unbounded collection (safety limit)
     const userMemories = category
       ? await ctx.db
           .query("memories")
           .withIndex("by_user_category", (q) =>
             q.eq("userId", userId).eq("category", category)
           )
-          .collect()
+          .take(100) // Safety limit
       : await ctx.db
           .query("memories")
           .withIndex("by_user_and_importance", (q) => q.eq("userId", userId))
-          .collect();
+          .take(100); // Safety limit
 
     // Sort by importance (descending)
     userMemories.sort((a, b) => b.importance - a.importance);

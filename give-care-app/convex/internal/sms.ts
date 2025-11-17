@@ -204,25 +204,255 @@ export const sendAssessmentReminder = internalAction({
 });
 
 /**
+ * Check if user has sent any inbound messages in the last N hours
+ */
+async function hasRecentInbound(
+  ctx: any,
+  userId: any,
+  hours: number
+): Promise<boolean> {
+  const threshold = Date.now() - hours * 60 * 60 * 1000;
+  const recentReceipt = await ctx.runQuery(
+    internal.internal.users.getRecentInboundReceipt,
+    {
+      userId,
+      since: threshold,
+    }
+  );
+  return recentReceipt !== null;
+}
+
+/**
+ * Check if current time is within quiet hours (9:00-19:00 local, never after 20:00)
+ * Simplified: uses UTC if timezone not available
+ */
+function isQuietHours(userTimezone?: string): boolean {
+  const now = new Date();
+  // Simplified: use UTC hours if timezone not available
+  // In production, use proper timezone library
+  const hour = now.getUTCHours();
+  
+  // Quiet hours: 9:00-19:00 (9 AM - 7 PM)
+  // Never send after 20:00 (8 PM)
+  return hour >= 9 && hour < 20; // 9 AM to 7:59 PM
+}
+
+/**
  * Send crisis follow-up message
+ * T+24h check-in with safety guards
  */
 export const sendCrisisFollowUpMessage = internalAction({
   args: {
     userId: v.id("users"),
-    hasResponded: v.boolean(),
   },
-  handler: async (ctx, { userId, hasResponded }) => {
+  handler: async (ctx, { userId }) => {
     const user = await ctx.runQuery(internal.internal.users.getUser, { userId });
     if (!user?.phone) return;
 
-    let message: string;
+    // Guard 1: Skip if user has sent any inbound message in last 24h
+    const hasResponded = await hasRecentInbound(ctx, userId, 24);
     if (hasResponded) {
-      message = "I'm here to support you. What kind of support would help right now?";
-    } else {
-      message = "How are you doing today? I wanted to check in after our conversation yesterday.";
+      // User already engaged - skip follow-up
+      return;
     }
 
+    // Guard 2: Respect quiet hours (9:00-19:00 local, never after 20:00)
+    const timezone = (user.metadata as any)?.timezone;
+    if (!isQuietHours(timezone)) {
+      // Outside quiet hours - skip (will be retried by cron if needed)
+      return;
+    }
+
+    // Send T+24h check-in message
+    const message =
+      "Checking in after yesterday. I can't provide crisis support, but human counselors at 988 (call) or 741741 (text) are available 24/7. Were you able to connect? Reply YES or NO.";
+
     await sendSMS(ctx, user.phone, message);
+
+    // Log guardrail event
+    await ctx.runMutation(internal.internal.learning.logGuardrailEvent, {
+      userId,
+      type: "crisis_followup_sent",
+      severity: "medium",
+      context: { timestamp: Date.now() },
+    });
+  },
+});
+
+/**
+ * Handle crisis follow-up response (YES/NO)
+ * Called when user replies to crisis follow-up
+ */
+export const handleCrisisFollowUpResponse = internalAction({
+  args: {
+    userId: v.id("users"),
+    response: v.string(), // "YES" or "NO" or "UNSURE"
+  },
+  handler: async (ctx, { userId, response }) => {
+    const user = await ctx.runQuery(internal.internal.users.getUser, { userId });
+    if (!user?.phone) return;
+
+    const upperResponse = response.toUpperCase().trim();
+
+    if (upperResponse === "YES") {
+      // User connected - acknowledge
+      await sendSMS(
+        ctx,
+        user.phone,
+        "Glad you were able to connect. I'm here if you need support."
+      );
+    } else if (upperResponse === "NO" || upperResponse === "UNSURE") {
+      // User didn't connect - offer help and schedule T+72h nudge
+      await sendSMS(
+        ctx,
+        user.phone,
+        "Thanks for telling me. Would a counselor right now help? If so, call 988 or text 741741. I can also share local options."
+      );
+
+      // Schedule T+72h nudge (from now, so 48h from original T+24h)
+      await ctx.scheduler.runAfter(
+        48 * 60 * 60 * 1000, // 48 hours = T+72h from original crisis
+        internal.internal.sms.sendCrisisFollowUpNudge,
+        { userId }
+      );
+    }
+  },
+});
+
+/**
+ * Send crisis follow-up nudge (T+72h)
+ * Second check-in if user replied NO/UNSURE
+ */
+export const sendCrisisFollowUpNudge = internalAction({
+  args: {
+    userId: v.id("users"),
+  },
+  handler: async (ctx, { userId }) => {
+    const user = await ctx.runQuery(internal.internal.users.getUser, { userId });
+    if (!user?.phone) return;
+
+    // Skip if user has responded since
+    const hasResponded = await hasRecentInbound(ctx, userId, 24);
+    if (hasResponded) {
+      return;
+    }
+
+    // Respect quiet hours
+    const timezone = (user.metadata as any)?.timezone;
+    if (!isQuietHours(timezone)) {
+      return;
+    }
+
+    const message =
+      "Just checking in again. Human counselors at 988 (call) or 741741 (text) are available 24/7 if you need support.";
+
+    await sendSMS(ctx, user.phone, message);
+  },
+});
+
+/**
+ * Send stress-spike follow-up (ask-first pattern)
+ * Only sends if user has opted into proactive check-ins
+ */
+export const sendScoreSpikeFollowUp = internalAction({
+  args: {
+    userId: v.id("users"),
+    oldScore: v.number(),
+    newScore: v.number(),
+    zones: v.any(),
+  },
+  handler: async (ctx, { userId, oldScore, newScore, zones }) => {
+    const user = await ctx.runQuery(internal.internal.users.getUser, { userId });
+    if (!user?.phone) return;
+
+    // Respect quiet hours
+    const timezone = (user.metadata as any)?.timezone;
+    if (!isQuietHours(timezone)) {
+      return;
+    }
+
+    // Send ask-first message
+    const message =
+      "Heads up: your last check-in was higher than usual. Want 1–2 quick ideas some caregivers use when stress spikes? Reply YES or NO.";
+
+    await sendSMS(ctx, user.phone, message);
+
+    // Update lastSpikeFollowUpAt timestamp
+    const metadata = user.metadata || {};
+    await ctx.runMutation(internal.internal.users.updateProfile, {
+      userId,
+      field: "lastSpikeFollowUpAt",
+      value: Date.now(),
+    });
+
+    // Log guardrail event
+    await ctx.runMutation(internal.internal.learning.logGuardrailEvent, {
+      userId,
+      type: "stress_spike_followup_sent",
+      severity: "medium",
+      context: { oldScore, newScore, delta: newScore - oldScore, timestamp: Date.now() },
+    });
+  },
+});
+
+/**
+ * Handle stress-spike follow-up response (YES/NO)
+ * Called when user replies to spike follow-up
+ */
+export const handleSpikeFollowUpResponse = internalAction({
+  args: {
+    userId: v.id("users"),
+    response: v.string(), // "YES" or "NO"
+    zones: v.any(), // User's zones for intervention matching
+  },
+  handler: async (ctx, { userId, response, zones }) => {
+    const user = await ctx.runQuery(internal.internal.users.getUser, { userId });
+    if (!user?.phone) return;
+
+    const upperResponse = response.toUpperCase().trim();
+
+    if (upperResponse === "YES") {
+      // Find worst zones for interventions
+      const zoneIds = Object.keys(zones || {})
+        .filter((z) => zones[z] !== undefined && zones[z] !== null)
+        .sort((a, b) => (zones[b] || 0) - (zones[a] || 0))
+        .slice(0, 2); // Top 2 zones
+
+      // Get interventions
+      const interventions = await ctx.runQuery(internal.interventions.findInterventions, {
+        zones: zoneIds,
+        limit: 2,
+      });
+
+      if (interventions.length > 0) {
+        // Format interventions message
+        const interventionLines = interventions
+          .slice(0, 2)
+          .map((intervention: any, i: number) => {
+            const num = i + 1;
+            return `• ${intervention.title} — ${intervention.description}`;
+          })
+          .join("\n");
+
+        const message = `Thanks for saying yes. Two quick options you can try now:\n${interventionLines}\nWant more like these? Reply MORE.`;
+
+        await sendSMS(ctx, user.phone, message);
+      } else {
+        // Fallback if no interventions found
+        await sendSMS(
+          ctx,
+          user.phone,
+          "Thanks for saying yes. I can help you find resources or support. What would help most right now?"
+        );
+      }
+    } else if (upperResponse === "NO") {
+      // User declined - acknowledge and offer human support
+      await sendSMS(
+        ctx,
+        user.phone,
+        "Got it. If you want to talk to a human, 988/741741 are 24/7."
+      );
+    }
   },
 });
 

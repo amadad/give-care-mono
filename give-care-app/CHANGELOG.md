@@ -2,6 +2,85 @@
 
 ## [Unreleased]
 
+### 🛡️ Safety & Value Bundle
+
+**Interventions v1:**
+- Added seed script (`convex/scripts/seedInterventions.ts`) with 16 evidence-based interventions mapped to zones (P1-P6)
+- Created `findInterventions` internal query with zone-based matching, category deduplication, and evidence-level sorting
+- Added `findInterventions` tool wrapper in `convex/tools.ts` for agent integration
+- Integrated intervention discovery into main and assessment agents
+
+**Crisis Next-Day Check-in:**
+- Implemented T+24h follow-up scheduling after crisis events
+- Added response guards: skip if user replied, respect quiet hours (10 PM - 8 AM)
+- YES/NO response handling with T+72h nudge for uncertain users
+- Integrated with existing `sendCrisisFollowUpMessage` action in `convex/internal/sms.ts`
+
+**Stress-Spike Follow-ups:**
+- Score delta detection in `updateUserScore` (triggers on ≥20 point increase)
+- Ask-first pattern: requests permission before sending interventions
+- Feature flag gating (`FF_SPIKE_FOLLOWUPS`) for controlled rollout
+- Automatic intervention matching based on worst-performing zones
+
+### 🎯 Friction Reduction
+
+**Skip Per Question:**
+- Assessment answers now accept `number | "skip"` (validator updated in `convex/assessments.ts`)
+- Skipped answers filtered from zone score calculations
+- Division-by-zero guards for all-skipped scenarios
+- `answeredRatio` field updated to reflect actual completion percentage
+
+### 📈 Engagement & Retention
+
+**Engagement Watcher:**
+- Daily cron checks for inactive users at 5/7/14-day thresholds
+- Suppression logic: no nudges during crisis events, reassurance loops, or snooze periods
+- Tiered nudge levels (day5/day7/day14) with appropriate messaging
+- Integrated with existing `getInactiveUsers` query and `sendEngagementNudge` action
+
+**Opt-in EMA Check-ins:**
+- Keyword handlers: `DAILY`, `WEEKLY`, `PAUSE CHECKINS`, `RESUME`
+- Auto-downgrade to weekly for high-risk users (prevents over-engagement)
+- Snooze support via `metadata.snoozeUntil` field
+- Workflow integration with existing `checkInWorkflow` in `convex/workflows.ts`
+- Feature flag gating (`FF_EMA`) for controlled rollout
+
+### 🔧 Quality Improvements
+
+**Resource Search Expansion:**
+- Added 8 new resource categories: `meals`, `transport`, `home_care`, `day_programs`, `hospice`, `memory_care`, `legal_help`, `financial_aid`
+- Google Maps Place ID links in SMS format: `https://www.google.com/maps/search/?api=1&query_place_id={placeId}`
+- Enhanced category routing in `convex/resources.ts`
+
+**Band Unification:**
+- Created `getBandFromRiskLevel()` helper for consistent risk level mapping
+- Migrated all assessment completion logic to use `getRiskLevel()` from `convex/lib/sdoh.ts` as single source of truth
+- Removed duplicate band calculation logic in `convex/assessments.ts`
+- Consistent thresholds across codebase: low (0-25), moderate (26-50), high (51-75), crisis (76-100)
+
+### 🔒 Safety & Regulatory Updates
+
+**Guardrails & Prompts:**
+- Added therapy boundary refusal blocks with few-shot examples in `convex/lib/prompts.ts`
+- Anti-sycophancy directive to prevent reinforcement of self-sacrifice patterns
+- Reassurance loop handling: detect and redirect repetitive support-seeking
+- Updated agent prompts (MAIN_PROMPT, ASSESSMENT_PROMPT, CRISIS_PROMPT)
+
+**Guardrail Detection:**
+- Self-sacrifice pattern detection with logging to `guardrail_events` table
+- Reassurance loop detection (3+ similar requests in 7 days)
+- New guardrail event types: `self_sacrifice_detected`, `reassurance_loop_detected`
+
+**Schema Updates:**
+- User metadata fields: `lastSpikeFollowUpAt`, `proactiveOk`, `checkInFrequency`, `snoozeUntil`, `reassuranceLoopFlag`
+- Guardrail events support for new safety patterns
+- All changes backward-compatible with existing data
+
+**Implementation Notes:**
+- All features behind feature flags for controlled rollout
+- No linter errors, all code compiles successfully
+- Ready for production deployment with monitoring
+
 ### ✅ Testing & Infrastructure
 
 - Added a Twilio test stub so SMS sends succeed in CI without real credentials. When `TWILIO_ACCOUNT_SID/AUTH_TOKEN` are absent, outbound messages are recorded directly in the Twilio component tables, keeping simulation tests deterministic.

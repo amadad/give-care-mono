@@ -214,6 +214,57 @@ export const getUsersWithCheckIns = internalQuery({
 });
 
 /**
+ * Get recent inbound receipt for a user (to check if user has responded)
+ */
+export const getRecentInboundReceipt = internalQuery({
+  args: {
+    userId: v.id("users"),
+    since: v.number(), // Timestamp threshold
+  },
+  handler: async (ctx, { userId, since }) => {
+    // Query inbound_receipts for this user since threshold
+    // Limit to recent 100 receipts to prevent unbounded collection
+    // Filter in code since we need to check receivedAt >= since
+    const receipts = await ctx.db
+      .query("inbound_receipts")
+      .withIndex("by_user", (q) => q.eq("userId", userId))
+      .order("desc")
+      .take(100); // Safety limit
+
+    // Find most recent receipt after threshold
+    const recent = receipts
+      .filter((r) => r.receivedAt && r.receivedAt >= since)
+      .sort((a, b) => (b.receivedAt || 0) - (a.receivedAt || 0))[0];
+
+    return recent || null;
+  },
+});
+
+/**
+ * Get recent guardrail events for a user
+ */
+export const getRecentGuardrailEvents = internalQuery({
+  args: {
+    userId: v.id("users"),
+    since: v.number(),
+    type: v.optional(v.string()),
+  },
+  handler: async (ctx, { userId, since, type }) => {
+    // Limit to recent 200 events to prevent unbounded collection
+    // Filter in code since we need to check createdAt >= since and optional type
+    const events = await ctx.db
+      .query("guardrail_events")
+      .withIndex("by_user", (q) => q.eq("userId", userId))
+      .order("desc")
+      .take(200); // Safety limit
+
+    return events.filter(
+      (e) => e.createdAt >= since && (!type || e.type === type)
+    );
+  },
+});
+
+/**
  * Get inactive users for engagement monitoring
  * Returns users with lastEngagementDate > days ago who aren't already escalated
  * CONVEX_01.md: Single query, filter in code for small result sets

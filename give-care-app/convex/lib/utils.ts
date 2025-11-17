@@ -162,6 +162,28 @@ export function isUpdatePaymentRequest(text: string): boolean {
 }
 
 /**
+ * Check if message is EMA check-in keyword
+ */
+export function isEMACheckInKeyword(text: string): "daily" | "weekly" | "pause" | "resume" | null {
+  const upper = text.toUpperCase().trim();
+  
+  if (/\bDAILY\b/.test(upper)) {
+    return "daily";
+  }
+  if (/\bWEEKLY\b/.test(upper)) {
+    return "weekly";
+  }
+  if (/\bPAUSE\s+CHECKINS?\b/.test(upper) || /\bPAUSE\b/.test(upper)) {
+    return "pause";
+  }
+  if (/\bRESUME\b/.test(upper)) {
+    return "resume";
+  }
+  
+  return null;
+}
+
+/**
  * Check if user is accepting an assessment offer
  */
 export function isAssessmentAcceptance(text: string): boolean {
@@ -233,6 +255,34 @@ export function getCrisisResponse(isDVHint: boolean): string {
   }
 
   return baseResponse;
+}
+
+/**
+ * Detect self-sacrifice patterns
+ */
+export function detectSelfSacrifice(text: string): boolean {
+  const patterns = [
+    /\bI\s+can'?t\s+(?:ever\s+)?rest\b/i,
+    /\bI\s+don'?t\s+deserve\s+help\b/i,
+    /\bI\s+should\s+always\s+put\s+others\s+first\b/i,
+    /\bI\s+can'?t\s+take\s+a\s+break\b/i,
+    /\bI\s+must\s+always\s+be\s+there\b/i,
+    /\bI\s+can'?t\s+be\s+selfish\b/i,
+  ];
+  return patterns.some((pattern) => pattern.test(text));
+}
+
+/**
+ * Detect reassurance-seeking patterns
+ */
+export function detectReassuranceLoop(text: string): boolean {
+  const patterns = [
+    /\bare\s+you\s+sure\b/i,
+    /\bwhat\s+if\b/i,
+    /\bbut\s+what\s+about\b/i,
+    /\bare\s+you\s+certain\b/i,
+  ];
+  return patterns.some((pattern) => pattern.test(text));
 }
 
 /**

@@ -183,3 +183,49 @@ export const trackInterventionHelpfulness = createTool({
     return { success: true };
   },
 });
+
+/**
+ * 5. findInterventions - Recommend micro-interventions matched to user zones
+ */
+export const findInterventions = createTool({
+  description:
+    "Recommend 1-3 micro-interventions matched to user's pressure zones (P1-P6). Use after assessments or when zones are referenced in conversation.",
+  args: z.object({
+    zones: z
+      .array(z.string())
+      .describe("Pressure zones to match interventions (e.g., ['P1', 'P6'])"),
+    limit: z
+      .number()
+      .optional()
+      .describe("Maximum number of interventions to return (default: 3)"),
+  }),
+  handler: async (
+    ctx: ToolCtx,
+    args
+  ): Promise<{
+    interventions: Array<{
+      _id: string;
+      title: string;
+      description: string;
+      category: string;
+      duration: string;
+      content: string;
+    }>;
+  }> => {
+    const result = await ctx.runQuery(internal.interventions.findInterventions, {
+      zones: args.zones,
+      limit: args.limit || 3,
+    });
+
+    return {
+      interventions: result.map((intervention: any) => ({
+        _id: intervention._id,
+        title: intervention.title,
+        description: intervention.description,
+        category: intervention.category,
+        duration: intervention.duration,
+        content: intervention.content,
+      })),
+    };
+  },
+});

@@ -43,10 +43,26 @@ export const getByExternalIdQuery = query({
 
 /**
  * List all subscriptions (admin query)
+ * Requires authentication - admin only
  */
 export const listSubscriptions = query({
-  args: {},
-  handler: async (ctx) => {
-    return await ctx.db.query("subscriptions").collect();
+  args: {
+    limit: v.optional(v.number()),
+  },
+  handler: async (ctx, { limit = 100 }) => {
+    // Access control: require authentication
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) {
+      throw new Error("Unauthorized: Authentication required");
+    }
+
+    // TODO: Add admin check if you have admin role system
+    // For now, any authenticated user can access (restrict further if needed)
+
+    // Limit results to prevent unbounded queries
+    // Note: Cannot use .order() without an index - using .take() only
+    return await ctx.db
+      .query("subscriptions")
+      .take(limit);
   },
 });

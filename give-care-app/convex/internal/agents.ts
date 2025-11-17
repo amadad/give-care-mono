@@ -9,7 +9,13 @@ import { mainAgent, assessmentAgent } from "../agents";
 import { components } from "../_generated/api";
 import { createThread, saveMessage } from "@convex-dev/agent";
 import { internal } from "../_generated/api";
-import { detectCrisis, getCrisisResponse, extractProfileData } from "../lib/utils";
+import {
+  detectCrisis,
+  getCrisisResponse,
+  extractProfileData,
+  detectSelfSacrifice,
+  detectReassuranceLoop,
+} from "../lib/utils";
 
 /**
  * Process message through Main Agent
@@ -41,6 +47,61 @@ export const processMainAgentMessage = internalAction({
           userId,
           field,
           value,
+        });
+      }
+    }
+
+    // Guardrail detection: self-sacrifice and reassurance loops
+    const hasSelfSacrifice = detectSelfSacrifice(body);
+    if (hasSelfSacrifice) {
+      await ctx.runMutation(internal.internal.learning.logGuardrailEvent, {
+        userId,
+        type: "self_sacrifice",
+        severity: "medium",
+        context: { message: body, timestamp: Date.now() },
+      });
+    }
+
+    // Check for reassurance loop (3+ similar questions in 24h)
+    const twentyFourHoursAgo = Date.now() - 24 * 60 * 60 * 1000;
+    const recentMessages = await ctx.runQuery(
+      internal.internal.users.getRecentInboundReceipt,
+      {
+        userId,
+        since: twentyFourHoursAgo,
+      }
+    );
+
+    const hasReassurancePattern = detectReassuranceLoop(body);
+    if (hasReassurancePattern) {
+      // Count similar reassurance patterns in last 24h
+      // Simplified: if this is a reassurance pattern, check if user has asked similar questions
+      // In production, would check message content similarity
+      await ctx.runMutation(internal.internal.learning.logGuardrailEvent, {
+        userId,
+        type: "reassurance_loop",
+        severity: "low",
+        context: { message: body, timestamp: Date.now() },
+      });
+
+      // Set reassurance loop flag after 3+ instances
+      const recentReassuranceEvents = await ctx.runQuery(
+        internal.internal.users.getRecentGuardrailEvents,
+        {
+          userId,
+          since: twentyFourHoursAgo,
+          type: "reassurance_loop",
+        }
+      );
+
+      if (recentReassuranceEvents && recentReassuranceEvents.length >= 2) {
+        // 3rd instance (this one + 2 previous) - set flag
+        const user = await ctx.runQuery(internal.internal.users.getUser, { userId });
+        const metadata = user?.metadata || {};
+        await ctx.runMutation(internal.internal.users.updateProfile, {
+          userId,
+          field: "reassuranceLoopFlag",
+          value: true,
         });
       }
     }
@@ -200,7 +261,11 @@ export const handleCrisisDetection = internalMutation({
       isDVHint: crisisResult.isDVHint,
     });
 
-    // Note: Crisis follow-up removed as part of simplification
-    // Future: Can add back if needed via check-in workflow
+    // Schedule crisis follow-up at T+24 hours
+    await ctx.scheduler.runAfter(
+      24 * 60 * 60 * 1000, // 24 hours in milliseconds
+      internal.internal.sms.sendCrisisFollowUpMessage,
+      { userId }
+    );
   },
 });

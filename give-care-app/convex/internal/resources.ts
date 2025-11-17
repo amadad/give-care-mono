@@ -130,10 +130,12 @@ export const cleanupExpiredCache = internalMutation({
   args: {},
   handler: async (ctx) => {
     const now = Date.now();
+    // Limit to prevent unbounded collection (safety limit)
+    // Cleanup should run frequently, so processing 1000 at a time is reasonable
     const expired = await ctx.db
       .query("resource_cache")
       .withIndex("by_expiresAt", (q) => q.lt("expiresAt", now))
-      .collect();
+      .take(1000); // Safety limit
 
     for (const entry of expired) {
       await ctx.db.delete(entry._id);

@@ -15,6 +15,7 @@ import {
   startAssessment,
   recordObservation,
   trackInterventionHelpfulness,
+  findInterventions,
 } from "./tools";
 
 /**
@@ -32,6 +33,7 @@ export const mainAgent = new Agent(components.agent, {
     startAssessment,
     recordObservation,
     trackInterventionHelpfulness,
+    findInterventions,
   },
   maxSteps: 5, // Allows tool chaining
 });
@@ -48,6 +50,7 @@ export const assessmentAgent = new Agent(components.agent, {
   instructions: ASSESSMENT_PROMPT,
   tools: {
     getResources, // Assessment agent can suggest resources after scoring
+    findInterventions, // Assessment agent can suggest interventions after scoring
   },
   maxSteps: 2, // Scoring + interpretation
 });
