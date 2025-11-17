@@ -10,14 +10,7 @@ import { z } from "zod";
 import { internal } from "./_generated/api";
 import type { ToolCtx } from "@convex-dev/agent";
 import { Id } from "./_generated/dataModel";
-
-/**
- * Extract ZIP code from query string (inline helper)
- */
-function extractZipFromQuery(query: string): string | null {
-  const zipMatch = query.match(/\b\d{5}\b/);
-  return zipMatch ? zipMatch[0] : null;
-}
+import { extractZipFromQuery } from "./lib/utils";
 
 /**
  * 1. getResources - Resource search with graceful degradation

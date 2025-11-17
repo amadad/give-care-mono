@@ -7,7 +7,6 @@
 export * as inbound from "./inbound";
 
 // Re-export internal modules
-export * as core from "./internal/core";
 export * as agents from "./internal/agents";
 export * as sms from "./internal/sms";
 export * as users from "./internal/users";
@@ -17,7 +16,6 @@ export * as resources from "./internal/resources";
 export * as stripe from "./internal/stripe";
 export * as stripeActions from "./internal/stripeActions";
 export * as subscriptions from "./internal/subscriptions";
-export * as events from "./internal/events";
 export * as cleanup from "./internal/cleanup";
 export * as twilioMutations from "./internal/twilioMutations";
 export * as agentRuns from "./internal/agentRuns";

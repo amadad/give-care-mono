@@ -28,6 +28,22 @@ export declare const api: {
       any
     >;
   };
+  auth: {
+    isAuthenticated: FunctionReference<"query", "public", {}, any>;
+    signIn: FunctionReference<
+      "action",
+      "public",
+      {
+        calledBy?: string;
+        params?: any;
+        provider?: string;
+        refreshToken?: string;
+        verifier?: string;
+      },
+      any
+    >;
+    signOut: FunctionReference<"action", "public", {}, any>;
+  };
   interventions: {
     getInterventionsByZones: FunctionReference<
       "query",
@@ -37,6 +53,12 @@ export declare const api: {
     >;
   };
   public: {
+    checkRateLimitStatus: FunctionReference<
+      "query",
+      "public",
+      { userId: Id<"users"> },
+      any
+    >;
     getByExternalIdQuery: FunctionReference<
       "query",
       "public",
@@ -79,18 +101,6 @@ export declare const api: {
       any
     >;
   };
-  wellness: {
-    getWellnessStatus: FunctionReference<
-      "query",
-      "public",
-      { userId: Id<"users"> },
-      any
-    >;
-    listAlerts: FunctionReference<"query", "public", { limit?: number }, any>;
-    listEvents: FunctionReference<"query", "public", { limit?: number }, any>;
-    listScores: FunctionReference<"query", "public", { limit?: number }, any>;
-    listUsers: FunctionReference<"query", "public", { limit?: number }, any>;
-  };
 };
 
 /**
@@ -116,6 +126,74 @@ export declare const internal: {
         answer: number | "skip";
         sessionId: Id<"assessment_sessions">;
         userId: Id<"users">;
+      },
+      any
+    >;
+  };
+  auth: {
+    store: FunctionReference<
+      "mutation",
+      "internal",
+      {
+        args:
+          | {
+              generateTokens: boolean;
+              sessionId?: Id<"authSessions">;
+              type: "signIn";
+              userId: Id<"users">;
+            }
+          | { type: "signOut" }
+          | { refreshToken: string; type: "refreshSession" }
+          | {
+              allowExtraProviders: boolean;
+              generateTokens: boolean;
+              params: any;
+              provider?: string;
+              type: "verifyCodeAndSignIn";
+              verifier?: string;
+            }
+          | { type: "verifier" }
+          | { signature: string; type: "verifierSignature"; verifier: string }
+          | {
+              profile: any;
+              provider: string;
+              providerAccountId: string;
+              signature: string;
+              type: "userOAuth";
+            }
+          | {
+              accountId?: Id<"authAccounts">;
+              allowExtraProviders: boolean;
+              code: string;
+              email?: string;
+              expirationTime: number;
+              phone?: string;
+              provider: string;
+              type: "createVerificationCode";
+            }
+          | {
+              account: { id: string; secret?: string };
+              profile: any;
+              provider: string;
+              shouldLinkViaEmail?: boolean;
+              shouldLinkViaPhone?: boolean;
+              type: "createAccountFromCredentials";
+            }
+          | {
+              account: { id: string; secret?: string };
+              provider: string;
+              type: "retrieveAccountWithCredentials";
+            }
+          | {
+              account: { id: string; secret: string };
+              provider: string;
+              type: "modifyAccount";
+            }
+          | {
+              except?: Array<Id<"authSessions">>;
+              type: "invalidateSessions";
+              userId: Id<"users">;
+            };
       },
       any
     >;
@@ -222,40 +300,6 @@ export declare const internal: {
         "query",
         "internal",
         { cutoffTime: number; userId: Id<"users"> },
-        any
-      >;
-    };
-    core: {
-      ensureUserMutation: FunctionReference<
-        "mutation",
-        "internal",
-        {
-          channel: "sms" | "email" | "web";
-          email?: string;
-          externalId: string;
-          name?: string;
-          phone?: string;
-        },
-        any
-      >;
-      getUserById: FunctionReference<
-        "query",
-        "internal",
-        { userId: Id<"users"> },
-        any
-      >;
-      updateUserMetadata: FunctionReference<
-        "mutation",
-        "internal",
-        { metadata: any; userId: Id<"users"> },
-        any
-      >;
-    };
-    events: {
-      emitResourceSearch: FunctionReference<
-        "mutation",
-        "internal",
-        { category: string; query: string; userId: Id<"users">; zip: string },
         any
       >;
     };

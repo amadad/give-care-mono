@@ -286,6 +286,14 @@ export function detectReassuranceLoop(text: string): boolean {
 }
 
 /**
+ * Extract ZIP code from query string
+ */
+export function extractZipFromQuery(query: string): string | null {
+  const zipMatch = query.match(/\b\d{5}\b/);
+  return zipMatch ? zipMatch[0] : null;
+}
+
+/**
  * Extract profile data from message text (deterministic preprocessing)
  * Returns field-value pairs to auto-save before agent processing
  * This ensures data is captured even if agent doesn't use tools

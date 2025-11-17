@@ -13,14 +13,7 @@ import { internal } from "./_generated/api";
 import { searchWithMapsGrounding } from "./lib/maps";
 import { findWorstZone } from "./lib/scoreCalculator";
 import { getZoneDisplayName } from "./lib/sdoh";
-
-/**
- * Extract ZIP code from query string (inline helper)
- */
-function extractZipFromQuery(query: string): string | null {
-  const zipMatch = query.match(/\b\d{5}\b/);
-  return zipMatch ? zipMatch[0] : null;
-}
+import { extractZipFromQuery } from "./lib/utils";
 
 /**
  * National resources (hardcoded list for graceful degradation)
