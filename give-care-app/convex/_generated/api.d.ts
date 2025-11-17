@@ -71,6 +71,7 @@ export declare const api: {
       { userId: Id<"users"> },
       any
     >;
+    listAccounts: FunctionReference<"query", "public", { limit?: number }, any>;
     listAlerts: FunctionReference<"query", "public", { limit?: number }, any>;
     listEvents: FunctionReference<"query", "public", { limit?: number }, any>;
     listScores: FunctionReference<"query", "public", { limit?: number }, any>;
