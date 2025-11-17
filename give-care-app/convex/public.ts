@@ -51,14 +51,7 @@ export const listSubscriptions = query({
     limit: v.optional(v.number()),
   },
   handler: async (ctx, { limit = 100 }) => {
-    // Access control: require authentication
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) {
-      throw new Error("Unauthorized: Authentication required");
-    }
-
-    // TODO: Add admin check if you have admin role system
-    // For now, any authenticated user can access (restrict further if needed)
+    await checkAdminAccess(ctx);
 
     // Limit results to prevent unbounded queries
     // Note: Cannot use .order() without an index - using .take() only
@@ -113,6 +106,31 @@ export const resetRateLimiter = mutation({
 });
 
 /**
+ * Admin email whitelist
+ * Only these emails can access the admin dashboard
+ */
+const ADMIN_EMAILS = [
+  "ali@scty.org",
+  "ali@givecareapp.com",
+  // Add more admin emails here as needed
+];
+
+/**
+ * Check if current user is admin
+ */
+async function checkAdminAccess(ctx: any): Promise<void> {
+  const identity = await ctx.auth.getUserIdentity();
+  if (!identity) {
+    throw new Error("Unauthorized: Authentication required");
+  }
+
+  const email = identity.email;
+  if (!email || !ADMIN_EMAILS.includes(email)) {
+    throw new Error("Unauthorized: Admin access only. Contact administrator to request access.");
+  }
+}
+
+/**
  * List all users (admin query)
  * Requires authentication - admin only
  */
@@ -121,11 +139,7 @@ export const listUsers = query({
     limit: v.optional(v.number()),
   },
   handler: async (ctx, { limit = 100 }) => {
-    // Access control: require authentication
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) {
-      throw new Error("Unauthorized: Authentication required");
-    }
+    await checkAdminAccess(ctx);
 
     // Limit results to prevent unbounded queries
     // Note: Cannot use .order() without an index - using .take() only
@@ -144,11 +158,7 @@ export const listScores = query({
     limit: v.optional(v.number()),
   },
   handler: async (ctx, { limit = 100 }) => {
-    // Access control: require authentication
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) {
-      throw new Error("Unauthorized: Authentication required");
-    }
+    await checkAdminAccess(ctx);
 
     // Limit results to prevent unbounded queries
     // Note: Cannot use .order() without an index - using .take() only
@@ -167,11 +177,7 @@ export const listAlerts = query({
     limit: v.optional(v.number()),
   },
   handler: async (ctx, { limit = 100 }) => {
-    // Access control: require authentication
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) {
-      throw new Error("Unauthorized: Authentication required");
-    }
+    await checkAdminAccess(ctx);
 
     // Limit results to prevent unbounded queries
     // Note: Cannot use .order() without an index - using .take() only
@@ -190,11 +196,7 @@ export const listEvents = query({
     limit: v.optional(v.number()),
   },
   handler: async (ctx, { limit = 100 }) => {
-    // Access control: require authentication
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) {
-      throw new Error("Unauthorized: Authentication required");
-    }
+    await checkAdminAccess(ctx);
 
     // Limit results to prevent unbounded queries
     // Note: Cannot use .order() without an index - using .take() only

@@ -178,6 +178,12 @@ export declare const internal: {
     >;
   };
   auth: {
+    ensureAdminUserFields: FunctionReference<
+      "mutation",
+      "internal",
+      { userId: Id<"users"> },
+      any
+    >;
     store: FunctionReference<
       "mutation",
       "internal",

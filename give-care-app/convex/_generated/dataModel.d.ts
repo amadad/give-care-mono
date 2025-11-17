@@ -816,7 +816,7 @@ export type DataModel = {
         postalCode?: string;
         state?: string;
       };
-      channel: "sms" | "email" | "web";
+      channel?: "sms" | "email" | "web";
       consent?: { emergency: boolean; marketing: boolean };
       emaEnabled?: boolean;
       email?: string;
@@ -825,7 +825,7 @@ export type DataModel = {
       lastEMA?: number;
       lastEngagementDate?: number;
       lastSDOH?: number;
-      locale: string;
+      locale?: string;
       metadata?: {
         careRecipient?: string;
         careRecipientName?: string;

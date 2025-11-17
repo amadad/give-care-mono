@@ -11,6 +11,29 @@ import { calculateZoneAverage } from "./lib/scoreCalculator";
 import { getRiskLevel, getBandFromRiskLevel } from "./lib/sdoh";
 
 /**
+ * Admin email whitelist (matches public.ts)
+ */
+const ADMIN_EMAILS = [
+  "ali@scty.org",
+  "ali@givecareapp.com",
+];
+
+/**
+ * Check if current user is admin
+ */
+async function checkAdminAccess(ctx: any): Promise<void> {
+  const identity = await ctx.auth.getUserIdentity();
+  if (!identity) {
+    throw new Error("Unauthorized: Authentication required");
+  }
+
+  const email = identity.email;
+  if (!email || !ADMIN_EMAILS.includes(email)) {
+    throw new Error("Unauthorized: Admin access only. Contact administrator to request access.");
+  }
+}
+
+/**
  * List all assessments (admin query)
  * Requires authentication - admin only
  */
@@ -19,14 +42,7 @@ export const listAssessments = query({
     limit: v.optional(v.number()),
   },
   handler: async (ctx, { limit = 100 }) => {
-    // Access control: require authentication
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) {
-      throw new Error("Unauthorized: Authentication required");
-    }
-
-    // TODO: Add admin check if you have admin role system
-    // For now, any authenticated user can access (restrict further if needed)
+    await checkAdminAccess(ctx);
 
     // Limit results to prevent unbounded queries
     // Note: Cannot use .order() without an index - using .take() only
