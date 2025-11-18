@@ -258,6 +258,30 @@ export function getCrisisResponse(isDVHint: boolean): string {
 }
 
 /**
+ * Normalize phone number to E.164 format
+ * Preserves Twilio-style E.164 input, adds +1 for US 10/11-digit numbers
+ */
+export function normalizePhone(phoneNumber: string): string {
+  if (phoneNumber.startsWith("+")) {
+    // Already E.164 format
+    return phoneNumber;
+  }
+
+  const digits = phoneNumber.replace(/\D/g, "");
+  if (digits.length === 10) {
+    // US 10-digit number → +1 prefix
+    return `+1${digits}`;
+  }
+  if (digits.length === 11 && digits[0] === "1") {
+    // US 11-digit number with leading country code
+    return `+${digits}`;
+  }
+
+  // Fallback: use as-is if it doesn't match expected patterns
+  return phoneNumber;
+}
+
+/**
  * Detect self-sacrifice patterns
  */
 export function detectSelfSacrifice(text: string): boolean {

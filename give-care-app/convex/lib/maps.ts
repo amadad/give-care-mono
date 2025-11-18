@@ -2,69 +2,17 @@
 
 /**
  * Google Maps Grounding via Gemini API
- * 
- * Uses Gemini Maps Grounding to find real caregiving resources.
+ * Natural query interpretation - NO forced categories
+ *
  * See: https://ai.google.dev/gemini-api/docs/maps-grounding
- * 
- * Following official Gemini API docs pattern with @google/genai SDK
  */
 
 import { GoogleGenAI } from '@google/genai';
 
 export interface LocationData {
-  zipCode?: string;
+  zipCode: string;
   latitude?: number;
   longitude?: number;
-}
-
-/**
- * Map pressure zones to human-readable service categories
- */
-const ZONE_TO_SERVICE_MAP: Record<string, string> = {
-  P1: 'social support and caregiver peer groups',
-  P2: 'respite care and in-home healthcare',
-  P3: 'housing assistance and home modification',
-  P4: 'financial aid and benefits counseling',
-  P5: 'legal aid and care navigation',
-  P6: 'mental health and counseling',
-};
-
-/**
- * Build caregiving-specific query (inline helper)
- */
-function buildCaregivingQuery(query: string, category: string, zipCode: string, zones?: string[]): string {
-  let enhancedQuery = `Find ${category || 'caregiving'} resources`;
-
-  // Map zone codes (P1, P2, etc.) to human-readable service names
-  if (zones && zones.length > 0) {
-    const serviceTypes = zones
-      .map(zone => ZONE_TO_SERVICE_MAP[zone] || zone)
-      .join(', ');
-    enhancedQuery += ` for ${serviceTypes}`;
-  }
-
-  enhancedQuery += ` near ${zipCode}`;
-  return enhancedQuery;
-}
-
-/**
- * Format resources for SMS (inline helper)
- * Includes Google Maps Place ID links when available
- */
-function formatResourcesForSMS(
-  resources: Array<{ placeId?: string; name: string; address?: string }>,
-  category: string
-): string {
-  const lines = resources.slice(0, 3).map((r, i) => {
-    const num = i + 1;
-    const addr = r.address ? ` - ${r.address}` : '';
-    // Add Google Maps link if placeId available
-    const mapsLink = r.placeId
-      ? `\n   https://www.google.com/maps/search/?api=1&query_place_id=${r.placeId}`
-      : '';
-    return `${num}. ${r.name}${addr}${mapsLink}`;
-  });
-  return `Found ${resources.length} ${category} resources:\n${lines.join('\n')}`;
 }
 
 export interface MapsGroundingResult {
@@ -72,24 +20,24 @@ export interface MapsGroundingResult {
     placeId: string;
     name: string;
     address?: string;
+    uri?: string;
     types?: string[];
   }>;
   widgetToken?: string;
-  text: string; // Formatted for SMS
+  text: string; // Formatted response
+  searchQuery: string; // The actual query used
 }
 
-const MAPS_FETCH_TIMEOUT_MS = 3000; // 3 seconds timeout
+const MAPS_FETCH_TIMEOUT_MS = 5000; // 5 seconds timeout
 
 /**
- * Search using Google Maps Grounding
- * Following official Gemini API docs pattern
+ * Search using Google Maps Grounding with natural query
+ * Gemini interprets the query and uses Maps when geographically relevant
  */
 export async function searchWithMapsGrounding(
   query: string,
-  category: string,
   location: LocationData,
-  timeoutMs: number = MAPS_FETCH_TIMEOUT_MS,
-  zones?: string[]
+  timeoutMs: number = MAPS_FETCH_TIMEOUT_MS
 ): Promise<MapsGroundingResult> {
   const apiKey = process.env.GOOGLE_GENERATIVE_AI_API_KEY || process.env.GEMINI_API_KEY;
   if (!apiKey) {
@@ -98,19 +46,16 @@ export async function searchWithMapsGrounding(
 
   const ai = new GoogleGenAI({ apiKey });
 
-  // Build caregiving-specific query with zone refinements
-  if (!location.zipCode) {
-    throw new Error("Zip code is required for Maps Grounding");
-  }
-  const mapsQuery = buildCaregivingQuery(query, category, location.zipCode, zones);
+  // Build natural query with location context
+  const searchQuery = `${query} near ${location.zipCode}`;
 
   // Config per official docs
   const config: any = {
-    tools: [{ googleMaps: {} }],
-    maxOutputTokens: 200, // Optimize for speed
+    tools: [{ googleMaps: { enableWidget: true } }],
+    maxOutputTokens: 500,
   };
 
-  // Add location context if available (per best practices)
+  // Add lat/lng context if available (improves accuracy)
   if (location.latitude && location.longitude) {
     config.toolConfig = {
       retrievalConfig: {
@@ -128,8 +73,8 @@ export async function searchWithMapsGrounding(
   });
 
   const apiPromise = ai.models.generateContent({
-    model: "gemini-2.5-flash-lite", // Fast model
-    contents: mapsQuery,
+    model: "gemini-2.5-flash-lite",
+    contents: searchQuery,
     config,
   });
 
@@ -138,15 +83,15 @@ export async function searchWithMapsGrounding(
   // Extract grounding metadata
   const candidate = response.candidates?.[0];
   if (!candidate) {
-    throw new Error("No response candidate");
+    throw new Error("No response candidate from Maps Grounding");
   }
 
   const groundingMetadata = candidate.groundingMetadata as any;
   if (!groundingMetadata?.groundingChunks) {
-    throw new Error("No Maps Grounding results");
+    throw new Error("No Maps Grounding results found");
   }
 
-  // Extract placeIds (policy-compliant: only store place_id, name, types)
+  // Extract place data (policy-compliant: placeId, name, address, types)
   const resources = groundingMetadata.groundingChunks
     .filter((chunk: any) => chunk.maps)
     .map((chunk: any) => {
@@ -155,16 +100,43 @@ export async function searchWithMapsGrounding(
         placeId: maps.placeId || maps.id || '',
         name: maps.title || maps.name || 'Unknown',
         address: maps.formattedAddress || maps.address,
+        uri: maps.uri,
         types: maps.types || [],
       };
     })
-    .filter((r: any) => r.placeId); // Only include resources with placeId
+    .filter((r: any) => r.placeId); // Only include valid places
 
   const widgetToken = groundingMetadata.googleMapsWidgetContextToken;
 
-  // Format for SMS (<160 chars per item, Google Maps attribution)
-  const text = formatResourcesForSMS(resources, category);
+  // Get response text
+  const text = candidate.content?.parts?.[0]?.text ||
+    formatPlacesForSMS(resources);
 
-  return { resources, widgetToken, text };
+  return {
+    resources,
+    widgetToken,
+    text,
+    searchQuery,
+  };
 }
 
+/**
+ * Format places for SMS display
+ * Fallback if Gemini doesn't provide formatted text
+ */
+function formatPlacesForSMS(
+  places: Array<{ name: string; address?: string; uri?: string }>
+): string {
+  if (places.length === 0) {
+    return "No locations found.";
+  }
+
+  const lines = places.slice(0, 3).map((place, i) => {
+    const num = i + 1;
+    const addr = place.address ? `\n   ${place.address}` : '';
+    const link = place.uri ? `\n   ${place.uri}` : '';
+    return `${num}. ${place.name}${addr}${link}`;
+  });
+
+  return `Found ${places.length} location${places.length > 1 ? 's' : ''}:\n${lines.join('\n\n')}`;
+}

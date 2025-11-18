@@ -4,6 +4,8 @@
 
 import { internalMutation, internalQuery } from "../_generated/server";
 import { v } from "convex/values";
+import { normalizePhone } from "../lib/utils";
+import { computeAccessScenario } from "./subscriptions";
 
 /**
  * Create or update user from signup form
@@ -16,20 +18,7 @@ export const upsertUserFromSignup = internalMutation({
     name: v.string(),
   },
   handler: async (ctx, { phone, email, name }) => {
-    // Normalize phone to E.164 format
-    let normalized: string;
-    if (phone.startsWith("+")) {
-      normalized = phone;
-    } else {
-      const digits = phone.replace(/\D/g, "");
-      if (digits.length === 10) {
-        normalized = `+1${digits}`;
-      } else if (digits.length === 11 && digits[0] === "1") {
-        normalized = `+${digits}`;
-      } else {
-        normalized = phone;
-      }
-    }
+    const normalized = normalizePhone(phone);
 
     // Try to find existing user by phone
     const existing = await ctx.db
@@ -167,16 +156,12 @@ export const getUsersWithCheckIns = internalQuery({
         continue; // No check-in frequency set
       }
 
-      // Get last EMA assessment completion date
-      const lastEMA = await ctx.db
-        .query("assessments")
-        .withIndex("by_user_and_type", (q) =>
-          q.eq("userId", user._id).eq("definitionId", "ema")
-        )
-        .order("desc")
-        .first();
-
-      const lastCheckInDate = lastEMA?.completedAt || 0;
+      // Use lastEMA timestamp instead of per-user assessment query
+      const lastEMA =
+        user.lastEMA ||
+        (metadata as any)?.lastEMA ||
+        0;
+      const lastCheckInDate = lastEMA;
       const hoursSinceCheckIn = (now - lastCheckInDate) / (1000 * 60 * 60);
 
       // Check eligibility based on frequency
@@ -190,19 +175,14 @@ export const getUsersWithCheckIns = internalQuery({
       }
 
       if (isEligible) {
-        // Check subscription access (only active users)
+        // Check subscription access (only active or grace-period users)
         const subscription = await ctx.db
           .query("subscriptions")
           .withIndex("by_user", (q) => q.eq("userId", user._id))
           .first();
+        const access = computeAccessScenario(subscription);
 
-        const hasAccess =
-          subscription?.status === "active" ||
-          (subscription?.status === "canceled" &&
-            subscription.gracePeriodEndsAt &&
-            Date.now() < subscription.gracePeriodEndsAt);
-
-        if (hasAccess) {
+        if (access.hasAccess) {
           eligibleUsers.push({ _id: user._id });
         }
       }
@@ -299,19 +279,14 @@ export const getInactiveUsers = internalQuery({
       // Note: engagementFlags removed as part of simplification
       // All users are eligible for check-ins if they meet other criteria
 
-      // Check subscription access (only active users)
+      // Check subscription access (only active or grace-period users)
       const subscription = await ctx.db
         .query("subscriptions")
         .withIndex("by_user", (q) => q.eq("userId", user._id))
         .first();
+      const access = computeAccessScenario(subscription);
 
-      const hasAccess =
-        subscription?.status === "active" ||
-        (subscription?.status === "canceled" &&
-          subscription.gracePeriodEndsAt &&
-          Date.now() < subscription.gracePeriodEndsAt);
-
-      if (hasAccess) {
+      if (access.hasAccess) {
         eligibleUsers.push({ _id: user._id });
       }
     }

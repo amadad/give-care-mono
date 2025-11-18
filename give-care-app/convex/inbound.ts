@@ -16,65 +16,16 @@ import {
   isBillingRequest,
   isUpdatePaymentRequest,
   isEMACheckInKeyword,
+  getCrisisResponse,
+  normalizePhone,
 } from "./lib/utils";
-import { getCrisisResponse } from "./lib/utils";
 import type { Id } from "./_generated/dataModel";
+import { computeAccessScenario } from "./internal/subscriptions";
 
 // Inlined feature flags
 const FEATURES = {
   SUBSCRIPTION_GATING: process.env.SUBSCRIPTIONS_ENABLED === "true",
 } as const;
-import type { MutationCtx } from "./_generated/server";
-
-/**
- * Check subscription access (inline - was in subscriptionService)
- * Returns access status and scenario for messaging
- */
-async function checkSubscriptionAccess(
-  ctx: MutationCtx,
-  userId: Id<"users">
-): Promise<{
-  hasAccess: boolean;
-  scenario: "new_user" | "active" | "grace_period" | "grace_expired" | "past_due" | "incomplete" | "unknown";
-  gracePeriodEndsAt?: number;
-}> {
-  const subscription = await ctx.db
-    .query("subscriptions")
-    .withIndex("by_user", (q) => q.eq("userId", userId))
-    .first();
-
-  if (!subscription) {
-    return { hasAccess: false, scenario: "new_user" };
-  }
-
-  const now = Date.now();
-
-  // Active subscription
-  if (subscription.status === "active") {
-    return { hasAccess: true, scenario: "active" };
-  }
-
-  // Canceled but in grace period
-  if (subscription.status === "canceled" && subscription.gracePeriodEndsAt) {
-    if (now < subscription.gracePeriodEndsAt) {
-      return {
-        hasAccess: true,
-        scenario: "grace_period",
-        gracePeriodEndsAt: subscription.gracePeriodEndsAt,
-      };
-    } else {
-      return { hasAccess: false, scenario: "grace_expired" };
-    }
-  }
-
-  // Past due
-  if (subscription.status === "past_due") {
-    return { hasAccess: false, scenario: "past_due" };
-  }
-
-  // Unknown/other status
-  return { hasAccess: false, scenario: "unknown" };
-}
 
 /**
  * Handle incoming message from Twilio Component
@@ -228,7 +179,11 @@ export const handleIncomingMessage = internalMutation({
 
     // Step 8: Check subscription access (crisis bypasses this, feature flag controls gating)
     if (FEATURES.SUBSCRIPTION_GATING) {
-      const access = await checkSubscriptionAccess(ctx, user._id);
+      const subscription = await ctx.db
+        .query("subscriptions")
+        .withIndex("by_user", (q) => q.eq("userId", user._id))
+        .first();
+      const access = computeAccessScenario(subscription);
       if (!access.hasAccess) {
         // No access - send appropriate message based on scenario
         await ctx.scheduler.runAfter(0, internal.twilioMutations.sendSubscriptionMessageAction, {
@@ -261,23 +216,7 @@ export const handleIncomingMessage = internalMutation({
  */
 async function getUserOrCreate(ctx: any, phoneNumber: string): Promise<any> {
   // Normalize phone number to E.164 format
-  // Twilio sends E.164 format (+1XXXXXXXXXX), preserve it
-  let normalized: string;
-  if (phoneNumber.startsWith("+")) {
-    // Already E.164 format
-    normalized = phoneNumber;
-  } else {
-    // Add +1 prefix for US numbers (remove all non-digits first)
-    const digits = phoneNumber.replace(/\D/g, "");
-    if (digits.length === 10) {
-      normalized = `+1${digits}`;
-    } else if (digits.length === 11 && digits[0] === "1") {
-      normalized = `+${digits}`;
-    } else {
-      // Fallback: use as-is if doesn't match expected format
-      normalized = phoneNumber;
-    }
-  }
+  const normalized = normalizePhone(phoneNumber);
 
   // Try to find existing user by phone
   const existing = await ctx.db

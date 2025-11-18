@@ -1,8 +1,12 @@
 /**
- * Resource Search
- * Google Maps Grounding API integration (policy-compliant)
- * 
- * Following Convex Pattern: Action → Query → Mutation
+ * AI-Native Resource Search
+ * Zero hardcoded resources - pure AI-powered intent interpretation
+ *
+ * Architecture:
+ * 1. Interpret intent → Map to SDOH zones
+ * 2. Has ZIP? → Maps Grounding (local)
+ * 3. No ZIP? → Search Grounding or Gemini knowledge (national)
+ * 4. Tiered search with graceful fallback
  */
 
 "use node";
@@ -10,151 +14,162 @@
 import { internalAction } from "./_generated/server";
 import { v } from "convex/values";
 import { internal } from "./_generated/api";
+import { interpretSearchIntent, getZoneDisplayName } from "./lib/intentInterpreter";
 import { searchWithMapsGrounding } from "./lib/maps";
-import { findWorstZone } from "./lib/scoreCalculator";
-import { getZoneDisplayName } from "./lib/sdoh";
-import { extractZipFromQuery } from "./lib/utils";
+import { tieredSearch } from "./lib/search";
 
 /**
- * National resources (hardcoded list for graceful degradation)
- * Expanded categories for common caregiving needs
- */
-const NATIONAL_RESOURCES: Record<string, string[]> = {
-  respite: [
-    "Family Caregiver Alliance: caregiver.org",
-    "ARCH National Respite: archrespite.org",
-    "National Respite Locator: archrespite.org/respitelocator",
-  ],
-  support: [
-    "Family Caregiver Alliance: caregiver.org",
-    "AARP Caregiving: aarp.org/caregiving",
-    "Caregiver Action Network: caregiveraction.org",
-  ],
-  meals: [
-    "Meals on Wheels: mealsonwheelsamerica.org",
-    "Elderly Nutrition Program: acl.gov/programs/health-wellness/nutrition-services",
-    "211 Food Assistance: 211.org",
-  ],
-  transport: [
-    "Eldercare Locator: eldercare.acl.gov",
-    "National Aging and Disability Transportation Center: nadtc.org",
-    "211 Transportation: 211.org",
-  ],
-  home_care: [
-    "Eldercare Locator: eldercare.acl.gov",
-    "Aging and Disability Resource Centers: adrc-tae.org",
-    "211 Home Care: 211.org",
-  ],
-  day_programs: [
-    "Eldercare Locator: eldercare.acl.gov",
-    "Adult Day Services Association: nadsa.org",
-    "211 Adult Day Care: 211.org",
-  ],
-  hospice: [
-    "National Hospice and Palliative Care Organization: nhpco.org",
-    "Hospice Foundation of America: hospicefoundation.org",
-    "211 Hospice: 211.org",
-  ],
-  memory_care: [
-    "Alzheimer's Association: alz.org",
-    "Alzheimer's Foundation of America: alzfdn.org",
-    "211 Memory Care: 211.org",
-  ],
-  legal_help: [
-    "Elder Law Answers: elderlawanswers.com",
-    "National Academy of Elder Law Attorneys: naela.org",
-    "211 Legal Assistance: 211.org",
-  ],
-  financial_aid: [
-    "Benefits.gov: benefits.gov",
-    "Eldercare Locator: eldercare.acl.gov",
-    "211 Financial Assistance: 211.org",
-  ],
-  default: [
-    "Family Caregiver Alliance: caregiver.org",
-    "AARP Caregiving: aarp.org/caregiving",
-    "National Alliance for Caregiving: caregiving.org",
-  ],
-};
-
-function getNationalResources(category?: string): string[] {
-  return NATIONAL_RESOURCES[category || "default"] || NATIONAL_RESOURCES.default;
-}
-
-/**
- * Search resources with graceful degradation
- * No ZIP → national resources, Has ZIP → local, Has score → targeted by worst zone
+ * AI-Native Resource Search
+ * Interprets user intent and finds relevant resources dynamically
  */
 export const searchResources = internalAction({
   args: {
     userId: v.id("users"),
     query: v.string(),
-    category: v.optional(v.string()),
+    category: v.optional(v.string()), // Legacy - ignored
     zipCode: v.optional(v.string()),
-    zone: v.optional(v.string()), // P1-P6 zone for targeted resources
-    hasScore: v.optional(v.boolean()), // Whether user has a score
+    zone: v.optional(v.string()), // Legacy - ignored
+    hasScore: v.optional(v.boolean()), // Legacy - ignored
   },
-  handler: async (ctx, { userId, query, category, zipCode, zone, hasScore }) => {
-    // Extract ZIP from query if present
-    const zipFromQuery = extractZipFromQuery(query);
-    const zip = zipCode || zipFromQuery;
-    
-    // Get user to check for ZIP and score
+  handler: async (ctx, { userId, query, zipCode }) => {
+    // Get user context
     const user = await ctx.runQuery(internal.internal.users.getUser, { userId });
-    const userZip = zip || user?.zipCode || (user?.metadata as any)?.zipCode;
-    const userHasScore = hasScore !== undefined ? hasScore : (user?.gcSdohScore !== undefined && user.gcSdohScore !== null);
-    const userZones = user?.zones || (user?.metadata as any)?.zones;
-    
-    // Graceful degradation: No ZIP → return national resources
-    if (!userZip) {
-      const nationalResources = getNationalResources(category);
+    const userZip = zipCode || user?.zipCode || (user?.metadata as any)?.zipCode;
+    const userLat = (user?.metadata as any)?.latitude;
+    const userLng = (user?.metadata as any)?.longitude;
+
+    try {
+      // STEP 1: Interpret Intent (AI-powered)
+      const intent = await interpretSearchIntent(query, {
+        zones: user?.zones,
+        gcSdohScore: user?.gcSdohScore,
+        metadata: user?.metadata,
+      });
+
+      // STEP 2: Choose search strategy based on location availability
+      const shouldUseLocal =
+        !!userZip && intent.isGeographical === true;
+
+      if (shouldUseLocal) {
+        // LOCAL SEARCH: Use Maps Grounding when query is truly geographical
+        return await searchLocalResources(intent, {
+          zipCode: userZip,
+          latitude: userLat,
+          longitude: userLng,
+        });
+      } else {
+        // NATIONAL SEARCH: Use Search Grounding or Gemini knowledge
+        return await searchNationalResources(intent);
+      }
+    } catch (error) {
+      // Fallback: Simple Gemini response without grounding
       return {
-        resources: `National resources:\n${nationalResources.map(r => `• ${r}`).join('\n')}\n\nShare your ZIP for local options?`,
-        message: "I found some national resources. Share your ZIP code for local options near you.",
+        resources: `I had trouble finding specific resources. Could you clarify what you're looking for? For example: "respite care near me" or "caregiver support groups"`,
+        error: (error as Error).message,
+        suggestion: userZip
+          ? "Try refining your search or checking if the location is correct."
+          : "Share your ZIP code for local options: 'My ZIP is 12345'",
       };
     }
+  },
+});
 
-    // Has ZIP → Google Maps search for local resources
-    // If has score + worst zone → add zone context to query
-    let searchQuery = query;
-    let targetZone: string | undefined = zone;
-    
-    if (userHasScore && userZones && !targetZone) {
-      // Find worst zone for targeted resources
-      const worstZone = findWorstZone(userZones as any);
-      if (worstZone) {
-        targetZone = worstZone;
-        const zoneName = getZoneDisplayName(worstZone);
-        // Enhance query with zone context
-        searchQuery = `${query} for ${zoneName.toLowerCase()} support`;
-      }
-    }
+/**
+ * Search for local resources using Maps Grounding
+ * Tries each tier until successful
+ */
+async function searchLocalResources(
+  intent: any,
+  location: { zipCode: string; latitude?: number; longitude?: number }
+): Promise<any> {
+  let lastError: Error | null = null;
 
-    // Call Maps Grounding API for local search
+  // Try each search tier (specific → general)
+  for (const tier of intent.searchTiers) {
     try {
-      const result = await searchWithMapsGrounding(
-        searchQuery,
-        category || "caregiving",
-        { zipCode: userZip },
-        3000 // 3s timeout
-      );
+      const result = await searchWithMapsGrounding(tier, location);
 
+      // Success! Return formatted results
       return {
-        resources: result.text,
-        sources: result.resources.map((r) => ({
+        resources: formatMapsResponse(result.text, intent),
+        sources: result.resources.map((r: any) => ({
           placeId: r.placeId,
           name: r.name,
           address: r.address,
         })),
         widgetToken: result.widgetToken,
+        intent: {
+          zones: intent.sdohZones,
+          reasoning: intent.reasoning,
+        },
       };
     } catch (error) {
-      // Fallback to national resources on error
-      const nationalResources = getNationalResources(category);
-      return {
-        resources: `I couldn't find local results. Here are national resources:\n${nationalResources.map(r => `• ${r}`).join('\n')}`,
-        message: "Local search unavailable. Here are national resources.",
-      };
+      console.log(`Maps search tier failed: ${tier}`, error);
+      lastError = error as Error;
+      // If Maps returns a clear "no results" signal, fall back early
+      const message = (lastError as Error).message || String(lastError);
+      if (message.includes("No Maps Grounding results found")) {
+        break;
+      }
+      continue; // Try next tier for transient errors
     }
-  },
-});
+  }
+
+  // All tiers failed or no local results - fall back to national search
+  try {
+    return await searchNationalResources(intent);
+  } catch (nationalError) {
+    // Preserve original Maps error when available
+    throw lastError || (nationalError as Error);
+  }
+}
+
+/**
+ * Search for national resources using Search Grounding or Gemini
+ * Tries each tier until successful
+ */
+async function searchNationalResources(intent: any): Promise<any> {
+  try {
+    // Use tiered search with Gemini (Search Grounding optional)
+    const result = await tieredSearch(
+      intent.searchTiers,
+      false // Set to true to enable Search Grounding (if available)
+    );
+
+    return {
+      resources: formatNationalResponse(result.text, intent),
+      sources: result.sources.length > 0 ? result.sources : undefined,
+      intent: {
+        zones: intent.sdohZones,
+        reasoning: intent.reasoning,
+      },
+      message: "These are online resources. Share your ZIP code for local options.",
+    };
+  } catch (error) {
+    throw new Error(`National search failed: ${(error as Error).message}`);
+  }
+}
+
+/**
+ * Format Maps Grounding response for SMS
+ * Add SDOH zone context
+ */
+function formatMapsResponse(text: string, intent: any): string {
+  const zoneContext = intent.sdohZones.length > 0
+    ? `\n\nRelated to: ${intent.sdohZones.map(getZoneDisplayName).join(", ")}`
+    : "";
+
+  return `${text}${zoneContext}`;
+}
+
+/**
+ * Format national search response for SMS
+ * Add SDOH zone context and ZIP prompt
+ */
+function formatNationalResponse(text: string, intent: any): string {
+  const zoneContext = intent.sdohZones.length > 0
+    ? `\n\nThese address: ${intent.sdohZones.map(getZoneDisplayName).join(", ")}`
+    : "";
+
+  return `${text}${zoneContext}\n\nShare your ZIP for local options.`;
+}

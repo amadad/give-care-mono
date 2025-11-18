@@ -704,6 +704,12 @@ export declare const internal: {
         { plan: "plus" | "enterprise"; userId: Id<"users"> },
         any
       >;
+      getAccessScenario: FunctionReference<
+        "query",
+        "internal",
+        { userId: Id<"users"> },
+        any
+      >;
       getByUserId: FunctionReference<
         "query",
         "internal",
