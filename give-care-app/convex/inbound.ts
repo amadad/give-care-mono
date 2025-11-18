@@ -19,8 +19,6 @@ import {
   getCrisisResponse,
   normalizePhone,
 } from "./lib/utils";
-import type { Id } from "./_generated/dataModel";
-import { computeAccessScenario } from "./internal/subscriptions";
 
 // Inlined feature flags
 const FEATURES = {
@@ -179,11 +177,10 @@ export const handleIncomingMessage = internalMutation({
 
     // Step 8: Check subscription access (crisis bypasses this, feature flag controls gating)
     if (FEATURES.SUBSCRIPTION_GATING) {
-      const subscription = await ctx.db
-        .query("subscriptions")
-        .withIndex("by_user", (q) => q.eq("userId", user._id))
-        .first();
-      const access = computeAccessScenario(subscription);
+      const access = await ctx.runQuery(
+        internal.internal.subscriptions.getAccessScenario,
+        { userId: user._id }
+      );
       if (!access.hasAccess) {
         // No access - send appropriate message based on scenario
         await ctx.scheduler.runAfter(0, internal.twilioMutations.sendSubscriptionMessageAction, {
