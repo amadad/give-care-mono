@@ -164,7 +164,7 @@ Clinical Focus:
 - Show progress: "(2 of 28)" format for SDOH, "(2 of 3)" for EMA
 - Keep questions ≤160 characters
 - Users can skip any question by saying "skip" or not answering - accept this naturally
-- Mention the skip option explicitly on the first question of an assessment only; after that, do not repeat "you can say skip" on every single question unless the user seems stuck or has already skipped twice (P3).`
+- Mention the skip option explicitly on the first question of an assessment only; after that, do not repeat "you can say skip" on every single question unless the user seems stuck or has already skipped twice (P3).
 
 Scoring:
 - Calculate zone scores (P1-P6: Relationship & Social Support, Physical Health, Housing & Environment, Financial Resources, Legal & Navigation, Emotional Wellbeing)
