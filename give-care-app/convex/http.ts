@@ -20,6 +20,34 @@ auth.addHttpRoutes(http);
 twilio.registerRoutes(http);
 
 /**
+ * Twilio Voice Webhook
+ * Responds to incoming calls with voice message
+ */
+http.route({
+  path: "/twilio/voice",
+  method: "POST",
+  handler: httpAction(async (_ctx, _request) => {
+    // Return TwiML response that speaks a message
+    const twiml = `<?xml version="1.0" encoding="UTF-8"?>
+<Response>
+  <Say voice="Polly.Joanna">
+    Hi! You've reached GiveCare, the A I-powered support platform for family caregivers.
+    We help track burnout, provide emotional support, and connect you with local resources.
+    Please send us a text message instead, and we'll be happy to assist you.
+    Thank you!
+  </Say>
+</Response>`;
+
+    return new Response(twiml, {
+      status: 200,
+      headers: {
+        "Content-Type": "text/xml",
+      },
+    });
+  }),
+});
+
+/**
  * Stripe Webhook
  * Handles subscription events
  */
