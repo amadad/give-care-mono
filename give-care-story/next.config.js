@@ -16,6 +16,7 @@ const nextConfig = {
 
   experimental: {
     // Turbopack filesystem cache in dev for faster restarts
+    // Note: Turbopack disabled for production builds due to static export + Google Fonts issues
     turbopackFileSystemCacheForDev: true,
   },
 };

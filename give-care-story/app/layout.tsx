@@ -1,20 +1,5 @@
 import './globals.css';
 import type { Metadata } from 'next';
-import { Alegreya, Gabarito } from 'next/font/google';
-
-const alegreya = Alegreya({
-  subsets: ['latin'],
-  variable: '--font-alegreya',
-  weight: ['400', '500', '700'],
-  display: 'swap',
-});
-
-const gabarito = Gabarito({
-  subsets: ['latin'],
-  variable: '--font-gabarito',
-  weight: ['400', '500', '600', '700'],
-  display: 'swap',
-});
 
 export const metadata: Metadata = {
   title: 'Give Care Story: Empathy Engineered',
@@ -29,10 +14,15 @@ export default function RootLayout({
   return (
     <html lang="en">
       <head>
-        {/* Preload the video to prevent flashing between slides */}
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="" />
+        <link
+          href="https://fonts.googleapis.com/css2?family=Alegreya:wght@400;500;700&family=Gabarito:wght@400;500;600;700&display=swap"
+          rel="stylesheet"
+        />
         <link rel="preload" as="video" href="/crow.mp4" type="video/mp4" />
       </head>
-      <body className={`bg-[#54340E] ${alegreya.variable} ${gabarito.variable}`}>
+      <body className="bg-[#54340E]">
         {/* Global video element that will be used by all slides */}
         <div id="global-video" className="fixed inset-0 -z-10 opacity-0 pointer-events-none">
           <video
