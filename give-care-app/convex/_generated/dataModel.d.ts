@@ -438,6 +438,7 @@ export type DataModel = {
       by_creation_time: ["_creationTime"];
       by_severity: ["severity", "_creationTime"];
       by_user: ["userId", "_creationTime"];
+      by_user_createdAt: ["userId", "createdAt", "_creationTime"];
     };
     searchIndexes: {};
     vectorIndexes: {};

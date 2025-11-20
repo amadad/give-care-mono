@@ -7,6 +7,7 @@ import { WorkflowManager } from "@convex-dev/workflow";
 import { components, internal } from "./_generated/api";
 import { v } from "convex/values";
 import { internalAction } from "./_generated/server";
+import { DateTime } from "luxon";
 
 const workflow = new WorkflowManager(components.workflow);
 
@@ -40,17 +41,11 @@ export const checkInWorkflow = workflow.define({
     }
 
     // Step 2: Check quiet hours (9am-7pm local time, never after 8pm)
-    // Get user's timezone from metadata (default to UTC if missing)
     const timezone = (metadata as any)?.timezone || "UTC";
-    const now = new Date();
-    
-    // Convert to user's local time (simplified - assumes UTC offset in hours)
-    // For production, use a proper timezone library
-    const hour = now.getUTCHours(); // Simplified - use user's timezone in production
-    
-    // Check if within quiet hours (9am-7pm, never after 8pm)
+    const localTime = DateTime.now().setZone(timezone);
+    const hour = localTime.isValid ? localTime.hour : DateTime.utc().hour;
     const isQuietHours = hour >= 9 && hour < 20;
-    
+
     if (!isQuietHours) {
       // Outside quiet hours - skip (cron will retry next day)
       return;

@@ -145,6 +145,16 @@ export const getUsersWithCheckIns = internalQuery({
       .order("desc")
       .take(1000);
 
+    const userIdKeys = new Set(allUsers.map((u) => String((u._id as any).id ?? u._id)));
+    const subscriptions = await ctx.db.query("subscriptions").order("desc").take(2000);
+    const subsByUser = new Map<string, any>();
+    for (const sub of subscriptions) {
+      const key = String((sub.userId as any).id ?? sub.userId);
+      if (userIdKeys.has(key) && !subsByUser.has(key)) {
+        subsByUser.set(key, sub);
+      }
+    }
+
     const now = Date.now();
     const eligibleUsers: Array<{ _id: any }> = [];
 
@@ -176,11 +186,8 @@ export const getUsersWithCheckIns = internalQuery({
 
       if (isEligible) {
         // Check subscription access (only active or grace-period users)
-        const subscription = await ctx.db
-          .query("subscriptions")
-          .withIndex("by_user", (q) => q.eq("userId", user._id))
-          .first();
-        const access = computeAccessScenario(subscription);
+        const subKey = String((user._id as any).id ?? user._id);
+        const access = computeAccessScenario(subsByUser.get(subKey));
 
         if (access.hasAccess) {
           eligibleUsers.push({ _id: user._id });
@@ -231,16 +238,15 @@ export const getRecentGuardrailEvents = internalQuery({
   },
   handler: async (ctx, { userId, since, type }) => {
     // Limit to recent 200 events to prevent unbounded collection
-    // Filter in code since we need to check createdAt >= since and optional type
+    // Server-side filter on createdAt, then narrow by type
     const events = await ctx.db
       .query("guardrail_events")
-      .withIndex("by_user", (q) => q.eq("userId", userId))
+      .withIndex("by_user_createdAt", (q) => q.eq("userId", userId))
+      .filter((q) => q.gte(q.field("createdAt"), since))
       .order("desc")
       .take(200); // Safety limit
 
-    return events.filter(
-      (e) => e.createdAt >= since && (!type || e.type === type)
-    );
+    return type ? events.filter((e) => e.type === type) : events;
   },
 });
 
@@ -259,6 +265,16 @@ export const getInactiveUsers = internalQuery({
       .query("users")
       .order("desc")
       .take(1000);
+
+    const userIdKeys = new Set(allUsers.map((u) => String((u._id as any).id ?? u._id)));
+    const subscriptions = await ctx.db.query("subscriptions").order("desc").take(2000);
+    const subsByUser = new Map<string, any>();
+    for (const sub of subscriptions) {
+      const key = String((sub.userId as any).id ?? sub.userId);
+      if (userIdKeys.has(key) && !subsByUser.has(key)) {
+        subsByUser.set(key, sub);
+      }
+    }
 
     const now = Date.now();
     const threshold = days * 24 * 60 * 60 * 1000; // days in milliseconds
@@ -280,11 +296,8 @@ export const getInactiveUsers = internalQuery({
       // All users are eligible for check-ins if they meet other criteria
 
       // Check subscription access (only active or grace-period users)
-      const subscription = await ctx.db
-        .query("subscriptions")
-        .withIndex("by_user", (q) => q.eq("userId", user._id))
-        .first();
-      const access = computeAccessScenario(subscription);
+      const subKey = String((user._id as any).id ?? user._id);
+      const access = computeAccessScenario(subsByUser.get(subKey));
 
       if (access.hasAccess) {
         eligibleUsers.push({ _id: user._id });

@@ -16,7 +16,6 @@ import {
   isBillingRequest,
   isUpdatePaymentRequest,
   isEMACheckInKeyword,
-  getCrisisResponse,
   normalizePhone,
 } from "./lib/utils";
 
@@ -123,7 +122,10 @@ export const handleIncomingMessage = internalMutation({
           userId: user._id,
           receivedAt: Date.now(),
         }),
-        handleCrisis(ctx, user._id, crisisResult),
+        ctx.runMutation(internal.internal.agents.handleCrisisDetection, {
+          userId: user._id,
+          crisisResult,
+        }),
       ]);
       return { status: "crisis" };
     }
@@ -355,16 +357,12 @@ async function handleEMACheckInKeyword(
   // In production, consider adding a compound index (userId, createdAt) for better performance
   const recentCrises = await ctx.db
     .query("guardrail_events")
-    .withIndex("by_user", (q) => q.eq("userId", userId))
-    .collect();
+    .withIndex("by_user_createdAt", (q) => q.eq("userId", userId))
+    .filter((q) => q.gte(q.field("createdAt"), thirtyDaysAgo))
+    .order("desc")
+    .take(50);
 
-  // Filter in code (acceptable for small result sets per user)
-  // Limit to last 100 events per user to prevent unbounded collection
-  const filteredCrises = recentCrises
-    .filter((e) => e.type === "crisis" && e.createdAt >= thirtyDaysAgo)
-    .slice(0, 100); // Safety limit
-
-  const crisisCount = filteredCrises.length;
+  const crisisCount = recentCrises.length;
 
   if (keyword === "daily") {
     // Auto-downgrade to WEEKLY if high-risk
@@ -436,52 +434,4 @@ async function handleCrisisFollowUpResponseInline(
     response: body,
     alertId, // Pass the alertId so we don't have to query for it
   });
-}
-
-/**
- * Handle crisis detection
- * Fast-path: Deterministic response, no LLM, <600ms target
- * Optimized: Precompute response, batch DB operations, immediate scheduling
- */
-async function handleCrisis(
-  ctx: any,
-  userId: any,
-  crisisResult: any
-): Promise<void> {
-  // Precompute crisis response (no DB dependency)
-  const crisisMessage = getCrisisResponse(crisisResult.isDVHint);
-
-  // Insert alert first to get alertId for follow-up tracking
-  const alertId = await ctx.db.insert("alerts", {
-    userId,
-    type: "crisis",
-    severity: crisisResult.severity ?? "medium",
-    context: { detection: crisisResult },
-    message: crisisMessage,
-    channel: "sms",
-    status: "pending",
-  });
-
-  // Log guardrail event (parallel with alert)
-  await ctx.db.insert("guardrail_events", {
-    userId,
-    type: "crisis",
-    severity: crisisResult.severity ?? "medium",
-    context: { detection: crisisResult, alertId },
-    createdAt: Date.now(),
-  });
-
-  // Send crisis response immediately (0 delay scheduler = immediate)
-  // This is async but doesn't block the mutation response
-  await ctx.scheduler.runAfter(0, internal.twilioMutations.sendCrisisResponseAction, {
-    userId,
-    isDVHint: crisisResult.isDVHint,
-  });
-
-  // Schedule crisis follow-up at T+24 hours with alertId for feedback tracking
-  await ctx.scheduler.runAfter(
-    24 * 60 * 60 * 1000, // 24 hours in milliseconds
-    internal.internal.sms.sendCrisisFollowUpMessage,
-    { userId, alertId }
-  );
 }

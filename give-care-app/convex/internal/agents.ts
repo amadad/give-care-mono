@@ -132,13 +132,6 @@ export const processMainAgentMessage = internalAction({
       prompt: body,
     });
 
-    // Get relevant memories (optimized: importance ≥7, limit 5)
-    // This is async but non-blocking - agent will use memories via contextOptions
-    const memories = await ctx.runQuery(internal.internal.memories.getRelevantMemoriesQuery, {
-      userId,
-      limit: 5,
-    });
-
     // Generate response with memory context
     // Agent Component handles vector search automatically via contextOptions
     const result = await mainAgent.generateText(

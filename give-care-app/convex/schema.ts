@@ -326,6 +326,7 @@ export default defineSchema({
     createdAt: v.number(),
   })
     .index("by_user", ["userId"])
+    .index("by_user_createdAt", ["userId", "createdAt"])
     .index("by_severity", ["severity"]),
 
   // Conversation feedback - User feedback on AI responses
