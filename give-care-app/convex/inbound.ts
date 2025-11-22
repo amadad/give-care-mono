@@ -144,6 +144,17 @@ export const handleIncomingMessage = internalMutation({
       lastEngagementDate: Date.now(),
     });
 
+    // Step 7.5: Check onboarding completion (triggers workflow to complete if ready)
+    const metadata = user.metadata || {};
+    const isOnboardingIncomplete = !metadata.onboardingCompletedAt;
+
+    if (isOnboardingIncomplete) {
+      // Trigger onboarding check (workflow handles completion and check-in workflow start)
+      await ctx.scheduler.runAfter(0, internal.onboarding.triggerOnboardingCheck, {
+        userId: user._id,
+      });
+    }
+
     // Step 8: Route to unified agent (handles everything: crisis, assessments, conversation)
     await ctx.scheduler.runAfter(0, internal.agent.chat, {
       userId: user._id,

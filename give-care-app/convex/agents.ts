@@ -18,6 +18,7 @@ import {
   startAssessmentTool,
   recordAssessmentAnswerTool,
   getCrisisResources,
+  checkOnboardingStatus,
 } from "./tools";
 import type { Id } from "./_generated/dataModel";
 
@@ -63,6 +64,9 @@ export const miraAgent = new Agent(components.agent, {
 
     // Crisis tool
     getCrisisResources,
+
+    // Onboarding tool
+    checkOnboardingStatus,
   },
   maxSteps: 4, // Reduced from 10 for faster responses (most SMS replies need 1-2 tools)
   usageHandler: trackUsage,

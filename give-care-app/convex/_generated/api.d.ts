@@ -908,6 +908,33 @@ export declare const internal: {
       any
     >;
   };
+  onboarding: {
+    getOnboardingStatus: FunctionReference<
+      "query",
+      "internal",
+      { userId: Id<"users"> },
+      any
+    >;
+    markComplete: FunctionReference<
+      "mutation",
+      "internal",
+      { userId: Id<"users"> },
+      any
+    >;
+    onboardingWorkflow: FunctionReference<"mutation", "internal", any, any>;
+    recordMilestone: FunctionReference<
+      "mutation",
+      "internal",
+      { milestone: string; userId: Id<"users"> },
+      any
+    >;
+    triggerOnboardingCheck: FunctionReference<
+      "action",
+      "internal",
+      { userId: Id<"users"> },
+      any
+    >;
+  };
   resources: {
     searchResources: FunctionReference<
       "action",

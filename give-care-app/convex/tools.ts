@@ -1,6 +1,24 @@
 /**
  * Agent Tools
  * Core tools for resources, assessments, memory, interventions, and profile updates
+ *
+ * PERFORMANCE PATTERNS:
+ *
+ * 1. Concurrent Queries (Promise.all):
+ *    - Used when tool needs multiple independent queries
+ *    - Reduces latency by running queries in parallel
+ *    - Example: checkAssessmentStatus (user + SDOH + EMA in parallel)
+ *
+ * 2. Non-Blocking Operations (void):
+ *    - Used for fire-and-forget operations (logging, analytics)
+ *    - Doesn't block agent response
+ *    - Example: trackUsage in agents.ts
+ *
+ * 3. Tool Call Parallelism:
+ *    - Agent Component lets LLM decide tool call parallelism
+ *    - Independent tools CAN be called in parallel by LLM
+ *    - Dependent tools (need output of previous) run sequentially
+ *    - No config needed - handled automatically
  */
 
 "use node";
@@ -277,30 +295,28 @@ export const checkAssessmentStatus = createTool({
     message: string;
   }> => {
     const userId = ctx.userId as Id<"users">;
-    
-    // Get user to check current score
-    const user = await ctx.runQuery(internal.internal.users.getUser, { userId });
+
+    // Parallel: Get user + latest assessments (3 queries at once)
+    const [user, lastSDOH, lastEMA] = await Promise.all([
+      ctx.runQuery(internal.internal.users.getUser, { userId }),
+      ctx.runQuery(
+        internal.internal.assessments.getLatestCompletedAssessment,
+        { userId, assessmentType: "sdoh" }
+      ),
+      ctx.runQuery(
+        internal.internal.assessments.getLatestCompletedAssessment,
+        { userId, assessmentType: "ema" }
+      ),
+    ]);
+
     const currentScore = user?.gcSdohScore || null;
-    
-    // Check for latest SDOH assessment
-    const lastSDOH = await ctx.runQuery(
-      internal.internal.assessments.getLatestCompletedAssessment,
-      { userId, assessmentType: "sdoh" }
-    );
-    
-    // Check for latest EMA assessment
-    const lastEMA = await ctx.runQuery(
-      internal.internal.assessments.getLatestCompletedAssessment,
-      { userId, assessmentType: "ema" }
-    );
-    
     const hasSDOH = lastSDOH !== null;
     const hasEMA = lastEMA !== null;
     const lastSDOHDate = lastSDOH?.completedAt || null;
     const lastEMADate = lastEMA?.completedAt || null;
     const lastSDOHScore = lastSDOH?.gcBurnout || null;
     const lastEMAScore = lastEMA?.gcBurnout || null;
-    
+
     // Build helpful message for agent
     let message = "";
     if (hasSDOH && currentScore !== null) {
@@ -311,7 +327,7 @@ export const checkAssessmentStatus = createTool({
     } else {
       message = "User has not completed any assessments yet.";
     }
-    
+
     return {
       hasSDOH,
       hasEMA,
@@ -561,6 +577,69 @@ You're not alone. These trained counselors are available right now.`;
       success: true,
       resources: resourceText,
       hotlines,
+    };
+  },
+});
+
+/**
+ * 12. checkOnboardingStatus - Check onboarding completion status
+ * Returns what critical data has been collected and what's missing
+ */
+export const checkOnboardingStatus = createTool({
+  description:
+    "Check which onboarding steps are complete. Use to avoid re-asking for information already provided. Returns what data is missing and what to ask for next.",
+  args: z.object({}),
+  handler: async (
+    ctx: ToolCtx,
+    args
+  ): Promise<{
+    hasName: boolean;
+    hasZip: boolean;
+    hasBaselineAssessment: boolean;
+    hasCheckInPreference: boolean;
+    completedMilestones: string[];
+    completionPercent: number;
+    nextStep: string | null;
+    isComplete: boolean;
+  }> => {
+    const userId = ctx.userId as Id<"users">;
+    const user = await ctx.runQuery(internal.internal.users.getUser, { userId });
+    const metadata = getUserMetadata(user);
+
+    const hasName = !!metadata.firstName || !!metadata.profile?.firstName;
+    const hasZip = !!metadata.zipCode || !!user?.zipCode;
+    const hasBaselineAssessment = !!metadata.firstAssessmentCompletedAt;
+    const hasCheckInPreference = !!metadata.checkInFrequency;
+
+    const milestones = metadata.onboardingMilestones || [];
+    const completedMilestones = milestones.map((m: any) => m.milestone);
+
+    // Determine next step
+    let nextStep: string | null = null;
+    if (!hasName) {
+      nextStep = "name";
+    } else if (!hasZip) {
+      nextStep = "zip";
+    } else if (!hasBaselineAssessment) {
+      nextStep = "assessment";
+    } else if (!hasCheckInPreference) {
+      nextStep = "checkin";
+    }
+
+    const isComplete = hasName && hasZip && hasBaselineAssessment && hasCheckInPreference;
+    const completionPercent = Math.round(
+      ([hasName, hasZip, hasBaselineAssessment, hasCheckInPreference].filter(Boolean).length / 4) * 100
+    );
+
+    return {
+      hasName,
+      hasZip,
+      hasBaselineAssessment,
+      hasCheckInPreference,
+      completedMilestones,
+      completionPercent,
+      nextStep,
+      isComplete,
     };
   },
 });
