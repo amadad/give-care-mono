@@ -184,12 +184,19 @@ export const processAssessmentCompletion = internalAction({
     }
 
     // Generate interpretation and intervention suggestions
+    // Save system message as a user message to maintain conversation history consistency
     const prompt = `User completed assessment. Score: ${score} (${band}). Provide encouraging interpretation and suggest 1-2 matched interventions.`;
-    
+
+    const { messageId } = await saveMessage(ctx, components.agent, {
+      threadId,
+      userId,
+      prompt,
+    });
+
     const result = await assessmentAgent.generateText(
       ctx,
       { threadId },
-      { prompt }
+      { promptMessageId: messageId }
     );
 
     // Send response (via wrapper mutation to avoid scheduler path bug)
