@@ -29,7 +29,7 @@ export const processWebhook = internalAction({
     // Import Stripe SDK for signature verification
     const Stripe = (await import("stripe")).default;
     const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || "", {
-      apiVersion: "2025-10-29.clover",
+      apiVersion: "2025-11-17.clover" as any, // Type override for newer API version
     });
 
     let event;
@@ -81,7 +81,7 @@ export const createBillingPortalSession = internalAction({
     // Import Stripe SDK
     const Stripe = (await import("stripe")).default;
     const stripe = new Stripe(stripeSecretKey, {
-      apiVersion: "2025-10-29.clover",
+      apiVersion: "2025-11-17.clover" as any, // Type override for newer API version
     });
 
     // Create billing portal session
@@ -126,7 +126,7 @@ export const createCheckoutSessionForResubscribe = internalAction({
     // Import Stripe SDK (Node.js runtime)
     const Stripe = (await import("stripe")).default;
     const stripe = new Stripe(stripeSecretKey, {
-      apiVersion: "2025-10-29.clover",
+      apiVersion: "2025-11-17.clover" as any, // Type override for newer API version
     });
 
     // If user has existing Stripe customer, use Customer Portal

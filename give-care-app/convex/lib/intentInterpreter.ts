@@ -97,7 +97,17 @@ Return ONLY valid JSON (no markdown):
       },
     });
 
-    const result = JSON.parse(response.text);
+    const candidate = response.candidates?.[0];
+    if (!candidate) {
+      return fallbackIntentAnalysis(query);
+    }
+
+    const text = candidate.content?.parts?.[0]?.text;
+    if (!text) {
+      return fallbackIntentAnalysis(query);
+    }
+
+    const result = JSON.parse(text);
 
     // Validate and return
     if (!result.intent || !result.sdohZones || !result.searchTiers) {

@@ -245,13 +245,16 @@ export function extractCareRecipient(
 /**
  * Get crisis response template
  * All severities get same template (per plan)
+ * Optimized to fit within 160-char SMS segment
  */
 export function getCrisisResponse(isDVHint: boolean): string {
+  // 158 chars - fits in single SMS segment
   const baseResponse =
-    "I'm hearing intense distress. You're not alone - support is available 24/7. Call or text 988 or chat at 988lifeline.org. Text HOME to 741741 (Crisis Text Line). If in immediate danger, call 911.";
+    "You're not alone. 24/7 support: call/text 988 (lifeline) or text HOME to 741741. Immediate danger? Call 911. Help is here.";
 
   if (isDVHint) {
-    return `${baseResponse} If you can't safely reply, call 911.`;
+    // 147 chars - fits in single SMS segment
+    return "You're not alone. 24/7 support: call/text 988 or text HOME to 741741. Can't safely reply? Call 911. Help is here.";
   }
 
   return baseResponse;

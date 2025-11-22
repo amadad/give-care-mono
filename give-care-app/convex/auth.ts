@@ -3,16 +3,7 @@ import { Password } from "@convex-dev/auth/providers/Password";
 import { internalMutation } from "./_generated/server";
 import { v } from "convex/values";
 import { internal } from "./_generated/api";
-
-/**
- * Admin email whitelist
- * Only these emails can create accounts and access the admin dashboard
- */
-const ADMIN_EMAILS = [
-  "ali@scty.org",
-  "ali@givecareapp.com",
-  // Add more admin emails here as needed
-];
+import { ADMIN_EMAILS } from "./lib/adminConfig";
 
 /**
  * Post-auth hook to ensure required fields are set for admin users

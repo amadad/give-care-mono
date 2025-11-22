@@ -7,16 +7,8 @@ import { query, internalMutation, internalQuery } from "./_generated/server";
 import { v } from "convex/values";
 import { getAssessmentDefinition } from "./lib/assessmentCatalog";
 import { internal } from "./_generated/api";
-import { calculateZoneAverage } from "./lib/scoreCalculator";
-import { getRiskLevel, getBandFromRiskLevel } from "./lib/sdoh";
-
-/**
- * Admin email whitelist (matches public.ts)
- */
-const ADMIN_EMAILS = [
-  "ali@scty.org",
-  "ali@givecareapp.com",
-];
+import { calculateAssessmentScores } from "./lib/assessmentScoring";
+import { ADMIN_EMAILS } from "./lib/adminConfig";
 
 /**
  * Check if current user is admin
@@ -93,46 +85,15 @@ export const processAssessmentAnswer = internalMutation({
         questionIndex: nextIndex,
       });
 
-      // Filter out skipped answers (only use numeric values for scoring)
-      const answeredValues = answers.filter((a) => typeof a.value === "number");
-      const answeredRatio = answeredValues.length / definition.questions.length;
-
-      // Guard: Don't calculate score if no answers
-      if (answeredValues.length === 0) {
+      // Calculate scores using shared scoring logic
+      let scoringResult;
+      try {
+        scoringResult = calculateAssessmentScores(answers, definition);
+      } catch (error) {
         return { error: "No answers provided" };
       }
 
-      // Calculate scores and create records inline (synchronous for tests)
-      // Calculate raw scores (only from answered questions)
-      const zoneScores: Record<string, number[]> = {};
-      for (const answer of answeredValues) {
-        const question = definition.questions.find((q) => q.id === answer.questionId);
-        if (question?.zone) {
-          if (!zoneScores[question.zone]) {
-            zoneScores[question.zone] = [];
-          }
-          zoneScores[question.zone].push(answer.value);
-        }
-      }
-
-      // Calculate zone averages (only for zones with answers)
-      const zoneAverages: Record<string, number> = {};
-      for (const [zone, values] of Object.entries(zoneScores)) {
-        if (values.length > 0) {
-          zoneAverages[zone] =
-            values.reduce((sum, v) => sum + v, 0) / values.length;
-        }
-      }
-
-      // Calculate composite score (average of answered questions, normalized to 0-100)
-      const allValues = answeredValues.map((a) => a.value);
-      const avgScore = allValues.reduce((sum, v) => sum + v, 0) / allValues.length; // Raw average (1-5 scale)
-      const composite = avgScore * 20; // Normalize to 0-100
-      const gcBurnout = Math.round(composite);
-
-      // Determine band using getRiskLevel (single source of truth)
-      const riskLevel = getRiskLevel(gcBurnout);
-      const band = getBandFromRiskLevel(riskLevel);
+      const { gcBurnout, band, rawComposite, zones, answeredRatio } = scoringResult;
 
       // Create assessment record (only EMA or SDOH)
       if (session.definitionId !== "ema" && session.definitionId !== "sdoh") {
@@ -161,30 +122,16 @@ export const processAssessmentAnswer = internalMutation({
       }
 
       // Create score record for backward compatibility
-      const p1Scores = zoneScores["P1"] || [];
-      const p2Scores = zoneScores["P2"] || [];
-      const p3Scores = zoneScores["P3"] || [];
-      const p4Scores = zoneScores["P4"] || [];
-      const p5Scores = zoneScores["P5"] || [];
-      const p6Scores = zoneScores["P6"] || [];
-
       await ctx.db.insert("scores", {
         userId,
         assessmentId,
         instrument: session.definitionId as "ema" | "sdoh",
-        rawComposite: avgScore,
+        rawComposite,
         gcBurnout,
         band,
-        zones: {
-          P1: p1Scores.length > 0 ? calculateZoneAverage(p1Scores) : undefined,
-          P2: p2Scores.length > 0 ? calculateZoneAverage(p2Scores) : undefined,
-          P3: p3Scores.length > 0 ? calculateZoneAverage(p3Scores) : undefined,
-          P4: p4Scores.length > 0 ? calculateZoneAverage(p4Scores) : undefined,
-          P5: p5Scores.length > 0 ? calculateZoneAverage(p5Scores) : undefined,
-          P6: p6Scores.length > 0 ? calculateZoneAverage(p6Scores) : undefined,
-        },
-        confidence: answeredRatio, // Use answeredRatio for confidence
-        answeredRatio: answeredRatio,
+        zones,
+        confidence: answeredRatio,
+        answeredRatio,
       });
 
       // Route to Assessment Agent for interpretation
@@ -230,45 +177,15 @@ export const completeAssessment = internalMutation({
       session.definitionId as any
     );
 
-    // Filter out skipped answers (only use numeric values for scoring)
-    const answeredValues = session.answers.filter((a) => typeof a.value === "number");
-    const answeredRatio = answeredValues.length / definition.questions.length;
-
-    // Guard: Don't calculate score if no answers
-    if (answeredValues.length === 0) {
+    // Calculate scores using shared scoring logic
+    let scoringResult;
+    try {
+      scoringResult = calculateAssessmentScores(session.answers, definition);
+    } catch (error) {
       return; // Cannot complete assessment with no answers
     }
 
-    // Calculate raw scores (only from answered questions)
-    const zoneScores: Record<string, number[]> = {};
-    for (const answer of answeredValues) {
-      const question = definition.questions.find((q) => q.id === answer.questionId);
-      if (question?.zone) {
-        if (!zoneScores[question.zone]) {
-          zoneScores[question.zone] = [];
-        }
-        zoneScores[question.zone].push(answer.value);
-      }
-    }
-
-    // Calculate zone averages (only for zones with answers)
-    const zoneAverages: Record<string, number> = {};
-    for (const [zone, values] of Object.entries(zoneScores)) {
-      if (values.length > 0) {
-        zoneAverages[zone] =
-          values.reduce((sum, v) => sum + v, 0) / values.length;
-      }
-    }
-
-    // Calculate composite score (average of answered questions, normalized to 0-100)
-    const allValues = answeredValues.map((a) => a.value);
-    const avgScore = allValues.reduce((sum, v) => sum + v, 0) / allValues.length; // Raw average (1-5 scale)
-    const composite = avgScore * 20; // Normalize to 0-100
-    const gcBurnout = Math.round(composite);
-
-    // Determine band using getRiskLevel (single source of truth)
-    const riskLevel = getRiskLevel(gcBurnout);
-    const band = getBandFromRiskLevel(riskLevel);
+    const { gcBurnout, band, rawComposite, zones, answeredRatio } = scoringResult;
 
     // Create assessment record (only EMA or SDOH)
     if (session.definitionId !== "ema" && session.definitionId !== "sdoh") {
@@ -297,30 +214,16 @@ export const completeAssessment = internalMutation({
     }
 
     // Create score record for backward compatibility
-    const p1Scores = zoneScores["P1"] || [];
-    const p2Scores = zoneScores["P2"] || [];
-    const p3Scores = zoneScores["P3"] || [];
-    const p4Scores = zoneScores["P4"] || [];
-    const p5Scores = zoneScores["P5"] || [];
-    const p6Scores = zoneScores["P6"] || [];
-
     await ctx.db.insert("scores", {
       userId,
       assessmentId,
       instrument: session.definitionId as "ema" | "sdoh",
-      rawComposite: avgScore,
+      rawComposite,
       gcBurnout,
       band,
-        zones: {
-          P1: p1Scores.length > 0 ? calculateZoneAverage(p1Scores) : undefined,
-          P2: p2Scores.length > 0 ? calculateZoneAverage(p2Scores) : undefined,
-          P3: p3Scores.length > 0 ? calculateZoneAverage(p3Scores) : undefined,
-          P4: p4Scores.length > 0 ? calculateZoneAverage(p4Scores) : undefined,
-          P5: p5Scores.length > 0 ? calculateZoneAverage(p5Scores) : undefined,
-          P6: p6Scores.length > 0 ? calculateZoneAverage(p6Scores) : undefined,
-        },
-        confidence: answeredRatio, // Use answeredRatio for confidence
-        answeredRatio: answeredRatio,
+      zones,
+      confidence: answeredRatio,
+      answeredRatio,
     });
 
     // Route to Assessment Agent for interpretation
