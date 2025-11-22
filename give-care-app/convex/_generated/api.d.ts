@@ -193,6 +193,14 @@ export declare const api: {
  * ```
  */
 export declare const internal: {
+  agent: {
+    chat: FunctionReference<
+      "action",
+      "internal",
+      { message: string; userId: Id<"users"> },
+      any
+    >;
+  };
   assessments: {
     completeAssessment: FunctionReference<
       "mutation",
@@ -339,20 +347,6 @@ export declare const internal: {
       >;
     };
     agents: {
-      handleCrisisDetection: FunctionReference<
-        "mutation",
-        "internal",
-        {
-          crisisResult: {
-            isCrisis: boolean;
-            isDVHint: boolean;
-            isFalsePositive: boolean;
-            severity?: "high" | "medium" | "low";
-          };
-          userId: Id<"users">;
-        },
-        any
-      >;
       processAssessmentCompletion: FunctionReference<
         "action",
         "internal",
@@ -362,12 +356,6 @@ export declare const internal: {
           score: number;
           userId: Id<"users">;
         },
-        any
-      >;
-      processMainAgentMessage: FunctionReference<
-        "action",
-        "internal",
-        { body: string; userId: Id<"users"> },
         any
       >;
     };
@@ -384,7 +372,19 @@ export declare const internal: {
         { assessmentType: "ema" | "sdoh"; userId: Id<"users"> },
         any
       >;
+      processAssessmentAnswerForAgent: FunctionReference<
+        "mutation",
+        "internal",
+        { answer: number | "skip"; userId: Id<"users"> },
+        any
+      >;
       startAssessment: FunctionReference<
+        "mutation",
+        "internal",
+        { assessmentType: "ema" | "sdoh"; userId: Id<"users"> },
+        any
+      >;
+      startAssessmentForAgent: FunctionReference<
         "mutation",
         "internal",
         { assessmentType: "ema" | "sdoh"; userId: Id<"users"> },

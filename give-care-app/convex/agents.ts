@@ -1,29 +1,31 @@
 /**
- * Agent Definitions
- * Main Agent (95% of traffic) and Assessment Agent (5% of traffic)
- * Crisis Router is deterministic (no LLM) - handled in inbound.ts
+ * Unified Agent Definition - Mira
+ * Single agent handles all conversation, assessment, and support
+ * Uses Gemini 2.5 Flash-Lite for cost-efficiency and low latency
  */
 
 "use node";
 
 import { Agent, type UsageHandler } from "@convex-dev/agent";
 import { components, internal } from "./_generated/api";
-import { MAIN_MODEL, ASSESSMENT_MODEL, EMBEDDING_MODEL } from "./lib/models";
-import { MAIN_PROMPT, ASSESSMENT_PROMPT } from "./lib/prompts";
+import { MAIN_MODEL, EMBEDDING_MODEL } from "./lib/models";
+import { UNIFIED_PROMPT } from "./lib/prompts";
 import {
   getResources,
-  startAssessment,
   recordObservation,
   trackInterventionHelpfulness,
   findInterventions,
   checkAssessmentStatus,
   recordMemory,
   updateProfile,
+  startAssessmentTool,
+  recordAssessmentAnswerTool,
+  getCrisisResources,
 } from "./tools";
 
 /**
- * Usage tracking handler for both agents
- * Tracks token usage, costs, and execution metadata
+ * Usage tracking handler
+ * Tracks token usage, costs, and execution metadata for Gemini 2.5 Flash-Lite
  */
 const trackUsage: UsageHandler = async (ctx, usage) => {
   await ctx.runMutation(internal.internal.agentRuns.track, {
@@ -32,7 +34,6 @@ const trackUsage: UsageHandler = async (ctx, usage) => {
     agentName: usage.agentName,
     model: usage.model,
     provider: usage.provider,
-    // AI SDK 5.0: inputTokens/outputTokens instead of promptTokens/completionTokens
     promptTokens: usage.usage.inputTokens ?? 0,
     completionTokens: usage.usage.outputTokens ?? 0,
     totalTokens: usage.usage.totalTokens ?? 0,
@@ -41,43 +42,33 @@ const trackUsage: UsageHandler = async (ctx, usage) => {
 };
 
 /**
- * Main Agent (95% of traffic)
- * General support, resource discovery, daily check-ins, memory building
- * Note: Temperature configuration handled by model defaults
+ * Mira - Unified Care Agent
+ * Handles all interactions: conversation, assessments, crisis support, resources
  */
-export const mainAgent = new Agent(components.agent, {
-  name: "Main Agent",
-  languageModel: MAIN_MODEL,
+export const miraAgent = new Agent(components.agent, {
+  name: "Mira",
+  languageModel: MAIN_MODEL, // Gemini 2.5 Flash-Lite
   textEmbeddingModel: EMBEDDING_MODEL,
-  instructions: MAIN_PROMPT,
+  instructions: UNIFIED_PROMPT,
   tools: {
-    getResources,
-    startAssessment,
-    recordObservation,
-    trackInterventionHelpfulness,
-    findInterventions,
-    checkAssessmentStatus,
+    // Core tools
     recordMemory,
     updateProfile,
-  },
-  maxSteps: 5, // Allows tool chaining
-  usageHandler: trackUsage,
-});
+    getResources,
 
-/**
- * Assessment Agent (5% of traffic)
- * Clinical scoring and intervention matching
- * Note: Temperature configuration handled by model defaults
- */
-export const assessmentAgent = new Agent(components.agent, {
-  name: "Assessment Agent",
-  languageModel: ASSESSMENT_MODEL,
-  textEmbeddingModel: EMBEDDING_MODEL,
-  instructions: ASSESSMENT_PROMPT,
-  tools: {
-    getResources, // Assessment agent can suggest resources after scoring
-    findInterventions, // Assessment agent can suggest interventions after scoring
+    // Assessment tools
+    checkAssessmentStatus,
+    startAssessmentTool,
+    recordAssessmentAnswerTool,
+
+    // Intervention tools
+    recordObservation,
+    findInterventions,
+    trackInterventionHelpfulness,
+
+    // Crisis tool
+    getCrisisResources,
   },
-  maxSteps: 2, // Scoring + interpretation
+  maxSteps: 10, // Allow multi-turn conversations and tool use
   usageHandler: trackUsage,
 });

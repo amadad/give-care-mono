@@ -352,3 +352,215 @@ export const updateProfile = createTool({
     return { success: true, message: "Profile updated." };
   },
 });
+
+/**
+ * 9. startAssessmentTool - Begin assessment (Agent-Based Flow)
+ * Returns first question for agent to deliver in conversation
+ */
+export const startAssessmentTool = createTool({
+  description:
+    "Begin a wellness assessment and get the first question to ask. Use for EMA (3-question daily check-in) or SDOH-28 (comprehensive assessment). Returns first question with progress indicator.",
+  args: z.object({
+    assessmentType: z
+      .enum(["ema", "sdoh"])
+      .describe("Type of assessment: 'ema' for daily check-in, 'sdoh' for comprehensive assessment"),
+  }),
+  handler: async (
+    ctx: ToolCtx,
+    args
+  ): Promise<{
+    success: boolean;
+    question?: string;
+    progress?: string;
+    totalQuestions?: number;
+    message?: string;
+    error?: string;
+  }> => {
+    const userId = ctx.userId as Id<"users">;
+
+    // Check for existing active session
+    const existingSession = await ctx.runQuery(
+      internal.internal.assessments.getActiveSession,
+      { userId }
+    );
+
+    if (existingSession) {
+      return {
+        success: false,
+        error: "User already has an assessment in progress.",
+        message: "Let's finish your current assessment first. Reply 1-5 or skip to continue.",
+      };
+    }
+
+    // Start assessment session (creates session in DB)
+    const result = await ctx.runMutation(
+      internal.internal.assessments.startAssessmentForAgent,
+      {
+        userId,
+        assessmentType: args.assessmentType,
+      }
+    );
+
+    if (!result.success) {
+      return {
+        success: false,
+        error: result.message,
+        message: result.message,
+      };
+    }
+
+    return {
+      success: true,
+      question: result.firstQuestion,
+      progress: result.progress,
+      totalQuestions: result.totalQuestions,
+    };
+  },
+});
+
+/**
+ * 10. recordAssessmentAnswerTool - Record answer and get next question
+ * Agent-based assessment flow - validates answer and returns next question or completion
+ */
+export const recordAssessmentAnswerTool = createTool({
+  description:
+    "Record user's answer to current assessment question. Accepts 1-5 rating or 'skip'. Returns next question with progress, or completion status with score/zones if assessment is finished.",
+  args: z.object({
+    answer: z
+      .string()
+      .describe("User's answer: number 1-5 or the word 'skip'"),
+  }),
+  handler: async (
+    ctx: ToolCtx,
+    args
+  ): Promise<{
+    success: boolean;
+    complete?: boolean;
+    nextQuestion?: string;
+    progress?: string;
+    score?: number;
+    band?: string;
+    worstZone?: string;
+    worstZoneName?: string;
+    error?: string;
+    message?: string;
+  }> => {
+    const userId = ctx.userId as Id<"users">;
+
+    // Validate answer format
+    const trimmed = args.answer.trim().toLowerCase();
+    let validatedAnswer: number | "skip" | null = null;
+
+    if (trimmed === "skip") {
+      validatedAnswer = "skip";
+    } else {
+      const parsed = Number(args.answer.trim());
+      if (!Number.isNaN(parsed) && parsed >= 1 && parsed <= 5) {
+        validatedAnswer = parsed;
+      }
+    }
+
+    if (validatedAnswer === null) {
+      return {
+        success: false,
+        error: "Invalid answer format",
+        message: "Please reply with a number 1-5 or say skip.",
+      };
+    }
+
+    // Process answer
+    const result = await ctx.runMutation(
+      internal.internal.assessments.processAssessmentAnswerForAgent,
+      {
+        userId,
+        answer: validatedAnswer,
+      }
+    );
+
+    if (!result.success) {
+      return {
+        success: false,
+        error: result.message,
+        message: result.message,
+      };
+    }
+
+    // Check if assessment is complete
+    if (result.complete) {
+      return {
+        success: true,
+        complete: true,
+        score: result.score,
+        band: result.band,
+        worstZone: result.worstZone,
+        worstZoneName: result.worstZoneName,
+      };
+    }
+
+    // Return next question
+    return {
+      success: true,
+      complete: false,
+      nextQuestion: result.nextQuestion,
+      progress: result.progress,
+    };
+  },
+});
+
+/**
+ * 11. getCrisisResources - Get immediate crisis resources
+ * Returns crisis hotlines and immediate support resources
+ */
+export const getCrisisResources = createTool({
+  description:
+    "Get immediate crisis resources including suicide hotline (988) and crisis text line. Use IMMEDIATELY when user expresses suicidal thoughts or immediate crisis.",
+  args: z.object({}),
+  handler: async (
+    ctx: ToolCtx,
+    args
+  ): Promise<{
+    success: boolean;
+    resources: string;
+    hotlines: Array<{ name: string; number: string; description: string }>;
+  }> => {
+    const hotlines = [
+      {
+        name: "988 Suicide & Crisis Lifeline",
+        number: "988",
+        description: "24/7 free and confidential support for people in distress",
+      },
+      {
+        name: "Crisis Text Line",
+        number: "Text HOME to 741741",
+        description: "Free 24/7 support via text message",
+      },
+      {
+        name: "National Domestic Violence Hotline",
+        number: "1-800-799-7233",
+        description: "Support for domestic violence situations",
+      },
+    ];
+
+    const resourceText = `🆘 IMMEDIATE HELP:
+
+• 988 Suicide & Crisis Lifeline: Call/text 988 (24/7, free, confidential)
+• Crisis Text Line: Text HOME to 741741
+• National DV Hotline: 1-800-799-7233
+
+You're not alone. These trained counselors are available right now.`;
+
+    // Log crisis event
+    await ctx.runMutation(internal.internal.learning.logGuardrailEvent, {
+      userId: ctx.userId as Id<"users">,
+      type: "crisis",
+      severity: "high",
+      context: { timestamp: Date.now(), source: "getCrisisResources tool" },
+    });
+
+    return {
+      success: true,
+      resources: resourceText,
+      hotlines,
+    };
+  },
+});
