@@ -51,6 +51,26 @@ export const processMainAgentMessage = internalAction({
       }
     }
 
+    // Token budget guardrail (50k tokens/hour per user)
+    const oneHourAgo = Date.now() - 60 * 60 * 1000;
+    const recentUsage = await ctx.runQuery(internal.internal.users.getRecentUsage, {
+      userId,
+      since: oneHourAgo,
+    });
+
+    const tokensLastHour = recentUsage.reduce(
+      (sum, row) => sum + (row.totalTokens || 0),
+      0
+    );
+
+    if (tokensLastHour >= 50000) {
+      await ctx.runAction(internal.internal.sms.sendAgentResponse, {
+        userId,
+        text: "I’m at capacity right now. Can we continue in about an hour?",
+      });
+      return;
+    }
+
     // Guardrail detection: self-sacrifice and reassurance loops
     const hasSelfSacrifice = detectSelfSacrifice(body);
     if (hasSelfSacrifice) {
@@ -145,8 +165,7 @@ export const processMainAgentMessage = internalAction({
     );
 
     // Response is automatically saved by Agent Component
-    // Send SMS response (async via wrapper mutation to avoid scheduler path bug)
-    await ctx.scheduler.runAfter(0, internal.internal.twilioMutations.sendAgentResponseAction, {
+    await ctx.runAction(internal.internal.sms.sendAgentResponse, {
       userId,
       text: result.text,
     });
@@ -199,8 +218,8 @@ export const processAssessmentCompletion = internalAction({
       { promptMessageId: messageId }
     );
 
-    // Send response (via wrapper mutation to avoid scheduler path bug)
-    await ctx.scheduler.runAfter(0, internal.internal.twilioMutations.sendAgentResponseAction, {
+    // Send response
+    await ctx.runAction(internal.internal.sms.sendAgentResponse, {
       userId,
       text: result.text,
     });

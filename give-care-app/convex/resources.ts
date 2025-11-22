@@ -17,11 +17,14 @@ import { internal } from "./_generated/api";
 import { interpretSearchIntent, getZoneDisplayName } from "./lib/intentInterpreter";
 import { searchWithMapsGrounding } from "./lib/maps";
 import { tieredSearch } from "./lib/search";
+import { getUserMetadata } from "./lib/utils";
 
 const CACHE_TTL_MS = 6 * 60 * 60 * 1000; // 6 hours
 
-function cacheKey(raw: string | undefined): string {
-  return (raw || "general").toLowerCase().slice(0, 80);
+function cacheKey(intent: any, zip: string | null): string {
+  const intentLabel = intent?.intent || "general";
+  const topZone = Array.isArray(intent?.sdohZones) ? intent.sdohZones[0] || "" : "";
+  return `${zip || "national"}|${intentLabel}|${topZone}`.toLowerCase();
 }
 
 function isCacheValid(entry: any): boolean {
@@ -44,22 +47,22 @@ export const searchResources = internalAction({
   handler: async (ctx, { userId, query, zipCode }) => {
     // Get user context
     const user = await ctx.runQuery(internal.internal.users.getUser, { userId });
-    const userZip = zipCode || user?.zipCode || (user?.metadata as any)?.zipCode;
-    const userLat = (user?.metadata as any)?.latitude;
-    const userLng = (user?.metadata as any)?.longitude;
+    const metadata = getUserMetadata(user);
+    const userZip = zipCode || user?.zipCode || metadata.zipCode;
+    const userLat = metadata.latitude;
+    const userLng = metadata.longitude;
 
     try {
       // STEP 1: Interpret Intent (AI-powered)
       const intent = await interpretSearchIntent(query, {
         zones: user?.zones,
         gcSdohScore: user?.gcSdohScore,
-        metadata: user?.metadata,
+        metadata,
       });
 
       // STEP 1.5: Check cache before searching
-      const zipKey = userZip || "national";
-      const categoryKey = cacheKey(intent.searchTiers?.[0]);
-      const cached = await getCachedResources(ctx, zipKey, categoryKey);
+      const key = cacheKey(intent, userZip);
+      const cached = await getCachedResources(ctx, key);
       if (cached) {
         return cached;
       }
@@ -76,17 +79,17 @@ export const searchResources = internalAction({
           longitude: userLng,
         });
         // Cache successful local result
-        await writeResourceCache(ctx, zipKey, categoryKey, {
-          resources: result.resources,
-          placeIds: result.sources?.map((s: any) => s.placeId).filter(Boolean),
+        await writeResourceCache(ctx, key, {
+          resourcesText: result.resources,
+          sources: result.sources,
         });
         return result;
       } else {
         // NATIONAL SEARCH: Use Search Grounding or Gemini knowledge
         const result = await searchNationalResources(intent);
-        await writeResourceCache(ctx, zipKey, categoryKey, {
-          resources: result.resources,
-          placeIds: result.sources?.map((s: any) => s.placeId).filter(Boolean),
+        await writeResourceCache(ctx, key, {
+          resourcesText: result.resources,
+          sources: result.sources,
         });
         return result;
       }
@@ -203,18 +206,16 @@ function formatNationalResponse(text: string, intent: any): string {
   return `${text}${zoneContext}\n\nShare your ZIP for local options.`;
 }
 
-async function getCachedResources(ctx: any, zipKey: string, categoryKey: string) {
+async function getCachedResources(ctx: any, cacheKeyValue: string) {
   const cached = await ctx.db
     .query("resource_cache")
-    .withIndex("by_zip_cat", (q: any) => q.eq("zip", zipKey).eq("category", categoryKey))
+    .withIndex("by_zip_cat", (q: any) => q.eq("zip", cacheKeyValue).eq("category", cacheKeyValue))
     .first();
 
   if (cached && isCacheValid(cached)) {
     return {
-      resources: cached.results,
-      sources: cached.placeIds
-        ? cached.placeIds.map((placeId: string) => ({ placeId, name: "Saved result" }))
-        : undefined,
+      resources: (cached.results as any)?.resourcesText || cached.results,
+      sources: (cached.results as any)?.sources || cached.placeIds?.map((placeId: string) => ({ placeId, name: "Saved result" })),
       intent: {},
       message: "Sharing saved options. Reply with your ZIP for fresher local results.",
     };
@@ -225,20 +226,19 @@ async function getCachedResources(ctx: any, zipKey: string, categoryKey: string)
 
 async function writeResourceCache(
   ctx: any,
-  zipKey: string,
-  categoryKey: string,
-  payload: { resources: string; placeIds?: string[] }
+  cacheKeyValue: string,
+  payload: { resourcesText: string; sources?: Array<{ placeId?: string; name?: string; address?: string }> }
 ) {
   const existing = await ctx.db
     .query("resource_cache")
-    .withIndex("by_zip_cat", (q: any) => q.eq("zip", zipKey).eq("category", categoryKey))
+    .withIndex("by_zip_cat", (q: any) => q.eq("zip", cacheKeyValue).eq("category", cacheKeyValue))
     .first();
 
   const doc = {
-    category: categoryKey,
-    zip: zipKey,
-    placeIds: payload.placeIds,
-    results: payload.resources,
+    category: cacheKeyValue,
+    zip: cacheKeyValue,
+    placeIds: payload.sources?.map((s) => s.placeId).filter(Boolean),
+    results: payload,
     createdAt: Date.now(),
     expiresAt: Date.now() + CACHE_TTL_MS,
   };

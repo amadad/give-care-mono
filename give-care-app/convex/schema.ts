@@ -1,6 +1,6 @@
 import { defineSchema, defineTable } from "convex/server";
 import { v } from "convex/values";
-import { agentMetadataValidator } from "./lib/validators";
+import { agentMetadataValidator, eventPayloadValidator } from "./lib/validators";
 import { authTables } from "@convex-dev/auth/server";
 
 // Validators
@@ -182,9 +182,10 @@ export default defineSchema({
       v.literal("assessment.started"),
       v.literal("profile.updated"),
       v.literal("memory.recorded"),
-      v.literal("check_in.completed")
+      v.literal("check_in.completed"),
+      v.literal("sms.missing_phone")
     ),
-    payload: v.any(), // Flexible payload for event-specific data
+    payload: eventPayloadValidator, // Flexible payload for event-specific data (typed)
   })
     .index("by_user", ["userId"])
     .index("by_type", ["type"]),

@@ -10,7 +10,7 @@ import { z } from "zod";
 import { internal } from "./_generated/api";
 import type { ToolCtx } from "@convex-dev/agent";
 import { Id } from "./_generated/dataModel";
-import { extractZipFromQuery } from "./lib/utils";
+import { extractZipFromQuery, getUserMetadata } from "./lib/utils";
 
 /**
  * 1. getResources - Resource search with graceful degradation
@@ -51,7 +51,8 @@ export const getResources = createTool({
       userId: ctx.userId as Id<"users">,
     });
 
-    const userZip = user?.zipCode || (user?.metadata as any)?.zipCode || zipFromQuery;
+    const metadata = getUserMetadata(user);
+    const userZip = user?.zipCode || metadata.zipCode || zipFromQuery;
     const hasScore = user?.gcSdohScore !== undefined && user.gcSdohScore !== null;
 
     // Call resource search with graceful degradation

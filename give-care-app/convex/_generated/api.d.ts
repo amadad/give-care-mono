@@ -132,6 +132,16 @@ export declare const api: {
       any
     >;
     listUsers: FunctionReference<"query", "public", { limit?: number }, any>;
+    recordAssessmentResponse: FunctionReference<
+      "mutation",
+      "public",
+      {
+        answer: number | "skip";
+        sessionId: Id<"assessment_sessions">;
+        userId: Id<"users">;
+      },
+      any
+    >;
     recordMemory: FunctionReference<
       "mutation",
       "public",
@@ -579,6 +589,12 @@ export declare const internal: {
         { response: string; userId: Id<"users">; zones: any },
         any
       >;
+      logSmsIssue: FunctionReference<
+        "mutation",
+        "internal",
+        { context?: string; reason: "missing_phone"; userId: Id<"users"> },
+        any
+      >;
       sendAgentResponse: FunctionReference<
         "action",
         "internal",
@@ -848,6 +864,12 @@ export declare const internal: {
         any
       >;
       getRecentInboundReceipt: FunctionReference<
+        "query",
+        "internal",
+        { since: number; userId: Id<"users"> },
+        any
+      >;
+      getRecentUsage: FunctionReference<
         "query",
         "internal",
         { since: number; userId: Id<"users"> },

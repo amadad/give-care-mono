@@ -56,7 +56,7 @@ const twilioComponentModules = import.meta.glob(
  * Components are registered from convex.config.ts (real components, not mocks):
  * - agent: Thread/message management, vector search, RAG
  * - workflow: Durable workflows for check-ins, engagement, trends
- * - rateLimiter: Rate limiting (10 SMS/day)
+ * - rateLimiter: Rate limiting (20 SMS/day)
  * - twilio: SMS sending/receiving with built-in handling
  *
  * This enables live E2E testing against real component implementations.

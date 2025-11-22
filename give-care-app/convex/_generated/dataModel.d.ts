@@ -406,7 +406,29 @@ export type DataModel = {
   };
   events: {
     document: {
-      payload: any;
+      payload:
+        | { helpful: boolean; resourceId: string; timestamp: number }
+        | { query?: string; timestamp?: number; zip?: string; zone?: string }
+        | {
+            band?: string;
+            completedAt?: number;
+            definitionId?: string;
+            score?: number;
+          }
+        | { fields?: Array<string>; timestamp?: number }
+        | {
+            category?: string;
+            importance?: number;
+            memoryId?: Id<"memories">;
+            timestamp?: number;
+          }
+        | {
+            assessmentId?: Id<"assessments">;
+            band?: string;
+            completedAt?: number;
+            gcBurnout?: number;
+          }
+        | { context?: string; reason: "missing_phone"; timestamp: number };
       type:
         | "intervention.try"
         | "intervention.success"
@@ -417,12 +439,36 @@ export type DataModel = {
         | "assessment.started"
         | "profile.updated"
         | "memory.recorded"
-        | "check_in.completed";
+        | "check_in.completed"
+        | "sms.missing_phone";
       userId: Id<"users">;
       _id: Id<"events">;
       _creationTime: number;
     };
-    fieldPaths: "_creationTime" | "_id" | "payload" | "type" | "userId";
+    fieldPaths:
+      | "_creationTime"
+      | "_id"
+      | "payload"
+      | "payload.assessmentId"
+      | "payload.band"
+      | "payload.category"
+      | "payload.completedAt"
+      | "payload.context"
+      | "payload.definitionId"
+      | "payload.fields"
+      | "payload.gcBurnout"
+      | "payload.helpful"
+      | "payload.importance"
+      | "payload.memoryId"
+      | "payload.query"
+      | "payload.reason"
+      | "payload.resourceId"
+      | "payload.score"
+      | "payload.timestamp"
+      | "payload.zip"
+      | "payload.zone"
+      | "type"
+      | "userId";
     indexes: {
       by_id: ["_id"];
       by_creation_time: ["_creationTime"];
@@ -966,6 +1012,7 @@ export type DataModel = {
       lastSDOH?: number;
       locale?: string;
       metadata?: {
+        awaitingCrisisFollowUp?: { alertId: Id<"alerts">; timestamp: number };
         careRecipient?: string;
         careRecipientName?: string;
         checkInFrequency?: "daily" | "weekly";
@@ -979,8 +1026,14 @@ export type DataModel = {
         firstResourceSearchedAt?: number;
         firstScore?: number;
         gcBurnout?: number;
+        gcSdohScore?: number;
         journeyPhase?: string;
         lastAssessmentScore?: number;
+        lastEMA?: number;
+        lastSDOH?: number;
+        lastSpikeFollowUpAt?: number;
+        latitude?: number;
+        longitude?: number;
         onboardingCompletedAt?: number;
         onboardingMilestones?: Array<{
           completedAt: number;
@@ -988,16 +1041,27 @@ export type DataModel = {
         }>;
         onboardingStage?: string;
         primaryStressor?: string;
+        proactiveOk?: boolean;
         profile?: {
           careRecipientName?: string;
           firstName?: string;
           relationship?: string;
         };
+        reassuranceLoopFlag?: boolean;
+        riskLevel?: "low" | "moderate" | "high" | "crisis";
         snoozeUntil?: number;
         threadId?: string;
         timezone?: string;
         totalInteractionCount?: number;
         zipCode?: string;
+        zones?: {
+          P1?: number;
+          P2?: number;
+          P3?: number;
+          P4?: number;
+          P5?: number;
+          P6?: number;
+        };
       };
       name?: string;
       phone?: string;
@@ -1036,6 +1100,9 @@ export type DataModel = {
       | "lastSDOH"
       | "locale"
       | "metadata"
+      | "metadata.awaitingCrisisFollowUp"
+      | "metadata.awaitingCrisisFollowUp.alertId"
+      | "metadata.awaitingCrisisFollowUp.timestamp"
       | "metadata.careRecipient"
       | "metadata.careRecipientName"
       | "metadata.checkInFrequency"
@@ -1049,21 +1116,37 @@ export type DataModel = {
       | "metadata.firstResourceSearchedAt"
       | "metadata.firstScore"
       | "metadata.gcBurnout"
+      | "metadata.gcSdohScore"
       | "metadata.journeyPhase"
       | "metadata.lastAssessmentScore"
+      | "metadata.lastEMA"
+      | "metadata.lastSDOH"
+      | "metadata.lastSpikeFollowUpAt"
+      | "metadata.latitude"
+      | "metadata.longitude"
       | "metadata.onboardingCompletedAt"
       | "metadata.onboardingMilestones"
       | "metadata.onboardingStage"
       | "metadata.primaryStressor"
+      | "metadata.proactiveOk"
       | "metadata.profile"
       | "metadata.profile.careRecipientName"
       | "metadata.profile.firstName"
       | "metadata.profile.relationship"
+      | "metadata.reassuranceLoopFlag"
+      | "metadata.riskLevel"
       | "metadata.snoozeUntil"
       | "metadata.threadId"
       | "metadata.timezone"
       | "metadata.totalInteractionCount"
       | "metadata.zipCode"
+      | "metadata.zones"
+      | "metadata.zones.P1"
+      | "metadata.zones.P2"
+      | "metadata.zones.P3"
+      | "metadata.zones.P4"
+      | "metadata.zones.P5"
+      | "metadata.zones.P6"
       | "name"
       | "phone"
       | "riskLevel"

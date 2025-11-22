@@ -6,6 +6,7 @@
 import { internalQuery, internalMutation } from "../_generated/server";
 import { v } from "convex/values";
 import type { Id } from "../_generated/dataModel";
+import { getUserMetadata } from "../lib/utils";
 
 /**
  * Get location from user (query helper)
@@ -19,7 +20,8 @@ export const getLocationFromUserQuery = internalQuery({
     const user = await ctx.db.get(userId);
     if (!user) return null;
     
-    const zipCode = user.zipCode || (user.metadata as any)?.zipCode;
+    const metadata = getUserMetadata(user);
+    const zipCode = user.zipCode || metadata.zipCode;
     if (!zipCode) return null;
     
     return { zipCode };
@@ -50,4 +52,3 @@ export const getLatestUserScore = internalQuery({
     };
   },
 });
-

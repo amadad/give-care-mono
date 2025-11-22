@@ -244,7 +244,7 @@ Immediate (before scaling):
 | **Resource navigation focus** | ✅ Implemented | `convex/resources.ts` |
 | **Validated assessments** | ✅ Partial (2 of 4) | EMA + SDOH-28 |
 | **Trauma-informed design** | ✅ Prompt-level | P1-P6 principles in `convex/lib/prompts.ts` |
-| **Rate limiting** | ✅ Implemented | 10 SMS/day via @convex-dev/rate-limiter |
+| **Rate limiting** | ✅ Implemented | 20 SMS/day via @convex-dev/rate-limiter |
 | **Privacy-preserving** | 🚧 Partial | Stores embeddings (identifiable) |
 | **Human-in-loop** | ❌ Missing | No clinical oversight |
 | **Bias auditing** | ❌ Missing | No evaluation system |
@@ -893,7 +893,7 @@ Loop: User seeks repeated reassurance, AI provides it, anxiety temporarily
 ```
 
 **Current Protection**:
-- ✅ Rate limiting (10 SMS/day) slows loop
+- ✅ Rate limiting (20 SMS/day) slows loop
 - ❌ No reassurance pattern detection
 
 **Required Action**:

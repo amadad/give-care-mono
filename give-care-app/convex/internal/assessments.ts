@@ -27,6 +27,20 @@ export const startAssessment = internalMutation({
     ),
   },
   handler: async (ctx, { userId, assessmentType }) => {
+    // Prevent multiple active sessions
+    const existingSession = await ctx.db
+      .query("assessment_sessions")
+      .withIndex("by_user_status", (q) => q.eq("userId", userId).eq("status", "active"))
+      .first();
+
+    if (existingSession) {
+      return {
+        success: false,
+        message: "You already have an assessment in progress. Let's finish that first.",
+        nextStep: "Reply 1-5 or skip to continue.",
+      };
+    }
+
     // Check cooldown periods (EMA + SDOH only)
     const cooldowns: Record<string, number> = {
       ema: 86400000, // 1 day

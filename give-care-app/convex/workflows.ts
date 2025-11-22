@@ -8,6 +8,7 @@ import { components, internal } from "./_generated/api";
 import { v } from "convex/values";
 import { internalAction } from "./_generated/server";
 import { DateTime } from "luxon";
+import { getUserMetadata } from "./lib/utils";
 
 const workflow = new WorkflowManager(components.workflow);
 
@@ -26,9 +27,9 @@ export const checkInWorkflow = workflow.define({
       return; // User not found
     }
 
-    const metadata = user.metadata || {};
-    const checkInFrequency = (metadata as any)?.checkInFrequency;
-    const snoozeUntil = (metadata as any)?.snoozeUntil;
+    const metadata = getUserMetadata(user);
+    const checkInFrequency = metadata.checkInFrequency;
+    const snoozeUntil = metadata.snoozeUntil;
 
     // Check if check-ins are enabled
     if (!checkInFrequency) {
@@ -41,7 +42,7 @@ export const checkInWorkflow = workflow.define({
     }
 
     // Step 2: Check quiet hours (9am-7pm local time, never after 8pm)
-    const timezone = (metadata as any)?.timezone || "UTC";
+    const timezone = metadata.timezone || "UTC";
     const localTime = DateTime.now().setZone(timezone);
     const hour = localTime.isValid ? localTime.hour : DateTime.utc().hour;
     const isQuietHours = hour >= 9 && hour < 20;

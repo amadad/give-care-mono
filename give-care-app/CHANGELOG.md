@@ -2,6 +2,14 @@
 
 ## [Unreleased]
 
+### 📝 Documentation
+- Refreshed `docs/ARCHITECTURE.md` to match current Convex layout (agents, tools, internal modules, scripts)
+- Updated schema summary to 27 tables and documented typed `events.payload`
+- Captured current priorities (type safety, latency from scheduler hops, SMS failure logging) and removed stale tsconfig/domains notes
+- Converted `events.payload` to a typed union and added missing-phone SMS logging; added `users.by_checkInFrequency_lastEMA` index
+- Typed `UserMetadata` + helper, removed most `as any` metadata reads, and added a `requireUser` helper
+- Reduced agent latency by using direct action→action sends instead of scheduler hops inside `internal/agents`
+
 ### 🛡️ Safety & Value Bundle
 
 **Interventions v1:**

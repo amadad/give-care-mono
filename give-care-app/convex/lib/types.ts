@@ -3,6 +3,8 @@
  */
 
 import type { Id } from "../_generated/dataModel";
+import type { Infer } from "convex/values";
+import { agentMetadataValidator, eventPayloadValidator } from "./validators";
 
 export type AssessmentType = "ema" | "sdoh";
 
@@ -44,3 +46,6 @@ export interface ResourceResult {
   types?: string[];
 }
 
+export type UserMetadata = Infer<typeof agentMetadataValidator>;
+
+export type EventPayload = Infer<typeof eventPayloadValidator>;

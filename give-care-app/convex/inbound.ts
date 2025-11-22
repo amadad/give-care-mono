@@ -17,6 +17,7 @@ import {
   isUpdatePaymentRequest,
   isEMACheckInKeyword,
   normalizePhone,
+  getUserMetadata,
 } from "./lib/utils";
 
 // Inlined feature flags
@@ -99,7 +100,7 @@ export const handleIncomingMessage = internalMutation({
     }
 
     // Check if user is awaiting crisis follow-up response
-    const metadata = user.metadata as any;
+    const metadata = getUserMetadata(user);
     if (metadata?.awaitingCrisisFollowUp) {
       const { alertId, timestamp } = metadata.awaitingCrisisFollowUp;
 
@@ -137,7 +138,7 @@ export const handleIncomingMessage = internalMutation({
       receivedAt: Date.now(),
     });
 
-    // Step 7: Rate limiting (10 SMS/day) - only for non-crisis messages
+    // Step 7: Rate limiting (20 SMS/day) - only for non-crisis messages
     // Crisis messages bypass rate limiting (already handled above)
     const rateLimitKey = user._id; // User ID as string key
     const rateLimitCheck = await ctx.runQuery(components.rateLimiter.lib.checkRateLimit, {
@@ -146,8 +147,8 @@ export const handleIncomingMessage = internalMutation({
       config: {
         kind: "fixed window",
         period: 86400000, // 24 hours in milliseconds
-        rate: 10, // 10 messages per day
-        capacity: 10,
+        rate: 20, // 20 messages per day
+        capacity: 20,
       },
       count: 1,
     });
@@ -171,8 +172,8 @@ export const handleIncomingMessage = internalMutation({
       config: {
         kind: "fixed window",
         period: 86400000,
-        rate: 10,
-        capacity: 10,
+        rate: 20,
+        capacity: 20,
       },
       count: 1,
     });
@@ -411,7 +412,7 @@ async function handleEMACheckInKeyword(
   const user = await ctx.db.get(userId);
   if (!user) return;
 
-  const metadata = user.metadata || {};
+  const metadata = getUserMetadata(user);
   let checkInFrequency: "daily" | "weekly" | null = null;
   let snoozeUntil: number | undefined = undefined;
   let message = "";
@@ -452,7 +453,7 @@ async function handleEMACheckInKeyword(
     message = "Check-ins paused for 7 days. Text RESUME to restart.";
   } else if (keyword === "resume") {
     // Resume with previous frequency or default to WEEKLY
-    checkInFrequency = (metadata as any)?.checkInFrequency || "weekly";
+    checkInFrequency = metadata.checkInFrequency || "weekly";
     snoozeUntil = undefined;
     message = `Check-ins resumed (${checkInFrequency.toUpperCase()}). You can text DAILY, WEEKLY, PAUSE CHECKINS, or RESUME anytime.`;
   }
@@ -463,7 +464,7 @@ async function handleEMACheckInKeyword(
       ...metadata,
       checkInFrequency,
       snoozeUntil,
-    } as any,
+    },
   });
 
   // Send confirmation message
@@ -487,12 +488,12 @@ async function handleCrisisFollowUpResponseInline(
 ): Promise<void> {
   // Clear awaiting state
   const user = await ctx.db.get(userId);
-  const metadata = user?.metadata as any;
+  const metadata = getUserMetadata(user);
   await ctx.db.patch(userId, {
     metadata: {
       ...metadata,
       awaitingCrisisFollowUp: undefined,
-    } as any,
+    },
   });
 
   // Schedule the response handler (action) to send SMS and record feedback

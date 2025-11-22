@@ -57,8 +57,8 @@ export const checkRateLimitStatus = query({
       config: {
         kind: "fixed window",
         period: 86400000,
-        rate: 10,
-        capacity: 10,
+        rate: 20,
+        capacity: 20,
       },
       count: 1,
     });
@@ -66,7 +66,7 @@ export const checkRateLimitStatus = query({
     return {
       ok: result.ok,
       retryAfter: result.retryAfter,
-      currentConfig: { rate: 10, capacity: 10, period: 86400000 },
+      currentConfig: { rate: 20, capacity: 20, period: 86400000 },
     };
   },
 });
@@ -194,6 +194,11 @@ export const recordMemory = mutation({
     importance: v.number(),
   },
   handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity || (identity.subject as any) !== args.userId) {
+      throw new Error("Unauthorized: memory updates must be initiated by the profile owner.");
+    }
+
     await ctx.runMutation(internal.internal.memories.recordMemory, args);
     return { success: true };
   },
@@ -221,5 +226,24 @@ export const listMemories = query({
       userId,
       category,
     });
+  },
+});
+
+/**
+ * Record assessment response (optional public surface)
+ */
+export const recordAssessmentResponse = mutation({
+  args: {
+    userId: v.id("users"),
+    sessionId: v.id("assessment_sessions"),
+    answer: v.union(v.number(), v.literal("skip")),
+  },
+  handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity || (identity.subject as any) !== args.userId) {
+      throw new Error("Unauthorized: assessment responses must be sent by the profile owner.");
+    }
+
+    return await ctx.runMutation(internal.assessments.processAssessmentAnswer, args);
   },
 });

@@ -554,7 +554,7 @@ trackInterventionHelpfulness: tool({
 ### Usage Tracking & Rate Limiting
 **Status**: ✅ Convex Rate Limiter component
 
-- 10 SMS/day per user (configurable)
+- 20 SMS/day per user (configurable)
 - Crisis bypass (no limits for crisis messages)
 - Rate limit messaging via `sendRateLimitMessage`
 - `lastEngagementDate` tracking
@@ -702,7 +702,7 @@ trackInterventionHelpfulness: tool({
 - ✅ Google Maps resource discovery
 - ✅ Memory system with vector search
 - ✅ Stripe subscriptions + billing portal
-- ✅ Rate limiting (10 SMS/day)
+- ✅ Rate limiting (20 SMS/day)
 - ✅ Durable workflows
 - 🚧 Check-in workflow built but disabled
 - 🚧 Engagement monitoring templates exist, no trigger

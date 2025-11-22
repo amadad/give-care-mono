@@ -2,20 +2,52 @@
 export { SlideLayout } from './SlideLayout';
 export { CenteredContent, VideoOverlay, TwoColumnLayout } from './ContentLayout';
 
-// Typography Components  
-export { 
-  SlideTitle, 
-  SlideSubtitle, 
-  SlideBody, 
+// Typography Components
+export {
+  SlideTitle,
+  SlideSubtitle,
+  SlideBody,
   SlideQuote,
   VideoSlideTitle,
-  VideoSlideSubtitle 
+  VideoSlideSubtitle
 } from './Typography';
 
 // Media Components
-export { 
-  GiveCareLogo, 
-  FullscreenImage, 
-  ImageCard, 
-  PhoneMockup 
+export {
+  GiveCareLogo,
+  FullscreenImage,
+  ImageCard,
+  PhoneMockup
 } from './MediaComponents';
+
+// Presentation Components (animated, data-driven)
+export {
+  BigHeadline,
+  SupportingText,
+  AnimatedList,
+  StatGrid,
+  ProgressiveReveal,
+  Comparison,
+  D3ProgressBar,
+  TwoColumnLayout as AnimatedTwoColumn
+} from './PresentationComponents';
+
+// Slide Templates (complete slide layouts)
+export {
+  TitleSlide,
+  ContentSlide,
+  StatSlide,
+  TwoColumnSlide,
+  ComparisonSlide,
+  QuestionSlide
+} from './SlideTemplates';
+
+// D3 Visualizations
+export {
+  CirclePacking,
+  SankeyDiagram,
+  RadialChart,
+  BarChartRace,
+  InvisibleToVisible,
+  LiveStats
+} from './D3Visualizations';

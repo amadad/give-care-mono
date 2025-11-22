@@ -6,6 +6,7 @@
 import { query } from "./_generated/server";
 import { v } from "convex/values";
 import { getRiskLevel } from "./lib/sdoh";
+import { getUserMetadata } from "./lib/utils";
 
 /**
  * Get current score for a user
@@ -20,10 +21,11 @@ export const getScore = query({
       return null;
     }
 
+    const metadata = getUserMetadata(user);
     // Get score from top-level fields (with metadata fallback for migration)
-    const gcSdohScore = user.gcSdohScore || (user.metadata as any)?.gcSdohScore;
-    const zones = user.zones || (user.metadata as any)?.zones || {};
-    const riskLevel = user.riskLevel || (user.metadata as any)?.riskLevel;
+    const gcSdohScore = user.gcSdohScore || metadata.gcSdohScore;
+    const zones = user.zones || metadata.zones || {};
+    const riskLevel = user.riskLevel || metadata.riskLevel;
 
     if (gcSdohScore === undefined || gcSdohScore === null) {
       return null;
@@ -33,8 +35,8 @@ export const getScore = query({
       score: gcSdohScore,
       zones: zones || {},
       riskLevel: riskLevel || getRiskLevel(gcSdohScore),
-      lastEMA: user.lastEMA || (user.metadata as any)?.lastEMA,
-      lastSDOH: user.lastSDOH || (user.metadata as any)?.lastSDOH,
+      lastEMA: user.lastEMA || metadata.lastEMA,
+      lastSDOH: user.lastSDOH || metadata.lastSDOH,
     };
   },
 });
@@ -64,4 +66,3 @@ export const getScoreHistory = query({
     }));
   },
 });
-
