@@ -207,6 +207,17 @@ export const handleIncomingMessage = internalMutation({
     );
 
     if (activeSession) {
+      // Auto-expire sessions older than 24 hours
+      const sessionAge = Date.now() - activeSession._creationTime;
+      if (sessionAge > 24 * 60 * 60 * 1000) {
+        await ctx.db.patch(activeSession._id, { status: "completed" });
+        await ctx.scheduler.runAfter(0, internal.internal.sms.sendAgentResponse, {
+          userId: user._id,
+          text: "Your previous assessment expired. How can I help you?",
+        });
+        return { status: "assessment_expired" };
+      }
+
       const trimmed = body.trim();
       const lower = trimmed.toLowerCase();
       let answer: number | "skip" | null = null;
@@ -221,6 +232,16 @@ export const handleIncomingMessage = internalMutation({
       }
 
       if (answer === null) {
+        // Allow users to cancel assessment with keywords
+        if (lower.includes("cancel") || lower.includes("restart") || lower === "stop assessment") {
+          await ctx.db.patch(activeSession._id, { status: "completed" });
+          await ctx.scheduler.runAfter(0, internal.internal.sms.sendAgentResponse, {
+            userId: user._id,
+            text: "Assessment canceled. How can I help you?",
+          });
+          return { status: "assessment_canceled" };
+        }
+
         await ctx.scheduler.runAfter(0, internal.internal.sms.sendAgentResponse, {
           userId: user._id,
           text: "Please reply with a number 1-5 or say skip.",
