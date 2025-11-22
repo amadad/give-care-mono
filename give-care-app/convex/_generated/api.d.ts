@@ -110,6 +110,20 @@ export declare const api: {
     >;
     listAlerts: FunctionReference<"query", "public", { limit?: number }, any>;
     listEvents: FunctionReference<"query", "public", { limit?: number }, any>;
+    listMemories: FunctionReference<
+      "query",
+      "public",
+      {
+        category?:
+          | "care_routine"
+          | "preference"
+          | "intervention_result"
+          | "crisis_trigger"
+          | "family_health";
+        userId: Id<"users">;
+      },
+      any
+    >;
     listScores: FunctionReference<"query", "public", { limit?: number }, any>;
     listSubscriptions: FunctionReference<
       "query",
@@ -118,6 +132,22 @@ export declare const api: {
       any
     >;
     listUsers: FunctionReference<"query", "public", { limit?: number }, any>;
+    recordMemory: FunctionReference<
+      "mutation",
+      "public",
+      {
+        category:
+          | "care_routine"
+          | "preference"
+          | "intervention_result"
+          | "crisis_trigger"
+          | "family_health";
+        content: string;
+        importance: number;
+        userId: Id<"users">;
+      },
+      any
+    >;
     resetRateLimiter: FunctionReference<"mutation", "public", {}, any>;
   };
   score: {
@@ -559,6 +589,12 @@ export declare const internal: {
         "action",
         "internal",
         { band: string; score: number; userId: Id<"users"> },
+        any
+      >;
+      sendAssessmentQuestion: FunctionReference<
+        "action",
+        "internal",
+        { text: string; userId: Id<"users"> },
         any
       >;
       sendAssessmentReminder: FunctionReference<

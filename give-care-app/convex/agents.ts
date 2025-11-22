@@ -17,6 +17,8 @@ import {
   trackInterventionHelpfulness,
   findInterventions,
   checkAssessmentStatus,
+  recordMemory,
+  updateProfile,
 } from "./tools";
 
 /**
@@ -55,6 +57,8 @@ export const mainAgent = new Agent(components.agent, {
     trackInterventionHelpfulness,
     findInterventions,
     checkAssessmentStatus,
+    recordMemory,
+    updateProfile,
   },
   maxSteps: 5, // Allows tool chaining
   usageHandler: trackUsage,

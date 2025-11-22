@@ -380,6 +380,30 @@ export type DataModel = {
     searchIndexes: {};
     vectorIndexes: {};
   };
+  entitlements: {
+    document: {
+      active: boolean;
+      expiresAt?: number;
+      feature: string;
+      userId: Id<"users">;
+      _id: Id<"entitlements">;
+      _creationTime: number;
+    };
+    fieldPaths:
+      | "_creationTime"
+      | "_id"
+      | "active"
+      | "expiresAt"
+      | "feature"
+      | "userId";
+    indexes: {
+      by_id: ["_id"];
+      by_creation_time: ["_creationTime"];
+      by_user_feature: ["userId", "feature", "_creationTime"];
+    };
+    searchIndexes: {};
+    vectorIndexes: {};
+  };
   events: {
     document: {
       payload: any;
@@ -540,6 +564,39 @@ export type DataModel = {
     searchIndexes: {};
     vectorIndexes: {};
   };
+  llm_usage: {
+    document: {
+      agentName?: "main" | "assessment" | "crisis";
+      completionTokens: number;
+      createdAt: number;
+      model: string;
+      promptTokens: number;
+      provider: string;
+      totalTokens: number;
+      userId?: Id<"users">;
+      _id: Id<"llm_usage">;
+      _creationTime: number;
+    };
+    fieldPaths:
+      | "_creationTime"
+      | "_id"
+      | "agentName"
+      | "completionTokens"
+      | "createdAt"
+      | "model"
+      | "promptTokens"
+      | "provider"
+      | "totalTokens"
+      | "userId";
+    indexes: {
+      by_id: ["_id"];
+      by_creation_time: ["_creationTime"];
+      by_created: ["createdAt", "_creationTime"];
+      by_user_created: ["userId", "createdAt", "_creationTime"];
+    };
+    searchIndexes: {};
+    vectorIndexes: {};
+  };
   memories: {
     document: {
       category:
@@ -566,6 +623,30 @@ export type DataModel = {
       by_creation_time: ["_creationTime"];
       by_user_and_importance: ["userId", "importance", "_creationTime"];
       by_user_category: ["userId", "category", "_creationTime"];
+    };
+    searchIndexes: {};
+    vectorIndexes: {};
+  };
+  prompt_versions: {
+    document: {
+      createdAt: number;
+      name: string;
+      prompt: string;
+      version: string;
+      _id: Id<"prompt_versions">;
+      _creationTime: number;
+    };
+    fieldPaths:
+      | "_creationTime"
+      | "_id"
+      | "createdAt"
+      | "name"
+      | "prompt"
+      | "version";
+    indexes: {
+      by_id: ["_id"];
+      by_creation_time: ["_creationTime"];
+      by_name_version: ["name", "version", "_creationTime"];
     };
     searchIndexes: {};
     vectorIndexes: {};
@@ -775,6 +856,37 @@ export type DataModel = {
     searchIndexes: {};
     vectorIndexes: {};
   };
+  tool_calls: {
+    document: {
+      agentName?: string;
+      cost?: number;
+      createdAt: number;
+      durationMs?: number;
+      name: string;
+      success: boolean;
+      userId?: Id<"users">;
+      _id: Id<"tool_calls">;
+      _creationTime: number;
+    };
+    fieldPaths:
+      | "_creationTime"
+      | "_id"
+      | "agentName"
+      | "cost"
+      | "createdAt"
+      | "durationMs"
+      | "name"
+      | "success"
+      | "userId";
+    indexes: {
+      by_id: ["_id"];
+      by_creation_time: ["_creationTime"];
+      by_name: ["name", "_creationTime"];
+      by_user_created: ["userId", "createdAt", "_creationTime"];
+    };
+    searchIndexes: {};
+    vectorIndexes: {};
+  };
   triggers: {
     document: {
       nextRun: number;
@@ -804,6 +916,32 @@ export type DataModel = {
       by_creation_time: ["_creationTime"];
       by_nextRun: ["nextRun", "_creationTime"];
       by_user: ["userId", "_creationTime"];
+    };
+    searchIndexes: {};
+    vectorIndexes: {};
+  };
+  usage_invoices: {
+    document: {
+      billingPeriod: string;
+      status: "open" | "paid" | "void";
+      totalCost: number;
+      totalTokens: number;
+      userId: Id<"users">;
+      _id: Id<"usage_invoices">;
+      _creationTime: number;
+    };
+    fieldPaths:
+      | "_creationTime"
+      | "_id"
+      | "billingPeriod"
+      | "status"
+      | "totalCost"
+      | "totalTokens"
+      | "userId";
+    indexes: {
+      by_id: ["_id"];
+      by_creation_time: ["_creationTime"];
+      by_user_period: ["userId", "billingPeriod", "_creationTime"];
     };
     searchIndexes: {};
     vectorIndexes: {};
@@ -942,6 +1080,23 @@ export type DataModel = {
       by_creation_time: ["_creationTime"];
       by_externalId: ["externalId", "_creationTime"];
       by_phone: ["phone", "_creationTime"];
+    };
+    searchIndexes: {};
+    vectorIndexes: {};
+  };
+  watcher_state: {
+    document: {
+      cursor?: any;
+      lastRun?: number;
+      watcherName: string;
+      _id: Id<"watcher_state">;
+      _creationTime: number;
+    };
+    fieldPaths: "_creationTime" | "_id" | "cursor" | "lastRun" | "watcherName";
+    indexes: {
+      by_id: ["_id"];
+      by_creation_time: ["_creationTime"];
+      by_watcher: ["watcherName", "_creationTime"];
     };
     searchIndexes: {};
     vectorIndexes: {};

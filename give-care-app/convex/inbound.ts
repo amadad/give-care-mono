@@ -137,7 +137,7 @@ export const handleIncomingMessage = internalMutation({
       receivedAt: Date.now(),
     });
 
-    // Step 7: Rate limiting (30 SMS/day) - only for non-crisis messages
+    // Step 7: Rate limiting (10 SMS/day) - only for non-crisis messages
     // Crisis messages bypass rate limiting (already handled above)
     const rateLimitKey = user._id; // User ID as string key
     const rateLimitCheck = await ctx.runQuery(components.rateLimiter.lib.checkRateLimit, {
@@ -146,8 +146,8 @@ export const handleIncomingMessage = internalMutation({
       config: {
         kind: "fixed window",
         period: 86400000, // 24 hours in milliseconds
-        rate: 30, // 30 messages per day
-        capacity: 30,
+        rate: 10, // 10 messages per day
+        capacity: 10,
       },
       count: 1,
     });
@@ -171,8 +171,8 @@ export const handleIncomingMessage = internalMutation({
       config: {
         kind: "fixed window",
         period: 86400000,
-        rate: 30,
-        capacity: 30,
+        rate: 10,
+        capacity: 10,
       },
       count: 1,
     });
@@ -198,6 +198,73 @@ export const handleIncomingMessage = internalMutation({
     await ctx.db.patch(user._id, {
       lastEngagementDate: Date.now(),
     });
+
+    // Step 9a: Handle active assessment session responses
+    const activeSession = await ctx.runQuery(
+      internal.internal.assessments.getActiveSession,
+      { userId: user._id }
+    );
+
+    if (activeSession) {
+      const trimmed = body.trim();
+      const lower = trimmed.toLowerCase();
+      let answer: number | "skip" | null = null;
+
+      if (lower === "skip") {
+        answer = "skip";
+      } else {
+        const parsed = Number(trimmed);
+        if (!Number.isNaN(parsed) && parsed >= 1 && parsed <= 5) {
+          answer = parsed;
+        }
+      }
+
+      if (answer === null) {
+        await ctx.scheduler.runAfter(0, internal.internal.sms.sendAgentResponse, {
+          userId: user._id,
+          text: "Please reply with a number 1-5 or say skip.",
+        });
+        return { status: "assessment_invalid" };
+      }
+
+      const result = await ctx.runMutation(
+        internal.assessments.processAssessmentAnswer,
+        {
+          userId: user._id,
+          sessionId: activeSession._id,
+          answer: answer === "skip" ? "skip" : Number(answer),
+        }
+      );
+
+      if ((result as any)?.error) {
+        await ctx.scheduler.runAfter(0, internal.internal.sms.sendAgentResponse, {
+          userId: user._id,
+          text: "I couldn't process that answer. Please try again.",
+        });
+        return { status: "assessment_error" };
+      }
+
+      if ((result as any)?.complete) {
+        await ctx.scheduler.runAfter(0, internal.internal.sms.sendAgentResponse, {
+          userId: user._id,
+          text: "Thanks for completing the assessment. I’ll interpret your results now.",
+        });
+        return { status: "assessment_complete" };
+      }
+
+      // Continue to next question
+      const nextQuestion = (result as any)?.nextQuestion as string | undefined;
+      const progress = (result as any)?.progress as string | undefined;
+      if (nextQuestion) {
+        const text = progress ? `(${progress}) ${nextQuestion} Reply 1-5 or skip.` : `${nextQuestion} Reply 1-5 or skip.`;
+        await ctx.scheduler.runAfter(0, internal.internal.sms.sendAssessmentQuestion, {
+          userId: user._id,
+          text,
+        });
+      }
+
+      return { status: "assessment_continue" };
+    }
 
     // Step 10: Route to agent (async)
     await ctx.scheduler.runAfter(0, internal.internal.agents.processMainAgentMessage, {

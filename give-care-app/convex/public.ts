@@ -5,7 +5,7 @@
 
 import { query, mutation } from "./_generated/server";
 import { v } from "convex/values";
-import { components } from "./_generated/api";
+import { components, internal } from "./_generated/api";
 import { ADMIN_EMAILS } from "./lib/adminConfig";
 
 /**
@@ -57,8 +57,8 @@ export const checkRateLimitStatus = query({
       config: {
         kind: "fixed window",
         period: 86400000,
-        rate: 30,
-        capacity: 30,
+        rate: 10,
+        capacity: 10,
       },
       count: 1,
     });
@@ -66,7 +66,7 @@ export const checkRateLimitStatus = query({
     return {
       ok: result.ok,
       retryAfter: result.retryAfter,
-      currentConfig: { rate: 30, capacity: 30, period: 86400000 },
+      currentConfig: { rate: 10, capacity: 10, period: 86400000 },
     };
   },
 });
@@ -174,5 +174,52 @@ export const listEvents = query({
     return await ctx.db
       .query("events")
       .take(limit);
+  },
+});
+
+/**
+ * Record a memory (public surface for apps)
+ */
+export const recordMemory = mutation({
+  args: {
+    userId: v.id("users"),
+    content: v.string(),
+    category: v.union(
+      v.literal("care_routine"),
+      v.literal("preference"),
+      v.literal("intervention_result"),
+      v.literal("crisis_trigger"),
+      v.literal("family_health")
+    ),
+    importance: v.number(),
+  },
+  handler: async (ctx, args) => {
+    await ctx.runMutation(internal.internal.memories.recordMemory, args);
+    return { success: true };
+  },
+});
+
+/**
+ * List memories (admin only to avoid leaking user content)
+ */
+export const listMemories = query({
+  args: {
+    userId: v.id("users"),
+    category: v.optional(
+      v.union(
+        v.literal("care_routine"),
+        v.literal("preference"),
+        v.literal("intervention_result"),
+        v.literal("crisis_trigger"),
+        v.literal("family_health")
+      )
+    ),
+  },
+  handler: async (ctx, { userId, category }) => {
+    await checkAdminAccess(ctx);
+    return await ctx.runQuery(internal.internal.memories.listMemories, {
+      userId,
+      category,
+    });
   },
 });

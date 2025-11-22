@@ -1,6 +1,6 @@
 /**
  * Agent Tools
- * Simplified to 4 core tools: getResources, startAssessment, recordObservation, trackInterventionHelpfulness
+ * Core tools for resources, assessments, memory, interventions, and profile updates
  */
 
 "use node";
@@ -154,7 +154,39 @@ export const recordObservation = createTool({
 });
 
 /**
- * 4. trackInterventionHelpfulness - Simple "Did this help?" tracking
+ * 4. recordMemory - Persist important context
+ */
+export const recordMemory = createTool({
+  description:
+    "Save key caregiving context so we don't have to ask again. Use for routines, preferences, triggers, or intervention results. Keep it short.",
+  args: z.object({
+    content: z.string().min(3).max(500),
+    category: z.enum([
+      "care_routine",
+      "preference",
+      "intervention_result",
+      "crisis_trigger",
+      "family_health",
+    ]),
+    importance: z.number().min(1).max(10).default(7),
+  }),
+  handler: async (ctx: ToolCtx, args) => {
+    await ctx.runMutation(internal.internal.memories.recordMemory, {
+      userId: ctx.userId as Id<"users">,
+      category: args.category,
+      content: args.content,
+      importance: args.importance,
+    });
+
+    return {
+      success: true,
+      message: "Saved to your profile so I can remember it.",
+    };
+  },
+});
+
+/**
+ * 5. trackInterventionHelpfulness - Simple "Did this help?" tracking
  */
 export const trackInterventionHelpfulness = createTool({
   description:
@@ -178,7 +210,7 @@ export const trackInterventionHelpfulness = createTool({
 });
 
 /**
- * 5. findInterventions - Recommend micro-interventions matched to user zones
+ * 6. findInterventions - Recommend micro-interventions matched to user zones
  */
 export const findInterventions = createTool({
   description:
@@ -224,7 +256,7 @@ export const findInterventions = createTool({
 });
 
 /**
- * 6. checkAssessmentStatus - Check user's assessment history and burnout score
+ * 7. checkAssessmentStatus - Check user's assessment history and burnout score
  */
 export const checkAssessmentStatus = createTool({
   description:
@@ -289,5 +321,33 @@ export const checkAssessmentStatus = createTool({
       lastEMAScore,
       message,
     };
+  },
+});
+
+/**
+ * 8. updateProfile - Update key profile fields
+ */
+export const updateProfile = createTool({
+  description:
+    "Update user profile fields like first name, care recipient name, relationship, zip, or timezone. Use soft confirmations before updating.",
+  args: z.object({
+    field: z.enum([
+      "firstName",
+      "careRecipientName",
+      "relationship",
+      "zipCode",
+      "timezone",
+      "checkInFrequency",
+    ]),
+    value: z.string().min(1).max(200),
+  }),
+  handler: async (ctx: ToolCtx, args) => {
+    await ctx.runMutation(internal.internal.users.updateProfile, {
+      userId: ctx.userId as Id<"users">,
+      field: args.field,
+      value: args.value,
+    });
+
+    return { success: true, message: "Profile updated." };
   },
 });

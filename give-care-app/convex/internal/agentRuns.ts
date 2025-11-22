@@ -52,6 +52,18 @@ export const track = internalMutation({
         providerMetadata: args.providerMetadata,
       },
     });
+
+    // Token accounting (llm_usage)
+    await ctx.db.insert("llm_usage", {
+      userId: args.userId as Id<"users">,
+      agentName,
+      model: args.model,
+      provider: args.provider,
+      promptTokens: args.promptTokens,
+      completionTokens: args.completionTokens,
+      totalTokens: args.totalTokens,
+      createdAt: Date.now(),
+    });
   },
 });
 
@@ -179,4 +191,3 @@ export const migrateAgentRuns = internalMutation({
     return { migrated, skipped, total: runs.length };
   },
 });
-

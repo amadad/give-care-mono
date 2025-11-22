@@ -18,6 +18,16 @@ import { interpretSearchIntent, getZoneDisplayName } from "./lib/intentInterpret
 import { searchWithMapsGrounding } from "./lib/maps";
 import { tieredSearch } from "./lib/search";
 
+const CACHE_TTL_MS = 6 * 60 * 60 * 1000; // 6 hours
+
+function cacheKey(raw: string | undefined): string {
+  return (raw || "general").toLowerCase().slice(0, 80);
+}
+
+function isCacheValid(entry: any): boolean {
+  return !entry?.expiresAt || entry.expiresAt > Date.now();
+}
+
 /**
  * AI-Native Resource Search
  * Interprets user intent and finds relevant resources dynamically
@@ -46,20 +56,39 @@ export const searchResources = internalAction({
         metadata: user?.metadata,
       });
 
+      // STEP 1.5: Check cache before searching
+      const zipKey = userZip || "national";
+      const categoryKey = cacheKey(intent.searchTiers?.[0]);
+      const cached = await getCachedResources(ctx, zipKey, categoryKey);
+      if (cached) {
+        return cached;
+      }
+
       // STEP 2: Choose search strategy based on location availability
       const shouldUseLocal =
         !!userZip && intent.isGeographical === true;
 
       if (shouldUseLocal) {
         // LOCAL SEARCH: Use Maps Grounding when query is truly geographical
-        return await searchLocalResources(intent, {
+        const result = await searchLocalResources(intent, {
           zipCode: userZip,
           latitude: userLat,
           longitude: userLng,
         });
+        // Cache successful local result
+        await writeResourceCache(ctx, zipKey, categoryKey, {
+          resources: result.resources,
+          placeIds: result.sources?.map((s: any) => s.placeId).filter(Boolean),
+        });
+        return result;
       } else {
         // NATIONAL SEARCH: Use Search Grounding or Gemini knowledge
-        return await searchNationalResources(intent);
+        const result = await searchNationalResources(intent);
+        await writeResourceCache(ctx, zipKey, categoryKey, {
+          resources: result.resources,
+          placeIds: result.sources?.map((s: any) => s.placeId).filter(Boolean),
+        });
+        return result;
       }
     } catch (error) {
       // Fallback: Simple Gemini response without grounding
@@ -172,4 +201,51 @@ function formatNationalResponse(text: string, intent: any): string {
     : "";
 
   return `${text}${zoneContext}\n\nShare your ZIP for local options.`;
+}
+
+async function getCachedResources(ctx: any, zipKey: string, categoryKey: string) {
+  const cached = await ctx.db
+    .query("resource_cache")
+    .withIndex("by_zip_cat", (q: any) => q.eq("zip", zipKey).eq("category", categoryKey))
+    .first();
+
+  if (cached && isCacheValid(cached)) {
+    return {
+      resources: cached.results,
+      sources: cached.placeIds
+        ? cached.placeIds.map((placeId: string) => ({ placeId, name: "Saved result" }))
+        : undefined,
+      intent: {},
+      message: "Sharing saved options. Reply with your ZIP for fresher local results.",
+    };
+  }
+
+  return null;
+}
+
+async function writeResourceCache(
+  ctx: any,
+  zipKey: string,
+  categoryKey: string,
+  payload: { resources: string; placeIds?: string[] }
+) {
+  const existing = await ctx.db
+    .query("resource_cache")
+    .withIndex("by_zip_cat", (q: any) => q.eq("zip", zipKey).eq("category", categoryKey))
+    .first();
+
+  const doc = {
+    category: categoryKey,
+    zip: zipKey,
+    placeIds: payload.placeIds,
+    results: payload.resources,
+    createdAt: Date.now(),
+    expiresAt: Date.now() + CACHE_TTL_MS,
+  };
+
+  if (existing?._id) {
+    await ctx.db.patch(existing._id, doc);
+  } else {
+    await ctx.db.insert("resource_cache", doc);
+  }
 }

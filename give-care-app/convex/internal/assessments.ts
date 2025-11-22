@@ -2,12 +2,22 @@
  * Internal Assessment Functions
  */
 
+import { getAssessmentDefinition } from "../lib/assessmentCatalog";
+import { internal } from "../_generated/api";
 import { internalMutation, internalQuery } from "../_generated/server";
 import { v } from "convex/values";
 
 /**
  * Start assessment session
+ * Sends the first question immediately via SMS
  */
+
+function formatQuestion(questionText: string, index: number, total: number): string {
+  const progress = `(${index + 1} of ${total})`;
+  const skipHint = index === 0 ? " Reply 1-5 or skip." : " Reply 1-5 or skip.";
+  return `${progress} ${questionText}${skipHint}`;
+}
+
 export const startAssessment = internalMutation({
   args: {
     userId: v.id("users"),
@@ -52,6 +62,14 @@ export const startAssessment = internalMutation({
       questionIndex: 0,
       answers: [],
       status: "active",
+    });
+
+    // Send first question immediately
+    const definition = getAssessmentDefinition(assessmentType);
+    const firstQuestion = definition.questions[0];
+    await ctx.scheduler.runAfter(0, internal.internal.sms.sendAssessmentQuestion, {
+      userId,
+      text: formatQuestion(firstQuestion.text, 0, definition.questions.length),
     });
 
     return {
@@ -126,4 +144,3 @@ export const getLatestCompletedAssessment = internalQuery({
     };
   },
 });
-

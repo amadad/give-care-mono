@@ -51,6 +51,21 @@ export const sendHelpMessage = internalAction({
 });
 
 /**
+ * Send an assessment question (progress-aware)
+ */
+export const sendAssessmentQuestion = internalAction({
+  args: {
+    userId: v.id("users"),
+    text: v.string(),
+  },
+  handler: async (ctx, { userId, text }) => {
+    await withUserPhone(ctx, userId, async (_user, phone) => {
+      await sendSMS(ctx, phone, text);
+    });
+  },
+});
+
+/**
  * Send crisis response
  */
 export const sendCrisisResponse = internalAction({

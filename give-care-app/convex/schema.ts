@@ -370,4 +370,63 @@ export default defineSchema({
     .index("by_user", ["userId"])
     .index("by_thread", ["threadId"])
     .index("by_started", ["startedAt"]),
+
+  // LLM usage - token accounting
+  llm_usage: defineTable({
+    userId: v.optional(v.id("users")),
+    agentName: v.optional(v.union(v.literal("main"), v.literal("assessment"), v.literal("crisis"))),
+    model: v.string(),
+    provider: v.string(),
+    promptTokens: v.number(),
+    completionTokens: v.number(),
+    totalTokens: v.number(),
+    createdAt: v.number(),
+  })
+    .index("by_user_created", ["userId", "createdAt"])
+    .index("by_created", ["createdAt"]),
+
+  // Usage invoices - rollups
+  usage_invoices: defineTable({
+    userId: v.id("users"),
+    billingPeriod: v.string(), // e.g., 2025-01
+    totalTokens: v.number(),
+    totalCost: v.number(),
+    status: v.union(v.literal("open"), v.literal("paid"), v.literal("void")),
+  }).index("by_user_period", ["userId", "billingPeriod"]),
+
+  // Entitlements
+  entitlements: defineTable({
+    userId: v.id("users"),
+    feature: v.string(),
+    active: v.boolean(),
+    expiresAt: v.optional(v.number()),
+  }).index("by_user_feature", ["userId", "feature"]),
+
+  // Prompt versions (for future A/B and audit)
+  prompt_versions: defineTable({
+    name: v.string(),
+    version: v.string(),
+    prompt: v.string(),
+    createdAt: v.number(),
+  }).index("by_name_version", ["name", "version"]),
+
+  // Tool call telemetry
+  tool_calls: defineTable({
+    userId: v.optional(v.id("users")),
+    agentName: v.optional(v.string()),
+    name: v.string(),
+    durationMs: v.optional(v.number()),
+    success: v.boolean(),
+    cost: v.optional(v.number()),
+    createdAt: v.number(),
+  })
+    .index("by_user_created", ["userId", "createdAt"])
+    .index("by_name", ["name"]),
+
+  // Watcher state - cron cursors
+  watcher_state: defineTable({
+    watcherName: v.string(),
+    cursor: v.optional(v.any()),
+    lastRun: v.optional(v.number()),
+  }).index("by_watcher", ["watcherName"]),
 });
