@@ -108,12 +108,6 @@ export declare const api: {
       { externalId: string },
       any
     >;
-    getProfile: FunctionReference<
-      "query",
-      "public",
-      { userId: Id<"users"> },
-      any
-    >;
     listAlerts: FunctionReference<"query", "public", { limit?: number }, any>;
     listEvents: FunctionReference<"query", "public", { limit?: number }, any>;
     listScores: FunctionReference<"query", "public", { limit?: number }, any>;
@@ -477,13 +471,6 @@ export declare const internal: {
       >;
     };
     resources: {
-      cleanupExpiredCache: FunctionReference<"mutation", "internal", {}, any>;
-      getCachedResources: FunctionReference<
-        "query",
-        "internal",
-        { category: string; zip: string },
-        any
-      >;
       getLatestUserScore: FunctionReference<
         "query",
         "internal",
@@ -494,17 +481,6 @@ export declare const internal: {
         "query",
         "internal",
         { userId: Id<"users"> },
-        any
-      >;
-      saveToCache: FunctionReference<
-        "mutation",
-        "internal",
-        {
-          category: string;
-          placeIds: Array<string>;
-          ttlDays: number;
-          zip: string;
-        },
         any
       >;
     };

@@ -6,26 +6,7 @@
 import { query, mutation } from "./_generated/server";
 import { v } from "convex/values";
 import { components } from "./_generated/api";
-
-/**
- * Get user profile (with access control)
- */
-export const getProfile = query({
-  args: {
-    userId: v.id("users"),
-  },
-  handler: async (ctx, { userId }) => {
-    const user = await ctx.db.get(userId);
-    if (!user) {
-      throw new Error("User not found");
-    }
-    return {
-      name: user.name,
-      phone: user.phone,
-      metadata: user.metadata,
-    };
-  },
-});
+import { ADMIN_EMAILS } from "./lib/adminConfig";
 
 /**
  * Get user by external ID (phone or email)
@@ -104,16 +85,6 @@ export const resetRateLimiter = mutation({
     return { success: true, message: "Rate limiter cleared - users can now send up to 30 messages/day" };
   },
 });
-
-/**
- * Admin email whitelist
- * Only these emails can access the admin dashboard
- */
-const ADMIN_EMAILS = [
-  "ali@scty.org",
-  "ali@givecareapp.com",
-  // Add more admin emails here as needed
-];
 
 /**
  * Check if current user is admin

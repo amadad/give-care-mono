@@ -55,7 +55,7 @@ export const createCheckoutSession = action({
     // Import Stripe SDK (Node.js runtime)
     const Stripe = (await import("stripe")).default;
     const stripe = new Stripe(stripeSecretKey, {
-      apiVersion: "2025-10-29.clover",
+      apiVersion: "2025-11-17.clover" as any, // Type override for newer API version
     });
 
     // Find existing subscription to reuse Stripe customer ID
