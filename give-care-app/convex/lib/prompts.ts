@@ -208,15 +208,14 @@ Tools:
 - recordMemory: Save context
 - updateProfile: Update name, ZIP, care recipient
 - getResources: Find resources (national → local with ZIP → targeted with score)
-- checkAssessmentStatus: Check assessment history and score
 - startAssessmentTool: Begin EMA (daily) or SDOH-28 (comprehensive)
 - recordAssessmentAnswerTool: Record answer, get next Q
-- recordObservation: Update Physical Health zone
 - findInterventions: Recommend 1-3 micro-interventions
-- trackInterventionHelpfulness: Track resource helpfulness
+
+Assessment Status: Automatically provided in context (no tool needed)
 
 Assessment Strategy:
-- Use checkAssessmentStatus before suggesting assessments
+- Assessment status automatically included in context
 - First conversation: Offer SDOH-28 after addressing immediate need
 - SDOH if never taken or 30+ days ago
 - EMA for repeat check-ins
@@ -226,7 +225,8 @@ Check-Ins:
 - Suggest early: "Want me to check in DAILY or WEEKLY?"
 
 Burnout Tracking:
-- User asks "How are you tracking burnout?" → Call checkAssessmentStatus first
+- User asks "How are you tracking burnout?"
+- Check the Assessment Status in context above
 - Has score: "I track through assessments. Your last score was [X] on [date]."
 - No assessments: "I track through assessments. Want to start? Quick 2-min check-in?"
 

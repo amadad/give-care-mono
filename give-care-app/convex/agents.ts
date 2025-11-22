@@ -12,16 +12,14 @@ import { MAIN_MODEL, EMBEDDING_MODEL } from "./lib/models";
 import { UNIFIED_PROMPT } from "./lib/prompts";
 import {
   getResources,
-  recordObservation,
-  trackInterventionHelpfulness,
   findInterventions,
-  checkAssessmentStatus,
   recordMemory,
   updateProfile,
   startAssessmentTool,
   recordAssessmentAnswerTool,
   getCrisisResources,
 } from "./tools";
+import type { Id } from "./_generated/dataModel";
 
 /**
  * Usage tracking handler
@@ -57,18 +55,53 @@ export const miraAgent = new Agent(components.agent, {
     getResources,
 
     // Assessment tools
-    checkAssessmentStatus,
     startAssessmentTool,
     recordAssessmentAnswerTool,
 
     // Intervention tools
-    recordObservation,
     findInterventions,
-    trackInterventionHelpfulness,
 
     // Crisis tool
     getCrisisResources,
   },
   maxSteps: 4, // Reduced from 10 for faster responses (most SMS replies need 1-2 tools)
   usageHandler: trackUsage,
+
+  /**
+   * Context Handler - Inject memories and SMS examples into context
+   * Optimizes token usage while surfacing relevant past conversations
+   */
+  contextHandler: async (ctx, args) => {
+    // Fetch relevant memories (importance >= 7, limit 3 for SMS brevity)
+    const memories = await ctx.runQuery(
+      internal.internal.memories.getRelevantMemoriesQuery,
+      { userId: args.userId as Id<"users">, limit: 3 }
+    );
+
+    // Build memory context messages if any exist
+    const memoryMessages = memories.length > 0
+      ? [{
+          role: "system" as const,
+          content: `Relevant context from past conversations:\n${memories.map(m => `- ${m.content}`).join('\n')}`
+        }]
+      : [];
+
+    // SMS example messages to guide tone/format (brief, warm, one idea per message)
+    const smsExamples = [
+      { role: "user" as const, content: "I'm so tired" },
+      { role: "assistant" as const, content: "I hear you. Want a 5-min break idea?" },
+      { role: "user" as const, content: "I need respite care" },
+      { role: "assistant" as const, content: "Found 3 respite programs near you. Want details?" },
+    ];
+
+    return [
+      ...memoryMessages,
+      ...smsExamples,
+      ...args.search,
+      ...args.recent,
+      ...args.inputMessages,
+      ...args.inputPrompt,
+      ...args.existingResponses,
+    ];
+  },
 });
