@@ -3,6 +3,8 @@
  * Crisis detection, profile extraction, and helper functions
  */
 
+import type { UserMetadata } from "./types";
+
 // Crisis keyword patterns (19+ keywords across 3 severity levels)
 const CRISIS_PATTERNS = {
   high: [
@@ -47,6 +49,13 @@ export interface CrisisDetectionResult {
   severity?: "high" | "medium" | "low";
   isFalsePositive: boolean;
   isDVHint: boolean;
+}
+
+/**
+ * Safely coerce optional user metadata to a typed object
+ */
+export function getUserMetadata(user?: { metadata?: UserMetadata | null } | null): UserMetadata {
+  return (user?.metadata as UserMetadata) ?? {};
 }
 
 /**

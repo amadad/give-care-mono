@@ -5,6 +5,7 @@
 
 import { internalAction } from "../_generated/server";
 import { internal } from "../_generated/api";
+import { getUserMetadata } from "../lib/utils";
 
 /**
  * Run EMA check-ins for eligible users
@@ -96,7 +97,7 @@ export const checkEngagement = internalAction({
       const fullUser = usersMap.get(user._id);
       if (!fullUser) continue;
 
-      const metadata = fullUser.metadata || {};
+      const metadata = getUserMetadata(fullUser);
       const lastEngagementDate = fullUser.lastEngagementDate || 0;
       const daysSinceEngagement = (now - lastEngagementDate) / (24 * 60 * 60 * 1000);
 
@@ -106,12 +107,12 @@ export const checkEngagement = internalAction({
         continue; // Suppress - has crisis in last 7d
       }
 
-      const hasReassuranceLoop = (metadata as any)?.reassuranceLoopFlag === true;
+      const hasReassuranceLoop = metadata.reassuranceLoopFlag === true;
       if (hasReassuranceLoop) {
         continue; // Suppress - in reassurance loop
       }
 
-      const snoozeUntil = (metadata as any)?.snoozeUntil;
+      const snoozeUntil = metadata.snoozeUntil;
       if (snoozeUntil && now < snoozeUntil) {
         continue; // Suppress - snoozed
       }
@@ -153,4 +154,3 @@ export const checkEngagement = internalAction({
     };
   },
 });
-

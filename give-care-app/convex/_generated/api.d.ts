@@ -110,6 +110,20 @@ export declare const api: {
     >;
     listAlerts: FunctionReference<"query", "public", { limit?: number }, any>;
     listEvents: FunctionReference<"query", "public", { limit?: number }, any>;
+    listMemories: FunctionReference<
+      "query",
+      "public",
+      {
+        category?:
+          | "care_routine"
+          | "preference"
+          | "intervention_result"
+          | "crisis_trigger"
+          | "family_health";
+        userId: Id<"users">;
+      },
+      any
+    >;
     listScores: FunctionReference<"query", "public", { limit?: number }, any>;
     listSubscriptions: FunctionReference<
       "query",
@@ -118,6 +132,32 @@ export declare const api: {
       any
     >;
     listUsers: FunctionReference<"query", "public", { limit?: number }, any>;
+    recordAssessmentResponse: FunctionReference<
+      "mutation",
+      "public",
+      {
+        answer: number | "skip";
+        sessionId: Id<"assessment_sessions">;
+        userId: Id<"users">;
+      },
+      any
+    >;
+    recordMemory: FunctionReference<
+      "mutation",
+      "public",
+      {
+        category:
+          | "care_routine"
+          | "preference"
+          | "intervention_result"
+          | "crisis_trigger"
+          | "family_health";
+        content: string;
+        importance: number;
+        userId: Id<"users">;
+      },
+      any
+    >;
     resetRateLimiter: FunctionReference<"mutation", "public", {}, any>;
   };
   score: {
@@ -153,6 +193,14 @@ export declare const api: {
  * ```
  */
 export declare const internal: {
+  agent: {
+    chat: FunctionReference<
+      "action",
+      "internal",
+      { message: string; userId: Id<"users"> },
+      any
+    >;
+  };
   assessments: {
     completeAssessment: FunctionReference<
       "mutation",
@@ -299,20 +347,6 @@ export declare const internal: {
       >;
     };
     agents: {
-      handleCrisisDetection: FunctionReference<
-        "mutation",
-        "internal",
-        {
-          crisisResult: {
-            isCrisis: boolean;
-            isDVHint: boolean;
-            isFalsePositive: boolean;
-            severity?: "high" | "medium" | "low";
-          };
-          userId: Id<"users">;
-        },
-        any
-      >;
       processAssessmentCompletion: FunctionReference<
         "action",
         "internal",
@@ -322,12 +356,6 @@ export declare const internal: {
           score: number;
           userId: Id<"users">;
         },
-        any
-      >;
-      processMainAgentMessage: FunctionReference<
-        "action",
-        "internal",
-        { body: string; userId: Id<"users"> },
         any
       >;
     };
@@ -344,7 +372,19 @@ export declare const internal: {
         { assessmentType: "ema" | "sdoh"; userId: Id<"users"> },
         any
       >;
+      processAssessmentAnswerForAgent: FunctionReference<
+        "mutation",
+        "internal",
+        { answer: number | "skip"; userId: Id<"users"> },
+        any
+      >;
       startAssessment: FunctionReference<
+        "mutation",
+        "internal",
+        { assessmentType: "ema" | "sdoh"; userId: Id<"users"> },
+        any
+      >;
+      startAssessmentForAgent: FunctionReference<
         "mutation",
         "internal",
         { assessmentType: "ema" | "sdoh"; userId: Id<"users"> },
@@ -549,6 +589,12 @@ export declare const internal: {
         { response: string; userId: Id<"users">; zones: any },
         any
       >;
+      logSmsIssue: FunctionReference<
+        "mutation",
+        "internal",
+        { context?: string; reason: "missing_phone"; userId: Id<"users"> },
+        any
+      >;
       sendAgentResponse: FunctionReference<
         "action",
         "internal",
@@ -559,6 +605,12 @@ export declare const internal: {
         "action",
         "internal",
         { band: string; score: number; userId: Id<"users"> },
+        any
+      >;
+      sendAssessmentQuestion: FunctionReference<
+        "action",
+        "internal",
+        { text: string; userId: Id<"users"> },
         any
       >;
       sendAssessmentReminder: FunctionReference<
@@ -817,6 +869,12 @@ export declare const internal: {
         { since: number; userId: Id<"users"> },
         any
       >;
+      getRecentUsage: FunctionReference<
+        "query",
+        "internal",
+        { since: number; userId: Id<"users"> },
+        any
+      >;
       getUser: FunctionReference<
         "query",
         "internal",
@@ -847,6 +905,33 @@ export declare const internal: {
       "query",
       "internal",
       { limit?: number; zones: Array<string> },
+      any
+    >;
+  };
+  onboarding: {
+    getOnboardingStatus: FunctionReference<
+      "query",
+      "internal",
+      { userId: Id<"users"> },
+      any
+    >;
+    markComplete: FunctionReference<
+      "mutation",
+      "internal",
+      { userId: Id<"users"> },
+      any
+    >;
+    onboardingWorkflow: FunctionReference<"mutation", "internal", any, any>;
+    recordMilestone: FunctionReference<
+      "mutation",
+      "internal",
+      { milestone: string; userId: Id<"users"> },
+      any
+    >;
+    triggerOnboardingCheck: FunctionReference<
+      "action",
+      "internal",
+      { userId: Id<"users"> },
       any
     >;
   };

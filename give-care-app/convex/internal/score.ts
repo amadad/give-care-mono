@@ -8,6 +8,7 @@ import { v } from "convex/values";
 import { internal } from "../_generated/api";
 import { calculateCompositeScore, calculateZoneAverage, normalizeScore, ZoneScores } from "../lib/scoreCalculator";
 import { getRiskLevel } from "../lib/sdoh";
+import { getUserMetadata } from "../lib/utils";
 import type { ZoneId } from "../lib/sdoh";
 
 /**
@@ -25,9 +26,10 @@ export const updateZone = internalMutation({
       throw new Error("User not found");
     }
 
+    const metadata = getUserMetadata(user);
     // Use top-level fields (with metadata fallback for migration)
-    const currentZones = (user.zones as ZoneScores) || ((user.metadata as any)?.zones as ZoneScores) || {};
-    const currentScore = user.gcSdohScore || ((user.metadata as any)?.gcSdohScore as number) || 0;
+    const currentZones = (user.zones as ZoneScores) || (metadata.zones as ZoneScores) || {};
+    const currentScore = user.gcSdohScore || (metadata.gcSdohScore as number) || 0;
 
     // Update zone
     const updatedZones: ZoneScores = {
@@ -50,18 +52,16 @@ export const updateZone = internalMutation({
     });
 
     // Update user (top-level fields + metadata for backward compatibility)
-    const metadata = user.metadata || {};
     await ctx.db.patch(userId, {
       zones: updatedZones,
       gcSdohScore: newScore,
       riskLevel: riskLevel as any,
       metadata: {
         ...metadata,
-        // Store in metadata as any for backward compatibility (not in schema validator)
         zones: updatedZones,
         gcSdohScore: newScore,
         riskLevel,
-      } as any,
+      },
     });
 
     return { score: newScore, riskLevel, zones: updatedZones };
@@ -101,7 +101,7 @@ export const updateFromSDOH = internalAction({
     const p5Answers = answers.slice(20, 26).map((a) => a.value);
     const p6Answers = answers.slice(26, 28).map((a) => a.value);
 
-    const metadata = user.metadata || {};
+    const metadata = getUserMetadata(user);
     const currentZones = (user.zones as ZoneScores) || (metadata.zones as ZoneScores) || {};
     const currentScore = user.gcSdohScore || (metadata.gcSdohScore as number) || 0;
 
@@ -162,7 +162,7 @@ export const updateFromEMA = internalAction({
     const p6Answers = [answers[0]?.value, answers[1]?.value].filter((v) => v !== undefined) as number[];
     const p1Answers = [answers[2]?.value].filter((v) => v !== undefined) as number[];
 
-    const metadata = user.metadata || {};
+    const metadata = getUserMetadata(user);
     const currentZones = (user.zones as ZoneScores) || (metadata.zones as ZoneScores) || {};
     const currentScore = user.gcSdohScore || (metadata.gcSdohScore as number) || 0;
 
@@ -297,10 +297,10 @@ export const updateUserScore = internalMutation({
         ...metadata,
         zones: args.zones,
         gcSdohScore: args.gcSdohScore,
-        riskLevel: args.riskLevel,
+        riskLevel: args.riskLevel as any,
         lastEMA: args.lastEMA,
         lastSDOH: args.lastSDOH,
-      } as any,
+      },
     });
 
     // Check for stress spike (delta >= 20) and schedule follow-up if conditions met
@@ -314,8 +314,8 @@ export const updateUserScore = internalMutation({
     ) {
       // Check conditions: no crisis in 7d, proactiveOk = true, cooldown >= 7d
       const hasCrisis = await hasRecentCrisis(ctx, args.userId, 7);
-      const proactiveOk = (metadata as any)?.proactiveOk === true;
-      const lastSpikeFollowUpAt = (metadata as any)?.lastSpikeFollowUpAt || 0;
+      const proactiveOk = metadata.proactiveOk === true;
+      const lastSpikeFollowUpAt = metadata.lastSpikeFollowUpAt || 0;
       const cooldownMs = 7 * 24 * 60 * 60 * 1000; // 7 days
       const cooldownMet = Date.now() - lastSpikeFollowUpAt >= cooldownMs;
 
@@ -335,4 +335,3 @@ export const updateUserScore = internalMutation({
     }
   },
 });
-

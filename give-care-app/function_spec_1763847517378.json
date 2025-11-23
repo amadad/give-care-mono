@@ -1,0 +1,4720 @@
+{
+  "url": "https://doting-tortoise-411.convex.cloud",
+  "functions": [
+    {
+      "functionType": "HttpAction",
+      "method": "GET",
+      "path": "/.well-known/jwks.json"
+    },
+    {
+      "functionType": "HttpAction",
+      "method": "GET",
+      "path": "/.well-known/openid-configuration"
+    },
+    {
+      "functionType": "HttpAction",
+      "method": "POST",
+      "path": "/twilio/incoming-message"
+    },
+    {
+      "functionType": "HttpAction",
+      "method": "POST",
+      "path": "/twilio/message-status"
+    },
+    {
+      "functionType": "HttpAction",
+      "method": "POST",
+      "path": "/twilio/voice"
+    },
+    {
+      "functionType": "HttpAction",
+      "method": "POST",
+      "path": "/stripe/webhook"
+    },
+    {
+      "args": {
+        "type": "object",
+        "value": {
+          "externalId": {
+            "fieldType": {
+              "type": "string"
+            },
+            "optional": false
+          }
+        }
+      },
+      "functionType": "Query",
+      "identifier": "public.js:getByExternalIdQuery",
+      "returns": {
+        "type": "any"
+      },
+      "visibility": {
+        "kind": "public"
+      }
+    },
+    {
+      "args": {
+        "type": "object",
+        "value": {
+          "limit": {
+            "fieldType": {
+              "type": "number"
+            },
+            "optional": true
+          }
+        }
+      },
+      "functionType": "Query",
+      "identifier": "public.js:listSubscriptions",
+      "returns": {
+        "type": "any"
+      },
+      "visibility": {
+        "kind": "public"
+      }
+    },
+    {
+      "args": {
+        "type": "object",
+        "value": {
+          "userId": {
+            "fieldType": {
+              "tableName": "users",
+              "type": "id"
+            },
+            "optional": false
+          }
+        }
+      },
+      "functionType": "Query",
+      "identifier": "public.js:checkRateLimitStatus",
+      "returns": {
+        "type": "any"
+      },
+      "visibility": {
+        "kind": "public"
+      }
+    },
+    {
+      "args": {
+        "type": "object",
+        "value": {}
+      },
+      "functionType": "Mutation",
+      "identifier": "public.js:resetRateLimiter",
+      "returns": {
+        "type": "any"
+      },
+      "visibility": {
+        "kind": "public"
+      }
+    },
+    {
+      "args": {
+        "type": "object",
+        "value": {
+          "limit": {
+            "fieldType": {
+              "type": "number"
+            },
+            "optional": true
+          }
+        }
+      },
+      "functionType": "Query",
+      "identifier": "public.js:listUsers",
+      "returns": {
+        "type": "any"
+      },
+      "visibility": {
+        "kind": "public"
+      }
+    },
+    {
+      "args": {
+        "type": "object",
+        "value": {
+          "limit": {
+            "fieldType": {
+              "type": "number"
+            },
+            "optional": true
+          }
+        }
+      },
+      "functionType": "Query",
+      "identifier": "public.js:listScores",
+      "returns": {
+        "type": "any"
+      },
+      "visibility": {
+        "kind": "public"
+      }
+    },
+    {
+      "args": {
+        "type": "object",
+        "value": {
+          "limit": {
+            "fieldType": {
+              "type": "number"
+            },
+            "optional": true
+          }
+        }
+      },
+      "functionType": "Query",
+      "identifier": "public.js:listAlerts",
+      "returns": {
+        "type": "any"
+      },
+      "visibility": {
+        "kind": "public"
+      }
+    },
+    {
+      "args": {
+        "type": "object",
+        "value": {
+          "limit": {
+            "fieldType": {
+              "type": "number"
+            },
+            "optional": true
+          }
+        }
+      },
+      "functionType": "Query",
+      "identifier": "public.js:listEvents",
+      "returns": {
+        "type": "any"
+      },
+      "visibility": {
+        "kind": "public"
+      }
+    },
+    {
+      "args": {
+        "type": "object",
+        "value": {
+          "category": {
+            "fieldType": {
+              "type": "union",
+              "value": [
+                {
+                  "type": "literal",
+                  "value": "care_routine"
+                },
+                {
+                  "type": "literal",
+                  "value": "preference"
+                },
+                {
+                  "type": "literal",
+                  "value": "intervention_result"
+                },
+                {
+                  "type": "literal",
+                  "value": "crisis_trigger"
+                },
+                {
+                  "type": "literal",
+                  "value": "family_health"
+                }
+              ]
+            },
+            "optional": false
+          },
+          "content": {
+            "fieldType": {
+              "type": "string"
+            },
+            "optional": false
+          },
+          "importance": {
+            "fieldType": {
+              "type": "number"
+            },
+            "optional": false
+          },
+          "userId": {
+            "fieldType": {
+              "tableName": "users",
+              "type": "id"
+            },
+            "optional": false
+          }
+        }
+      },
+      "functionType": "Mutation",
+      "identifier": "public.js:recordMemory",
+      "returns": {
+        "type": "any"
+      },
+      "visibility": {
+        "kind": "public"
+      }
+    },
+    {
+      "args": {
+        "type": "object",
+        "value": {
+          "category": {
+            "fieldType": {
+              "type": "union",
+              "value": [
+                {
+                  "type": "literal",
+                  "value": "care_routine"
+                },
+                {
+                  "type": "literal",
+                  "value": "preference"
+                },
+                {
+                  "type": "literal",
+                  "value": "intervention_result"
+                },
+                {
+                  "type": "literal",
+                  "value": "crisis_trigger"
+                },
+                {
+                  "type": "literal",
+                  "value": "family_health"
+                }
+              ]
+            },
+            "optional": true
+          },
+          "userId": {
+            "fieldType": {
+              "tableName": "users",
+              "type": "id"
+            },
+            "optional": false
+          }
+        }
+      },
+      "functionType": "Query",
+      "identifier": "public.js:listMemories",
+      "returns": {
+        "type": "any"
+      },
+      "visibility": {
+        "kind": "public"
+      }
+    },
+    {
+      "args": {
+        "type": "object",
+        "value": {
+          "answer": {
+            "fieldType": {
+              "type": "union",
+              "value": [
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "literal",
+                  "value": "skip"
+                }
+              ]
+            },
+            "optional": false
+          },
+          "sessionId": {
+            "fieldType": {
+              "tableName": "assessment_sessions",
+              "type": "id"
+            },
+            "optional": false
+          },
+          "userId": {
+            "fieldType": {
+              "tableName": "users",
+              "type": "id"
+            },
+            "optional": false
+          }
+        }
+      },
+      "functionType": "Mutation",
+      "identifier": "public.js:recordAssessmentResponse",
+      "returns": {
+        "type": "any"
+      },
+      "visibility": {
+        "kind": "public"
+      }
+    },
+    {
+      "args": {
+        "type": "object",
+        "value": {
+          "message": {
+            "fieldType": {
+              "type": "object",
+              "value": {
+                "account_sid": {
+                  "fieldType": {
+                    "type": "string"
+                  },
+                  "optional": false
+                },
+                "api_version": {
+                  "fieldType": {
+                    "type": "string"
+                  },
+                  "optional": false
+                },
+                "body": {
+                  "fieldType": {
+                    "type": "string"
+                  },
+                  "optional": false
+                },
+                "counterparty": {
+                  "fieldType": {
+                    "type": "string"
+                  },
+                  "optional": true
+                },
+                "date_created": {
+                  "fieldType": {
+                    "type": "string"
+                  },
+                  "optional": false
+                },
+                "date_sent": {
+                  "fieldType": {
+                    "type": "union",
+                    "value": [
+                      {
+                        "type": "string"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "optional": false
+                },
+                "date_updated": {
+                  "fieldType": {
+                    "type": "union",
+                    "value": [
+                      {
+                        "type": "string"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "optional": false
+                },
+                "direction": {
+                  "fieldType": {
+                    "type": "string"
+                  },
+                  "optional": false
+                },
+                "error_code": {
+                  "fieldType": {
+                    "type": "union",
+                    "value": [
+                      {
+                        "type": "number"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "optional": false
+                },
+                "error_message": {
+                  "fieldType": {
+                    "type": "union",
+                    "value": [
+                      {
+                        "type": "string"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "optional": false
+                },
+                "from": {
+                  "fieldType": {
+                    "type": "string"
+                  },
+                  "optional": false
+                },
+                "messaging_service_sid": {
+                  "fieldType": {
+                    "type": "union",
+                    "value": [
+                      {
+                        "type": "string"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "optional": false
+                },
+                "num_media": {
+                  "fieldType": {
+                    "type": "string"
+                  },
+                  "optional": false
+                },
+                "num_segments": {
+                  "fieldType": {
+                    "type": "string"
+                  },
+                  "optional": false
+                },
+                "price": {
+                  "fieldType": {
+                    "type": "union",
+                    "value": [
+                      {
+                        "type": "string"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "optional": false
+                },
+                "price_unit": {
+                  "fieldType": {
+                    "type": "union",
+                    "value": [
+                      {
+                        "type": "string"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "optional": false
+                },
+                "rest": {
+                  "fieldType": {
+                    "type": "any"
+                  },
+                  "optional": true
+                },
+                "sid": {
+                  "fieldType": {
+                    "type": "string"
+                  },
+                  "optional": false
+                },
+                "status": {
+                  "fieldType": {
+                    "type": "string"
+                  },
+                  "optional": false
+                },
+                "subresource_uris": {
+                  "fieldType": {
+                    "type": "union",
+                    "value": [
+                      {
+                        "type": "object",
+                        "value": {
+                          "feedback": {
+                            "fieldType": {
+                              "type": "string"
+                            },
+                            "optional": true
+                          },
+                          "media": {
+                            "fieldType": {
+                              "type": "string"
+                            },
+                            "optional": false
+                          }
+                        }
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "optional": false
+                },
+                "to": {
+                  "fieldType": {
+                    "type": "string"
+                  },
+                  "optional": false
+                },
+                "uri": {
+                  "fieldType": {
+                    "type": "string"
+                  },
+                  "optional": false
+                }
+              }
+            },
+            "optional": false
+          }
+        }
+      },
+      "functionType": "Mutation",
+      "identifier": "inbound.js:handleIncomingMessage",
+      "returns": {
+        "type": "any"
+      },
+      "visibility": {
+        "kind": "internal"
+      }
+    },
+    {
+      "args": {
+        "type": "object",
+        "value": {
+          "category": {
+            "fieldType": {
+              "type": "string"
+            },
+            "optional": true
+          },
+          "hasScore": {
+            "fieldType": {
+              "type": "boolean"
+            },
+            "optional": true
+          },
+          "query": {
+            "fieldType": {
+              "type": "string"
+            },
+            "optional": false
+          },
+          "userId": {
+            "fieldType": {
+              "tableName": "users",
+              "type": "id"
+            },
+            "optional": false
+          },
+          "zipCode": {
+            "fieldType": {
+              "type": "string"
+            },
+            "optional": true
+          },
+          "zone": {
+            "fieldType": {
+              "type": "string"
+            },
+            "optional": true
+          }
+        }
+      },
+      "functionType": "Action",
+      "identifier": "resources.js:searchResources",
+      "returns": {
+        "type": "any"
+      },
+      "visibility": {
+        "kind": "internal"
+      }
+    },
+    {
+      "args": {
+        "type": "object",
+        "value": {
+          "limit": {
+            "fieldType": {
+              "type": "number"
+            },
+            "optional": true
+          }
+        }
+      },
+      "functionType": "Query",
+      "identifier": "assessments.js:listAssessments",
+      "returns": {
+        "type": "any"
+      },
+      "visibility": {
+        "kind": "public"
+      }
+    },
+    {
+      "args": {
+        "type": "object",
+        "value": {
+          "answer": {
+            "fieldType": {
+              "type": "union",
+              "value": [
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "literal",
+                  "value": "skip"
+                }
+              ]
+            },
+            "optional": false
+          },
+          "sessionId": {
+            "fieldType": {
+              "tableName": "assessment_sessions",
+              "type": "id"
+            },
+            "optional": false
+          },
+          "userId": {
+            "fieldType": {
+              "tableName": "users",
+              "type": "id"
+            },
+            "optional": false
+          }
+        }
+      },
+      "functionType": "Mutation",
+      "identifier": "assessments.js:processAssessmentAnswer",
+      "returns": {
+        "type": "any"
+      },
+      "visibility": {
+        "kind": "internal"
+      }
+    },
+    {
+      "args": {
+        "type": "object",
+        "value": {
+          "sessionId": {
+            "fieldType": {
+              "tableName": "assessment_sessions",
+              "type": "id"
+            },
+            "optional": false
+          },
+          "userId": {
+            "fieldType": {
+              "tableName": "users",
+              "type": "id"
+            },
+            "optional": false
+          }
+        }
+      },
+      "functionType": "Mutation",
+      "identifier": "assessments.js:completeAssessment",
+      "returns": {
+        "type": "any"
+      },
+      "visibility": {
+        "kind": "internal"
+      }
+    },
+    {
+      "args": {
+        "type": "object",
+        "value": {
+          "limit": {
+            "fieldType": {
+              "type": "number"
+            },
+            "optional": true
+          },
+          "zones": {
+            "fieldType": {
+              "type": "array",
+              "value": {
+                "type": "string"
+              }
+            },
+            "optional": false
+          }
+        }
+      },
+      "functionType": "Query",
+      "identifier": "interventions.js:findInterventions",
+      "returns": {
+        "type": "any"
+      },
+      "visibility": {
+        "kind": "internal"
+      }
+    },
+    {
+      "args": {
+        "type": "object",
+        "value": {
+          "zones": {
+            "fieldType": {
+              "type": "array",
+              "value": {
+                "type": "string"
+              }
+            },
+            "optional": false
+          }
+        }
+      },
+      "functionType": "Query",
+      "identifier": "interventions.js:getInterventionsByZones",
+      "returns": {
+        "type": "any"
+      },
+      "visibility": {
+        "kind": "public"
+      }
+    },
+    {
+      "args": {
+        "type": "any"
+      },
+      "functionType": "Mutation",
+      "identifier": "workflows.js:checkInWorkflow",
+      "returns": {
+        "type": "any"
+      },
+      "visibility": {
+        "kind": "internal"
+      }
+    },
+    {
+      "args": {
+        "type": "object",
+        "value": {
+          "userId": {
+            "fieldType": {
+              "tableName": "users",
+              "type": "id"
+            },
+            "optional": false
+          }
+        }
+      },
+      "functionType": "Action",
+      "identifier": "workflows.js:startCheckInWorkflow",
+      "returns": {
+        "type": "any"
+      },
+      "visibility": {
+        "kind": "internal"
+      }
+    },
+    {
+      "args": {
+        "type": "object",
+        "value": {
+          "email": {
+            "fieldType": {
+              "type": "string"
+            },
+            "optional": false
+          },
+          "fullName": {
+            "fieldType": {
+              "type": "string"
+            },
+            "optional": false
+          },
+          "phoneNumber": {
+            "fieldType": {
+              "type": "string"
+            },
+            "optional": false
+          },
+          "priceId": {
+            "fieldType": {
+              "type": "string"
+            },
+            "optional": false
+          }
+        }
+      },
+      "functionType": "Action",
+      "identifier": "stripe.js:createCheckoutSession",
+      "returns": {
+        "type": "any"
+      },
+      "visibility": {
+        "kind": "public"
+      }
+    },
+    {
+      "args": {
+        "type": "object",
+        "value": {
+          "assessmentId": {
+            "fieldType": {
+              "tableName": "assessments",
+              "type": "id"
+            },
+            "optional": false
+          },
+          "band": {
+            "fieldType": {
+              "type": "string"
+            },
+            "optional": false
+          },
+          "score": {
+            "fieldType": {
+              "type": "number"
+            },
+            "optional": false
+          },
+          "userId": {
+            "fieldType": {
+              "tableName": "users",
+              "type": "id"
+            },
+            "optional": false
+          }
+        }
+      },
+      "functionType": "Action",
+      "identifier": "internal/agents.js:processAssessmentCompletion",
+      "returns": {
+        "type": "any"
+      },
+      "visibility": {
+        "kind": "internal"
+      }
+    },
+    {
+      "args": {
+        "type": "object",
+        "value": {
+          "userId": {
+            "fieldType": {
+              "tableName": "users",
+              "type": "id"
+            },
+            "optional": false
+          }
+        }
+      },
+      "functionType": "Query",
+      "identifier": "internal/assessments.js:getActiveSession",
+      "returns": {
+        "type": "any"
+      },
+      "visibility": {
+        "kind": "internal"
+      }
+    },
+    {
+      "args": {
+        "type": "object",
+        "value": {
+          "assessmentType": {
+            "fieldType": {
+              "type": "union",
+              "value": [
+                {
+                  "type": "literal",
+                  "value": "ema"
+                },
+                {
+                  "type": "literal",
+                  "value": "sdoh"
+                }
+              ]
+            },
+            "optional": false
+          },
+          "userId": {
+            "fieldType": {
+              "tableName": "users",
+              "type": "id"
+            },
+            "optional": false
+          }
+        }
+      },
+      "functionType": "Query",
+      "identifier": "internal/assessments.js:getLatestCompletedAssessment",
+      "returns": {
+        "type": "any"
+      },
+      "visibility": {
+        "kind": "internal"
+      }
+    },
+    {
+      "args": {
+        "type": "object",
+        "value": {
+          "answer": {
+            "fieldType": {
+              "type": "union",
+              "value": [
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "literal",
+                  "value": "skip"
+                }
+              ]
+            },
+            "optional": false
+          },
+          "userId": {
+            "fieldType": {
+              "tableName": "users",
+              "type": "id"
+            },
+            "optional": false
+          }
+        }
+      },
+      "functionType": "Mutation",
+      "identifier": "internal/assessments.js:processAssessmentAnswerForAgent",
+      "returns": {
+        "type": "any"
+      },
+      "visibility": {
+        "kind": "internal"
+      }
+    },
+    {
+      "args": {
+        "type": "object",
+        "value": {
+          "assessmentType": {
+            "fieldType": {
+              "type": "union",
+              "value": [
+                {
+                  "type": "literal",
+                  "value": "ema"
+                },
+                {
+                  "type": "literal",
+                  "value": "sdoh"
+                }
+              ]
+            },
+            "optional": false
+          },
+          "userId": {
+            "fieldType": {
+              "tableName": "users",
+              "type": "id"
+            },
+            "optional": false
+          }
+        }
+      },
+      "functionType": "Mutation",
+      "identifier": "internal/assessments.js:startAssessment",
+      "returns": {
+        "type": "any"
+      },
+      "visibility": {
+        "kind": "internal"
+      }
+    },
+    {
+      "args": {
+        "type": "object",
+        "value": {
+          "assessmentType": {
+            "fieldType": {
+              "type": "union",
+              "value": [
+                {
+                  "type": "literal",
+                  "value": "ema"
+                },
+                {
+                  "type": "literal",
+                  "value": "sdoh"
+                }
+              ]
+            },
+            "optional": false
+          },
+          "userId": {
+            "fieldType": {
+              "tableName": "users",
+              "type": "id"
+            },
+            "optional": false
+          }
+        }
+      },
+      "functionType": "Mutation",
+      "identifier": "internal/assessments.js:startAssessmentForAgent",
+      "returns": {
+        "type": "any"
+      },
+      "visibility": {
+        "kind": "internal"
+      }
+    },
+    {
+      "args": {
+        "type": "object",
+        "value": {}
+      },
+      "functionType": "Action",
+      "identifier": "internal/cleanup.js:cleanupOldMessages",
+      "returns": {
+        "type": "any"
+      },
+      "visibility": {
+        "kind": "internal"
+      }
+    },
+    {
+      "args": {
+        "type": "object",
+        "value": {
+          "receiptId": {
+            "fieldType": {
+              "tableName": "inbound_receipts",
+              "type": "id"
+            },
+            "optional": false
+          }
+        }
+      },
+      "functionType": "Mutation",
+      "identifier": "internal/cleanup.js:deleteReceipt",
+      "returns": {
+        "type": "any"
+      },
+      "visibility": {
+        "kind": "internal"
+      }
+    },
+    {
+      "args": {
+        "type": "object",
+        "value": {
+          "cutoffTime": {
+            "fieldType": {
+              "type": "number"
+            },
+            "optional": false
+          },
+          "userId": {
+            "fieldType": {
+              "tableName": "users",
+              "type": "id"
+            },
+            "optional": false
+          }
+        }
+      },
+      "functionType": "Query",
+      "identifier": "internal/cleanup.js:getOldReceipts",
+      "returns": {
+        "type": "any"
+      },
+      "visibility": {
+        "kind": "internal"
+      }
+    },
+    {
+      "args": {
+        "type": "object",
+        "value": {
+          "limit": {
+            "fieldType": {
+              "type": "number"
+            },
+            "optional": true
+          },
+          "userId": {
+            "fieldType": {
+              "tableName": "users",
+              "type": "id"
+            },
+            "optional": false
+          }
+        }
+      },
+      "functionType": "Query",
+      "identifier": "internal/memories.js:getRelevantMemoriesQuery",
+      "returns": {
+        "type": "any"
+      },
+      "visibility": {
+        "kind": "internal"
+      }
+    },
+    {
+      "args": {
+        "type": "object",
+        "value": {
+          "category": {
+            "fieldType": {
+              "type": "union",
+              "value": [
+                {
+                  "type": "literal",
+                  "value": "care_routine"
+                },
+                {
+                  "type": "literal",
+                  "value": "preference"
+                },
+                {
+                  "type": "literal",
+                  "value": "intervention_result"
+                },
+                {
+                  "type": "literal",
+                  "value": "crisis_trigger"
+                },
+                {
+                  "type": "literal",
+                  "value": "family_health"
+                }
+              ]
+            },
+            "optional": true
+          },
+          "userId": {
+            "fieldType": {
+              "tableName": "users",
+              "type": "id"
+            },
+            "optional": false
+          }
+        }
+      },
+      "functionType": "Query",
+      "identifier": "internal/memories.js:listMemories",
+      "returns": {
+        "type": "any"
+      },
+      "visibility": {
+        "kind": "internal"
+      }
+    },
+    {
+      "args": {
+        "type": "object",
+        "value": {
+          "category": {
+            "fieldType": {
+              "type": "union",
+              "value": [
+                {
+                  "type": "literal",
+                  "value": "care_routine"
+                },
+                {
+                  "type": "literal",
+                  "value": "preference"
+                },
+                {
+                  "type": "literal",
+                  "value": "intervention_result"
+                },
+                {
+                  "type": "literal",
+                  "value": "crisis_trigger"
+                },
+                {
+                  "type": "literal",
+                  "value": "family_health"
+                }
+              ]
+            },
+            "optional": false
+          },
+          "content": {
+            "fieldType": {
+              "type": "string"
+            },
+            "optional": false
+          },
+          "importance": {
+            "fieldType": {
+              "type": "number"
+            },
+            "optional": false
+          },
+          "userId": {
+            "fieldType": {
+              "tableName": "users",
+              "type": "id"
+            },
+            "optional": false
+          }
+        }
+      },
+      "functionType": "Mutation",
+      "identifier": "internal/memories.js:recordMemory",
+      "returns": {
+        "type": "any"
+      },
+      "visibility": {
+        "kind": "internal"
+      }
+    },
+    {
+      "args": {
+        "type": "object",
+        "value": {
+          "userId": {
+            "fieldType": {
+              "tableName": "users",
+              "type": "id"
+            },
+            "optional": false
+          }
+        }
+      },
+      "functionType": "Query",
+      "identifier": "internal/resources.js:getLatestUserScore",
+      "returns": {
+        "type": "any"
+      },
+      "visibility": {
+        "kind": "internal"
+      }
+    },
+    {
+      "args": {
+        "type": "object",
+        "value": {
+          "userId": {
+            "fieldType": {
+              "tableName": "users",
+              "type": "id"
+            },
+            "optional": false
+          }
+        }
+      },
+      "functionType": "Query",
+      "identifier": "internal/resources.js:getLocationFromUserQuery",
+      "returns": {
+        "type": "any"
+      },
+      "visibility": {
+        "kind": "internal"
+      }
+    },
+    {
+      "args": {
+        "type": "object",
+        "value": {
+          "eventData": {
+            "fieldType": {
+              "type": "any"
+            },
+            "optional": false
+          },
+          "eventType": {
+            "fieldType": {
+              "type": "string"
+            },
+            "optional": false
+          },
+          "stripeEventId": {
+            "fieldType": {
+              "type": "string"
+            },
+            "optional": false
+          }
+        }
+      },
+      "functionType": "Mutation",
+      "identifier": "internal/stripe.js:applyStripeEvent",
+      "returns": {
+        "type": "any"
+      },
+      "visibility": {
+        "kind": "internal"
+      }
+    },
+    {
+      "args": {
+        "type": "object",
+        "value": {
+          "returnUrl": {
+            "fieldType": {
+              "type": "string"
+            },
+            "optional": false
+          },
+          "userId": {
+            "fieldType": {
+              "tableName": "users",
+              "type": "id"
+            },
+            "optional": false
+          }
+        }
+      },
+      "functionType": "Action",
+      "identifier": "internal/stripeActions.js:createBillingPortalSession",
+      "returns": {
+        "type": "any"
+      },
+      "visibility": {
+        "kind": "internal"
+      }
+    },
+    {
+      "args": {
+        "type": "object",
+        "value": {
+          "cancelUrl": {
+            "fieldType": {
+              "type": "string"
+            },
+            "optional": false
+          },
+          "successUrl": {
+            "fieldType": {
+              "type": "string"
+            },
+            "optional": false
+          },
+          "userId": {
+            "fieldType": {
+              "tableName": "users",
+              "type": "id"
+            },
+            "optional": false
+          }
+        }
+      },
+      "functionType": "Action",
+      "identifier": "internal/stripeActions.js:createCheckoutSessionForResubscribe",
+      "returns": {
+        "type": "any"
+      },
+      "visibility": {
+        "kind": "internal"
+      }
+    },
+    {
+      "args": {
+        "type": "object",
+        "value": {
+          "body": {
+            "fieldType": {
+              "type": "string"
+            },
+            "optional": false
+          },
+          "signature": {
+            "fieldType": {
+              "type": "string"
+            },
+            "optional": false
+          }
+        }
+      },
+      "functionType": "Action",
+      "identifier": "internal/stripeActions.js:processWebhook",
+      "returns": {
+        "type": "any"
+      },
+      "visibility": {
+        "kind": "internal"
+      }
+    },
+    {
+      "args": {
+        "type": "object",
+        "value": {
+          "plan": {
+            "fieldType": {
+              "type": "union",
+              "value": [
+                {
+                  "type": "literal",
+                  "value": "plus"
+                },
+                {
+                  "type": "literal",
+                  "value": "enterprise"
+                }
+              ]
+            },
+            "optional": false
+          },
+          "userId": {
+            "fieldType": {
+              "tableName": "users",
+              "type": "id"
+            },
+            "optional": false
+          }
+        }
+      },
+      "functionType": "Mutation",
+      "identifier": "internal/subscriptions.js:createTestSubscription",
+      "returns": {
+        "type": "any"
+      },
+      "visibility": {
+        "kind": "internal"
+      }
+    },
+    {
+      "args": {
+        "type": "object",
+        "value": {
+          "userId": {
+            "fieldType": {
+              "tableName": "users",
+              "type": "id"
+            },
+            "optional": false
+          }
+        }
+      },
+      "functionType": "Query",
+      "identifier": "internal/subscriptions.js:getAccessScenario",
+      "returns": {
+        "type": "any"
+      },
+      "visibility": {
+        "kind": "internal"
+      }
+    },
+    {
+      "args": {
+        "type": "object",
+        "value": {
+          "userId": {
+            "fieldType": {
+              "tableName": "users",
+              "type": "id"
+            },
+            "optional": false
+          }
+        }
+      },
+      "functionType": "Query",
+      "identifier": "internal/subscriptions.js:getByUserId",
+      "returns": {
+        "type": "any"
+      },
+      "visibility": {
+        "kind": "internal"
+      }
+    },
+    {
+      "args": {
+        "type": "object",
+        "value": {
+          "alertId": {
+            "fieldType": {
+              "tableName": "alerts",
+              "type": "id"
+            },
+            "optional": false
+          }
+        }
+      },
+      "functionType": "Query",
+      "identifier": "internal/users.js:getAlert",
+      "returns": {
+        "type": "any"
+      },
+      "visibility": {
+        "kind": "internal"
+      }
+    },
+    {
+      "args": {
+        "type": "object",
+        "value": {}
+      },
+      "functionType": "Query",
+      "identifier": "internal/users.js:getAllUsers",
+      "returns": {
+        "type": "any"
+      },
+      "visibility": {
+        "kind": "internal"
+      }
+    },
+    {
+      "args": {
+        "type": "object",
+        "value": {
+          "days": {
+            "fieldType": {
+              "type": "number"
+            },
+            "optional": true
+          }
+        }
+      },
+      "functionType": "Query",
+      "identifier": "internal/users.js:getInactiveUsers",
+      "returns": {
+        "type": "any"
+      },
+      "visibility": {
+        "kind": "internal"
+      }
+    },
+    {
+      "args": {
+        "type": "object",
+        "value": {
+          "userId": {
+            "fieldType": {
+              "tableName": "users",
+              "type": "id"
+            },
+            "optional": false
+          }
+        }
+      },
+      "functionType": "Query",
+      "identifier": "internal/users.js:getRecentCrisisAlert",
+      "returns": {
+        "type": "any"
+      },
+      "visibility": {
+        "kind": "internal"
+      }
+    },
+    {
+      "args": {
+        "type": "object",
+        "value": {
+          "since": {
+            "fieldType": {
+              "type": "number"
+            },
+            "optional": false
+          },
+          "type": {
+            "fieldType": {
+              "type": "string"
+            },
+            "optional": true
+          },
+          "userId": {
+            "fieldType": {
+              "tableName": "users",
+              "type": "id"
+            },
+            "optional": false
+          }
+        }
+      },
+      "functionType": "Query",
+      "identifier": "internal/users.js:getRecentGuardrailEvents",
+      "returns": {
+        "type": "any"
+      },
+      "visibility": {
+        "kind": "internal"
+      }
+    },
+    {
+      "args": {
+        "type": "object",
+        "value": {
+          "since": {
+            "fieldType": {
+              "type": "number"
+            },
+            "optional": false
+          },
+          "userId": {
+            "fieldType": {
+              "tableName": "users",
+              "type": "id"
+            },
+            "optional": false
+          }
+        }
+      },
+      "functionType": "Query",
+      "identifier": "internal/users.js:getRecentInboundReceipt",
+      "returns": {
+        "type": "any"
+      },
+      "visibility": {
+        "kind": "internal"
+      }
+    },
+    {
+      "args": {
+        "type": "object",
+        "value": {
+          "since": {
+            "fieldType": {
+              "type": "number"
+            },
+            "optional": false
+          },
+          "userId": {
+            "fieldType": {
+              "tableName": "users",
+              "type": "id"
+            },
+            "optional": false
+          }
+        }
+      },
+      "functionType": "Query",
+      "identifier": "internal/users.js:getRecentUsage",
+      "returns": {
+        "type": "any"
+      },
+      "visibility": {
+        "kind": "internal"
+      }
+    },
+    {
+      "args": {
+        "type": "object",
+        "value": {
+          "userId": {
+            "fieldType": {
+              "tableName": "users",
+              "type": "id"
+            },
+            "optional": false
+          }
+        }
+      },
+      "functionType": "Query",
+      "identifier": "internal/users.js:getUser",
+      "returns": {
+        "type": "any"
+      },
+      "visibility": {
+        "kind": "internal"
+      }
+    },
+    {
+      "args": {
+        "type": "object",
+        "value": {}
+      },
+      "functionType": "Query",
+      "identifier": "internal/users.js:getUsersWithCheckIns",
+      "returns": {
+        "type": "any"
+      },
+      "visibility": {
+        "kind": "internal"
+      }
+    },
+    {
+      "args": {
+        "type": "object",
+        "value": {
+          "field": {
+            "fieldType": {
+              "type": "string"
+            },
+            "optional": false
+          },
+          "userId": {
+            "fieldType": {
+              "tableName": "users",
+              "type": "id"
+            },
+            "optional": false
+          },
+          "value": {
+            "fieldType": {
+              "type": "any"
+            },
+            "optional": false
+          }
+        }
+      },
+      "functionType": "Mutation",
+      "identifier": "internal/users.js:updateProfile",
+      "returns": {
+        "type": "any"
+      },
+      "visibility": {
+        "kind": "internal"
+      }
+    },
+    {
+      "args": {
+        "type": "object",
+        "value": {
+          "email": {
+            "fieldType": {
+              "type": "string"
+            },
+            "optional": false
+          },
+          "name": {
+            "fieldType": {
+              "type": "string"
+            },
+            "optional": false
+          },
+          "phone": {
+            "fieldType": {
+              "type": "string"
+            },
+            "optional": false
+          }
+        }
+      },
+      "functionType": "Mutation",
+      "identifier": "internal/users.js:upsertUserFromSignup",
+      "returns": {
+        "type": "any"
+      },
+      "visibility": {
+        "kind": "internal"
+      }
+    },
+    {
+      "args": {
+        "type": "object",
+        "value": {
+          "userId": {
+            "fieldType": {
+              "tableName": "users",
+              "type": "id"
+            },
+            "optional": false
+          }
+        }
+      },
+      "functionType": "Action",
+      "identifier": "internal/twilioMutations.js:handleBillingPortalAction",
+      "returns": {
+        "type": "any"
+      },
+      "visibility": {
+        "kind": "internal"
+      }
+    },
+    {
+      "args": {
+        "type": "object",
+        "value": {
+          "userId": {
+            "fieldType": {
+              "tableName": "users",
+              "type": "id"
+            },
+            "optional": false
+          }
+        }
+      },
+      "functionType": "Action",
+      "identifier": "internal/twilioMutations.js:handleResubscribeAction",
+      "returns": {
+        "type": "any"
+      },
+      "visibility": {
+        "kind": "internal"
+      }
+    },
+    {
+      "args": {
+        "type": "object",
+        "value": {
+          "message": {
+            "fieldType": {
+              "type": "object",
+              "value": {
+                "account_sid": {
+                  "fieldType": {
+                    "type": "string"
+                  },
+                  "optional": false
+                },
+                "api_version": {
+                  "fieldType": {
+                    "type": "string"
+                  },
+                  "optional": false
+                },
+                "body": {
+                  "fieldType": {
+                    "type": "string"
+                  },
+                  "optional": false
+                },
+                "counterparty": {
+                  "fieldType": {
+                    "type": "string"
+                  },
+                  "optional": true
+                },
+                "date_created": {
+                  "fieldType": {
+                    "type": "string"
+                  },
+                  "optional": false
+                },
+                "date_sent": {
+                  "fieldType": {
+                    "type": "union",
+                    "value": [
+                      {
+                        "type": "string"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "optional": false
+                },
+                "date_updated": {
+                  "fieldType": {
+                    "type": "union",
+                    "value": [
+                      {
+                        "type": "string"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "optional": false
+                },
+                "direction": {
+                  "fieldType": {
+                    "type": "string"
+                  },
+                  "optional": false
+                },
+                "error_code": {
+                  "fieldType": {
+                    "type": "union",
+                    "value": [
+                      {
+                        "type": "number"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "optional": false
+                },
+                "error_message": {
+                  "fieldType": {
+                    "type": "union",
+                    "value": [
+                      {
+                        "type": "string"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "optional": false
+                },
+                "from": {
+                  "fieldType": {
+                    "type": "string"
+                  },
+                  "optional": false
+                },
+                "messaging_service_sid": {
+                  "fieldType": {
+                    "type": "union",
+                    "value": [
+                      {
+                        "type": "string"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "optional": false
+                },
+                "num_media": {
+                  "fieldType": {
+                    "type": "string"
+                  },
+                  "optional": false
+                },
+                "num_segments": {
+                  "fieldType": {
+                    "type": "string"
+                  },
+                  "optional": false
+                },
+                "price": {
+                  "fieldType": {
+                    "type": "union",
+                    "value": [
+                      {
+                        "type": "string"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "optional": false
+                },
+                "price_unit": {
+                  "fieldType": {
+                    "type": "union",
+                    "value": [
+                      {
+                        "type": "string"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "optional": false
+                },
+                "rest": {
+                  "fieldType": {
+                    "type": "any"
+                  },
+                  "optional": true
+                },
+                "sid": {
+                  "fieldType": {
+                    "type": "string"
+                  },
+                  "optional": false
+                },
+                "status": {
+                  "fieldType": {
+                    "type": "string"
+                  },
+                  "optional": false
+                },
+                "subresource_uris": {
+                  "fieldType": {
+                    "type": "union",
+                    "value": [
+                      {
+                        "type": "object",
+                        "value": {
+                          "feedback": {
+                            "fieldType": {
+                              "type": "string"
+                            },
+                            "optional": true
+                          },
+                          "media": {
+                            "fieldType": {
+                              "type": "string"
+                            },
+                            "optional": false
+                          }
+                        }
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "optional": false
+                },
+                "to": {
+                  "fieldType": {
+                    "type": "string"
+                  },
+                  "optional": false
+                },
+                "uri": {
+                  "fieldType": {
+                    "type": "string"
+                  },
+                  "optional": false
+                }
+              }
+            },
+            "optional": false
+          }
+        }
+      },
+      "functionType": "Mutation",
+      "identifier": "internal/twilioMutations.js:insertSimulatedMessage",
+      "returns": {
+        "type": "any"
+      },
+      "visibility": {
+        "kind": "internal"
+      }
+    },
+    {
+      "args": {
+        "type": "object",
+        "value": {
+          "text": {
+            "fieldType": {
+              "type": "string"
+            },
+            "optional": false
+          },
+          "userId": {
+            "fieldType": {
+              "tableName": "users",
+              "type": "id"
+            },
+            "optional": false
+          }
+        }
+      },
+      "functionType": "Action",
+      "identifier": "internal/twilioMutations.js:sendAgentResponseAction",
+      "returns": {
+        "type": "any"
+      },
+      "visibility": {
+        "kind": "internal"
+      }
+    },
+    {
+      "args": {
+        "type": "object",
+        "value": {
+          "isDVHint": {
+            "fieldType": {
+              "type": "boolean"
+            },
+            "optional": false
+          },
+          "userId": {
+            "fieldType": {
+              "tableName": "users",
+              "type": "id"
+            },
+            "optional": false
+          }
+        }
+      },
+      "functionType": "Action",
+      "identifier": "internal/twilioMutations.js:sendCrisisResponseAction",
+      "returns": {
+        "type": "any"
+      },
+      "visibility": {
+        "kind": "internal"
+      }
+    },
+    {
+      "args": {
+        "type": "object",
+        "value": {
+          "userId": {
+            "fieldType": {
+              "tableName": "users",
+              "type": "id"
+            },
+            "optional": false
+          }
+        }
+      },
+      "functionType": "Action",
+      "identifier": "internal/twilioMutations.js:sendHelpMessageAction",
+      "returns": {
+        "type": "any"
+      },
+      "visibility": {
+        "kind": "internal"
+      }
+    },
+    {
+      "args": {
+        "type": "object",
+        "value": {
+          "gracePeriodEndsAt": {
+            "fieldType": {
+              "type": "number"
+            },
+            "optional": true
+          },
+          "userId": {
+            "fieldType": {
+              "tableName": "users",
+              "type": "id"
+            },
+            "optional": false
+          }
+        }
+      },
+      "functionType": "Action",
+      "identifier": "internal/twilioMutations.js:sendResubscribeMessageAction",
+      "returns": {
+        "type": "any"
+      },
+      "visibility": {
+        "kind": "internal"
+      }
+    },
+    {
+      "args": {
+        "type": "object",
+        "value": {
+          "userId": {
+            "fieldType": {
+              "tableName": "users",
+              "type": "id"
+            },
+            "optional": false
+          }
+        }
+      },
+      "functionType": "Action",
+      "identifier": "internal/twilioMutations.js:sendStopConfirmationAction",
+      "returns": {
+        "type": "any"
+      },
+      "visibility": {
+        "kind": "internal"
+      }
+    },
+    {
+      "args": {
+        "type": "object",
+        "value": {
+          "gracePeriodEndsAt": {
+            "fieldType": {
+              "type": "number"
+            },
+            "optional": true
+          },
+          "scenario": {
+            "fieldType": {
+              "type": "union",
+              "value": [
+                {
+                  "type": "literal",
+                  "value": "new_user"
+                },
+                {
+                  "type": "literal",
+                  "value": "active"
+                },
+                {
+                  "type": "literal",
+                  "value": "grace_period"
+                },
+                {
+                  "type": "literal",
+                  "value": "grace_expired"
+                },
+                {
+                  "type": "literal",
+                  "value": "past_due"
+                },
+                {
+                  "type": "literal",
+                  "value": "incomplete"
+                },
+                {
+                  "type": "literal",
+                  "value": "unknown"
+                }
+              ]
+            },
+            "optional": false
+          },
+          "userId": {
+            "fieldType": {
+              "tableName": "users",
+              "type": "id"
+            },
+            "optional": false
+          }
+        }
+      },
+      "functionType": "Action",
+      "identifier": "internal/twilioMutations.js:sendSubscriptionMessageAction",
+      "returns": {
+        "type": "any"
+      },
+      "visibility": {
+        "kind": "internal"
+      }
+    },
+    {
+      "args": {
+        "type": "object",
+        "value": {
+          "userId": {
+            "fieldType": {
+              "tableName": "users",
+              "type": "id"
+            },
+            "optional": false
+          }
+        }
+      },
+      "functionType": "Action",
+      "identifier": "twilioMutations.js:handleBillingPortalAction",
+      "returns": {
+        "type": "any"
+      },
+      "visibility": {
+        "kind": "internal"
+      }
+    },
+    {
+      "args": {
+        "type": "object",
+        "value": {
+          "userId": {
+            "fieldType": {
+              "tableName": "users",
+              "type": "id"
+            },
+            "optional": false
+          }
+        }
+      },
+      "functionType": "Action",
+      "identifier": "twilioMutations.js:handleResubscribeAction",
+      "returns": {
+        "type": "any"
+      },
+      "visibility": {
+        "kind": "internal"
+      }
+    },
+    {
+      "args": {
+        "type": "object",
+        "value": {
+          "message": {
+            "fieldType": {
+              "type": "object",
+              "value": {
+                "account_sid": {
+                  "fieldType": {
+                    "type": "string"
+                  },
+                  "optional": false
+                },
+                "api_version": {
+                  "fieldType": {
+                    "type": "string"
+                  },
+                  "optional": false
+                },
+                "body": {
+                  "fieldType": {
+                    "type": "string"
+                  },
+                  "optional": false
+                },
+                "counterparty": {
+                  "fieldType": {
+                    "type": "string"
+                  },
+                  "optional": true
+                },
+                "date_created": {
+                  "fieldType": {
+                    "type": "string"
+                  },
+                  "optional": false
+                },
+                "date_sent": {
+                  "fieldType": {
+                    "type": "union",
+                    "value": [
+                      {
+                        "type": "string"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "optional": false
+                },
+                "date_updated": {
+                  "fieldType": {
+                    "type": "union",
+                    "value": [
+                      {
+                        "type": "string"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "optional": false
+                },
+                "direction": {
+                  "fieldType": {
+                    "type": "string"
+                  },
+                  "optional": false
+                },
+                "error_code": {
+                  "fieldType": {
+                    "type": "union",
+                    "value": [
+                      {
+                        "type": "number"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "optional": false
+                },
+                "error_message": {
+                  "fieldType": {
+                    "type": "union",
+                    "value": [
+                      {
+                        "type": "string"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "optional": false
+                },
+                "from": {
+                  "fieldType": {
+                    "type": "string"
+                  },
+                  "optional": false
+                },
+                "messaging_service_sid": {
+                  "fieldType": {
+                    "type": "union",
+                    "value": [
+                      {
+                        "type": "string"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "optional": false
+                },
+                "num_media": {
+                  "fieldType": {
+                    "type": "string"
+                  },
+                  "optional": false
+                },
+                "num_segments": {
+                  "fieldType": {
+                    "type": "string"
+                  },
+                  "optional": false
+                },
+                "price": {
+                  "fieldType": {
+                    "type": "union",
+                    "value": [
+                      {
+                        "type": "string"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "optional": false
+                },
+                "price_unit": {
+                  "fieldType": {
+                    "type": "union",
+                    "value": [
+                      {
+                        "type": "string"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "optional": false
+                },
+                "rest": {
+                  "fieldType": {
+                    "type": "any"
+                  },
+                  "optional": true
+                },
+                "sid": {
+                  "fieldType": {
+                    "type": "string"
+                  },
+                  "optional": false
+                },
+                "status": {
+                  "fieldType": {
+                    "type": "string"
+                  },
+                  "optional": false
+                },
+                "subresource_uris": {
+                  "fieldType": {
+                    "type": "union",
+                    "value": [
+                      {
+                        "type": "object",
+                        "value": {
+                          "feedback": {
+                            "fieldType": {
+                              "type": "string"
+                            },
+                            "optional": true
+                          },
+                          "media": {
+                            "fieldType": {
+                              "type": "string"
+                            },
+                            "optional": false
+                          }
+                        }
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "optional": false
+                },
+                "to": {
+                  "fieldType": {
+                    "type": "string"
+                  },
+                  "optional": false
+                },
+                "uri": {
+                  "fieldType": {
+                    "type": "string"
+                  },
+                  "optional": false
+                }
+              }
+            },
+            "optional": false
+          }
+        }
+      },
+      "functionType": "Mutation",
+      "identifier": "twilioMutations.js:insertSimulatedMessage",
+      "returns": {
+        "type": "any"
+      },
+      "visibility": {
+        "kind": "internal"
+      }
+    },
+    {
+      "args": {
+        "type": "object",
+        "value": {
+          "text": {
+            "fieldType": {
+              "type": "string"
+            },
+            "optional": false
+          },
+          "userId": {
+            "fieldType": {
+              "tableName": "users",
+              "type": "id"
+            },
+            "optional": false
+          }
+        }
+      },
+      "functionType": "Action",
+      "identifier": "twilioMutations.js:sendAgentResponseAction",
+      "returns": {
+        "type": "any"
+      },
+      "visibility": {
+        "kind": "internal"
+      }
+    },
+    {
+      "args": {
+        "type": "object",
+        "value": {
+          "isDVHint": {
+            "fieldType": {
+              "type": "boolean"
+            },
+            "optional": false
+          },
+          "userId": {
+            "fieldType": {
+              "tableName": "users",
+              "type": "id"
+            },
+            "optional": false
+          }
+        }
+      },
+      "functionType": "Action",
+      "identifier": "twilioMutations.js:sendCrisisResponseAction",
+      "returns": {
+        "type": "any"
+      },
+      "visibility": {
+        "kind": "internal"
+      }
+    },
+    {
+      "args": {
+        "type": "object",
+        "value": {
+          "userId": {
+            "fieldType": {
+              "tableName": "users",
+              "type": "id"
+            },
+            "optional": false
+          }
+        }
+      },
+      "functionType": "Action",
+      "identifier": "twilioMutations.js:sendHelpMessageAction",
+      "returns": {
+        "type": "any"
+      },
+      "visibility": {
+        "kind": "internal"
+      }
+    },
+    {
+      "args": {
+        "type": "object",
+        "value": {
+          "gracePeriodEndsAt": {
+            "fieldType": {
+              "type": "number"
+            },
+            "optional": true
+          },
+          "userId": {
+            "fieldType": {
+              "tableName": "users",
+              "type": "id"
+            },
+            "optional": false
+          }
+        }
+      },
+      "functionType": "Action",
+      "identifier": "twilioMutations.js:sendResubscribeMessageAction",
+      "returns": {
+        "type": "any"
+      },
+      "visibility": {
+        "kind": "internal"
+      }
+    },
+    {
+      "args": {
+        "type": "object",
+        "value": {
+          "userId": {
+            "fieldType": {
+              "tableName": "users",
+              "type": "id"
+            },
+            "optional": false
+          }
+        }
+      },
+      "functionType": "Action",
+      "identifier": "twilioMutations.js:sendStopConfirmationAction",
+      "returns": {
+        "type": "any"
+      },
+      "visibility": {
+        "kind": "internal"
+      }
+    },
+    {
+      "args": {
+        "type": "object",
+        "value": {
+          "gracePeriodEndsAt": {
+            "fieldType": {
+              "type": "number"
+            },
+            "optional": true
+          },
+          "scenario": {
+            "fieldType": {
+              "type": "union",
+              "value": [
+                {
+                  "type": "literal",
+                  "value": "new_user"
+                },
+                {
+                  "type": "literal",
+                  "value": "active"
+                },
+                {
+                  "type": "literal",
+                  "value": "grace_period"
+                },
+                {
+                  "type": "literal",
+                  "value": "grace_expired"
+                },
+                {
+                  "type": "literal",
+                  "value": "past_due"
+                },
+                {
+                  "type": "literal",
+                  "value": "incomplete"
+                },
+                {
+                  "type": "literal",
+                  "value": "unknown"
+                }
+              ]
+            },
+            "optional": false
+          },
+          "userId": {
+            "fieldType": {
+              "tableName": "users",
+              "type": "id"
+            },
+            "optional": false
+          }
+        }
+      },
+      "functionType": "Action",
+      "identifier": "twilioMutations.js:sendSubscriptionMessageAction",
+      "returns": {
+        "type": "any"
+      },
+      "visibility": {
+        "kind": "internal"
+      }
+    },
+    {
+      "args": {
+        "type": "object",
+        "value": {
+          "alertId": {
+            "fieldType": {
+              "tableName": "alerts",
+              "type": "id"
+            },
+            "optional": true
+          },
+          "response": {
+            "fieldType": {
+              "type": "string"
+            },
+            "optional": false
+          },
+          "userId": {
+            "fieldType": {
+              "tableName": "users",
+              "type": "id"
+            },
+            "optional": false
+          }
+        }
+      },
+      "functionType": "Action",
+      "identifier": "internal/sms.js:handleCrisisFollowUpResponse",
+      "returns": {
+        "type": "any"
+      },
+      "visibility": {
+        "kind": "internal"
+      }
+    },
+    {
+      "args": {
+        "type": "object",
+        "value": {
+          "response": {
+            "fieldType": {
+              "type": "string"
+            },
+            "optional": false
+          },
+          "userId": {
+            "fieldType": {
+              "tableName": "users",
+              "type": "id"
+            },
+            "optional": false
+          },
+          "zones": {
+            "fieldType": {
+              "type": "any"
+            },
+            "optional": false
+          }
+        }
+      },
+      "functionType": "Action",
+      "identifier": "internal/sms.js:handleSpikeFollowUpResponse",
+      "returns": {
+        "type": "any"
+      },
+      "visibility": {
+        "kind": "internal"
+      }
+    },
+    {
+      "args": {
+        "type": "object",
+        "value": {
+          "context": {
+            "fieldType": {
+              "type": "string"
+            },
+            "optional": true
+          },
+          "reason": {
+            "fieldType": {
+              "type": "literal",
+              "value": "missing_phone"
+            },
+            "optional": false
+          },
+          "userId": {
+            "fieldType": {
+              "tableName": "users",
+              "type": "id"
+            },
+            "optional": false
+          }
+        }
+      },
+      "functionType": "Mutation",
+      "identifier": "internal/sms.js:logSmsIssue",
+      "returns": {
+        "type": "any"
+      },
+      "visibility": {
+        "kind": "internal"
+      }
+    },
+    {
+      "args": {
+        "type": "object",
+        "value": {
+          "text": {
+            "fieldType": {
+              "type": "string"
+            },
+            "optional": false
+          },
+          "userId": {
+            "fieldType": {
+              "tableName": "users",
+              "type": "id"
+            },
+            "optional": false
+          }
+        }
+      },
+      "functionType": "Action",
+      "identifier": "internal/sms.js:sendAgentResponse",
+      "returns": {
+        "type": "any"
+      },
+      "visibility": {
+        "kind": "internal"
+      }
+    },
+    {
+      "args": {
+        "type": "object",
+        "value": {
+          "band": {
+            "fieldType": {
+              "type": "string"
+            },
+            "optional": false
+          },
+          "score": {
+            "fieldType": {
+              "type": "number"
+            },
+            "optional": false
+          },
+          "userId": {
+            "fieldType": {
+              "tableName": "users",
+              "type": "id"
+            },
+            "optional": false
+          }
+        }
+      },
+      "functionType": "Action",
+      "identifier": "internal/sms.js:sendAssessmentCompletionMessage",
+      "returns": {
+        "type": "any"
+      },
+      "visibility": {
+        "kind": "internal"
+      }
+    },
+    {
+      "args": {
+        "type": "object",
+        "value": {
+          "text": {
+            "fieldType": {
+              "type": "string"
+            },
+            "optional": false
+          },
+          "userId": {
+            "fieldType": {
+              "tableName": "users",
+              "type": "id"
+            },
+            "optional": false
+          }
+        }
+      },
+      "functionType": "Action",
+      "identifier": "internal/sms.js:sendAssessmentQuestion",
+      "returns": {
+        "type": "any"
+      },
+      "visibility": {
+        "kind": "internal"
+      }
+    },
+    {
+      "args": {
+        "type": "object",
+        "value": {
+          "userId": {
+            "fieldType": {
+              "tableName": "users",
+              "type": "id"
+            },
+            "optional": false
+          }
+        }
+      },
+      "functionType": "Action",
+      "identifier": "internal/sms.js:sendAssessmentReminder",
+      "returns": {
+        "type": "any"
+      },
+      "visibility": {
+        "kind": "internal"
+      }
+    },
+    {
+      "args": {
+        "type": "object",
+        "value": {
+          "alertId": {
+            "fieldType": {
+              "tableName": "alerts",
+              "type": "id"
+            },
+            "optional": false
+          },
+          "userId": {
+            "fieldType": {
+              "tableName": "users",
+              "type": "id"
+            },
+            "optional": false
+          }
+        }
+      },
+      "functionType": "Action",
+      "identifier": "internal/sms.js:sendCrisisFollowUpMessage",
+      "returns": {
+        "type": "any"
+      },
+      "visibility": {
+        "kind": "internal"
+      }
+    },
+    {
+      "args": {
+        "type": "object",
+        "value": {
+          "userId": {
+            "fieldType": {
+              "tableName": "users",
+              "type": "id"
+            },
+            "optional": false
+          }
+        }
+      },
+      "functionType": "Action",
+      "identifier": "internal/sms.js:sendCrisisFollowUpNudge",
+      "returns": {
+        "type": "any"
+      },
+      "visibility": {
+        "kind": "internal"
+      }
+    },
+    {
+      "args": {
+        "type": "object",
+        "value": {
+          "isDVHint": {
+            "fieldType": {
+              "type": "boolean"
+            },
+            "optional": false
+          },
+          "userId": {
+            "fieldType": {
+              "tableName": "users",
+              "type": "id"
+            },
+            "optional": false
+          }
+        }
+      },
+      "functionType": "Action",
+      "identifier": "internal/sms.js:sendCrisisResponse",
+      "returns": {
+        "type": "any"
+      },
+      "visibility": {
+        "kind": "internal"
+      }
+    },
+    {
+      "args": {
+        "type": "object",
+        "value": {
+          "level": {
+            "fieldType": {
+              "type": "union",
+              "value": [
+                {
+                  "type": "literal",
+                  "value": "day5"
+                },
+                {
+                  "type": "literal",
+                  "value": "day7"
+                },
+                {
+                  "type": "literal",
+                  "value": "day14"
+                }
+              ]
+            },
+            "optional": false
+          },
+          "userId": {
+            "fieldType": {
+              "tableName": "users",
+              "type": "id"
+            },
+            "optional": false
+          }
+        }
+      },
+      "functionType": "Action",
+      "identifier": "internal/sms.js:sendEngagementNudge",
+      "returns": {
+        "type": "any"
+      },
+      "visibility": {
+        "kind": "internal"
+      }
+    },
+    {
+      "args": {
+        "type": "object",
+        "value": {
+          "userId": {
+            "fieldType": {
+              "tableName": "users",
+              "type": "id"
+            },
+            "optional": false
+          }
+        }
+      },
+      "functionType": "Action",
+      "identifier": "internal/sms.js:sendHelpMessage",
+      "returns": {
+        "type": "any"
+      },
+      "visibility": {
+        "kind": "internal"
+      }
+    },
+    {
+      "args": {
+        "type": "object",
+        "value": {
+          "userId": {
+            "fieldType": {
+              "tableName": "users",
+              "type": "id"
+            },
+            "optional": false
+          }
+        }
+      },
+      "functionType": "Action",
+      "identifier": "internal/sms.js:sendRateLimitMessage",
+      "returns": {
+        "type": "any"
+      },
+      "visibility": {
+        "kind": "internal"
+      }
+    },
+    {
+      "args": {
+        "type": "object",
+        "value": {
+          "gracePeriodEndsAt": {
+            "fieldType": {
+              "type": "number"
+            },
+            "optional": true
+          },
+          "userId": {
+            "fieldType": {
+              "tableName": "users",
+              "type": "id"
+            },
+            "optional": false
+          }
+        }
+      },
+      "functionType": "Action",
+      "identifier": "internal/sms.js:sendResubscribeMessage",
+      "returns": {
+        "type": "any"
+      },
+      "visibility": {
+        "kind": "internal"
+      }
+    },
+    {
+      "args": {
+        "type": "object",
+        "value": {
+          "newScore": {
+            "fieldType": {
+              "type": "number"
+            },
+            "optional": false
+          },
+          "oldScore": {
+            "fieldType": {
+              "type": "number"
+            },
+            "optional": false
+          },
+          "userId": {
+            "fieldType": {
+              "tableName": "users",
+              "type": "id"
+            },
+            "optional": false
+          },
+          "zones": {
+            "fieldType": {
+              "type": "any"
+            },
+            "optional": false
+          }
+        }
+      },
+      "functionType": "Action",
+      "identifier": "internal/sms.js:sendScoreSpikeFollowUp",
+      "returns": {
+        "type": "any"
+      },
+      "visibility": {
+        "kind": "internal"
+      }
+    },
+    {
+      "args": {
+        "type": "object",
+        "value": {
+          "userId": {
+            "fieldType": {
+              "tableName": "users",
+              "type": "id"
+            },
+            "optional": false
+          }
+        }
+      },
+      "functionType": "Action",
+      "identifier": "internal/sms.js:sendStopConfirmation",
+      "returns": {
+        "type": "any"
+      },
+      "visibility": {
+        "kind": "internal"
+      }
+    },
+    {
+      "args": {
+        "type": "object",
+        "value": {
+          "gracePeriodEndsAt": {
+            "fieldType": {
+              "type": "number"
+            },
+            "optional": true
+          },
+          "scenario": {
+            "fieldType": {
+              "type": "union",
+              "value": [
+                {
+                  "type": "literal",
+                  "value": "new_user"
+                },
+                {
+                  "type": "literal",
+                  "value": "active"
+                },
+                {
+                  "type": "literal",
+                  "value": "grace_period"
+                },
+                {
+                  "type": "literal",
+                  "value": "grace_expired"
+                },
+                {
+                  "type": "literal",
+                  "value": "past_due"
+                },
+                {
+                  "type": "literal",
+                  "value": "incomplete"
+                },
+                {
+                  "type": "literal",
+                  "value": "unknown"
+                }
+              ]
+            },
+            "optional": false
+          },
+          "userId": {
+            "fieldType": {
+              "tableName": "users",
+              "type": "id"
+            },
+            "optional": false
+          }
+        }
+      },
+      "functionType": "Action",
+      "identifier": "internal/sms.js:sendSubscriptionMessage",
+      "returns": {
+        "type": "any"
+      },
+      "visibility": {
+        "kind": "internal"
+      }
+    },
+    {
+      "args": {
+        "type": "object",
+        "value": {
+          "userId": {
+            "fieldType": {
+              "tableName": "users",
+              "type": "id"
+            },
+            "optional": false
+          }
+        }
+      },
+      "functionType": "Action",
+      "identifier": "internal/sms.js:sendWelcomeSMS",
+      "returns": {
+        "type": "any"
+      },
+      "visibility": {
+        "kind": "internal"
+      }
+    },
+    {
+      "args": {
+        "type": "object",
+        "value": {}
+      },
+      "functionType": "Mutation",
+      "identifier": "internal/agentRuns.js:migrateAgentRuns",
+      "returns": {
+        "type": "any"
+      },
+      "visibility": {
+        "kind": "internal"
+      }
+    },
+    {
+      "args": {
+        "type": "object",
+        "value": {
+          "agentName": {
+            "fieldType": {
+              "type": "string"
+            },
+            "optional": true
+          },
+          "completionTokens": {
+            "fieldType": {
+              "type": "number"
+            },
+            "optional": false
+          },
+          "model": {
+            "fieldType": {
+              "type": "string"
+            },
+            "optional": false
+          },
+          "promptTokens": {
+            "fieldType": {
+              "type": "number"
+            },
+            "optional": false
+          },
+          "provider": {
+            "fieldType": {
+              "type": "string"
+            },
+            "optional": false
+          },
+          "providerMetadata": {
+            "fieldType": {
+              "type": "any"
+            },
+            "optional": true
+          },
+          "threadId": {
+            "fieldType": {
+              "type": "string"
+            },
+            "optional": true
+          },
+          "totalTokens": {
+            "fieldType": {
+              "type": "number"
+            },
+            "optional": false
+          },
+          "userId": {
+            "fieldType": {
+              "type": "string"
+            },
+            "optional": true
+          }
+        }
+      },
+      "functionType": "Mutation",
+      "identifier": "internal/agentRuns.js:track",
+      "returns": {
+        "type": "any"
+      },
+      "visibility": {
+        "kind": "internal"
+      }
+    },
+    {
+      "args": {
+        "type": "object",
+        "value": {
+          "context": {
+            "fieldType": {
+              "type": "any"
+            },
+            "optional": false
+          },
+          "severity": {
+            "fieldType": {
+              "type": "union",
+              "value": [
+                {
+                  "type": "literal",
+                  "value": "low"
+                },
+                {
+                  "type": "literal",
+                  "value": "medium"
+                },
+                {
+                  "type": "literal",
+                  "value": "high"
+                }
+              ]
+            },
+            "optional": false
+          },
+          "type": {
+            "fieldType": {
+              "type": "union",
+              "value": [
+                {
+                  "type": "literal",
+                  "value": "crisis"
+                },
+                {
+                  "type": "literal",
+                  "value": "false_positive"
+                },
+                {
+                  "type": "literal",
+                  "value": "dv_hint"
+                },
+                {
+                  "type": "literal",
+                  "value": "crisis_followup_sent"
+                },
+                {
+                  "type": "literal",
+                  "value": "stress_spike_followup_sent"
+                },
+                {
+                  "type": "literal",
+                  "value": "reassurance_loop"
+                },
+                {
+                  "type": "literal",
+                  "value": "self_sacrifice"
+                }
+              ]
+            },
+            "optional": false
+          },
+          "userId": {
+            "fieldType": {
+              "tableName": "users",
+              "type": "id"
+            },
+            "optional": true
+          }
+        }
+      },
+      "functionType": "Mutation",
+      "identifier": "internal/learning.js:logGuardrailEvent",
+      "returns": {
+        "type": "any"
+      },
+      "visibility": {
+        "kind": "internal"
+      }
+    },
+    {
+      "args": {
+        "type": "object",
+        "value": {
+          "agentRunId": {
+            "fieldType": {
+              "tableName": "agent_runs",
+              "type": "id"
+            },
+            "optional": true
+          },
+          "alertId": {
+            "fieldType": {
+              "tableName": "alerts",
+              "type": "id"
+            },
+            "optional": true
+          },
+          "helpful": {
+            "fieldType": {
+              "type": "boolean"
+            },
+            "optional": false
+          },
+          "reason": {
+            "fieldType": {
+              "type": "string"
+            },
+            "optional": true
+          },
+          "userId": {
+            "fieldType": {
+              "tableName": "users",
+              "type": "id"
+            },
+            "optional": false
+          }
+        }
+      },
+      "functionType": "Mutation",
+      "identifier": "internal/learning.js:recordConversationFeedback",
+      "returns": {
+        "type": "any"
+      },
+      "visibility": {
+        "kind": "internal"
+      }
+    },
+    {
+      "args": {
+        "type": "object",
+        "value": {
+          "alertId": {
+            "fieldType": {
+              "tableName": "alerts",
+              "type": "id"
+            },
+            "optional": false
+          },
+          "connectedWith988": {
+            "fieldType": {
+              "type": "boolean"
+            },
+            "optional": true
+          },
+          "followUpResponse": {
+            "fieldType": {
+              "type": "string"
+            },
+            "optional": true
+          },
+          "userId": {
+            "fieldType": {
+              "tableName": "users",
+              "type": "id"
+            },
+            "optional": false
+          },
+          "wasHelpful": {
+            "fieldType": {
+              "type": "boolean"
+            },
+            "optional": true
+          }
+        }
+      },
+      "functionType": "Mutation",
+      "identifier": "internal/learning.js:recordCrisisFeedback",
+      "returns": {
+        "type": "any"
+      },
+      "visibility": {
+        "kind": "internal"
+      }
+    },
+    {
+      "args": {
+        "type": "object",
+        "value": {
+          "helpful": {
+            "fieldType": {
+              "type": "boolean"
+            },
+            "optional": false
+          },
+          "resourceId": {
+            "fieldType": {
+              "type": "string"
+            },
+            "optional": false
+          },
+          "userId": {
+            "fieldType": {
+              "tableName": "users",
+              "type": "id"
+            },
+            "optional": false
+          }
+        }
+      },
+      "functionType": "Mutation",
+      "identifier": "internal/learning.js:trackHelpfulnessMutation",
+      "returns": {
+        "type": "any"
+      },
+      "visibility": {
+        "kind": "internal"
+      }
+    },
+    {
+      "args": {
+        "type": "object",
+        "value": {
+          "assessmentCompleted": {
+            "fieldType": {
+              "type": "boolean"
+            },
+            "optional": true
+          },
+          "avgResponseTimeMs": {
+            "fieldType": {
+              "type": "number"
+            },
+            "optional": true
+          },
+          "crisisDetected": {
+            "fieldType": {
+              "type": "boolean"
+            },
+            "optional": true
+          },
+          "endedAt": {
+            "fieldType": {
+              "type": "number"
+            },
+            "optional": true
+          },
+          "messageCount": {
+            "fieldType": {
+              "type": "number"
+            },
+            "optional": false
+          },
+          "startedAt": {
+            "fieldType": {
+              "type": "number"
+            },
+            "optional": false
+          },
+          "threadId": {
+            "fieldType": {
+              "type": "string"
+            },
+            "optional": true
+          },
+          "userId": {
+            "fieldType": {
+              "tableName": "users",
+              "type": "id"
+            },
+            "optional": false
+          },
+          "userReturnedNext24h": {
+            "fieldType": {
+              "type": "boolean"
+            },
+            "optional": true
+          }
+        }
+      },
+      "functionType": "Mutation",
+      "identifier": "internal/learning.js:upsertSessionMetrics",
+      "returns": {
+        "type": "any"
+      },
+      "visibility": {
+        "kind": "internal"
+      }
+    },
+    {
+      "args": {
+        "type": "object",
+        "value": {
+          "newScore": {
+            "fieldType": {
+              "type": "number"
+            },
+            "optional": false
+          },
+          "oldScore": {
+            "fieldType": {
+              "type": "number"
+            },
+            "optional": false
+          },
+          "trigger": {
+            "fieldType": {
+              "type": "union",
+              "value": [
+                {
+                  "type": "literal",
+                  "value": "ema"
+                },
+                {
+                  "type": "literal",
+                  "value": "sdoh"
+                },
+                {
+                  "type": "literal",
+                  "value": "observation"
+                }
+              ]
+            },
+            "optional": false
+          },
+          "userId": {
+            "fieldType": {
+              "tableName": "users",
+              "type": "id"
+            },
+            "optional": false
+          },
+          "zones": {
+            "fieldType": {
+              "type": "any"
+            },
+            "optional": false
+          }
+        }
+      },
+      "functionType": "Mutation",
+      "identifier": "internal/score.js:insertScoreHistory",
+      "returns": {
+        "type": "any"
+      },
+      "visibility": {
+        "kind": "internal"
+      }
+    },
+    {
+      "args": {
+        "type": "object",
+        "value": {
+          "answers": {
+            "fieldType": {
+              "type": "array",
+              "value": {
+                "type": "object",
+                "value": {
+                  "questionId": {
+                    "fieldType": {
+                      "type": "string"
+                    },
+                    "optional": false
+                  },
+                  "value": {
+                    "fieldType": {
+                      "type": "number"
+                    },
+                    "optional": false
+                  }
+                }
+              }
+            },
+            "optional": false
+          },
+          "userId": {
+            "fieldType": {
+              "tableName": "users",
+              "type": "id"
+            },
+            "optional": false
+          }
+        }
+      },
+      "functionType": "Action",
+      "identifier": "internal/score.js:updateFromEMA",
+      "returns": {
+        "type": "any"
+      },
+      "visibility": {
+        "kind": "internal"
+      }
+    },
+    {
+      "args": {
+        "type": "object",
+        "value": {
+          "answers": {
+            "fieldType": {
+              "type": "array",
+              "value": {
+                "type": "object",
+                "value": {
+                  "questionId": {
+                    "fieldType": {
+                      "type": "string"
+                    },
+                    "optional": false
+                  },
+                  "value": {
+                    "fieldType": {
+                      "type": "number"
+                    },
+                    "optional": false
+                  }
+                }
+              }
+            },
+            "optional": false
+          },
+          "userId": {
+            "fieldType": {
+              "tableName": "users",
+              "type": "id"
+            },
+            "optional": false
+          }
+        }
+      },
+      "functionType": "Action",
+      "identifier": "internal/score.js:updateFromSDOH",
+      "returns": {
+        "type": "any"
+      },
+      "visibility": {
+        "kind": "internal"
+      }
+    },
+    {
+      "args": {
+        "type": "object",
+        "value": {
+          "gcSdohScore": {
+            "fieldType": {
+              "type": "number"
+            },
+            "optional": false
+          },
+          "lastEMA": {
+            "fieldType": {
+              "type": "number"
+            },
+            "optional": true
+          },
+          "lastSDOH": {
+            "fieldType": {
+              "type": "number"
+            },
+            "optional": true
+          },
+          "riskLevel": {
+            "fieldType": {
+              "type": "string"
+            },
+            "optional": false
+          },
+          "trigger": {
+            "fieldType": {
+              "type": "union",
+              "value": [
+                {
+                  "type": "literal",
+                  "value": "ema"
+                },
+                {
+                  "type": "literal",
+                  "value": "sdoh"
+                },
+                {
+                  "type": "literal",
+                  "value": "observation"
+                }
+              ]
+            },
+            "optional": true
+          },
+          "userId": {
+            "fieldType": {
+              "tableName": "users",
+              "type": "id"
+            },
+            "optional": false
+          },
+          "zones": {
+            "fieldType": {
+              "type": "any"
+            },
+            "optional": false
+          }
+        }
+      },
+      "functionType": "Mutation",
+      "identifier": "internal/score.js:updateUserScore",
+      "returns": {
+        "type": "any"
+      },
+      "visibility": {
+        "kind": "internal"
+      }
+    },
+    {
+      "args": {
+        "type": "object",
+        "value": {
+          "userId": {
+            "fieldType": {
+              "tableName": "users",
+              "type": "id"
+            },
+            "optional": false
+          },
+          "value": {
+            "fieldType": {
+              "type": "number"
+            },
+            "optional": false
+          },
+          "zone": {
+            "fieldType": {
+              "type": "string"
+            },
+            "optional": false
+          }
+        }
+      },
+      "functionType": "Mutation",
+      "identifier": "internal/score.js:updateZone",
+      "returns": {
+        "type": "any"
+      },
+      "visibility": {
+        "kind": "internal"
+      }
+    },
+    {
+      "args": {
+        "type": "object",
+        "value": {
+          "userId": {
+            "fieldType": {
+              "tableName": "users",
+              "type": "id"
+            },
+            "optional": false
+          }
+        }
+      },
+      "functionType": "Query",
+      "identifier": "score.js:getScore",
+      "returns": {
+        "type": "any"
+      },
+      "visibility": {
+        "kind": "public"
+      }
+    },
+    {
+      "args": {
+        "type": "object",
+        "value": {
+          "limit": {
+            "fieldType": {
+              "type": "number"
+            },
+            "optional": true
+          },
+          "userId": {
+            "fieldType": {
+              "tableName": "users",
+              "type": "id"
+            },
+            "optional": false
+          }
+        }
+      },
+      "functionType": "Query",
+      "identifier": "score.js:getScoreHistory",
+      "returns": {
+        "type": "any"
+      },
+      "visibility": {
+        "kind": "public"
+      }
+    },
+    {
+      "args": {
+        "type": "object",
+        "value": {}
+      },
+      "functionType": "Action",
+      "identifier": "internal/workflows.js:runCheckIns",
+      "returns": {
+        "type": "any"
+      },
+      "visibility": {
+        "kind": "internal"
+      }
+    },
+    {
+      "args": {
+        "type": "object",
+        "value": {}
+      },
+      "functionType": "Action",
+      "identifier": "internal/workflows.js:checkEngagement",
+      "returns": {
+        "type": "any"
+      },
+      "visibility": {
+        "kind": "internal"
+      }
+    },
+    {
+      "args": {
+        "type": "object",
+        "value": {}
+      },
+      "functionType": "Mutation",
+      "identifier": "scripts/seedInterventions.js:seedInterventions",
+      "returns": {
+        "type": "any"
+      },
+      "visibility": {
+        "kind": "internal"
+      }
+    },
+    {
+      "args": {
+        "type": "object",
+        "value": {
+          "userId": {
+            "fieldType": {
+              "tableName": "users",
+              "type": "id"
+            },
+            "optional": false
+          }
+        }
+      },
+      "functionType": "Mutation",
+      "identifier": "auth.js:ensureAdminUserFields",
+      "returns": {
+        "type": "any"
+      },
+      "visibility": {
+        "kind": "internal"
+      }
+    },
+    {
+      "args": {
+        "type": "object",
+        "value": {}
+      },
+      "functionType": "Query",
+      "identifier": "auth.js:isAuthenticated",
+      "returns": {
+        "type": "any"
+      },
+      "visibility": {
+        "kind": "public"
+      }
+    },
+    {
+      "args": {
+        "type": "object",
+        "value": {
+          "calledBy": {
+            "fieldType": {
+              "type": "string"
+            },
+            "optional": true
+          },
+          "params": {
+            "fieldType": {
+              "type": "any"
+            },
+            "optional": true
+          },
+          "provider": {
+            "fieldType": {
+              "type": "string"
+            },
+            "optional": true
+          },
+          "refreshToken": {
+            "fieldType": {
+              "type": "string"
+            },
+            "optional": true
+          },
+          "verifier": {
+            "fieldType": {
+              "type": "string"
+            },
+            "optional": true
+          }
+        }
+      },
+      "functionType": "Action",
+      "identifier": "auth.js:signIn",
+      "returns": {
+        "type": "any"
+      },
+      "visibility": {
+        "kind": "public"
+      }
+    },
+    {
+      "args": {
+        "type": "object",
+        "value": {}
+      },
+      "functionType": "Action",
+      "identifier": "auth.js:signOut",
+      "returns": {
+        "type": "any"
+      },
+      "visibility": {
+        "kind": "public"
+      }
+    },
+    {
+      "args": {
+        "type": "object",
+        "value": {
+          "args": {
+            "fieldType": {
+              "type": "union",
+              "value": [
+                {
+                  "type": "object",
+                  "value": {
+                    "generateTokens": {
+                      "fieldType": {
+                        "type": "boolean"
+                      },
+                      "optional": false
+                    },
+                    "sessionId": {
+                      "fieldType": {
+                        "tableName": "authSessions",
+                        "type": "id"
+                      },
+                      "optional": true
+                    },
+                    "type": {
+                      "fieldType": {
+                        "type": "literal",
+                        "value": "signIn"
+                      },
+                      "optional": false
+                    },
+                    "userId": {
+                      "fieldType": {
+                        "tableName": "users",
+                        "type": "id"
+                      },
+                      "optional": false
+                    }
+                  }
+                },
+                {
+                  "type": "object",
+                  "value": {
+                    "type": {
+                      "fieldType": {
+                        "type": "literal",
+                        "value": "signOut"
+                      },
+                      "optional": false
+                    }
+                  }
+                },
+                {
+                  "type": "object",
+                  "value": {
+                    "refreshToken": {
+                      "fieldType": {
+                        "type": "string"
+                      },
+                      "optional": false
+                    },
+                    "type": {
+                      "fieldType": {
+                        "type": "literal",
+                        "value": "refreshSession"
+                      },
+                      "optional": false
+                    }
+                  }
+                },
+                {
+                  "type": "object",
+                  "value": {
+                    "allowExtraProviders": {
+                      "fieldType": {
+                        "type": "boolean"
+                      },
+                      "optional": false
+                    },
+                    "generateTokens": {
+                      "fieldType": {
+                        "type": "boolean"
+                      },
+                      "optional": false
+                    },
+                    "params": {
+                      "fieldType": {
+                        "type": "any"
+                      },
+                      "optional": false
+                    },
+                    "provider": {
+                      "fieldType": {
+                        "type": "string"
+                      },
+                      "optional": true
+                    },
+                    "type": {
+                      "fieldType": {
+                        "type": "literal",
+                        "value": "verifyCodeAndSignIn"
+                      },
+                      "optional": false
+                    },
+                    "verifier": {
+                      "fieldType": {
+                        "type": "string"
+                      },
+                      "optional": true
+                    }
+                  }
+                },
+                {
+                  "type": "object",
+                  "value": {
+                    "type": {
+                      "fieldType": {
+                        "type": "literal",
+                        "value": "verifier"
+                      },
+                      "optional": false
+                    }
+                  }
+                },
+                {
+                  "type": "object",
+                  "value": {
+                    "signature": {
+                      "fieldType": {
+                        "type": "string"
+                      },
+                      "optional": false
+                    },
+                    "type": {
+                      "fieldType": {
+                        "type": "literal",
+                        "value": "verifierSignature"
+                      },
+                      "optional": false
+                    },
+                    "verifier": {
+                      "fieldType": {
+                        "type": "string"
+                      },
+                      "optional": false
+                    }
+                  }
+                },
+                {
+                  "type": "object",
+                  "value": {
+                    "profile": {
+                      "fieldType": {
+                        "type": "any"
+                      },
+                      "optional": false
+                    },
+                    "provider": {
+                      "fieldType": {
+                        "type": "string"
+                      },
+                      "optional": false
+                    },
+                    "providerAccountId": {
+                      "fieldType": {
+                        "type": "string"
+                      },
+                      "optional": false
+                    },
+                    "signature": {
+                      "fieldType": {
+                        "type": "string"
+                      },
+                      "optional": false
+                    },
+                    "type": {
+                      "fieldType": {
+                        "type": "literal",
+                        "value": "userOAuth"
+                      },
+                      "optional": false
+                    }
+                  }
+                },
+                {
+                  "type": "object",
+                  "value": {
+                    "accountId": {
+                      "fieldType": {
+                        "tableName": "authAccounts",
+                        "type": "id"
+                      },
+                      "optional": true
+                    },
+                    "allowExtraProviders": {
+                      "fieldType": {
+                        "type": "boolean"
+                      },
+                      "optional": false
+                    },
+                    "code": {
+                      "fieldType": {
+                        "type": "string"
+                      },
+                      "optional": false
+                    },
+                    "email": {
+                      "fieldType": {
+                        "type": "string"
+                      },
+                      "optional": true
+                    },
+                    "expirationTime": {
+                      "fieldType": {
+                        "type": "number"
+                      },
+                      "optional": false
+                    },
+                    "phone": {
+                      "fieldType": {
+                        "type": "string"
+                      },
+                      "optional": true
+                    },
+                    "provider": {
+                      "fieldType": {
+                        "type": "string"
+                      },
+                      "optional": false
+                    },
+                    "type": {
+                      "fieldType": {
+                        "type": "literal",
+                        "value": "createVerificationCode"
+                      },
+                      "optional": false
+                    }
+                  }
+                },
+                {
+                  "type": "object",
+                  "value": {
+                    "account": {
+                      "fieldType": {
+                        "type": "object",
+                        "value": {
+                          "id": {
+                            "fieldType": {
+                              "type": "string"
+                            },
+                            "optional": false
+                          },
+                          "secret": {
+                            "fieldType": {
+                              "type": "string"
+                            },
+                            "optional": true
+                          }
+                        }
+                      },
+                      "optional": false
+                    },
+                    "profile": {
+                      "fieldType": {
+                        "type": "any"
+                      },
+                      "optional": false
+                    },
+                    "provider": {
+                      "fieldType": {
+                        "type": "string"
+                      },
+                      "optional": false
+                    },
+                    "shouldLinkViaEmail": {
+                      "fieldType": {
+                        "type": "boolean"
+                      },
+                      "optional": true
+                    },
+                    "shouldLinkViaPhone": {
+                      "fieldType": {
+                        "type": "boolean"
+                      },
+                      "optional": true
+                    },
+                    "type": {
+                      "fieldType": {
+                        "type": "literal",
+                        "value": "createAccountFromCredentials"
+                      },
+                      "optional": false
+                    }
+                  }
+                },
+                {
+                  "type": "object",
+                  "value": {
+                    "account": {
+                      "fieldType": {
+                        "type": "object",
+                        "value": {
+                          "id": {
+                            "fieldType": {
+                              "type": "string"
+                            },
+                            "optional": false
+                          },
+                          "secret": {
+                            "fieldType": {
+                              "type": "string"
+                            },
+                            "optional": true
+                          }
+                        }
+                      },
+                      "optional": false
+                    },
+                    "provider": {
+                      "fieldType": {
+                        "type": "string"
+                      },
+                      "optional": false
+                    },
+                    "type": {
+                      "fieldType": {
+                        "type": "literal",
+                        "value": "retrieveAccountWithCredentials"
+                      },
+                      "optional": false
+                    }
+                  }
+                },
+                {
+                  "type": "object",
+                  "value": {
+                    "account": {
+                      "fieldType": {
+                        "type": "object",
+                        "value": {
+                          "id": {
+                            "fieldType": {
+                              "type": "string"
+                            },
+                            "optional": false
+                          },
+                          "secret": {
+                            "fieldType": {
+                              "type": "string"
+                            },
+                            "optional": false
+                          }
+                        }
+                      },
+                      "optional": false
+                    },
+                    "provider": {
+                      "fieldType": {
+                        "type": "string"
+                      },
+                      "optional": false
+                    },
+                    "type": {
+                      "fieldType": {
+                        "type": "literal",
+                        "value": "modifyAccount"
+                      },
+                      "optional": false
+                    }
+                  }
+                },
+                {
+                  "type": "object",
+                  "value": {
+                    "except": {
+                      "fieldType": {
+                        "type": "array",
+                        "value": {
+                          "tableName": "authSessions",
+                          "type": "id"
+                        }
+                      },
+                      "optional": true
+                    },
+                    "type": {
+                      "fieldType": {
+                        "type": "literal",
+                        "value": "invalidateSessions"
+                      },
+                      "optional": false
+                    },
+                    "userId": {
+                      "fieldType": {
+                        "tableName": "users",
+                        "type": "id"
+                      },
+                      "optional": false
+                    }
+                  }
+                }
+              ]
+            },
+            "optional": false
+          }
+        }
+      },
+      "functionType": "Mutation",
+      "identifier": "auth.js:store",
+      "returns": {
+        "type": "any"
+      },
+      "visibility": {
+        "kind": "internal"
+      }
+    },
+    {
+      "args": {
+        "type": "object",
+        "value": {
+          "limit": {
+            "fieldType": {
+              "type": "number"
+            },
+            "optional": true
+          },
+          "userId": {
+            "fieldType": {
+              "tableName": "users",
+              "type": "id"
+            },
+            "optional": true
+          }
+        }
+      },
+      "functionType": "Query",
+      "identifier": "feedback.js:getConversationQualityMetrics",
+      "returns": {
+        "type": "any"
+      },
+      "visibility": {
+        "kind": "public"
+      }
+    },
+    {
+      "args": {
+        "type": "object",
+        "value": {
+          "limit": {
+            "fieldType": {
+              "type": "number"
+            },
+            "optional": true
+          }
+        }
+      },
+      "functionType": "Query",
+      "identifier": "feedback.js:getCrisisFeedbackSummary",
+      "returns": {
+        "type": "any"
+      },
+      "visibility": {
+        "kind": "public"
+      }
+    },
+    {
+      "args": {
+        "type": "object",
+        "value": {
+          "limit": {
+            "fieldType": {
+              "type": "number"
+            },
+            "optional": true
+          }
+        }
+      },
+      "functionType": "Query",
+      "identifier": "feedback.js:getCrisisAlertsWithFeedback",
+      "returns": {
+        "type": "any"
+      },
+      "visibility": {
+        "kind": "public"
+      }
+    },
+    {
+      "args": {
+        "type": "object",
+        "value": {
+          "limit": {
+            "fieldType": {
+              "type": "number"
+            },
+            "optional": true
+          },
+          "userId": {
+            "fieldType": {
+              "tableName": "users",
+              "type": "id"
+            },
+            "optional": true
+          }
+        }
+      },
+      "functionType": "Query",
+      "identifier": "feedback.js:getSessionOutcomeMetrics",
+      "returns": {
+        "type": "any"
+      },
+      "visibility": {
+        "kind": "public"
+      }
+    },
+    {
+      "args": {
+        "type": "object",
+        "value": {
+          "limit": {
+            "fieldType": {
+              "type": "number"
+            },
+            "optional": true
+          },
+          "severity": {
+            "fieldType": {
+              "type": "union",
+              "value": [
+                {
+                  "type": "literal",
+                  "value": "low"
+                },
+                {
+                  "type": "literal",
+                  "value": "medium"
+                },
+                {
+                  "type": "literal",
+                  "value": "high"
+                }
+              ]
+            },
+            "optional": true
+          },
+          "type": {
+            "fieldType": {
+              "type": "union",
+              "value": [
+                {
+                  "type": "literal",
+                  "value": "crisis"
+                },
+                {
+                  "type": "literal",
+                  "value": "false_positive"
+                },
+                {
+                  "type": "literal",
+                  "value": "dv_hint"
+                },
+                {
+                  "type": "literal",
+                  "value": "crisis_followup_sent"
+                },
+                {
+                  "type": "literal",
+                  "value": "stress_spike_followup_sent"
+                },
+                {
+                  "type": "literal",
+                  "value": "reassurance_loop"
+                },
+                {
+                  "type": "literal",
+                  "value": "self_sacrifice"
+                }
+              ]
+            },
+            "optional": true
+          }
+        }
+      },
+      "functionType": "Query",
+      "identifier": "feedback.js:getGuardrailEventsForReview",
+      "returns": {
+        "type": "any"
+      },
+      "visibility": {
+        "kind": "public"
+      }
+    },
+    {
+      "args": {
+        "type": "object",
+        "value": {
+          "message": {
+            "fieldType": {
+              "type": "string"
+            },
+            "optional": false
+          },
+          "userId": {
+            "fieldType": {
+              "tableName": "users",
+              "type": "id"
+            },
+            "optional": false
+          }
+        }
+      },
+      "functionType": "Action",
+      "identifier": "agent.js:chat",
+      "returns": {
+        "type": "any"
+      },
+      "visibility": {
+        "kind": "internal"
+      }
+    }
+  ]
+}

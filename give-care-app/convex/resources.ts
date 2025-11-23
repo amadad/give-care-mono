@@ -17,6 +17,19 @@ import { internal } from "./_generated/api";
 import { interpretSearchIntent, getZoneDisplayName } from "./lib/intentInterpreter";
 import { searchWithMapsGrounding } from "./lib/maps";
 import { tieredSearch } from "./lib/search";
+import { getUserMetadata } from "./lib/utils";
+
+const CACHE_TTL_MS = 6 * 60 * 60 * 1000; // 6 hours
+
+function cacheKey(intent: any, zip: string | null): string {
+  const intentLabel = intent?.intent || "general";
+  const topZone = Array.isArray(intent?.sdohZones) ? intent.sdohZones[0] || "" : "";
+  return `${zip || "national"}|${intentLabel}|${topZone}`.toLowerCase();
+}
+
+function isCacheValid(entry: any): boolean {
+  return !entry?.expiresAt || entry.expiresAt > Date.now();
+}
 
 /**
  * AI-Native Resource Search
@@ -34,17 +47,25 @@ export const searchResources = internalAction({
   handler: async (ctx, { userId, query, zipCode }) => {
     // Get user context
     const user = await ctx.runQuery(internal.internal.users.getUser, { userId });
-    const userZip = zipCode || user?.zipCode || (user?.metadata as any)?.zipCode;
-    const userLat = (user?.metadata as any)?.latitude;
-    const userLng = (user?.metadata as any)?.longitude;
+    const metadata = getUserMetadata(user);
+    const userZip = zipCode || user?.zipCode || metadata.zipCode;
+    const userLat = metadata.latitude;
+    const userLng = metadata.longitude;
 
     try {
       // STEP 1: Interpret Intent (AI-powered)
       const intent = await interpretSearchIntent(query, {
         zones: user?.zones,
         gcSdohScore: user?.gcSdohScore,
-        metadata: user?.metadata,
+        metadata,
       });
+
+      // STEP 1.5: Check cache before searching
+      const key = cacheKey(intent, userZip);
+      const cached = await getCachedResources(ctx, key);
+      if (cached) {
+        return cached;
+      }
 
       // STEP 2: Choose search strategy based on location availability
       const shouldUseLocal =
@@ -52,14 +73,25 @@ export const searchResources = internalAction({
 
       if (shouldUseLocal) {
         // LOCAL SEARCH: Use Maps Grounding when query is truly geographical
-        return await searchLocalResources(intent, {
+        const result = await searchLocalResources(intent, {
           zipCode: userZip,
           latitude: userLat,
           longitude: userLng,
         });
+        // Cache successful local result
+        await writeResourceCache(ctx, key, {
+          resourcesText: result.resources,
+          sources: result.sources,
+        });
+        return result;
       } else {
         // NATIONAL SEARCH: Use Search Grounding or Gemini knowledge
-        return await searchNationalResources(intent);
+        const result = await searchNationalResources(intent);
+        await writeResourceCache(ctx, key, {
+          resourcesText: result.resources,
+          sources: result.sources,
+        });
+        return result;
       }
     } catch (error) {
       // Fallback: Simple Gemini response without grounding
@@ -172,4 +204,48 @@ function formatNationalResponse(text: string, intent: any): string {
     : "";
 
   return `${text}${zoneContext}\n\nShare your ZIP for local options.`;
+}
+
+async function getCachedResources(ctx: any, cacheKeyValue: string) {
+  const cached = await ctx.db
+    .query("resource_cache")
+    .withIndex("by_zip_cat", (q: any) => q.eq("zip", cacheKeyValue).eq("category", cacheKeyValue))
+    .first();
+
+  if (cached && isCacheValid(cached)) {
+    return {
+      resources: (cached.results as any)?.resourcesText || cached.results,
+      sources: (cached.results as any)?.sources || cached.placeIds?.map((placeId: string) => ({ placeId, name: "Saved result" })),
+      intent: {},
+      message: "Sharing saved options. Reply with your ZIP for fresher local results.",
+    };
+  }
+
+  return null;
+}
+
+async function writeResourceCache(
+  ctx: any,
+  cacheKeyValue: string,
+  payload: { resourcesText: string; sources?: Array<{ placeId?: string; name?: string; address?: string }> }
+) {
+  const existing = await ctx.db
+    .query("resource_cache")
+    .withIndex("by_zip_cat", (q: any) => q.eq("zip", cacheKeyValue).eq("category", cacheKeyValue))
+    .first();
+
+  const doc = {
+    category: cacheKeyValue,
+    zip: cacheKeyValue,
+    placeIds: payload.sources?.map((s) => s.placeId).filter(Boolean),
+    results: payload,
+    createdAt: Date.now(),
+    expiresAt: Date.now() + CACHE_TTL_MS,
+  };
+
+  if (existing?._id) {
+    await ctx.db.patch(existing._id, doc);
+  } else {
+    await ctx.db.insert("resource_cache", doc);
+  }
 }

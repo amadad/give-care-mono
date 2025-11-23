@@ -3,10 +3,10 @@
  * Called via scheduler for async Twilio sending
  */
 
-import { internalAction } from "../_generated/server";
+import { internalAction, internalMutation } from "../_generated/server";
 import { v } from "convex/values";
 import { sendSMS, getHelpMessage, getStopConfirmation } from "../lib/twilio";
-import { getCrisisResponse } from "../lib/utils";
+import { getCrisisResponse, getUserMetadata } from "../lib/utils";
 import { internal } from "../_generated/api";
 
 /**
@@ -18,7 +18,14 @@ async function withUserPhone(
   fn: (user: any, phone: string) => Promise<void> | void
 ): Promise<void> {
   const user = await ctx.runQuery(internal.internal.users.getUser, { userId });
-  if (!user?.phone) return;
+  if (!user?.phone) {
+    await ctx.runMutation(internal.internal.sms.logSmsIssue, {
+      userId,
+      reason: "missing_phone",
+      context: "Attempted SMS send without phone",
+    });
+    return;
+  }
   await fn(user, user.phone);
 }
 
@@ -46,6 +53,21 @@ export const sendHelpMessage = internalAction({
   handler: async (ctx, { userId }) => {
     await withUserPhone(ctx, userId, async (_user, phone) => {
       await sendSMS(ctx, phone, getHelpMessage());
+    });
+  },
+});
+
+/**
+ * Send an assessment question (progress-aware)
+ */
+export const sendAssessmentQuestion = internalAction({
+  args: {
+    userId: v.id("users"),
+    text: v.string(),
+  },
+  handler: async (ctx, { userId, text }) => {
+    await withUserPhone(ctx, userId, async (_user, phone) => {
+      await sendSMS(ctx, phone, text);
     });
   },
 });
@@ -267,7 +289,7 @@ export const sendCrisisFollowUpMessage = internalAction({
       }
 
       // Guard 2: Respect quiet hours (9:00-19:00 local, never after 20:00)
-      const timezone = (user.metadata as any)?.timezone;
+      const timezone = getUserMetadata(user).timezone;
       if (!isQuietHours(timezone)) {
         return;
       }
@@ -380,7 +402,7 @@ export const sendCrisisFollowUpNudge = internalAction({
         return;
       }
 
-      const timezone = (user.metadata as any)?.timezone;
+      const timezone = getUserMetadata(user).timezone;
       if (!isQuietHours(timezone)) {
         return;
       }
@@ -406,7 +428,7 @@ export const sendScoreSpikeFollowUp = internalAction({
   },
   handler: async (ctx, { userId, oldScore, newScore, zones }) => {
     await withUserPhone(ctx, userId, async (user, phone) => {
-      if (!isQuietHours((user.metadata as any)?.timezone)) {
+      if (!isQuietHours(getUserMetadata(user).timezone)) {
         return;
       }
 
@@ -562,6 +584,28 @@ export const sendSubscriptionMessage = internalAction({
       }
 
       await sendSMS(ctx, phone, message);
+    });
+  },
+});
+
+/**
+ * Log SMS issues for observability (missing phone, etc.)
+ */
+export const logSmsIssue = internalMutation({
+  args: {
+    userId: v.id("users"),
+    reason: v.literal("missing_phone"),
+    context: v.optional(v.string()),
+  },
+  handler: async (ctx, { userId, reason, context }) => {
+    await ctx.db.insert("events", {
+      userId,
+      type: "sms.missing_phone",
+      payload: {
+        reason,
+        context,
+        timestamp: Date.now(),
+      },
     });
   },
 });

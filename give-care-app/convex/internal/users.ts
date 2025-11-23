@@ -4,7 +4,8 @@
 
 import { internalMutation, internalQuery } from "../_generated/server";
 import { v } from "convex/values";
-import { normalizePhone } from "../lib/utils";
+import { getUserMetadata, normalizePhone } from "../lib/utils";
+import { requireUser } from "../lib/userHelpers";
 import { computeAccessScenario } from "./subscriptions";
 
 /**
@@ -69,12 +70,9 @@ export const updateProfile = internalMutation({
     value: v.any(),
   },
   handler: async (ctx, { userId, field, value }) => {
-    const user = await ctx.db.get(userId);
-    if (!user) {
-      throw new Error("User not found");
-    }
+    const user = await requireUser(ctx.db, userId);
 
-    const metadata = user.metadata || {};
+    const metadata = getUserMetadata(user);
 
     // Profile fields go in metadata.profile, everything else at metadata level
     const profileFields = ['firstName', 'careRecipientName', 'relationship'];
@@ -159,7 +157,7 @@ export const getUsersWithCheckIns = internalQuery({
     const eligibleUsers: Array<{ _id: any }> = [];
 
     for (const user of allUsers) {
-      const metadata = user.metadata || {};
+      const metadata = getUserMetadata(user);
       const checkInFrequency = metadata.checkInFrequency;
 
       if (!checkInFrequency) {
@@ -169,7 +167,7 @@ export const getUsersWithCheckIns = internalQuery({
       // Use lastEMA timestamp instead of per-user assessment query
       const lastEMA =
         user.lastEMA ||
-        (metadata as any)?.lastEMA ||
+        metadata.lastEMA ||
         0;
       const lastCheckInDate = lastEMA;
       const hoursSinceCheckIn = (now - lastCheckInDate) / (1000 * 60 * 60);
@@ -224,6 +222,24 @@ export const getRecentInboundReceipt = internalQuery({
       .sort((a, b) => (b.receivedAt || 0) - (a.receivedAt || 0))[0];
 
     return recent || null;
+  },
+});
+
+/**
+ * Get recent LLM usage for a user
+ */
+export const getRecentUsage = internalQuery({
+  args: {
+    userId: v.id("users"),
+    since: v.number(),
+  },
+  handler: async (ctx, { userId, since }) => {
+    const usage = await ctx.db
+      .query("llm_usage")
+      .withIndex("by_user_created", (q) => q.eq("userId", userId))
+      .filter((q) => q.gte(q.field("createdAt"), since))
+      .take(200);
+    return usage;
   },
 });
 

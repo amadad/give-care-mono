@@ -380,9 +380,55 @@ export type DataModel = {
     searchIndexes: {};
     vectorIndexes: {};
   };
+  entitlements: {
+    document: {
+      active: boolean;
+      expiresAt?: number;
+      feature: string;
+      userId: Id<"users">;
+      _id: Id<"entitlements">;
+      _creationTime: number;
+    };
+    fieldPaths:
+      | "_creationTime"
+      | "_id"
+      | "active"
+      | "expiresAt"
+      | "feature"
+      | "userId";
+    indexes: {
+      by_id: ["_id"];
+      by_creation_time: ["_creationTime"];
+      by_user_feature: ["userId", "feature", "_creationTime"];
+    };
+    searchIndexes: {};
+    vectorIndexes: {};
+  };
   events: {
     document: {
-      payload: any;
+      payload:
+        | { helpful: boolean; resourceId: string; timestamp: number }
+        | { query?: string; timestamp?: number; zip?: string; zone?: string }
+        | {
+            band?: string;
+            completedAt?: number;
+            definitionId?: string;
+            score?: number;
+          }
+        | { fields?: Array<string>; timestamp?: number }
+        | {
+            category?: string;
+            importance?: number;
+            memoryId?: Id<"memories">;
+            timestamp?: number;
+          }
+        | {
+            assessmentId?: Id<"assessments">;
+            band?: string;
+            completedAt?: number;
+            gcBurnout?: number;
+          }
+        | { context?: string; reason: "missing_phone"; timestamp: number };
       type:
         | "intervention.try"
         | "intervention.success"
@@ -393,12 +439,36 @@ export type DataModel = {
         | "assessment.started"
         | "profile.updated"
         | "memory.recorded"
-        | "check_in.completed";
+        | "check_in.completed"
+        | "sms.missing_phone";
       userId: Id<"users">;
       _id: Id<"events">;
       _creationTime: number;
     };
-    fieldPaths: "_creationTime" | "_id" | "payload" | "type" | "userId";
+    fieldPaths:
+      | "_creationTime"
+      | "_id"
+      | "payload"
+      | "payload.assessmentId"
+      | "payload.band"
+      | "payload.category"
+      | "payload.completedAt"
+      | "payload.context"
+      | "payload.definitionId"
+      | "payload.fields"
+      | "payload.gcBurnout"
+      | "payload.helpful"
+      | "payload.importance"
+      | "payload.memoryId"
+      | "payload.query"
+      | "payload.reason"
+      | "payload.resourceId"
+      | "payload.score"
+      | "payload.timestamp"
+      | "payload.zip"
+      | "payload.zone"
+      | "type"
+      | "userId";
     indexes: {
       by_id: ["_id"];
       by_creation_time: ["_creationTime"];
@@ -540,6 +610,39 @@ export type DataModel = {
     searchIndexes: {};
     vectorIndexes: {};
   };
+  llm_usage: {
+    document: {
+      agentName?: "main" | "assessment" | "crisis";
+      completionTokens: number;
+      createdAt: number;
+      model: string;
+      promptTokens: number;
+      provider: string;
+      totalTokens: number;
+      userId?: Id<"users">;
+      _id: Id<"llm_usage">;
+      _creationTime: number;
+    };
+    fieldPaths:
+      | "_creationTime"
+      | "_id"
+      | "agentName"
+      | "completionTokens"
+      | "createdAt"
+      | "model"
+      | "promptTokens"
+      | "provider"
+      | "totalTokens"
+      | "userId";
+    indexes: {
+      by_id: ["_id"];
+      by_creation_time: ["_creationTime"];
+      by_created: ["createdAt", "_creationTime"];
+      by_user_created: ["userId", "createdAt", "_creationTime"];
+    };
+    searchIndexes: {};
+    vectorIndexes: {};
+  };
   memories: {
     document: {
       category:
@@ -566,6 +669,30 @@ export type DataModel = {
       by_creation_time: ["_creationTime"];
       by_user_and_importance: ["userId", "importance", "_creationTime"];
       by_user_category: ["userId", "category", "_creationTime"];
+    };
+    searchIndexes: {};
+    vectorIndexes: {};
+  };
+  prompt_versions: {
+    document: {
+      createdAt: number;
+      name: string;
+      prompt: string;
+      version: string;
+      _id: Id<"prompt_versions">;
+      _creationTime: number;
+    };
+    fieldPaths:
+      | "_creationTime"
+      | "_id"
+      | "createdAt"
+      | "name"
+      | "prompt"
+      | "version";
+    indexes: {
+      by_id: ["_id"];
+      by_creation_time: ["_creationTime"];
+      by_name_version: ["name", "version", "_creationTime"];
     };
     searchIndexes: {};
     vectorIndexes: {};
@@ -775,6 +902,37 @@ export type DataModel = {
     searchIndexes: {};
     vectorIndexes: {};
   };
+  tool_calls: {
+    document: {
+      agentName?: string;
+      cost?: number;
+      createdAt: number;
+      durationMs?: number;
+      name: string;
+      success: boolean;
+      userId?: Id<"users">;
+      _id: Id<"tool_calls">;
+      _creationTime: number;
+    };
+    fieldPaths:
+      | "_creationTime"
+      | "_id"
+      | "agentName"
+      | "cost"
+      | "createdAt"
+      | "durationMs"
+      | "name"
+      | "success"
+      | "userId";
+    indexes: {
+      by_id: ["_id"];
+      by_creation_time: ["_creationTime"];
+      by_name: ["name", "_creationTime"];
+      by_user_created: ["userId", "createdAt", "_creationTime"];
+    };
+    searchIndexes: {};
+    vectorIndexes: {};
+  };
   triggers: {
     document: {
       nextRun: number;
@@ -808,6 +966,32 @@ export type DataModel = {
     searchIndexes: {};
     vectorIndexes: {};
   };
+  usage_invoices: {
+    document: {
+      billingPeriod: string;
+      status: "open" | "paid" | "void";
+      totalCost: number;
+      totalTokens: number;
+      userId: Id<"users">;
+      _id: Id<"usage_invoices">;
+      _creationTime: number;
+    };
+    fieldPaths:
+      | "_creationTime"
+      | "_id"
+      | "billingPeriod"
+      | "status"
+      | "totalCost"
+      | "totalTokens"
+      | "userId";
+    indexes: {
+      by_id: ["_id"];
+      by_creation_time: ["_creationTime"];
+      by_user_period: ["userId", "billingPeriod", "_creationTime"];
+    };
+    searchIndexes: {};
+    vectorIndexes: {};
+  };
   users: {
     document: {
       address?: {
@@ -828,6 +1012,7 @@ export type DataModel = {
       lastSDOH?: number;
       locale?: string;
       metadata?: {
+        awaitingCrisisFollowUp?: { alertId: Id<"alerts">; timestamp: number };
         careRecipient?: string;
         careRecipientName?: string;
         checkInFrequency?: "daily" | "weekly";
@@ -841,8 +1026,14 @@ export type DataModel = {
         firstResourceSearchedAt?: number;
         firstScore?: number;
         gcBurnout?: number;
+        gcSdohScore?: number;
         journeyPhase?: string;
         lastAssessmentScore?: number;
+        lastEMA?: number;
+        lastSDOH?: number;
+        lastSpikeFollowUpAt?: number;
+        latitude?: number;
+        longitude?: number;
         onboardingCompletedAt?: number;
         onboardingMilestones?: Array<{
           completedAt: number;
@@ -850,16 +1041,27 @@ export type DataModel = {
         }>;
         onboardingStage?: string;
         primaryStressor?: string;
+        proactiveOk?: boolean;
         profile?: {
           careRecipientName?: string;
           firstName?: string;
           relationship?: string;
         };
+        reassuranceLoopFlag?: boolean;
+        riskLevel?: "low" | "moderate" | "high" | "crisis";
         snoozeUntil?: number;
         threadId?: string;
         timezone?: string;
         totalInteractionCount?: number;
         zipCode?: string;
+        zones?: {
+          P1?: number;
+          P2?: number;
+          P3?: number;
+          P4?: number;
+          P5?: number;
+          P6?: number;
+        };
       };
       name?: string;
       phone?: string;
@@ -898,6 +1100,9 @@ export type DataModel = {
       | "lastSDOH"
       | "locale"
       | "metadata"
+      | "metadata.awaitingCrisisFollowUp"
+      | "metadata.awaitingCrisisFollowUp.alertId"
+      | "metadata.awaitingCrisisFollowUp.timestamp"
       | "metadata.careRecipient"
       | "metadata.careRecipientName"
       | "metadata.checkInFrequency"
@@ -911,21 +1116,37 @@ export type DataModel = {
       | "metadata.firstResourceSearchedAt"
       | "metadata.firstScore"
       | "metadata.gcBurnout"
+      | "metadata.gcSdohScore"
       | "metadata.journeyPhase"
       | "metadata.lastAssessmentScore"
+      | "metadata.lastEMA"
+      | "metadata.lastSDOH"
+      | "metadata.lastSpikeFollowUpAt"
+      | "metadata.latitude"
+      | "metadata.longitude"
       | "metadata.onboardingCompletedAt"
       | "metadata.onboardingMilestones"
       | "metadata.onboardingStage"
       | "metadata.primaryStressor"
+      | "metadata.proactiveOk"
       | "metadata.profile"
       | "metadata.profile.careRecipientName"
       | "metadata.profile.firstName"
       | "metadata.profile.relationship"
+      | "metadata.reassuranceLoopFlag"
+      | "metadata.riskLevel"
       | "metadata.snoozeUntil"
       | "metadata.threadId"
       | "metadata.timezone"
       | "metadata.totalInteractionCount"
       | "metadata.zipCode"
+      | "metadata.zones"
+      | "metadata.zones.P1"
+      | "metadata.zones.P2"
+      | "metadata.zones.P3"
+      | "metadata.zones.P4"
+      | "metadata.zones.P5"
+      | "metadata.zones.P6"
       | "name"
       | "phone"
       | "riskLevel"
@@ -942,6 +1163,23 @@ export type DataModel = {
       by_creation_time: ["_creationTime"];
       by_externalId: ["externalId", "_creationTime"];
       by_phone: ["phone", "_creationTime"];
+    };
+    searchIndexes: {};
+    vectorIndexes: {};
+  };
+  watcher_state: {
+    document: {
+      cursor?: any;
+      lastRun?: number;
+      watcherName: string;
+      _id: Id<"watcher_state">;
+      _creationTime: number;
+    };
+    fieldPaths: "_creationTime" | "_id" | "cursor" | "lastRun" | "watcherName";
+    indexes: {
+      by_id: ["_id"];
+      by_creation_time: ["_creationTime"];
+      by_watcher: ["watcherName", "_creationTime"];
     };
     searchIndexes: {};
     vectorIndexes: {};
