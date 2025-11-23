@@ -309,7 +309,7 @@ export const checkAssessmentStatus = createTool({
       ),
     ]);
 
-    const currentScore = user?.gcSdohScore || null;
+    const currentScore = user?.gcSdohScore ?? null;
     const hasSDOH = lastSDOH !== null;
     const hasEMA = lastEMA !== null;
     const lastSDOHDate = lastSDOH?.completedAt || null;
@@ -320,7 +320,7 @@ export const checkAssessmentStatus = createTool({
     // Build helpful message for agent
     let message = "";
     if (hasSDOH && currentScore !== null) {
-      const dateStr = new Date(lastSDOHDate!).toLocaleDateString();
+      const dateStr = new Date(lastSDOHDate).toLocaleDateString();
       message = `User has SDOH assessment. Last score: ${currentScore} (completed ${dateStr}).`;
     } else if (hasEMA && !hasSDOH) {
       message = "User has EMA check-ins but no full SDOH assessment yet.";

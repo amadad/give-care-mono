@@ -97,6 +97,12 @@ export const sendAgentResponse = internalAction({
     text: v.string(),
   },
   handler: async (ctx, { userId, text }) => {
+    // Guard against empty messages (Twilio Error 21602)
+    if (!text || text.trim().length === 0) {
+      console.error("Attempted to send empty SMS", { userId });
+      return;
+    }
+
     await withUserPhone(ctx, userId, async (_user, phone) => {
       await sendSMS(ctx, phone, text);
     });

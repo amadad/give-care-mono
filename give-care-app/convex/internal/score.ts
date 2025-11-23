@@ -6,10 +6,19 @@
 import { internalMutation, internalAction } from "../_generated/server";
 import { v } from "convex/values";
 import { internal } from "../_generated/api";
-import { calculateCompositeScore, calculateZoneAverage, normalizeScore, ZoneScores } from "../lib/scoreCalculator";
+import { calculateCompositeScore, normalizeScore, ZoneScores } from "../lib/scoreCalculator";
 import { getRiskLevel } from "../lib/sdoh";
 import { getUserMetadata } from "../lib/utils";
 import type { ZoneId } from "../lib/sdoh";
+
+const zonesValidator = v.object({
+  P1: v.optional(v.number()),
+  P2: v.optional(v.number()),
+  P3: v.optional(v.number()),
+  P4: v.optional(v.number()),
+  P5: v.optional(v.number()),
+  P6: v.optional(v.number()),
+});
 
 /**
  * Update a specific zone score
@@ -28,8 +37,10 @@ export const updateZone = internalMutation({
 
     const metadata = getUserMetadata(user);
     // Use top-level fields (with metadata fallback for migration)
-    const currentZones = (user.zones as ZoneScores) || (metadata.zones as ZoneScores) || {};
-    const currentScore = user.gcSdohScore || (metadata.gcSdohScore as number) || 0;
+    const currentZones = (user.zones as ZoneScores | undefined)
+      ?? (metadata.zones as ZoneScores | undefined)
+      ?? {};
+    const currentScore = user.gcSdohScore ?? (metadata.gcSdohScore) ?? 0;
 
     // Update zone
     const updatedZones: ZoneScores = {
@@ -75,49 +86,31 @@ export const updateZone = internalMutation({
 export const updateFromSDOH = internalAction({
   args: {
     userId: v.id("users"),
-    answers: v.array(
-      v.object({
-        questionId: v.string(),
-        value: v.number(),
-      })
-    ),
+    zones: zonesValidator,
+    gcBurnout: v.number(),
   },
-  handler: async (ctx, { userId, answers }) => {
+  handler: async (ctx, { userId, zones, gcBurnout }) => {
     const user = await ctx.runQuery(internal.internal.users.getUser, { userId });
     if (!user) {
       throw new Error("User not found");
     }
 
-    // Map SDOH questions to zones
-    // P1: questions 1-8 (Relationship & Social Support)
-    // P3: questions 9-12 (Housing & Environment)
-    // P4: questions 13-20 (Financial Resources)
-    // P5: questions 21-26 (Legal & Navigation)
-    // P6: questions 27-28 (Emotional Wellbeing)
-
-    const p1Answers = answers.slice(0, 8).map((a) => a.value);
-    const p3Answers = answers.slice(8, 12).map((a) => a.value);
-    const p4Answers = answers.slice(12, 20).map((a) => a.value);
-    const p5Answers = answers.slice(20, 26).map((a) => a.value);
-    const p6Answers = answers.slice(26, 28).map((a) => a.value);
-
     const metadata = getUserMetadata(user);
-    const currentZones = (user.zones as ZoneScores) || (metadata.zones as ZoneScores) || {};
-    const currentScore = user.gcSdohScore || (metadata.gcSdohScore as number) || 0;
+    const currentZones = (user.zones as ZoneScores | undefined)
+      ?? (metadata.zones as ZoneScores | undefined)
+      ?? {};
+    const currentScore = user.gcSdohScore ?? (metadata.gcSdohScore) ?? 0;
 
-    // Calculate zone scores
-    const updatedZones: ZoneScores = {
-      ...currentZones,
-      P1: calculateZoneAverage(p1Answers),
-      P3: calculateZoneAverage(p3Answers),
-      P4: calculateZoneAverage(p4Answers),
-      P5: calculateZoneAverage(p5Answers),
-      P6: calculateZoneAverage(p6Answers),
-      // P2 (Physical) not covered by SDOH - inferred from conversation
-    };
+    // Merge computed zones (respect existing P2 if assessment doesn't cover it)
+    const updatedZones: ZoneScores = { ...currentZones };
+    for (const [zone, value] of Object.entries(zones)) {
+      if (typeof value === "number") {
+        updatedZones[zone as keyof ZoneScores] = normalizeScore(value);
+      }
+    }
 
-    // Recalculate composite score
-    const newScore = calculateCompositeScore(updatedZones);
+    // Use canonical burnout score from assessment results
+    const newScore = normalizeScore(gcBurnout);
     const riskLevel = getRiskLevel(newScore);
 
     // Update user and record score history in single transaction
@@ -141,56 +134,30 @@ export const updateFromSDOH = internalAction({
 export const updateFromEMA = internalAction({
   args: {
     userId: v.id("users"),
-    answers: v.array(
-      v.object({
-        questionId: v.string(),
-        value: v.number(),
-      })
-    ),
+    zones: zonesValidator,
+    gcBurnout: v.number(),
   },
-  handler: async (ctx, { userId, answers }) => {
+  handler: async (ctx, { userId, zones, gcBurnout }) => {
     const user = await ctx.runQuery(internal.internal.users.getUser, { userId });
     if (!user) {
       throw new Error("User not found");
     }
 
-    // EMA has 3 questions:
-    // 1. Stress level (P6 - emotional)
-    // 2. Mood (P6 - emotional)
-    // 3. Support (P1 - social)
-
-    const p6Answers = [answers[0]?.value, answers[1]?.value].filter((v) => v !== undefined) as number[];
-    const p1Answers = [answers[2]?.value].filter((v) => v !== undefined) as number[];
-
     const metadata = getUserMetadata(user);
-    const currentZones = (user.zones as ZoneScores) || (metadata.zones as ZoneScores) || {};
-    const currentScore = user.gcSdohScore || (metadata.gcSdohScore as number) || 0;
+    const currentZones = (user.zones as ZoneScores | undefined)
+      ?? (metadata.zones as ZoneScores | undefined)
+      ?? {};
+    const currentScore = user.gcSdohScore ?? (metadata.gcSdohScore) ?? 0;
 
-    // Update zones (blend with existing if present)
-    const updatedZones: ZoneScores = {
-      ...currentZones,
-    };
-
-    if (p6Answers.length > 0) {
-      const newP6 = calculateZoneAverage(p6Answers);
-      // Blend: 70% new EMA, 30% existing (if present)
-      const existingP6 = currentZones.P6 || 0;
-      updatedZones.P6 = existingP6 > 0 
-        ? Math.round(newP6 * 0.7 + existingP6 * 0.3)
-        : newP6;
+    // Merge computed zones from EMA (preserve other zones)
+    const updatedZones: ZoneScores = { ...currentZones };
+    for (const [zone, value] of Object.entries(zones)) {
+      if (typeof value === "number") {
+        updatedZones[zone as keyof ZoneScores] = normalizeScore(value);
+      }
     }
 
-    if (p1Answers.length > 0) {
-      const newP1 = calculateZoneAverage(p1Answers);
-      // Blend: 70% new EMA, 30% existing (if present)
-      const existingP1 = currentZones.P1 || 0;
-      updatedZones.P1 = existingP1 > 0
-        ? Math.round(newP1 * 0.7 + existingP1 * 0.3)
-        : newP1;
-    }
-
-    // Recalculate composite score
-    const newScore = calculateCompositeScore(updatedZones);
+    const newScore = normalizeScore(gcBurnout);
     const riskLevel = getRiskLevel(newScore);
 
     // Update user and record score history in single transaction
@@ -267,7 +234,7 @@ export const updateUserScore = internalMutation({
     const user = await ctx.db.get(args.userId);
     if (!user) return;
 
-    const oldScore = user.gcSdohScore || 0;
+    const oldScore = user.gcSdohScore ?? 0;
     const newScore = args.gcSdohScore;
     const delta = newScore - oldScore;
 

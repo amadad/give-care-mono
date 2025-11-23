@@ -22,7 +22,7 @@ export type SubscriptionAccessScenario = {
  * Pure helper to derive access scenario from a subscription row
  * Used by both inbound and internal queries
  */
-export function computeAccessScenario(subscription: any | null): SubscriptionAccessScenario {
+export function computeAccessScenario(subscription: any): SubscriptionAccessScenario {
   if (!subscription) {
     return { hasAccess: false, scenario: "new_user" };
   }

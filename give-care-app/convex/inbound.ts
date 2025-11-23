@@ -86,7 +86,7 @@ export const handleIncomingMessage = internalMutation({
       receivedAt: Date.now(),
     });
 
-    // Step 5: Rate limiting (20 SMS/day)
+    // Step 5: Rate limiting (30 SMS/day)
     const rateLimitKey = user._id;
     const rateLimitCheck = await ctx.runQuery(components.rateLimiter.lib.checkRateLimit, {
       name: "sms_daily",
@@ -94,8 +94,8 @@ export const handleIncomingMessage = internalMutation({
       config: {
         kind: "fixed window",
         period: 86400000,
-        rate: 20,
-        capacity: 20,
+        rate: 30,
+        capacity: 30,
       },
       count: 1,
     });
@@ -117,8 +117,8 @@ export const handleIncomingMessage = internalMutation({
       config: {
         kind: "fixed window",
         period: 86400000,
-        rate: 20,
-        capacity: 20,
+        rate: 30,
+        capacity: 30,
       },
       count: 1,
     });

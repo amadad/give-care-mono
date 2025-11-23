@@ -55,7 +55,7 @@ export interface CrisisDetectionResult {
  * Safely coerce optional user metadata to a typed object
  */
 export function getUserMetadata(user?: { metadata?: UserMetadata | null } | null): UserMetadata {
-  return (user?.metadata as UserMetadata) ?? {};
+  return (user?.metadata) ?? {};
 }
 
 /**

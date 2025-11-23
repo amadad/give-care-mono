@@ -21,3 +21,4 @@ export * as twilioMutations from "./internal/twilioMutations";
 export * as agentRuns from "./internal/agentRuns";
 export * as learning from "./internal/learning";
 export * as score from "./internal/score";
+export * as workflows from "./internal/workflows";
