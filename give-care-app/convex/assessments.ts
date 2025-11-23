@@ -70,7 +70,7 @@ export const processAssessmentAnswer = internalMutation({
     if (answer !== "skip") {
       answers.push({
         questionId: currentQuestion.id,
-        value: answer as number,
+        value: answer,
       });
     }
 
@@ -102,7 +102,7 @@ export const processAssessmentAnswer = internalMutation({
 
       const assessmentId = await ctx.db.insert("assessments", {
         userId,
-        definitionId: session.definitionId as "ema" | "sdoh",
+        definitionId: session.definitionId,
         version: "1.0",
         answers,
         completedAt: Date.now(),
@@ -112,12 +112,14 @@ export const processAssessmentAnswer = internalMutation({
       if (session.definitionId === "ema") {
         await ctx.scheduler.runAfter(0, internal.internal.score.updateFromEMA, {
           userId,
-          answers,
+          zones,
+          gcBurnout,
         });
       } else if (session.definitionId === "sdoh") {
         await ctx.scheduler.runAfter(0, internal.internal.score.updateFromSDOH, {
           userId,
-          answers,
+          zones,
+          gcBurnout,
         });
       }
 
@@ -125,7 +127,7 @@ export const processAssessmentAnswer = internalMutation({
       await ctx.db.insert("scores", {
         userId,
         assessmentId,
-        instrument: session.definitionId as "ema" | "sdoh",
+        instrument: session.definitionId,
         rawComposite,
         gcBurnout,
         band,
@@ -194,7 +196,7 @@ export const completeAssessment = internalMutation({
 
     const assessmentId = await ctx.db.insert("assessments", {
       userId,
-      definitionId: session.definitionId as "ema" | "sdoh",
+      definitionId: session.definitionId,
       version: "1.0",
       answers: session.answers,
       completedAt: Date.now(),
@@ -204,12 +206,14 @@ export const completeAssessment = internalMutation({
     if (session.definitionId === "ema") {
       await ctx.scheduler.runAfter(0, internal.internal.score.updateFromEMA, {
         userId,
-        answers: session.answers,
+        zones,
+        gcBurnout,
       });
     } else if (session.definitionId === "sdoh") {
       await ctx.scheduler.runAfter(0, internal.internal.score.updateFromSDOH, {
         userId,
-        answers: session.answers,
+        zones,
+        gcBurnout,
       });
     }
 
@@ -217,7 +221,7 @@ export const completeAssessment = internalMutation({
     await ctx.db.insert("scores", {
       userId,
       assessmentId,
-      instrument: session.definitionId as "ema" | "sdoh",
+      instrument: session.definitionId,
       rawComposite,
       gcBurnout,
       band,
@@ -233,6 +237,13 @@ export const completeAssessment = internalMutation({
       score: gcBurnout,
       band,
     });
+
+    return {
+      assessmentId,
+      gcBurnout,
+      band,
+      zones,
+      answeredRatio,
+    };
   },
 });
-

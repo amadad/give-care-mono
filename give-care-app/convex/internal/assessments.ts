@@ -14,7 +14,7 @@ import { v } from "convex/values";
 
 function formatQuestion(questionText: string, index: number, total: number): string {
   const progress = `(${index + 1} of ${total})`;
-  const skipHint = index === 0 ? " Reply 1-5 or skip." : " Reply 1-5 or skip.";
+  const skipHint = index === 0 ? " Reply 1-5 or skip." : " Reply 1-5.";
   return `${progress} ${questionText}${skipHint}`;
 }
 
@@ -255,16 +255,15 @@ export const processAssessmentAnswerForAgent = internalMutation({
     // Get assessment definition
     const definition = getAssessmentDefinition(session.definitionId as "ema" | "sdoh");
 
-    // Record answer
+    // Record answer (skip responses are not stored)
     const currentQuestion = definition.questions[session.questionIndex];
-    const updatedAnswers = [
-      ...session.answers,
-      {
+    const updatedAnswers = [...session.answers];
+    if (answer !== "skip") {
+      updatedAnswers.push({
         questionId: currentQuestion.id,
-        value: answer === "skip" ? null : answer,
-        timestamp: Date.now(),
-      },
-    ];
+        value: answer,
+      });
+    }
 
     // Check if this was the last question
     const isLastQuestion = session.questionIndex >= definition.questions.length - 1;
@@ -274,60 +273,56 @@ export const processAssessmentAnswerForAgent = internalMutation({
       await ctx.db.patch(session._id, {
         answers: updatedAnswers,
         status: "completed",
+        questionIndex: session.questionIndex + 1,
       });
 
       // Process completion (calculate scores, etc.)
-      const result = await ctx.runMutation(internal.assessments.processAssessmentAnswer, {
+      const completion = await ctx.runMutation(internal.assessments.completeAssessment, {
         userId,
         sessionId: session._id,
-        answer: answer === "skip" ? "skip" : Number(answer),
       });
 
-      if ((result as any)?.complete) {
-        // Get user to fetch updated score
-        const user = await ctx.db.get(userId);
-        const score = user?.gcSdohScore || 0;
-
-        // Calculate worst zone from zones object
-        const zones = user?.zones || {};
-        let worstZone = "P6";
-        let maxScore = 0;
-        for (const [zone, zoneScore] of Object.entries(zones)) {
-          if (zoneScore && zoneScore > maxScore) {
-            maxScore = zoneScore;
-            worstZone = zone;
-          }
-        }
-
-        // Map zone to descriptive name
-        const zoneNames: Record<string, string> = {
-          P1: "Relationship & Social Support",
-          P2: "Physical Health",
-          P3: "Housing & Environment",
-          P4: "Financial Resources",
-          P5: "Legal & Navigation",
-          P6: "Emotional Wellbeing",
-        };
-
-        // Determine score band
-        let band = "low stress";
-        if (score >= 76) band = "crisis level";
-        else if (score >= 51) band = "high stress";
-        else if (score >= 26) band = "moderate stress";
-
+      if (!completion) {
         return {
-          success: true,
-          complete: true,
-          score,
-          band,
-          worstZone,
-          worstZoneName: zoneNames[worstZone] || worstZone,
+          success: false,
+          message: "Failed to complete assessment.",
         };
       }
 
+      const { gcBurnout: score, band, zones } = completion;
+
+      // Calculate worst zone from scoring result
+      let worstZone: string | null = null;
+      let maxScore = -1;
+      for (const [zone, zoneScore] of Object.entries(zones || {})) {
+        if (typeof zoneScore === "number" && zoneScore > maxScore) {
+          maxScore = zoneScore;
+          worstZone = zone;
+        }
+      }
+
+      const zoneNames: Record<string, string> = {
+        P1: "Relationship & Social Support",
+        P2: "Physical Health",
+        P3: "Housing & Environment",
+        P4: "Financial Resources",
+        P5: "Legal & Navigation",
+        P6: "Emotional Wellbeing",
+      };
+
+      // Determine score band text
+      let bandText = "low stress";
+      if (score >= 76) bandText = "crisis level";
+      else if (score >= 51) bandText = "high stress";
+      else if (score >= 26) bandText = "moderate stress";
+
       return {
-        success: false,
-        message: "Failed to complete assessment.",
+        success: true,
+        complete: true,
+        score,
+        band: bandText,
+        worstZone,
+        worstZoneName: worstZone ? zoneNames[worstZone] || worstZone : undefined,
       };
     }
 

@@ -73,7 +73,7 @@ export const chat = internalAction({
     }
 
     // Build assessment status context
-    const currentScore = user?.gcSdohScore || null;
+    const currentScore = user?.gcSdohScore ?? null;
     const hasSDOH = lastSDOH !== null;
     const hasEMA = lastEMA !== null;
     const assessmentContext = buildAssessmentContext(hasSDOH, hasEMA, currentScore, lastSDOH);
@@ -135,6 +135,23 @@ export const chat = internalAction({
         },
       }
     );
+
+    // Validate response before sending
+    if (!result.text || result.text.trim().length === 0) {
+      console.error("Agent returned empty response", {
+        userId,
+        message,
+        resultKeys: Object.keys(result),
+      });
+
+      // Send fallback message instead of failing silently
+      await ctx.runAction(internal.internal.sms.sendAgentResponse, {
+        userId,
+        text: "I'm here to help. Could you tell me more about what you need?",
+      });
+
+      return { success: false, error: "empty_response", response: "" };
+    }
 
     // Send response via SMS
     await ctx.runAction(internal.internal.sms.sendAgentResponse, {

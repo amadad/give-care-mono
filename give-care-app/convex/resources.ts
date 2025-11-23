@@ -139,7 +139,7 @@ async function searchLocalResources(
       console.log(`Maps search tier failed: ${tier}`, error);
       lastError = error as Error;
       // If Maps returns a clear "no results" signal, fall back early
-      const message = (lastError as Error).message || String(lastError);
+      const message = (lastError).message || String(lastError);
       if (message.includes("No Maps Grounding results found")) {
         break;
       }
@@ -214,8 +214,8 @@ async function getCachedResources(ctx: any, cacheKeyValue: string) {
 
   if (cached && isCacheValid(cached)) {
     return {
-      resources: (cached.results as any)?.resourcesText || cached.results,
-      sources: (cached.results as any)?.sources || cached.placeIds?.map((placeId: string) => ({ placeId, name: "Saved result" })),
+      resources: (cached.results)?.resourcesText || cached.results,
+      sources: (cached.results)?.sources || cached.placeIds?.map((placeId: string) => ({ placeId, name: "Saved result" })),
       intent: {},
       message: "Sharing saved options. Reply with your ZIP for fresher local results.",
     };

@@ -125,6 +125,81 @@ npm test -- --watch
 - No mocking - real Convex environment only
 - Tests in `tests/internal/` and `tests/lib/`
 
+## Agent Playground
+
+Interactive UI for testing and debugging Mira agent in real-time.
+
+### Setup
+
+The playground is configured in `convex/playground.ts` and exposes these APIs:
+- `isApiKeyValid` - Validate API keys
+- `listAgents` - List available agents (Mira)
+- `listUsers` - Browse users with threads
+- `listThreads` - View user conversation threads
+- `listMessages` - Inspect thread messages and tool calls
+- `createThread` - Start new conversation
+- `generateText` - Send messages and see responses
+- `fetchPromptContext` - Debug context loading
+
+### Generate API Key
+
+**For Development:**
+```bash
+npx convex run --component agent apiKeys:issue '{name:"playground-dev"}'
+```
+
+**For Production:**
+```bash
+npx convex run --component agent apiKeys:issue '{name:"playground-prod"}' --prod
+```
+
+Note: Deploy playground to prod first with `npx convex deploy` before generating prod key.
+
+### Access Playground
+
+**Option 1: Local (Recommended)**
+```bash
+npx @convex-dev/agent-playground
+```
+
+Opens at `http://localhost:4174/` with auto-detected Convex URL from `.env.local`
+
+**Option 2: Hosted**
+
+Visit: https://get-convex.github.io/agent/
+
+Manually configure:
+- Deployment URL: From `.env.local` (`VITE_CONVEX_URL`)
+- Playground API Path: `playground`
+- API Key: From generation command above
+
+### Using the Playground
+
+1. **Select User** - Browse users who have threads
+2. **View Threads** - See conversation history
+3. **Inspect Messages** - View message content, tool calls, metadata
+4. **Test Context** - Adjust context options (recent messages, search, etc.)
+5. **Send Messages** - Try different prompts, see token usage
+6. **Debug Tools** - See which tools are called and why
+
+### Playground Features
+
+**Context Options:**
+- `recentMessages` - Number of recent messages to include
+- `excludeToolMessages` - Hide tool call details from context
+- `searchOtherThreads` - Search across user's other conversations
+- `searchOptions.limit` - Max search results
+- `searchOptions.vectorSearch` - Semantic search
+- `searchOptions.textSearch` - Keyword search
+- `messageRange` - Context padding (before/after)
+
+**Useful for:**
+- Testing prompt changes before deploying
+- Debugging why agent called specific tools
+- Inspecting token usage per message
+- Viewing full conversation context
+- Testing edge cases safely
+
 ## Deployment
 
 ### Deploy to Production

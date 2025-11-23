@@ -10,6 +10,7 @@ export default tseslint.config(
       "dist",
       "_archive",
       "tests",
+      "scripts",
       "eslint.config.js",
       "convex/_generated",
       "convex/test.setup.ts",

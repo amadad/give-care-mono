@@ -57,8 +57,8 @@ export const checkRateLimitStatus = query({
       config: {
         kind: "fixed window",
         period: 86400000,
-        rate: 20,
-        capacity: 20,
+        rate: 30,
+        capacity: 30,
       },
       count: 1,
     });
@@ -66,7 +66,7 @@ export const checkRateLimitStatus = query({
     return {
       ok: result.ok,
       retryAfter: result.retryAfter,
-      currentConfig: { rate: 20, capacity: 20, period: 86400000 },
+      currentConfig: { rate: 30, capacity: 30, period: 86400000 },
     };
   },
 });

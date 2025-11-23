@@ -23,9 +23,9 @@ export const getScore = query({
 
     const metadata = getUserMetadata(user);
     // Get score from top-level fields (with metadata fallback for migration)
-    const gcSdohScore = user.gcSdohScore || metadata.gcSdohScore;
-    const zones = user.zones || metadata.zones || {};
-    const riskLevel = user.riskLevel || metadata.riskLevel;
+    const gcSdohScore = user.gcSdohScore ?? metadata.gcSdohScore;
+    const zones = user.zones ?? metadata.zones ?? {};
+    const riskLevel = user.riskLevel ?? metadata.riskLevel;
 
     if (gcSdohScore === undefined || gcSdohScore === null) {
       return null;
@@ -34,9 +34,9 @@ export const getScore = query({
     return {
       score: gcSdohScore,
       zones: zones || {},
-      riskLevel: riskLevel || getRiskLevel(gcSdohScore),
-      lastEMA: user.lastEMA || metadata.lastEMA,
-      lastSDOH: user.lastSDOH || metadata.lastSDOH,
+      riskLevel: riskLevel ?? getRiskLevel(gcSdohScore),
+      lastEMA: user.lastEMA ?? metadata.lastEMA,
+      lastSDOH: user.lastSDOH ?? metadata.lastSDOH,
     };
   },
 });
