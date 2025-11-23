@@ -74,69 +74,30 @@ pnpm --filter give-care-story dev          # Presentations
 ## give-care-app (Backend)
 
 **Tech**: Convex, Convex Agent Component (@convex-dev/agent), Vercel AI SDK, Twilio, Vitest
+**Model**: Gemini 2.5 Flash-Lite (cost-efficient, low latency)
 **Critical**: Run `npx convex dev` first - generates types in `convex/_generated/`
 
-**Architecture**: 3-agent system (Main, Crisis, Assessment) using Convex Agent Component
+**Architecture**: Unified single-agent system (Mira) using Convex Agent Component
 
 **Key Patterns**:
 - Files importing AI SDK need `"use node"` directive
-- Use Convex validators, NOT Zod
-- System prompts in `convex/lib/prompts.ts` with template variables
-- Tools split into `convex/lib/tools/` directory
-- Memory uses Convex Agent Component built-in storage
+- Use Convex validators in schema, Zod for tool definitions (convex/tools.ts)
+- System prompts in `convex/lib/prompts.ts` (UNIFIED_PROMPT, TRAUMA_PRINCIPLES)
+- All 8 tools defined in `convex/tools.ts` (getResources, startAssessmentTool, recordAssessmentAnswerTool, getCrisisResources, recordMemory, updateProfile, findInterventions, checkOnboardingStatus)
+- Memory uses Convex Agent Component built-in storage with semantic search
 - No harness tokens required - fully Convex-native
 
-**Docs**: See `give-care-app/docs/ARCHITECTURE.md` and `give-care-app/docs/FEATURES.md`
+**Core Files**:
+- `convex/agent.ts` - Main chat handler, injects assessment context
+- `convex/agents.ts` - Mira agent definition, contextHandler, usageHandler
+- `convex/tools.ts` - All agent tools with Zod schemas
+- `convex/schema.ts` - Database schema with Convex validators
+- `convex/lib/prompts.ts` - System prompts, trauma principles, SMS constraints
 
-### Simulation Testing Loop
-
-**Purpose:** Recursive real-test verification against ARCHITECTURE.md + PRODUCT.md
-**Mode:** Fix-as-you-go OR document-then-fix
-**No Mocks:** Real Convex environment only
-
-**Protocol:**
-1. **Run** simulation test in `tests/simulation/`
-2. **Compare** failure to `ARCHITECTURE.md` (expected behavior)
-3. **Classify** issue:
-   - Code bug (implementation ≠ spec)
-   - Test bug (test ≠ spec)
-   - Spec gap (undefined behavior)
-   - Edge case (new scenario)
-4. **Fix** in identified file OR document in issue list
-5. **Re-run** test
-6. **Repeat** until all pass ✅
-
-**Commands:**
-```bash
-npm test -- simulation              # Run all simulation tests
-npm test -- context.simulation      # Run specific feature
-npm test -- --watch simulation      # Fix-as-you-go mode
-```
-
-**Verify Against Specs:**
-```typescript
-// Reference ARCHITECTURE.md in every test
-it('should record memory with importance', async () => {
-  // ARCHITECTURE.md: "recordMemory saves to memories table with category"
-  const result = await ctx.runMutation(api.functions.context.recordMemory, args);
-  expect(result).toMatchArchitectureSpec();
-});
-```
-
-**Edge Cases to Test:**
-- Missing data (undefined, null)
-- Boundary values (0, -1, MAX_INT)
-- Race conditions (concurrent ops)
-- Invalid input (wrong type, out of range)
-- Missing dependencies (user doesn't exist)
-
-**Success Criteria:**
-- ✅ All tests pass
-- ✅ Behavior matches ARCHITECTURE.md
-- ✅ Edge cases documented
-- ✅ No mocks used
-
-See `tests/simulation/README.md` for full details.
+**Testing**:
+- `tests/internal/` - Internal function tests (Stripe, utils)
+- `tests/lib/` - Library function tests
+- No mocking - real Convex environment only
 
 ## give-care-admin (Admin Dashboard)
 
@@ -199,13 +160,13 @@ See `tests/simulation/README.md` for full details.
 
 See `.env.example` in each project. Never commit secrets.
 
-**give-care-app**: `CONVEX_DEPLOYMENT`, `OPENAI_API_KEY`, `TWILIO_*`, `STRIPE_SECRET_KEY`
+**give-care-app**: `CONVEX_DEPLOYMENT`, `GEMINI_API_KEY` (Mira agent), `OPENAI_API_KEY` (embeddings), `TWILIO_*`, `STRIPE_SECRET_KEY`
 **give-care-admin**: `VITE_CONVEX_URL`
 **give-care-site**: `NEXT_PUBLIC_CONVEX_URL`, `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY`, `RESEND_API_KEY`
 
 ## Project-Specific Docs
 
-- `give-care-app/docs/` - Architecture, taxonomy, development guides
+- `give-care-app/CHANGELOG.md` - Version history and changes
 - `give-care-admin/README.md` - Admin dashboard setup and development
 - `give-care-site/CLAUDE.md` - Component patterns, design system
 - `give-care-story/CLAUDE.md` - Presentation guidelines
